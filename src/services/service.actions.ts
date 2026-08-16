@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getAuthenticatedTenant } from "@/lib/supabase/tenant";
 import { serviceSchema } from "@/lib/validations/service.schema";
+import { validateServiceLimit } from "@/config/plans";
 import { revalidatePath } from "next/cache";
 
 export interface ServiceActionState {
@@ -12,7 +13,7 @@ export interface ServiceActionState {
 }
 
 /**
- * 1. Criação de Serviço com Injeção Segura de tenant_id e RLS
+ * 1. Criação de Serviço com Injeção Segura de tenant_id, RLS e Enforcing de Limites de Plano
  */
 export async function createServiceAction(
   _prevState: ServiceActionState,
@@ -41,8 +42,23 @@ export async function createServiceAction(
     return { error: tenantError || "Nenhum estabelecimento associado a esta conta." };
   }
 
-  const { name, description, price, durationMinutes, isActive } = validation.data;
   const supabase = await createClient();
+
+  // Enforcing de Limites de Plano
+  const planTier = tenantContext.tenant?.plan_tier || "free";
+  const { count: currentServicesCount } = await supabase
+    .from("services")
+    .select("*", { count: "exact", head: true })
+    .eq("tenant_id", tenantContext.tenantId);
+
+  const limitCheck = validateServiceLimit(currentServicesCount || 0, planTier);
+  if (!limitCheck.allowed) {
+    return {
+      error: `Limite de ${limitCheck.limit} serviços atingido no Plano Gratuito. Faça upgrade para o Plano Pro para cadastrar serviços ilimitados.`,
+    };
+  }
+
+  const { name, description, price, durationMinutes, isActive } = validation.data;
 
   // Inserção com tenant_id garantido
   const { data, error } = await supabase

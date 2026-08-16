@@ -6,11 +6,13 @@ import { logoutAction } from "@/services/auth.actions";
 import {
   LayoutDashboard,
   Scissors,
+  CalendarCheck,
+  Sparkles,
+  CreditCard,
   Settings,
   Globe,
   LogOut,
   ExternalLink,
-  Sparkles,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 
@@ -37,10 +39,28 @@ export function AdminSidebar({
       current: pathname === "/admin/dashboard",
     },
     {
+      name: "Agendamentos",
+      href: "/admin/agendamentos",
+      icon: CalendarCheck,
+      current: pathname.startsWith("/admin/agendamentos"),
+    },
+    {
       name: "Serviços",
       href: "/admin/servicos",
       icon: Scissors,
       current: pathname.startsWith("/admin/servicos"),
+    },
+    {
+      name: "Antes & Depois",
+      href: "/admin/portfolio",
+      icon: Sparkles,
+      current: pathname.startsWith("/admin/portfolio"),
+    },
+    {
+      name: "Faturamento",
+      href: "/admin/faturamento",
+      icon: CreditCard,
+      current: pathname.startsWith("/admin/faturamento"),
     },
     {
       name: "Configurações",

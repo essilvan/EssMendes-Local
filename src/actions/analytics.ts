@@ -1,1 +1,6 @@
-export { recordAnalyticsEvent, type EventType } from "@/services/analytics.actions";
+export {
+  recordAnalyticsEvent,
+  getTenantAnalyticsSummary,
+  type EventType,
+  type AnalyticsSummary,
+} from "@/services/analytics.actions";

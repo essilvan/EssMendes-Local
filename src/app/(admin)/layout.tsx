@@ -59,11 +59,11 @@ export default async function AdminLayout({
             <div className="flex h-7 w-7 items-center justify-center rounded bg-teal-700 font-bold text-white text-xs">
               EM
             </div>
-            <span className="text-xs font-bold text-slate-900 truncate max-w-[160px]">
+            <span className="text-xs font-bold text-slate-900 truncate max-w-[120px]">
               {companyName}
             </span>
           </div>
-          <div className="flex items-center gap-3 text-xs">
+          <div className="flex items-center gap-2.5 text-xs overflow-x-auto">
             <a
               href="/admin/dashboard"
               className="text-slate-600 font-medium hover:text-teal-700"
@@ -71,10 +71,28 @@ export default async function AdminLayout({
               Início
             </a>
             <a
+              href="/admin/agendamentos"
+              className="text-slate-600 font-medium hover:text-teal-700"
+            >
+              Agenda
+            </a>
+            <a
               href="/admin/servicos"
               className="text-slate-600 font-medium hover:text-teal-700"
             >
               Serviços
+            </a>
+            <a
+              href="/admin/portfolio"
+              className="text-slate-600 font-medium hover:text-teal-700"
+            >
+              Antes/Depois
+            </a>
+            <a
+              href="/admin/faturamento"
+              className="text-slate-600 font-medium hover:text-teal-700"
+            >
+              Planos
             </a>
             <a
               href="/admin/configuracoes"

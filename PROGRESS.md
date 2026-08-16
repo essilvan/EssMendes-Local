@@ -1,49 +1,40 @@
 # 📊 Progresso do Projeto: EssMendes Local
 
-**Data:** 14 de Agosto de 2026  
-**Status do Projeto:** Fase 3 Concluída / Pronto para Fase 4  
+**Data:** 15 de Agosto de 2026  
+**Status do Projeto:** Fase 6 + Upload Nativo no Storage & Módulo de Portfólio Concluídos  
 
 ---
 
-## 🚀 1. O que foi feito hoje
+## 🚀 1. Resumo das Implementações de Hoje
 
-- **Resolução do vínculo de `tenant_id` no Supabase**:
-  - Estruturação e padronização da cadeia de autorização `auth.users` ➔ `tenant_users` ➔ `tenants`.
-  - Garantia de que todas as operações nos dados da empresa utilizem o `tenant_id` associado ao usuário autenticado.
+### 📸 Supabase Storage & Upload Nativo de Imagens
+- Criação e configuração do bucket público `tenant-media` no Supabase Storage com limite de 5MB por arquivo e suporte a PNG, JPG, WebP.
+- Implementação do componente reutilizável [`src/components/ui/ImageUpload.tsx`](file:///C:/Projetos/EssMendes-Local/src/components/ui/ImageUpload.tsx) com suporte a *drag-and-drop*, seleção direta de arquivos, *preview* em tempo real, troca, exclusão e geração automática da URL pública.
+- Substituição de inputs manuais de texto de imagem em [`ProfileForm.tsx`](file:///C:/Projetos/EssMendes-Local/src/components/admin/ProfileForm.tsx) pelo componente visual de upload.
 
-- **Criação e Refinamento de Políticas RLS (Row Level Security)**:
-  - Políticas de segurança para tabelas `tenants`, `tenant_profiles`, `services` e `analytics_events`.
-  - Isolamento multi-tenant garantido diretamente no nível do banco de dados PostgreSQL.
+### ✨ Módulo de Portfólio "Antes & Depois"
+- Criação da tabela `public.portfolio_items` com colunas `id`, `tenant_id`, `title`, `description`, `before_image_url`, `after_image_url`, `display_order`, `is_active`, `created_at`, `updated_at`.
+- Definição de políticas de segurança Row-Level Security (RLS) para leitura pública (`is_active = true`) e gestão restrita aos membros autenticados do tenant.
+- Tela administrativa completa em [`src/app/(admin)/admin/portfolio/page.tsx`](file:///C:/Projetos/EssMendes-Local/src/app/(admin)/admin/portfolio/page.tsx) com listagem comparativa lado a lado, modal de cadastro com duplo upload e alternância rápida de visibilidade.
+- Server Actions seguras em [`src/services/portfolio.actions.ts`](file:///C:/Projetos/EssMendes-Local/src/services/portfolio.actions.ts) com revalidação instantânea de rotas.
+- Inclusão do link "Antes & Depois" no menu lateral desktop e no cabeçalho mobile.
 
-- **Correções nas Server Actions e Handlers**:
-  - Ajustes nas ações de gerenciamento de serviços (criação, edição, exclusão e reordenação).
-  - Ajustes no salvamento e atualização das configurações de perfil da empresa/tenant.
+### 💎 Redesign Moderno da Vitrine Pública (`/[slug]`)
+- **Hero Imersivo**: Banner com gradiente suave, badge dinâmico de status ("Aberto Agora" vs "Fechado no Momento") e botões de ação rápida (WhatsApp, Localização e Agendamento).
+- **Showcase Interativo Antes & Depois**: Componente [`BeforeAfterShowcase.tsx`](file:///C:/Projetos/EssMendes-Local/src/components/public/BeforeAfterShowcase.tsx) com divisor central arrastável para comparação visual em tempo real.
+- **Catálogo & Horários**: Cards elegantes de serviços com agendamento online e tabela de horários com rota no Google Maps.
 
-- **Feedback Visual e Diagnóstico**:
-  - Implementação de toasts/alertas de feedback visual para o usuário em operações de sucesso e falha.
-  - Adição de logs de erro detalhados para facilitar o diagnóstico de operações no Supabase.
-
----
-
-## 📌 2. Estado Atual do Sistema
-
-- **Multi-tenancy & RLS**: Cadastros de serviços e perfil da empresa funcionando com isolamento completo por tenant.
-- **Autenticação & Dashboard**: Rotas de login, registro, dashboard administrativo e configurações operacionais integradas ao Supabase SSR.
-- **Qualidade de Código & Build**: Next.js 15 build validado com sucesso sem erros de TypeScript ou dependências.
+### 📦 Monetização e Planos de Assinatura
+- Planos Free (até 3 serviços) e Pro (ilimitado por R$ 49,90/mês ou R$ 499/ano) com regras de limites e painel de faturamento em [`/admin/faturamento`](file:///C:/Projetos/EssMendes-Local/src/app/(admin)/admin/faturamento/page.tsx).
+- Landing page institucional de alta conversão em [`src/app/page.tsx`](file:///C:/Projetos/EssMendes-Local/src/app/page.tsx).
 
 ---
 
-## 🔮 3. Próximo Passo Pendente (Amanhã)
+## 📌 2. Próximos Passos (Para Amanhã)
 
-> **Início da FASE 4 - Motor de Agendamentos Online e Prevenção de Conflitos**
-
-### Tarefas da Fase 4:
-1. **Estrutura de Agendamentos no Supabase**:
-   - Criação das tabelas `appointments`, `customers`, `business_hours`, `professional_hours`, `special_hours`, `holidays` e `blocked_periods`.
-   - Implementação de constraint nativa de exclusão no PostgreSQL (`EXCLUDE USING gist` com `btree_gist` e `TSTZRANGE`) para prevenção matemática de *double-booking* e *race conditions*.
-2. **Procedimentos Armazenados (RPC) & Server Actions**:
-   - Stored procedure segura para criação de agendamentos atômicos.
-   - Server Actions públicas com rate limiting, honeypot e validação Zod.
-3. **Interface Pública e Painel Admin da Agenda**:
-   - Fluxo de seleção de serviço, profissional e horário na página pública (`/[slug]`).
-   - Visão de calendário e gestão de atendimentos no painel do administrador (`/admin/agenda`).
+1. **Testes de Ponta a Ponta do Portfólio**:
+   - Testar upload e renderização da galeria Antes & Depois na vitrine pública `/[slug]` e ajustes visuais finais.
+2. **Polimento Visual & Responsividade**:
+   - Validar experiência em dispositivos móveis e ajustar espaçamentos finos.
+3. **Preparação para Deploy em Produção**:
+   - Configuração de variáveis de ambiente de produção e checagem final de segurança.

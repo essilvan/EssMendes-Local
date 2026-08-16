@@ -15,6 +15,7 @@ import {
   Loader2,
   Save,
 } from "lucide-react";
+import { ImageUpload } from "@/components/ui/ImageUpload";
 
 interface ProfileFormProps {
   initialData: {
@@ -153,28 +154,17 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
             </div>
           </div>
 
-          {/* URL do Logotipo */}
+          {/* Logotipo / Imagem de Perfil */}
           <div className="sm:col-span-2">
-            <label
-              htmlFor="logoUrl"
-              className="block text-xs font-semibold uppercase tracking-wider text-slate-700"
-            >
-              URL do Logotipo / Imagem de Perfil
-            </label>
-            <div className="relative mt-1.5">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                <ImageIcon className="h-4 w-4" />
-              </div>
-              <input
-                id="logoUrl"
-                name="logoUrl"
-                type="url"
-                disabled={isPending}
-                defaultValue={initialData.logoUrl}
-                placeholder="https://exemplo.com/imagens/logo.png"
-                className="block w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600 disabled:bg-slate-100 disabled:cursor-not-allowed"
-              />
-            </div>
+            <ImageUpload
+              name="logoUrl"
+              value={initialData.logoUrl}
+              label="Logotipo / Imagem de Perfil do Negócio"
+              description="Esta imagem aparecerá em destaque no topo da sua página pública e nos links de compartilhamento."
+              folder="logos"
+              aspectRatio="square"
+              disabled={isPending}
+            />
           </div>
 
           {/* Descrição / Apresentação */}
