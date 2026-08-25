@@ -18,9 +18,15 @@ export async function updateTenantProfileAction(
   const rawData = {
     companyName: formData.get("companyName")?.toString().trim() || "",
     description: formData.get("description")?.toString().trim() || "",
+    editorialSummary: formData.get("editorialSummary")?.toString().trim() || "",
     phoneWhatsapp: formData.get("phoneWhatsapp")?.toString().trim() || "",
     address: formData.get("address")?.toString().trim() || "",
     logoUrl: formData.get("logoUrl")?.toString().trim() || "",
+    primaryColor: formData.get("primaryColor")?.toString().trim() || "",
+    googleMapsUrl: formData.get("googleMapsUrl")?.toString().trim() || "",
+    rating: formData.get("rating") ? Number(formData.get("rating")) : 4.9,
+    reviewCount: formData.get("reviewCount") ? Number(formData.get("reviewCount")) : 128,
+    placePhotos: formData.get("placePhotos")?.toString().trim() || "",
   };
 
   // 1. Validação com Zod
@@ -31,7 +37,19 @@ export async function updateTenantProfileAction(
     return { error: firstError };
   }
 
-  const { companyName, description, phoneWhatsapp, address, logoUrl } = validation.data;
+  const {
+    companyName,
+    description,
+    editorialSummary,
+    phoneWhatsapp,
+    address,
+    logoUrl,
+    primaryColor,
+    googleMapsUrl,
+    rating,
+    reviewCount,
+    placePhotos: rawPlacePhotos,
+  } = validation.data;
 
   // 2. Obter tenant_id e usuário autenticado com tratamento de erros
   const { data: tenantContext, error: tenantContextError } = await getAuthenticatedTenant();
@@ -42,6 +60,21 @@ export async function updateTenantProfileAction(
 
   const tenantId = tenantContext.tenantId;
   const supabase = await createClient();
+
+  // Tratamento seguro do array de fotos
+  let parsedPhotos: string[] | undefined;
+  if (rawPlacePhotos) {
+    try {
+      const parsed = JSON.parse(rawPlacePhotos);
+      if (Array.isArray(parsed)) {
+        parsedPhotos = parsed.filter((p) => typeof p === "string" && p.trim().length > 0);
+      }
+    } catch {
+      if (rawPlacePhotos.startsWith("http")) {
+        parsedPhotos = [rawPlacePhotos];
+      }
+    }
+  }
 
   try {
     // 3. Atualizar nome na tabela `tenants`
@@ -59,19 +92,51 @@ export async function updateTenantProfileAction(
     }
 
     // 4. Upsert na tabela `tenant_profiles` com injeção segura de tenant_id
-    const { error: profileError } = await supabase
+    const profilePayload: Record<string, any> = {
+      tenant_id: tenantId,
+      name: companyName,
+      description: description || null,
+      editorial_summary: editorialSummary || description || null,
+      phone_whatsapp: phoneWhatsapp || null,
+      address: address || null,
+      logo_url: logoUrl || null,
+      primary_color: primaryColor || "#0d9488",
+      google_maps_url: googleMapsUrl || null,
+      rating: rating ?? 4.9,
+      review_count: reviewCount ?? 128,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (parsedPhotos !== undefined) {
+      profilePayload.place_photos = parsedPhotos;
+    }
+
+    let { error: profileError } = await supabase
       .from("tenant_profiles")
-      .upsert(
-        {
-          tenant_id: tenantId,
-          description: description || null,
-          phone_whatsapp: phoneWhatsapp || null,
-          address: address || null,
-          logo_url: logoUrl || null,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "tenant_id" }
-      );
+      .upsert(profilePayload, { onConflict: "tenant_id" });
+
+    // Fallback gracioso caso alguma coluna opcional ainda não exista no Supabase remoto
+    if (profileError && profileError.code === "PGRST204") {
+      const fallbackPayload: Record<string, any> = {
+        tenant_id: tenantId,
+        description: description || null,
+        phone_whatsapp: phoneWhatsapp || null,
+        address: address || null,
+        logo_url: logoUrl || null,
+        primary_color: primaryColor || "#0d9488",
+        google_maps_url: googleMapsUrl || null,
+        rating: rating ?? 4.9,
+        review_count: reviewCount ?? 128,
+        updated_at: new Date().toISOString(),
+      };
+      if (parsedPhotos !== undefined) {
+        fallbackPayload.place_photos = parsedPhotos;
+      }
+      const fallbackRes = await supabase
+        .from("tenant_profiles")
+        .upsert(fallbackPayload, { onConflict: "tenant_id" });
+      profileError = fallbackRes.error;
+    }
 
     if (profileError) {
       console.error("[updateTenantProfileAction] Erro no Supabase ao atualizar tabela 'tenant_profiles':", profileError);
@@ -80,6 +145,7 @@ export async function updateTenantProfileAction(
 
     // 5. Revalidação de Cache das páginas
     revalidatePath("/admin/configuracoes");
+    revalidatePath("/admin/perfil");
     revalidatePath("/admin/dashboard");
     if (tenantContext.tenant?.slug) {
       revalidatePath(`/${tenantContext.tenant.slug}`);

@@ -39,13 +39,58 @@ export default async function ConfiguracoesPage() {
     console.error("[ConfiguracoesPage] Erro ao buscar tenant_profiles:", profileError);
   }
 
+  // Tratamento seguro de fotos do Google Places (place_photos)
+  let cleanPlacePhotos: string[] = [];
+  if (profile?.place_photos) {
+    if (Array.isArray(profile.place_photos)) {
+      cleanPlacePhotos = profile.place_photos.filter(
+        (p: any) => typeof p === "string" && p.trim().length > 0
+      );
+    } else if (typeof profile.place_photos === "string") {
+      try {
+        const parsed = JSON.parse(profile.place_photos);
+        if (Array.isArray(parsed)) {
+          cleanPlacePhotos = parsed.filter(
+            (p: any) => typeof p === "string" && p.trim().length > 0
+          );
+        }
+      } catch {
+        if (profile.place_photos.startsWith("http")) {
+          cleanPlacePhotos = [profile.place_photos];
+        }
+      }
+    }
+  }
+
+  // Busca serviços cadastrados para o tenant
+  const { data: rawServices } = await supabase
+    .from("services")
+    .select("id, name, description, price, duration_minutes, is_active, created_at")
+    .eq("tenant_id", tenantContext.tenantId)
+    .order("created_at", { ascending: false });
+
   const initialData = {
     companyName: tenantContext.tenant?.name || (tenantContext.user.user_metadata?.company_name as string) || "",
     description: profile?.description || "",
+    editorialSummary: profile?.editorial_summary || profile?.description || "",
     phoneWhatsapp: profile?.phone_whatsapp || "",
     address: profile?.address || "",
-    logoUrl: profile?.logo_url || "",
+    logoUrl: profile?.logo_url || (cleanPlacePhotos.length > 0 ? cleanPlacePhotos[0] : ""),
+    placePhotos: cleanPlacePhotos,
+    primaryColor: profile?.primary_color || "#0d9488",
+    googleMapsUrl: profile?.google_maps_url || "",
+    rating: profile?.rating || 4.9,
+    reviewCount: profile?.review_count || 128,
     slug: tenantContext.tenant?.slug || "",
+    services: (rawServices || []).map((s: any) => ({
+      id: s.id,
+      name: s.name,
+      description: s.description,
+      price: Number(s.price),
+      duration_minutes: s.duration_minutes,
+      is_active: s.is_active,
+      created_at: s.created_at,
+    })),
   };
 
   return (

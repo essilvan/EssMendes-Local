@@ -13,6 +13,8 @@ import {
   Globe,
   LogOut,
   ExternalLink,
+  Star,
+  Newspaper,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 
@@ -55,6 +57,18 @@ export function AdminSidebar({
       href: "/admin/portfolio",
       icon: Sparkles,
       current: pathname.startsWith("/admin/portfolio"),
+    },
+    {
+      name: "Avaliações Google",
+      href: "/admin/avaliacoes",
+      icon: Star,
+      current: pathname.startsWith("/admin/avaliacoes"),
+    },
+    {
+      name: "Posts & Novidades",
+      href: "/admin/posts",
+      icon: Newspaper,
+      current: pathname.startsWith("/admin/posts"),
     },
     {
       name: "Faturamento",

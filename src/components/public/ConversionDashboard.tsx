@@ -1,0 +1,259 @@
+"use client";
+
+import React from "react";
+import type { Service, PortfolioItem, TenantProfile, TenantPost } from "@/types";
+import { BeforeAfterShowcase } from "./BeforeAfterShowcase";
+import { BookingWidgetCard } from "./BookingWidgetCard";
+import {
+  Sparkles,
+  Clock,
+  Calendar,
+  Gift,
+  Copy,
+  Check,
+  ArrowRight,
+} from "lucide-react";
+
+interface ConversionDashboardProps {
+  tenant: {
+    id: string;
+    name: string;
+    slug: string;
+  };
+  profile: TenantProfile | null;
+  services: Service[];
+  portfolioItems: PortfolioItem[];
+  posts?: TenantPost[];
+  activeCoupon?: {
+    code: string;
+    title?: string;
+    discountText?: string;
+    description?: string;
+  } | null;
+  onOpenBookingModal: (serviceId?: string) => void;
+}
+
+export function ConversionDashboard({
+  tenant,
+  profile,
+  services,
+  portfolioItems,
+  posts = [],
+  activeCoupon,
+  onOpenBookingModal,
+}: ConversionDashboardProps) {
+  const [copiedCoupon, setCopiedCoupon] = React.useState(false);
+
+  // Identifica se há algum cupom real ativo (via prop ou post promocional)
+  const promoPostWithCoupon = posts.find(
+    (p) =>
+      p.is_active &&
+      (p.title.toLowerCase().includes("cupom") ||
+        p.content.toLowerCase().includes("cupom") ||
+        p.title.toLowerCase().includes("off") ||
+        p.content.toLowerCase().includes("desconto"))
+  );
+
+  const couponData =
+    activeCoupon ||
+    (promoPostWithCoupon
+      ? {
+          code:
+            promoPostWithCoupon.content.match(/cupom\s+([A-Z0-9]+)/i)?.[1] ||
+            promoPostWithCoupon.title.match(/([A-Z0-9]{5,})/)?.[1] ||
+            "",
+          title: promoPostWithCoupon.title,
+          description: promoPostWithCoupon.content,
+        }
+      : null);
+
+  const hasCoupon = Boolean(couponData && couponData.code);
+  const hasPortfolio = portfolioItems && portfolioItems.length > 0;
+  const hasMiddleColumn = hasPortfolio || hasCoupon;
+
+  const handleCopyCoupon = (code: string) => {
+    if (!code) return;
+    navigator.clipboard.writeText(code);
+    setCopiedCoupon(true);
+    setTimeout(() => setCopiedCoupon(false), 2500);
+  };
+
+  const formatCurrency = (val: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(val);
+  };
+
+  return (
+    <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      
+      {/* =========================================================================
+          COLUNA 1: Nossos Serviços (Catálogo Universal de Serviços)
+         ========================================================================= */}
+      <div
+        id="servicos"
+        className={`${
+          hasMiddleColumn ? "lg:col-span-4" : "lg:col-span-7"
+        } rounded-3xl border border-slate-200 bg-white p-6 sm:p-7 shadow-sm space-y-4`}
+      >
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
+          <div>
+            <div
+              className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold"
+              style={{
+                backgroundColor: "var(--primary-alpha-10, rgba(13, 148, 136, 0.1))",
+                color: "var(--primary-color, #0d9488)",
+              }}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              <span>Nossos Serviços</span>
+            </div>
+            <h3 className="mt-1 text-base sm:text-lg font-black text-slate-900">
+              Catálogo & Preços
+            </h3>
+          </div>
+
+          <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
+            {services.length} {services.length === 1 ? "opção" : "opções"}
+          </span>
+        </div>
+
+        {/* Lista de Cards de Serviços Reais */}
+        {services.length === 0 ? (
+          <div className="text-center py-8 text-slate-500 text-xs space-y-2">
+            <p className="font-semibold text-slate-700">Nenhum serviço cadastrado no momento.</p>
+            <p className="text-slate-400">
+              Faça seu agendamento ou tire dúvidas diretamente pelo WhatsApp.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {services.map((service) => (
+              <div
+                key={service.id}
+                className="group rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4 space-y-2.5 hover:border-slate-300 hover:bg-slate-50 transition shadow-2xs"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="space-y-0.5">
+                    <h4 className="text-xs sm:text-sm font-black text-slate-900 group-hover:text-slate-700 transition">
+                      {service.name}
+                    </h4>
+                    {service.description && (
+                      <p className="text-[11px] sm:text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                        {service.description}
+                      </p>
+                    )}
+                  </div>
+
+                  <span
+                    className="text-sm sm:text-base font-black shrink-0"
+                    style={{ color: "var(--primary-color, #0d9488)" }}
+                  >
+                    {formatCurrency(Number(service.price))}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between pt-1.5 border-t border-slate-200/60">
+                  <span className="text-[11px] font-bold text-slate-500 flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {service.duration_minutes} min
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => onOpenBookingModal(service.id)}
+                    className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-black text-white shadow-2xs hover:opacity-95 active:scale-95 transition cursor-pointer"
+                    style={{ backgroundColor: "var(--primary-color, #0d9488)" }}
+                  >
+                    <Calendar className="h-3.5 w-3.5" />
+                    <span>Agendar Este Serviço</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* =========================================================================
+          COLUNA 2: Antes & Depois + Banner de Cupom Real (se houver dados reais)
+         ========================================================================= */}
+      {hasMiddleColumn && (
+        <div className="lg:col-span-4 space-y-6">
+          {/* Card Antes & Depois (Apenas itens reais do banco) */}
+          {hasPortfolio && <BeforeAfterShowcase items={portfolioItems} />}
+
+          {/* Banner Promocional Verde / Tema (Apenas se houver cupom ativo real) */}
+          {hasCoupon && couponData && (
+            <div
+              className="relative overflow-hidden rounded-3xl p-6 text-white shadow-sm space-y-3.5 transition"
+              style={{
+                backgroundColor: "var(--primary-color, #0d9488)",
+              }}
+            >
+              {/* Círculo decorativo */}
+              <div className="pointer-events-none absolute -right-6 -bottom-6 h-28 w-28 rounded-full bg-white/10 blur-md" />
+
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-black tracking-wider uppercase backdrop-blur-xs ring-1 ring-white/30">
+                  <Gift className="h-3 w-3 text-amber-300 fill-current" />
+                  <span>Condição Especial</span>
+                </span>
+              </div>
+
+              <div className="space-y-1">
+                <h4 className="text-base font-black tracking-tight text-white leading-tight">
+                  {couponData.title || "Oferta Promocional Ativa"}
+                </h4>
+                <p className="text-xs text-white/90 leading-relaxed font-normal">
+                  {couponData.description ||
+                    "Utilize o cupom de desconto abaixo ao realizar seu agendamento."}
+                </p>
+              </div>
+
+              {/* Cupom e Botão Copiar */}
+              <div className="flex items-center justify-between gap-2 rounded-2xl bg-white/15 p-2 backdrop-blur-xs border border-white/20">
+                <span className="font-mono text-xs font-black tracking-widest text-white px-2">
+                  {couponData.code}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => handleCopyCoupon(couponData.code)}
+                  className="inline-flex items-center gap-1 rounded-xl bg-white px-3 py-1 text-[11px] font-black text-slate-900 shadow-xs hover:bg-slate-50 transition cursor-pointer"
+                >
+                  {copiedCoupon ? (
+                    <>
+                      <Check className="h-3 w-3 text-emerald-600 stroke-[3]" />
+                      <span className="text-emerald-700">Copiado!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3 w-3 text-slate-500" />
+                      <span>Copiar Cupom</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* =========================================================================
+          COLUNA 3: Widget de Agendamento em 3 Passos
+         ========================================================================= */}
+      <div className={hasMiddleColumn ? "lg:col-span-4" : "lg:col-span-5"}>
+        <BookingWidgetCard
+          tenantId={tenant.id}
+          tenantName={tenant.name}
+          services={services}
+          businessPhone={profile?.phone_whatsapp}
+          onSuccessOpenModal={() => {}}
+        />
+      </div>
+
+    </section>
+  );
+}

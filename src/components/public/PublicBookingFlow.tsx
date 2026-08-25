@@ -238,13 +238,16 @@ export function PublicBookingFlow({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs transition-opacity animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 p-0 sm:p-4 backdrop-blur-xs transition-opacity animate-in fade-in duration-200">
+      <div className="relative w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-white shadow-2xl ring-1 ring-slate-200">
         
         {/* Header */}
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white/95 px-6 py-4 backdrop-blur-xs">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
+            <div
+              className="flex h-9 w-9 items-center justify-center rounded-xl text-white shadow-2xs"
+              style={{ backgroundColor: "var(--primary-color, #0d9488)" }}
+            >
               <CalendarIcon className="h-5 w-5" />
             </div>
             <div>
@@ -283,14 +286,17 @@ export function PublicBookingFlow({
               </div>
 
               {/* Resumo do Agendamento */}
-              <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-left space-y-3 text-xs">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 text-left space-y-3 text-xs">
                 <div className="flex justify-between pb-2 border-b border-slate-200">
                   <span className="text-slate-500">Serviço:</span>
                   <span className="font-bold text-slate-900">{confirmedAppointment.service_name}</span>
                 </div>
                 <div className="flex justify-between pb-2 border-b border-slate-200">
                   <span className="text-slate-500">Data e Horário:</span>
-                  <span className="font-bold text-teal-800">
+                  <span
+                    className="font-bold"
+                    style={{ color: "var(--primary-color, #0d9488)" }}
+                  >
                     {new Date(`${selectedDate}T00:00:00`).toLocaleDateString("pt-BR")} às {selectedTime}
                   </span>
                 </div>
@@ -300,7 +306,7 @@ export function PublicBookingFlow({
                 </div>
                 <div className="flex justify-between pb-2 border-b border-slate-200">
                   <span className="text-slate-500">Valor Previsto:</span>
-                  <span className="font-bold text-teal-900">{formatCurrency(Number(confirmedAppointment.price))}</span>
+                  <span className="font-bold text-slate-900">{formatCurrency(Number(confirmedAppointment.price))}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Cliente:</span>
@@ -315,7 +321,7 @@ export function PublicBookingFlow({
                     href={getConfirmationWhatsAppUrl()}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 transition"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3.5 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 active:scale-95 transition"
                   >
                     <MessageCircle className="h-4 w-4" />
                     <span>Confirmar no WhatsApp da Empresa</span>
@@ -332,7 +338,7 @@ export function PublicBookingFlow({
               </div>
             </div>
           ) : (
-            /* Formulário de Agendamento */
+            /* Formulário de Agendamento em 3 Etapas */
             <form onSubmit={handleSubmitBooking} className="space-y-6">
               
               {/* Mensagem de Erro Geral */}
@@ -358,7 +364,7 @@ export function PublicBookingFlow({
                         onClick={() => setSelectedService(service)}
                         className={`flex items-center justify-between rounded-xl border p-3 text-left transition ${
                           isSelected
-                            ? "border-teal-600 bg-teal-50/60 ring-1 ring-teal-600"
+                            ? "border-slate-900 bg-slate-50 ring-1 ring-slate-900/10 shadow-2xs"
                             : "border-slate-200 bg-white hover:border-slate-300"
                         }`}
                       >
@@ -369,7 +375,10 @@ export function PublicBookingFlow({
                             {service.duration_minutes} min
                           </p>
                         </div>
-                        <span className="text-xs font-extrabold text-teal-800">
+                        <span
+                          className="text-xs font-extrabold"
+                          style={{ color: "var(--primary-color, #0d9488)" }}
+                        >
                           {formatCurrency(Number(service.price))}
                         </span>
                       </button>
@@ -389,7 +398,7 @@ export function PublicBookingFlow({
                     min={getTodayStr()}
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
-                    className="text-xs rounded-lg border border-slate-200 px-2 py-1 text-slate-700 bg-slate-50 focus:border-teal-600 focus:outline-none"
+                    className="text-xs rounded-lg border border-slate-200 px-2 py-1 text-slate-700 bg-slate-50 focus:outline-none"
                   />
                 </div>
 
@@ -404,11 +413,16 @@ export function PublicBookingFlow({
                         onClick={() => setSelectedDate(day.dateStr)}
                         className={`flex flex-col items-center justify-center rounded-xl p-2 text-center transition ${
                           isSelected
-                            ? "bg-teal-800 text-white shadow-xs font-bold"
+                            ? "text-white shadow-xs font-bold"
                             : "border border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-slate-700"
                         }`}
+                        style={
+                          isSelected
+                            ? { backgroundColor: "var(--primary-color, #0d9488)" }
+                            : undefined
+                        }
                       >
-                        <span className="text-[10px] opacity-80">{day.weekDay}</span>
+                        <span className="text-[10px] opacity-90">{day.weekDay}</span>
                         <span className="text-sm font-extrabold">{day.dayNumber}</span>
                       </button>
                     );
@@ -424,8 +438,8 @@ export function PublicBookingFlow({
 
                 {isLoadingSlots ? (
                   <div className="flex items-center justify-center py-8 text-xs text-slate-500 gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin text-teal-700" />
-                    <span>Consultando disponibilidade em tempo real...</span>
+                    <Loader2 className="h-4 w-4 animate-spin text-slate-600" />
+                    <span>Consultando horários disponíveis...</span>
                   </div>
                 ) : slotsError ? (
                   <div className="rounded-lg bg-red-50 p-3 text-xs text-red-700">
@@ -445,13 +459,18 @@ export function PublicBookingFlow({
                           type="button"
                           disabled={!slot.available}
                           onClick={() => setSelectedTime(slot.time)}
-                          className={`rounded-lg py-2 px-2.5 text-xs font-semibold transition text-center ${
+                          className={`rounded-xl py-2 px-2.5 text-xs font-semibold transition text-center ${
                             !slot.available
                               ? "bg-slate-100 text-slate-300 cursor-not-allowed line-through"
                               : isSelected
-                              ? "bg-teal-700 text-white shadow-xs"
-                              : "border border-slate-200 bg-white text-slate-800 hover:border-teal-500 hover:bg-teal-50/50"
+                              ? "text-white shadow-xs font-bold"
+                              : "border border-slate-200 bg-white text-slate-800 hover:border-slate-400"
                           }`}
+                          style={
+                            isSelected && slot.available
+                              ? { backgroundColor: "var(--primary-color, #0d9488)" }
+                              : undefined
+                          }
                         >
                           {slot.time}
                         </button>
@@ -480,7 +499,7 @@ export function PublicBookingFlow({
                         placeholder="Ex: Maria Oliveira"
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2 pl-9 pr-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-teal-600 focus:bg-white focus:outline-none"
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2 pl-9 pr-3 text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none"
                       />
                     </div>
                   </div>
@@ -497,7 +516,7 @@ export function PublicBookingFlow({
                         placeholder="Ex: (11) 99999-8888"
                         value={customerPhone}
                         onChange={(e) => setCustomerPhone(e.target.value)}
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2 pl-9 pr-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-teal-600 focus:bg-white focus:outline-none"
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2 pl-9 pr-3 text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none"
                       />
                     </div>
                   </div>
@@ -513,7 +532,7 @@ export function PublicBookingFlow({
                         placeholder="Ex: seuemail@exemplo.com"
                         value={customerEmail}
                         onChange={(e) => setCustomerEmail(e.target.value)}
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2 pl-9 pr-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-teal-600 focus:bg-white focus:outline-none"
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2 pl-9 pr-3 text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none"
                       />
                     </div>
                   </div>
@@ -526,10 +545,10 @@ export function PublicBookingFlow({
                       <FileText className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                       <input
                         type="text"
-                        placeholder="Ex: Primeira vez no local, preferência de horário..."
+                        placeholder="Ex: Primeira vez no local, preferência de atendimento..."
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2 pl-9 pr-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-teal-600 focus:bg-white focus:outline-none"
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2 pl-9 pr-3 text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none"
                       />
                     </div>
                   </div>
@@ -541,7 +560,8 @@ export function PublicBookingFlow({
                 <button
                   type="submit"
                   disabled={isPending || !selectedTime || !selectedService}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-teal-800 px-4 py-3 text-sm font-bold text-white shadow-sm hover:bg-teal-900 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-extrabold text-white shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  style={{ backgroundColor: "var(--primary-color, #0d9488)" }}
                 >
                   {isPending ? (
                     <>

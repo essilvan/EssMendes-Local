@@ -1,23 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { WhatsAppButton } from "@/components/public/WhatsAppButton";
-import { PublicPageTracker } from "@/components/public/PublicPageTracker";
-import { PublicServicesView } from "@/components/public/PublicServicesView";
-import { BeforeAfterShowcase } from "@/components/public/BeforeAfterShowcase";
-import { generateWhatsAppUrl, sanitizePhoneNumber } from "@/utils/phone";
-import {
-  MapPin,
-  Phone,
-  ShieldCheck,
-  CalendarCheck2,
-  Clock,
-  ExternalLink,
-  Navigation,
-  Sparkles,
-  Calendar,
-} from "lucide-react";
-import type { Service, TenantProfile, PortfolioItem } from "@/types";
+import { PublicTenantHub } from "@/components/public/PublicTenantHub";
+import { sanitizePhoneNumber } from "@/utils/phone";
+import { getBusinessStatus } from "@/utils/opening-hours";
+import { extractNeighborhoodAndCity, sanitizeDescription } from "@/utils/address";
+import type { Service, TenantProfile, PortfolioItem, TenantReview, TenantPost } from "@/types";
 
 interface PublicPageProps {
   params: Promise<{
@@ -27,7 +15,9 @@ interface PublicPageProps {
 
 export const dynamic = "force-dynamic";
 
-// 1. Geração Dinâmica de Metadados SEO Local Avançado
+/**
+ * 1. Geração Dinâmica de Metadados SEO Local Avançado
+ */
 export async function generateMetadata({
   params,
 }: PublicPageProps): Promise<Metadata> {
@@ -49,28 +39,70 @@ export async function generateMetadata({
 
   const { data: profile } = await supabase
     .from("tenant_profiles")
-    .select("description, logo_url, address, phone_whatsapp")
+    .select("name, description, editorial_summary, logo_url, address, phone_whatsapp, phone, business_category, place_photos")
     .eq("tenant_id", tenant.id)
     .maybeSingle();
+
+  // Busca tags dos posts ativos para enriquecer as palavras-chave de SEO
+  const { data: rawPosts } = await supabase
+    .from("tenant_posts")
+    .select("tags, title")
+    .eq("tenant_id", tenant.id)
+    .eq("is_active", true)
+    .limit(5);
+
+  const postTags: string[] = (rawPosts || []).flatMap((p) => p.tags || []);
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://local.essmendes.com.br";
   const canonicalUrl = `${baseUrl}/${tenant.slug}`;
 
-  const title = `${tenant.name} | Agendamento Online & Serviços`;
-  const description =
-    profile?.description ||
-    `Conheça os serviços, preços e faça seu agendamento de horário online no ${tenant.name}. Localizado em ${profile?.address || "Atendimento local"}. WhatsApp: ${profile?.phone_whatsapp || ""}.`;
+  // Trata fotos do local para Open Graph
+  let ogImage = profile?.logo_url || null;
+  if (!ogImage && profile?.place_photos) {
+    if (Array.isArray(profile.place_photos) && profile.place_photos.length > 0) {
+      ogImage = profile.place_photos[0];
+    } else if (typeof profile.place_photos === "string") {
+      try {
+        const parsed = JSON.parse(profile.place_photos);
+        if (Array.isArray(parsed) && parsed.length > 0) ogImage = parsed[0];
+      } catch {
+        if (profile.place_photos.startsWith("http")) ogImage = profile.place_photos;
+      }
+    }
+  }
 
-  const ogImages = profile?.logo_url
+  const cleanLocation = extractNeighborhoodAndCity(profile?.address);
+  const cleanDescription = sanitizeDescription(profile?.description, profile?.address);
+
+  const title = `${profile?.name || tenant.name} | Agendamento Online & Catálogo`;
+  const description =
+    profile?.editorial_summary ||
+    cleanDescription ||
+    `Conheça os serviços, preços e faça seu agendamento de horário online em ${profile?.name || tenant.name}. Localizado em ${cleanLocation || profile?.address || "Atendimento local"}. WhatsApp: ${profile?.phone_whatsapp || profile?.phone || ""}.`;
+
+  const ogImages = ogImage
     ? [
         {
-          url: profile.logo_url,
+          url: ogImage,
           width: 1200,
           height: 630,
-          alt: `Logotipo e presença digital de ${tenant.name}`,
+          alt: `Fotos e presença digital de ${profile?.name || tenant.name}`,
         },
       ]
     : [];
+
+  const dynamicKeywords = Array.from(
+    new Set([
+      profile?.name || tenant.name,
+      profile?.business_category || "",
+      "agendamento online",
+      "horário marcado",
+      "catálogo de serviços",
+      "atendimento local",
+      cleanLocation,
+      ...postTags,
+    ])
+  ).filter(Boolean);
 
   return {
     title,
@@ -104,33 +136,18 @@ export async function generateMetadata({
         "max-snippet": -1,
       },
     },
-    keywords: [
-      tenant.name,
-      "agendamento online",
-      "horário marcado",
-      "catálogo de serviços",
-      "atendimento local",
-      profile?.address ? profile.address.split(",")[0].trim() : "",
-    ].filter(Boolean),
+    keywords: dynamicKeywords,
   };
 }
 
-// Helper para verificar se está aberto no momento (Segunda a Sábado, 08h às 18h)
-function checkIsOpenNow(): boolean {
-  const now = new Date();
-  const day = now.getDay(); // 0 = Domingo, 6 = Sábado
-  const hour = now.getHours();
-
-  if (day === 0) return false; // Domingo fechado
-  return hour >= 8 && hour < 18;
-}
-
-// 2. Página Pública do Estabelecimento (Redesign Moderno)
+/**
+ * 2. Página Pública do Estabelecimento (Local Business Hub)
+ */
 export default async function PublicTenantPage({ params }: PublicPageProps) {
   const { slug } = await params;
   const supabase = await createClient();
 
-  // Busca o tenant pelo slug
+  // 2.1 Busca o tenant pelo slug
   const { data: tenant } = await supabase
     .from("tenants")
     .select("id, name, slug")
@@ -141,22 +158,48 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
     notFound();
   }
 
-  // Busca dados de perfil do tenant
-  const { data: profile } = await supabase
-    .from("tenant_profiles")
-    .select("*")
-    .eq("tenant_id", tenant.id)
-    .maybeSingle();
+  // 2.2 Fetch paralelo e resiliente de todas as tabelas filhas vinculadas ao tenant.id
+  const [
+    profileRes,
+    servicesRes,
+    portfolioRes,
+    reviewsRes,
+    postsRes,
+  ] = await Promise.all([
+    supabase
+      .from("tenant_profiles")
+      .select("*")
+      .eq("tenant_id", tenant.id)
+      .maybeSingle(),
+    supabase
+      .from("services")
+      .select("*")
+      .eq("tenant_id", tenant.id)
+      .eq("is_active", true)
+      .order("name", { ascending: true }),
+    supabase
+      .from("portfolio_items")
+      .select("*")
+      .eq("tenant_id", tenant.id)
+      .eq("is_active", true)
+      .order("display_order", { ascending: true })
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("tenant_reviews")
+      .select("*")
+      .eq("tenant_id", tenant.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("tenant_posts")
+      .select("*")
+      .eq("tenant_id", tenant.id)
+      .order("published_at", { ascending: false }),
+  ]);
 
-  // Busca catálogo de serviços ativos
-  const { data: rawServices } = await supabase
-    .from("services")
-    .select("*")
-    .eq("tenant_id", tenant.id)
-    .eq("is_active", true)
-    .order("name", { ascending: true });
+  const profile = profileRes.data;
 
-  const activeServices: Service[] = (rawServices || []).map((s) => ({
+  // 2.3 Tratamento Seguro e Tipagem dos Serviços
+  const activeServices: Service[] = (servicesRes.data || []).map((s: any) => ({
     id: s.id,
     tenant_id: s.tenant_id,
     name: s.name,
@@ -168,75 +211,153 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
     updated_at: s.updated_at,
   }));
 
-  // Busca transformações de antes e depois
-  const { data: rawPortfolio } = await supabase
-    .from("portfolio_items")
-    .select("*")
-    .eq("tenant_id", tenant.id)
-    .eq("is_active", true)
-    .order("display_order", { ascending: true })
-    .order("created_at", { ascending: false });
+  // 2.4 Tratamento do Portfólio de Transformações (Apenas itens reais)
+  const portfolioItems = (portfolioRes.data || []) as PortfolioItem[];
 
-  const portfolioItems = (rawPortfolio || []) as PortfolioItem[];
+  // 2.5 Tratamento e Mapeamento Seguro de Avaliações Oficiais do Google Maps
+  const reviews: TenantReview[] = (reviewsRes.data || []).map((r: any) => ({
+    id: r.id,
+    tenant_id: r.tenant_id,
+    author_name: r.author_name || r.author || "Cliente Google",
+    author_photo_url: r.author_photo_url || r.photo_url || null,
+    rating: Number(r.rating) || 5,
+    text: r.review_text || r.text || "",
+    review_text: r.review_text || r.text || "",
+    relative_time: r.relative_time_description || r.relative_time || "recentemente",
+    relative_time_description: r.relative_time_description || r.relative_time || "recentemente",
+    created_at: r.created_at,
+    updated_at: r.updated_at,
+  }));
 
+  // 2.6 Tratamento e Filtragem de Posts / Artigos de SEO Ativos
+  const rawPostsList = postsRes.data || [];
+  const posts: TenantPost[] = rawPostsList
+    .filter((p: any) => p.is_active !== false && p.is_published !== false)
+    .map((p: any) => ({
+      id: p.id,
+      tenant_id: p.tenant_id,
+      title: p.title,
+      content: p.content,
+      image_url: p.image_url || null,
+      cta_type: p.cta_type || "booking",
+      cta_label: p.cta_label || "Agendar Horário",
+      cta_url: p.cta_url || null,
+      tags: Array.isArray(p.tags) ? p.tags : [],
+      meta_description: p.meta_description || null,
+      slug: p.slug || null,
+      is_active: p.is_active ?? p.is_published ?? true,
+      published_at: p.published_at || p.created_at,
+      created_at: p.created_at,
+      updated_at: p.updated_at,
+    }));
+
+  // 2.7 Parsing Robusto de Fotos do Google Maps (place_photos)
+  let cleanPlacePhotos: string[] = [];
+  if (profile?.place_photos) {
+    if (Array.isArray(profile.place_photos)) {
+      cleanPlacePhotos = profile.place_photos.filter((p: any) => Boolean(p) && typeof p === "string");
+    } else if (typeof profile.place_photos === "string") {
+      try {
+        const parsed = JSON.parse(profile.place_photos);
+        if (Array.isArray(parsed)) {
+          cleanPlacePhotos = parsed.filter((p: any) => Boolean(p) && typeof p === "string");
+        }
+      } catch {
+        if (profile.place_photos.startsWith("http")) {
+          cleanPlacePhotos = [profile.place_photos];
+        }
+      }
+    }
+  }
+
+  // 2.8 Parsing Robusto de Horários de Funcionamento (opening_hours_json)
+  let cleanOpeningHours: string[] = [];
+  if (profile?.opening_hours_json) {
+    if (Array.isArray(profile.opening_hours_json)) {
+      cleanOpeningHours = profile.opening_hours_json.filter((h: any) => Boolean(h) && typeof h === "string");
+    } else if (typeof profile.opening_hours_json === "string") {
+      try {
+        const parsed = JSON.parse(profile.opening_hours_json);
+        if (Array.isArray(parsed)) {
+          cleanOpeningHours = parsed.filter((h: any) => Boolean(h) && typeof h === "string");
+        }
+      } catch {}
+    }
+  }
+
+  // 2.9 Objeto de Perfil Tipado com Todos os Campos Enriquecidos
+  const fallbackLogo = profile?.logo_url || (cleanPlacePhotos.length > 0 ? cleanPlacePhotos[0] : null);
+  const cleanDescription = sanitizeDescription(profile?.description, profile?.address);
   const typedProfile: TenantProfile | null = profile
     ? {
         id: profile.id,
         tenant_id: profile.tenant_id,
-        description: profile.description,
-        phone_whatsapp: profile.phone_whatsapp,
-        address: profile.address,
-        logo_url: profile.logo_url,
+        name: profile.name || tenant.name,
+        description: cleanDescription || null,
+        editorial_summary: profile.editorial_summary || cleanDescription || null,
+        phone_whatsapp: profile.phone_whatsapp || profile.phone || null,
+        phone: profile.phone || profile.phone_whatsapp || null,
+        address: profile.address || null,
+        logo_url: fallbackLogo,
         template_id: profile.template_id || "default",
+        primary_color: profile.primary_color || "#0d9488",
+        google_maps_url: profile.google_maps_url || null,
+        google_place_id: profile.google_place_id || null,
+        rating: profile.rating ?? profile.google_rating ?? null,
+        google_rating: profile.google_rating ?? profile.rating ?? null,
+        review_count: profile.review_count ?? profile.google_reviews_count ?? null,
+        google_reviews_count: profile.google_reviews_count ?? profile.review_count ?? null,
+        business_category: profile.business_category || null,
+        opening_hours_json: cleanOpeningHours.length > 0 ? cleanOpeningHours : null,
+        latitude: typeof profile.latitude === "number" ? profile.latitude : null,
+        longitude: typeof profile.longitude === "number" ? profile.longitude : null,
+        hero_image_url: profile.hero_image_url || (cleanPlacePhotos.length > 0 ? cleanPlacePhotos[0] : null),
+        place_photos: cleanPlacePhotos,
         created_at: profile.created_at,
         updated_at: profile.updated_at,
       }
     : null;
 
-  const whatsappUrl = generateWhatsAppUrl(
-    profile?.phone_whatsapp || "",
-    tenant.name
-  );
-
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://local.essmendes.com.br";
   const canonicalUrl = `${baseUrl}/${tenant.slug}`;
-  const cleanPhone = profile?.phone_whatsapp ? sanitizePhoneNumber(profile.phone_whatsapp) : null;
+  const cleanPhone = profile?.phone_whatsapp || profile?.phone ? sanitizePhoneNumber(profile.phone_whatsapp || profile.phone) : null;
   const internationalPhone = cleanPhone ? `+55${cleanPhone}` : undefined;
-  const isOpenNow = checkIsOpenNow();
+  
+  // Cálculo dinâmico do horário de funcionamento real do estabelecimento
+  const businessStatus = getBusinessStatus(cleanOpeningHours);
 
-  // Schema Estruturado Rich Data (Schema.org LocalBusiness + OfferCatalog)
-  const jsonLd = {
+  // 2.10 Schemas Estruturados Rich Data (Schema.org LocalBusiness + OfferCatalog + BlogPosting)
+  const localBusinessJsonLd: Record<string, any> = {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
     "@id": canonicalUrl,
-    name: tenant.name,
-    description: profile?.description || `Presença profissional e catálogo de serviços de ${tenant.name}.`,
+    name: typedProfile?.name || tenant.name,
+    description: typedProfile?.editorial_summary || typedProfile?.description || (typedProfile?.business_category ? `${typedProfile.business_category} - ${tenant.name}` : `Presença profissional e catálogo de serviços de ${tenant.name}.`),
     url: canonicalUrl,
     telephone: internationalPhone,
-    image: profile?.logo_url || undefined,
+    image: typedProfile?.logo_url || (cleanPlacePhotos.length > 0 ? cleanPlacePhotos[0] : undefined),
     priceRange: "R$",
-    address: profile?.address
+    address: typedProfile?.address
       ? {
           "@type": "PostalAddress",
-          streetAddress: profile.address,
+          streetAddress: typedProfile.address,
           addressCountry: "BR",
         }
       : undefined,
-    openingHoursSpecification: [
-      {
-        "@type": "OpeningHoursSpecification",
-        dayOfWeek: [
-          "Monday",
-          "Tuesday",
-          "Wednesday",
-          "Thursday",
-          "Friday",
-          "Saturday",
-        ],
-        opens: "08:00",
-        closes: "18:00",
-      },
-    ],
+    geo: typedProfile?.latitude && typedProfile?.longitude
+      ? {
+          "@type": "GeoCoordinates",
+          latitude: typedProfile.latitude,
+          longitude: typedProfile.longitude,
+        }
+      : undefined,
+    aggregateRating: typedProfile?.google_rating || typedProfile?.rating
+      ? {
+          "@type": "AggregateRating",
+          ratingValue: typedProfile.google_rating || typedProfile.rating,
+          reviewCount: typedProfile.google_reviews_count || typedProfile.review_count || 1,
+        }
+      : undefined,
     hasOfferCatalog: activeServices.length > 0
       ? {
           "@type": "OfferCatalog",
@@ -256,218 +377,50 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
       : undefined,
   };
 
-  const googleMapsUrl = profile?.address
-    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(profile.address)}`
-    : null;
+  // Schemas Estruturados para Artigos e Posts de SEO Local (Schema.org BlogPosting)
+  const articleJsonLdList = posts.map((post) => ({
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: post.title,
+    description: post.meta_description || post.content.substring(0, 160),
+    articleBody: post.content,
+    image: post.image_url || undefined,
+    datePublished: post.published_at,
+    dateModified: post.updated_at || post.published_at,
+    author: {
+      "@type": "Organization",
+      name: typedProfile?.name || tenant.name,
+    },
+    publisher: {
+      "@type": "Organization",
+      name: typedProfile?.name || tenant.name,
+    },
+    keywords: post.tags && post.tags.length > 0 ? post.tags.join(", ") : undefined,
+    mainEntityOfPage: `${canonicalUrl}#novidades`,
+  }));
+
+  const allStructuredData = [localBusinessJsonLd, ...articleJsonLdList];
 
   return (
-    <div className="min-h-screen bg-slate-100/70 text-slate-900 selection:bg-teal-700 selection:text-white">
-      {/* Injeção JSON-LD para SEO Local */}
+    <>
+      {/* Injeção JSON-LD para SEO Local e Artigos */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(allStructuredData) }}
       />
 
-      {/* Tracker de Analytics (Zero PII) */}
-      <PublicPageTracker tenantId={tenant.id} />
-
-      {/* Hero Header Moderno com Gradiente e Texturas */}
-      <header className="relative bg-gradient-to-b from-teal-950 via-teal-900 to-teal-850 text-white pb-20 pt-10 px-4 sm:px-6 lg:px-8 shadow-sm">
-        <div className="mx-auto max-w-3xl text-center flex flex-col items-center">
-          
-          {/* Logo / Avatar com Borda e Sombra Suave */}
-          <div className="relative flex h-24 w-24 sm:h-28 sm:w-28 items-center justify-center rounded-3xl border-4 border-white/20 bg-white shadow-2xl overflow-hidden ring-4 ring-white/10">
-            {profile?.logo_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={profile.logo_url}
-                alt={`Logotipo de ${tenant.name}`}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center bg-teal-850 text-white font-black text-2xl sm:text-3xl">
-                {tenant.name.substring(0, 2).toUpperCase()}
-              </div>
-            )}
-          </div>
-
-          {/* Badges de Status (Aberto Agora + Verificado) */}
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-            <div
-              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-0.5 text-xs font-bold ring-1 ${
-                isOpenNow
-                  ? "bg-emerald-500/20 text-emerald-300 ring-emerald-400/30"
-                  : "bg-amber-500/20 text-amber-300 ring-amber-400/30"
-              }`}
-            >
-              <span
-                className={`h-2 w-2 rounded-full ${
-                  isOpenNow ? "bg-emerald-400 animate-pulse" : "bg-amber-400"
-                }`}
-              />
-              <span>{isOpenNow ? "Aberto Agora" : "Fechado no Momento"}</span>
-            </div>
-
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-teal-800/80 px-3 py-0.5 text-xs font-semibold text-teal-200 ring-1 ring-white/15">
-              <ShieldCheck className="h-3.5 w-3.5 text-teal-400" />
-              <span>Estabelecimento Verificado</span>
-            </div>
-          </div>
-
-          {/* Nome do Negócio */}
-          <h1 className="mt-3 text-2xl sm:text-4xl font-black tracking-tight text-white">
-            {tenant.name}
-          </h1>
-
-          {/* Descrição */}
-          {profile?.description && (
-            <p className="mt-2.5 max-w-xl text-xs sm:text-sm text-teal-100/90 leading-relaxed font-normal">
-              {profile.description}
-            </p>
-          )}
-
-          {/* Informações Rápidas de Localização */}
-          <div className="mt-3.5 flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-xs text-teal-200">
-            {profile?.address && (
-              <div className="flex items-center gap-1.5">
-                <MapPin className="h-3.5 w-3.5 text-teal-400 shrink-0" />
-                <span>{profile.address}</span>
-              </div>
-            )}
-            {profile?.phone_whatsapp && (
-              <div className="flex items-center gap-1.5">
-                <Phone className="h-3.5 w-3.5 text-teal-400 shrink-0" />
-                <span>{profile.phone_whatsapp}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Botões de Ação Rápida no Hero */}
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3 w-full max-w-md">
-            {profile?.phone_whatsapp && (
-              <div className="flex-1 min-w-[180px]">
-                <WhatsAppButton
-                  tenantId={tenant.id}
-                  url={whatsappUrl}
-                  businessName={tenant.name}
-                  size="large"
-                />
-              </div>
-            )}
-
-            {googleMapsUrl && (
-              <a
-                href={googleMapsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-3.5 text-xs font-bold text-white backdrop-blur-xs hover:bg-white/20 transition shadow-xs"
-                title="Abrir no Google Maps"
-              >
-                <Navigation className="h-4 w-4 text-teal-300" />
-                <span>Ver Mapa</span>
-              </a>
-            )}
-          </div>
-
-        </div>
-      </header>
-
-      {/* Conteúdo Principal */}
-      <main className="mx-auto max-w-3xl -mt-8 px-4 pb-20 sm:px-6 space-y-8">
-        
-        {/* Catálogo Interativo com Agendamento Online */}
-        <section>
-          <PublicServicesView
-            tenant={tenant}
-            profile={typedProfile}
-            services={activeServices}
-          />
-        </section>
-
-        {/* Seção de Antes & Depois (Se houver transformações cadastradas) */}
-        {portfolioItems.length > 0 && (
-          <section>
-            <BeforeAfterShowcase items={portfolioItems} />
-          </section>
-        )}
-
-        {/* Informações de Atendimento & Horários */}
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-6">
-          <div className="border-b border-slate-100 pb-4">
-            <h3 className="text-base font-bold text-slate-900">
-              Horários de Atendimento & Localização
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Venha nos visitar ou agende seu horário com antecedência.
-            </p>
-          </div>
-
-          <div className="grid gap-6 sm:grid-cols-2 text-xs">
-            {/* Horários da Semana */}
-            <div className="space-y-3">
-              <span className="font-bold text-slate-900 flex items-center gap-1.5">
-                <Clock className="h-4 w-4 text-teal-700" />
-                <span>Expediente de Trabalho:</span>
-              </span>
-
-              <ul className="space-y-2 border border-slate-100 rounded-xl bg-slate-50/60 p-3 text-slate-700">
-                <li className="flex justify-between pb-1 border-b border-slate-200/60">
-                  <span>Segunda a Sexta:</span>
-                  <strong className="text-teal-900">08:00 às 18:00</strong>
-                </li>
-                <li className="flex justify-between pb-1 border-b border-slate-200/60">
-                  <span>Sábado:</span>
-                  <strong className="text-teal-900">08:00 às 18:00</strong>
-                </li>
-                <li className="flex justify-between text-slate-400">
-                  <span>Domingo:</span>
-                  <span>Fechado</span>
-                </li>
-              </ul>
-            </div>
-
-            {/* Endereço e Contato */}
-            <div className="space-y-3 flex flex-col justify-between">
-              <div className="space-y-2">
-                <span className="font-bold text-slate-900 flex items-center gap-1.5">
-                  <MapPin className="h-4 w-4 text-teal-700" />
-                  <span>Endereço:</span>
-                </span>
-                <p className="text-slate-600 bg-slate-50/60 p-3 rounded-xl border border-slate-100 leading-relaxed">
-                  {profile?.address || "Consulte o endereço detalhado via WhatsApp."}
-                </p>
-              </div>
-
-              {googleMapsUrl && (
-                <a
-                  href={googleMapsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-xs font-bold text-teal-800 hover:bg-slate-50 transition shadow-2xs"
-                >
-                  <Navigation className="h-3.5 w-3.5" />
-                  <span>Traçar Rota no Google Maps</span>
-                  <ExternalLink className="h-3 w-3 text-slate-400 ml-1" />
-                </a>
-              )}
-            </div>
-          </div>
-        </section>
-
-        {/* Rodapé da Plataforma */}
-        <footer className="pt-6 text-center text-xs text-slate-500 space-y-1">
-          <p>
-            Página profissional gerada por{" "}
-            <a href="/" className="font-bold text-teal-700 hover:underline">
-              EssMendes Local
-            </a>
-          </p>
-          <p className="text-[11px] text-slate-400">
-            Plataforma de presença digital e geração de clientes para negócios locais.
-          </p>
-        </footer>
-
-      </main>
-    </div>
+      {/* Renderização do Local Business Hub */}
+      <PublicTenantHub
+        tenant={tenant}
+        profile={typedProfile}
+        services={activeServices}
+        portfolioItems={portfolioItems}
+        reviews={reviews}
+        posts={posts}
+        isOpenNow={businessStatus.isOpenNow}
+        statusBadgeText={businessStatus.badgeText}
+        statusDetailText={businessStatus.detailText}
+      />
+    </>
   );
 }

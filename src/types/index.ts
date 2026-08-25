@@ -21,11 +21,60 @@ export interface Tenant {
 export interface TenantProfile {
   id: string;
   tenant_id: string;
+  name?: string | null;
   description?: string | null;
+  editorial_summary?: string | null;
   phone_whatsapp?: string | null;
+  phone?: string | null;
   address?: string | null;
   logo_url?: string | null;
   template_id: string;
+  primary_color?: string | null;
+  google_maps_url?: string | null;
+  google_place_id?: string | null;
+  rating?: number | null;
+  google_rating?: number | null;
+  review_count?: number | null;
+  google_reviews_count?: number | null;
+  business_category?: string | null;
+  opening_hours_json?: string[] | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  hero_image_url?: string | null;
+  place_photos?: string[] | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TenantReview {
+  id: string;
+  tenant_id: string;
+  author_name: string;
+  author_photo_url?: string | null;
+  rating: number;
+  text: string;
+  review_text?: string | null;
+  relative_time?: string | null;
+  relative_time_description?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TenantPost {
+  id: string;
+  tenant_id: string;
+  title: string;
+  content: string;
+  image_url?: string | null;
+  cta_type?: "booking" | "whatsapp" | "link" | null;
+  cta_label?: string | null;
+  cta_url?: string | null;
+  tags?: string[] | null;
+  meta_description?: string | null;
+  slug?: string | null;
+  is_active: boolean;
+  is_published?: boolean;
+  published_at: string;
   created_at: string;
   updated_at: string;
 }
