@@ -44,7 +44,7 @@ export function ReviewsManager({
   const [relativeTime, setRelativeTime] = useState("há 2 dias");
 
   // Estado para Resposta com IA em cada avaliação
-  const [generatingReviewId, setGeneratingReviewId] = useState<string | null>(null);
+  const [loadingReviewId, setLoadingReviewId] = useState<string | null>(null);
   const [aiResponses, setAiResponses] = useState<Record<string, string>>({});
   const [copiedReviewId, setCopiedReviewId] = useState<string | null>(null);
 
@@ -115,13 +115,18 @@ export function ReviewsManager({
   };
 
   // Gerar Resposta com IA para a avaliação
-  const handleGenerateAiResponse = async (rev: TenantReview) => {
-    setGeneratingReviewId(rev.id);
+  const handleGenerateResponse = async (
+    id: string,
+    author: string,
+    rate: number,
+    reviewContent: string
+  ) => {
+    setLoadingReviewId(id);
     try {
       const result = await generateReviewResponse({
-        authorName: rev.author_name,
-        rating: rev.rating,
-        reviewText: rev.text || rev.review_text || "",
+        authorName: author,
+        rating: rate,
+        reviewText: reviewContent,
         businessName,
         businessCategory,
       });
@@ -129,7 +134,7 @@ export function ReviewsManager({
       if (result.success && result.data?.responseText) {
         setAiResponses((prev) => ({
           ...prev,
-          [rev.id]: result.data!.responseText,
+          [id]: result.data!.responseText,
         }));
       } else {
         setFeedback({
@@ -143,7 +148,7 @@ export function ReviewsManager({
         message: "Erro de conexão ao gerar resposta com IA.",
       });
     } finally {
-      setGeneratingReviewId(null);
+      setLoadingReviewId(null);
     }
   };
 
@@ -164,6 +169,8 @@ export function ReviewsManager({
       return next;
     });
   };
+
+  const mapsLink = googleMapsUrl || (businessName ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(businessName)}` : null);
 
   return (
     <div className="space-y-6">
@@ -191,9 +198,9 @@ export function ReviewsManager({
         </p>
 
         <div className="flex items-center gap-2">
-          {googleMapsUrl && (
+          {mapsLink && (
             <a
-              href={googleMapsUrl}
+              href={mapsLink}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-2xs transition"
@@ -332,7 +339,8 @@ export function ReviewsManager({
         ) : (
           reviews.map((rev) => {
             const hasAiResponse = !!aiResponses[rev.id];
-            const isGeneratingThis = generatingReviewId === rev.id;
+            const isGeneratingThis = loadingReviewId === rev.id;
+            const reviewText = rev.text || rev.review_text || "";
 
             return (
               <div
@@ -367,16 +375,16 @@ export function ReviewsManager({
 
                   {/* Texto do Comentário do Cliente */}
                   <p className="text-xs text-slate-700 italic leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                    &ldquo;{rev.text || rev.review_text || "Sem comentário escrito."}&rdquo;
+                    &ldquo;{reviewText || "Sem comentário escrito."}&rdquo;
                   </p>
 
-                  {/* Card de Resposta Inteligente com IA Exibida Diretamente Abaixo do Comentário */}
+                  {/* Caixa de Texto com Resposta de IA Gerada */}
                   {hasAiResponse && (
                     <div className="rounded-xl border border-purple-200 bg-gradient-to-br from-purple-50/80 to-indigo-50/50 p-3.5 space-y-2 text-xs animate-in fade-in zoom-in-95 duration-200">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5 text-purple-900 font-bold text-[11px]">
                           <Bot className="h-3.5 w-3.5 text-purple-600" />
-                          <span>Resposta Gerada por IA:</span>
+                          <span>Sugestão de Resposta com IA:</span>
                         </div>
                         <button
                           type="button"
@@ -397,74 +405,55 @@ export function ReviewsManager({
                             [rev.id]: e.target.value,
                           }))
                         }
-                        className="w-full rounded-lg border border-purple-200 bg-white p-2 text-xs text-slate-800 focus:border-purple-500 focus:outline-none leading-relaxed"
+                        className="w-full rounded-lg border border-purple-200 bg-white p-2.5 text-xs text-slate-800 focus:border-purple-500 focus:outline-none leading-relaxed"
                       />
 
-                      <div className="flex items-center justify-between gap-1.5 pt-1">
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
                         <button
                           type="button"
                           onClick={() =>
                             handleCopyText(rev.id, aiResponses[rev.id])
                           }
-                          className="inline-flex items-center gap-1 rounded-lg bg-purple-600 px-3 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-purple-700 active:scale-95 transition"
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-purple-600 px-3 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-purple-700 active:scale-95 transition"
                         >
                           {copiedReviewId === rev.id ? (
                             <>
                               <Check className="h-3.5 w-3.5 text-emerald-200" />
-                              <span>Copiado!</span>
+                              <span>Resposta Copiada!</span>
                             </>
                           ) : (
                             <>
                               <Copy className="h-3.5 w-3.5" />
-                              <span>Copiar Resposta</span>
+                              <span>📋 Copiar Resposta</span>
                             </>
                           )}
                         </button>
 
-                        {googleMapsUrl ? (
+                        {mapsLink && (
                           <a
-                            href={googleMapsUrl}
+                            href={mapsLink}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-purple-700 hover:text-purple-900 hover:underline"
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-purple-700 hover:text-purple-900 hover:underline"
                           >
-                            <ExternalLink className="h-3 w-3" />
-                            <span>Responder no Maps</span>
+                            <ExternalLink className="h-3.5 w-3.5" />
+                            <span>🔗 Abrir Perfil do Google</span>
                           </a>
-                        ) : (
-                          <button
-                            type="button"
-                            disabled={isGeneratingThis}
-                            onClick={() => handleGenerateAiResponse(rev)}
-                            className="inline-flex items-center gap-1 text-[11px] text-slate-500 hover:text-slate-700"
-                          >
-                            <RefreshCw className={`h-3 w-3 ${isGeneratingThis ? "animate-spin" : ""}`} />
-                            <span>Regerar</span>
-                          </button>
                         )}
                       </div>
                     </div>
                   )}
                 </div>
 
-                {/* Rodapé do Card com o Botão Padronizado de IA */}
+                {/* Rodapé do Card com o Botão de IA */}
                 <div className="flex items-center justify-between pt-3 border-t border-slate-100 gap-2">
                   <button
                     type="button"
-                    disabled={isGeneratingThis}
-                    onClick={() => handleGenerateAiResponse(rev)}
-                    className="flex items-center gap-1 text-xs font-semibold text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 px-3 py-1.5 rounded-md border border-purple-200 transition-colors disabled:opacity-50"
+                    onClick={() => handleGenerateResponse(rev.id, rev.author_name, rev.rating, reviewText)}
+                    disabled={loadingReviewId === rev.id}
+                    className="flex items-center gap-1 text-xs font-semibold text-purple-600 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-3 py-1.5 rounded-md transition-all disabled:opacity-50"
                   >
-                    {isGeneratingThis ? (
-                      <>
-                        <Loader2 className="h-3.5 w-3.5 animate-spin text-purple-600" />
-                        <span>Gerando Resposta...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>{hasAiResponse ? "✨ Regerar com IA" : "✨ Gerar Resposta com IA"}</span>
-                      </>
-                    )}
+                    {loadingReviewId === rev.id ? "⏳ Gerando resposta..." : "✨ Gerar Resposta com IA"}
                   </button>
 
                   <button

@@ -208,22 +208,23 @@ export function PublicBookingFlow({
 
   // Generate WhatsApp confirmation URL
   const getConfirmationWhatsAppUrl = () => {
-    if (!confirmedAppointment || !businessPhone) return "#";
-    const phone = sanitizePhoneNumber(businessPhone);
+    if (!businessPhone) return "#";
+    const cleanPhone = businessPhone.replace(/\D/g, "");
+    const formattedPhone = cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`;
     const dateFormatted = new Date(`${selectedDate}T00:00:00`).toLocaleDateString("pt-BR", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
     });
 
-    const msg = encodeURIComponent(
-      `👋 Olá! Acabei de solicitar um agendamento pelo site:\n` +
-        `🚗 *Serviço:* ${confirmedAppointment.service_name}\n` +
-        `📅 *Data:* ${dateFormatted} às ${selectedTime}\n` +
-        `👤 *Cliente:* ${confirmedAppointment.customer_name} (${confirmedAppointment.customer_phone})`
+    const message = encodeURIComponent(
+      `👋 Olá! Acabei de solicitar um agendamento pelo site:\n\n` +
+      `🚗 *Serviço:* ${confirmedAppointment?.service_name || selectedService?.name || "Serviço"}\n` +
+      `📅 *Data:* ${dateFormatted} às ${selectedTime}\n` +
+      `👤 *Cliente:* ${customerName} (${customerPhone})`
     );
 
-    return `https://wa.me/${phone}?text=${msg}`;
+    return `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${message}`;
   };
 
   // Reset modal state
@@ -318,9 +319,8 @@ export function PublicBookingFlow({
                     href={getConfirmationWhatsAppUrl()}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3.5 text-sm font-bold text-white shadow-md hover:bg-emerald-700 active:scale-95 transition ring-4 ring-emerald-100"
+                    className="flex items-center justify-center gap-2 w-full py-3.5 px-6 rounded-xl font-bold text-white bg-[#25D366] hover:bg-[#1EBE5D] transition-all shadow-md mt-4"
                   >
-                    <MessageCircle className="h-4 w-4" />
                     <span>🟢 Confirmar Agendamento no WhatsApp</span>
                   </a>
                 )}
