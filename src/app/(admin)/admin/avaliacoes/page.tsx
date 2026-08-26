@@ -29,6 +29,13 @@ export default async function AdminAvaliacoesPage() {
 
   const supabase = await createClient();
 
+  // Busca perfil e dados do negócio
+  const { data: profile } = await supabase
+    .from("tenant_profiles")
+    .select("name, business_category, google_maps_url, phone_whatsapp")
+    .eq("tenant_id", tenantContext.tenantId)
+    .maybeSingle();
+
   // Busca avaliações do tenant
   const { data: rawReviews } = await supabase
     .from("tenant_reviews")
@@ -50,11 +57,16 @@ export default async function AdminAvaliacoesPage() {
           Avaliações & Google Reviews
         </h1>
         <p className="mt-1 text-sm text-slate-600">
-          Acompanhe, cadastre e gerencie os depoimentos exibidos no card do Google Business Profile na sua página pública.
+          Acompanhe os depoimentos recebidos, responda rapidamente com Inteligência Artificial e impulsione seu ranqueamento local no Google.
         </p>
       </div>
 
-      <ReviewsManager initialReviews={reviews} />
+      <ReviewsManager
+        initialReviews={reviews}
+        businessName={profile?.name || tenantContext.tenant?.name || "Meu Estabelecimento"}
+        businessCategory={profile?.business_category || "Serviços Locais"}
+        googleMapsUrl={profile?.google_maps_url || null}
+      />
     </div>
   );
 }

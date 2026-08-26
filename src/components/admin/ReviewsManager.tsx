@@ -4,8 +4,8 @@ import React, { useState, useTransition } from "react";
 import {
   addTenantReviewAction,
   deleteTenantReviewAction,
-  type ReviewActionState,
 } from "@/services/review.actions";
+import { generateReviewResponse } from "@/services/ai-review.actions";
 import type { TenantReview } from "@/types";
 import {
   Star,
@@ -14,22 +14,39 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
-  User,
-  MessageSquare,
   Sparkles,
+  Copy,
+  Check,
+  ExternalLink,
+  Bot,
+  RefreshCw,
+  X,
 } from "lucide-react";
 
 interface ReviewsManagerProps {
   initialReviews: TenantReview[];
+  businessName?: string;
+  businessCategory?: string;
+  googleMapsUrl?: string | null;
 }
 
-export function ReviewsManager({ initialReviews }: ReviewsManagerProps) {
+export function ReviewsManager({
+  initialReviews,
+  businessName,
+  businessCategory,
+  googleMapsUrl,
+}: ReviewsManagerProps) {
   const [reviews, setReviews] = useState<TenantReview[]>(initialReviews);
   const [isAdding, setIsAdding] = useState(false);
   const [authorName, setAuthorName] = useState("");
   const [rating, setRating] = useState(5);
   const [text, setText] = useState("");
   const [relativeTime, setRelativeTime] = useState("há 2 dias");
+
+  // Estado para Resposta com IA em cada avaliação
+  const [generatingReviewId, setGeneratingReviewId] = useState<string | null>(null);
+  const [aiResponses, setAiResponses] = useState<Record<string, string>>({});
+  const [copiedReviewId, setCopiedReviewId] = useState<string | null>(null);
 
   const [feedback, setFeedback] = useState<{
     type: "success" | "error";
@@ -97,6 +114,57 @@ export function ReviewsManager({ initialReviews }: ReviewsManagerProps) {
     });
   };
 
+  // Gerar Resposta com IA para a avaliação
+  const handleGenerateAiResponse = async (rev: TenantReview) => {
+    setGeneratingReviewId(rev.id);
+    try {
+      const result = await generateReviewResponse({
+        authorName: rev.author_name,
+        rating: rev.rating,
+        reviewText: rev.text || rev.review_text || "",
+        businessName,
+        businessCategory,
+      });
+
+      if (result.success && result.data?.responseText) {
+        setAiResponses((prev) => ({
+          ...prev,
+          [rev.id]: result.data!.responseText,
+        }));
+      } else {
+        setFeedback({
+          type: "error",
+          message: result.error || "Não foi possível gerar a resposta com IA.",
+        });
+      }
+    } catch (err) {
+      setFeedback({
+        type: "error",
+        message: "Erro de conexão ao gerar resposta com IA.",
+      });
+    } finally {
+      setGeneratingReviewId(null);
+    }
+  };
+
+  const handleCopyText = (reviewId: string, textToCopy: string) => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(textToCopy);
+      setCopiedReviewId(reviewId);
+      setTimeout(() => {
+        setCopiedReviewId(null);
+      }, 2500);
+    }
+  };
+
+  const handleCloseAiResponse = (reviewId: string) => {
+    setAiResponses((prev) => {
+      const next = { ...prev };
+      delete next[reviewId];
+      return next;
+    });
+  };
+
   return (
     <div className="space-y-6">
       {feedback && (
@@ -117,19 +185,33 @@ export function ReviewsManager({ initialReviews }: ReviewsManagerProps) {
       )}
 
       {/* Header com Botão de Adicionar */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <p className="text-xs text-slate-500">
-          Gerencie os depoimentos e notas exibidos no card oficial do Google Business Profile.
+          Gerencie depoimentos oficiais do Google e responda com IA para acelerar a reputação do seu negócio.
         </p>
 
-        <button
-          type="button"
-          onClick={() => setIsAdding(!isAdding)}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-slate-800 transition"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          <span>{isAdding ? "Cancelar" : "Nova Avaliação Manual"}</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {googleMapsUrl && (
+            <a
+              href={googleMapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-2xs transition"
+            >
+              <ExternalLink className="h-3.5 w-3.5 text-slate-400" />
+              <span>Ver no Google Maps</span>
+            </a>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setIsAdding(!isAdding)}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-slate-800 transition"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>{isAdding ? "Cancelar" : "Nova Avaliação Manual"}</span>
+          </button>
+        </div>
       </div>
 
       {/* Formulário de Adicionar Nova Avaliação */}
@@ -172,6 +254,8 @@ export function ReviewsManager({ initialReviews }: ReviewsManagerProps) {
                 <option value={5}>★★★★★ (5 Estrelas - Excelente)</option>
                 <option value={4}>★★★★☆ (4 Estrelas - Muito Bom)</option>
                 <option value={3}>★★★☆☆ (3 Estrelas - Bom)</option>
+                <option value={2}>★★☆☆☆ (2 Estrelas - Regular)</option>
+                <option value={1}>★☆☆☆☆ (1 Estrela - Insatisfeito)</option>
               </select>
             </div>
 
@@ -223,7 +307,7 @@ export function ReviewsManager({ initialReviews }: ReviewsManagerProps) {
       )}
 
       {/* Lista de Avaliações Cadastradas */}
-      <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {reviews.length === 0 ? (
           <div className="sm:col-span-2 lg:col-span-3 rounded-2xl border border-slate-200 bg-white p-10 text-center text-xs text-slate-500 space-y-2">
             <Star className="h-8 w-8 text-slate-300 mx-auto" />
@@ -231,48 +315,156 @@ export function ReviewsManager({ initialReviews }: ReviewsManagerProps) {
             <p>Utilize o importador automático do Google Maps em Perfil ou adicione avaliações manualmente.</p>
           </div>
         ) : (
-          reviews.map((rev) => (
-            <div
-              key={rev.id}
-              className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs space-y-3"
-            >
-              <div className="space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-800 text-white font-bold text-xs">
-                      {rev.author_name.charAt(0)}
+          reviews.map((rev) => {
+            const hasAiResponse = !!aiResponses[rev.id];
+            const isGeneratingThis = generatingReviewId === rev.id;
+
+            return (
+              <div
+                key={rev.id}
+                className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-2xs space-y-3 transition hover:shadow-xs"
+              >
+                <div className="space-y-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-800 text-white font-bold text-xs">
+                        {rev.author_name ? rev.author_name.charAt(0).toUpperCase() : "C"}
+                      </div>
+                      <div>
+                        <p className="font-bold text-xs text-slate-900">{rev.author_name}</p>
+                        <p className="text-[10px] text-slate-400">
+                          {rev.relative_time || rev.relative_time_description || "recentemente"}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-bold text-xs text-slate-900">{rev.author_name}</p>
-                      <p className="text-[10px] text-slate-400">{rev.relative_time || "recentemente"}</p>
+
+                    <div className="flex items-center gap-0.5 text-amber-500">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`h-3 w-3 ${
+                            i < rev.rating ? "fill-amber-400 text-amber-400" : "text-slate-200"
+                          }`}
+                        />
+                      ))}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-0.5 text-amber-500">
-                    {[...Array(rev.rating)].map((_, i) => (
-                      <Star key={i} className="h-3 w-3 fill-current" />
-                    ))}
-                  </div>
+                  <p className="text-xs text-slate-600 italic leading-relaxed">
+                    &ldquo;{rev.text || rev.review_text || "Sem comentário escrito."}&rdquo;
+                  </p>
                 </div>
 
-                <p className="text-xs text-slate-600 italic leading-relaxed">
-                  &ldquo;{rev.text}&rdquo;
-                </p>
-              </div>
+                {/* Card de Resposta Inteligente com IA */}
+                {hasAiResponse && (
+                  <div className="rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50/70 to-purple-50/40 p-3.5 space-y-2 text-xs animate-in fade-in zoom-in-95 duration-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-indigo-900 font-bold text-[11px]">
+                        <Bot className="h-3.5 w-3.5 text-indigo-600" />
+                        <span>Sugestão de Resposta com IA</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleCloseAiResponse(rev.id)}
+                        className="text-slate-400 hover:text-slate-600 p-0.5"
+                        title="Fechar sugestão"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
 
-              <div className="flex justify-end pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  disabled={deletingId === rev.id}
-                  onClick={() => handleDelete(rev.id)}
-                  className="inline-flex items-center gap-1 text-[11px] font-bold text-red-600 hover:text-red-800 transition"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  <span>Excluir</span>
-                </button>
+                    <textarea
+                      rows={3}
+                      value={aiResponses[rev.id]}
+                      onChange={(e) =>
+                        setAiResponses((prev) => ({
+                          ...prev,
+                          [rev.id]: e.target.value,
+                        }))
+                      }
+                      className="w-full rounded-lg border border-indigo-200/80 bg-white/90 p-2 text-xs text-slate-800 focus:border-indigo-500 focus:outline-none leading-relaxed"
+                    />
+
+                    <div className="flex items-center justify-between gap-1.5 pt-1">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleCopyText(rev.id, aiResponses[rev.id])
+                        }
+                        className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-2.5 py-1.5 text-[11px] font-bold text-white shadow-2xs hover:bg-indigo-700 active:scale-95 transition"
+                      >
+                        {copiedReviewId === rev.id ? (
+                          <>
+                            <Check className="h-3 w-3 text-emerald-200" />
+                            <span>Copiado!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3 w-3" />
+                            <span>Copiar Resposta</span>
+                          </>
+                        )}
+                      </button>
+
+                      {googleMapsUrl ? (
+                        <a
+                          href={googleMapsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-700 hover:text-indigo-900 hover:underline"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          <span>Google Maps</span>
+                        </a>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={isGeneratingThis}
+                          onClick={() => handleGenerateAiResponse(rev)}
+                          className="inline-flex items-center gap-1 text-[11px] text-slate-500 hover:text-slate-700"
+                        >
+                          <RefreshCw className={`h-3 w-3 ${isGeneratingThis ? "animate-spin" : ""}`} />
+                          <span>Regerar</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Rodapé do Card com Ações */}
+                <div className="flex items-center justify-between pt-2.5 border-t border-slate-100">
+                  <button
+                    type="button"
+                    disabled={isGeneratingThis}
+                    onClick={() => handleGenerateAiResponse(rev)}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 hover:text-indigo-900 transition disabled:opacity-50"
+                  >
+                    {isGeneratingThis ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-indigo-600" />
+                        <span>Gerando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
+                        <span>{hasAiResponse ? "Regerar com IA" : "✨ Gerar Resposta com IA"}</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={deletingId === rev.id}
+                    onClick={() => handleDelete(rev.id)}
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-red-600 hover:text-red-800 transition"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span>Excluir</span>
+                  </button>
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>

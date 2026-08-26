@@ -217,13 +217,10 @@ export function PublicBookingFlow({
     });
 
     const msg = encodeURIComponent(
-      `Olá! Acabei de realizar o agendamento pelo site:\n\n` +
-        `• *Cliente:* ${confirmedAppointment.customer_name}\n` +
-        `• *Serviço:* ${confirmedAppointment.service_name}\n` +
-        `• *Data:* ${dateFormatted}\n` +
-        `• *Horário:* ${selectedTime}\n` +
-        `• *Valor:* ${formatCurrency(Number(confirmedAppointment.price))}\n\n` +
-        `Gostaria de confirmar o meu horário. Obrigado!`
+      `👋 Olá! Acabei de solicitar um agendamento pelo site:\n` +
+        `🚗 *Serviço:* ${confirmedAppointment.service_name}\n` +
+        `📅 *Data:* ${dateFormatted} às ${selectedTime}\n` +
+        `👤 *Cliente:* ${confirmedAppointment.customer_name} (${confirmedAppointment.customer_phone})`
     );
 
     return `https://wa.me/${phone}?text=${msg}`;
@@ -321,10 +318,10 @@ export function PublicBookingFlow({
                     href={getConfirmationWhatsAppUrl()}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3.5 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 active:scale-95 transition"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3.5 text-sm font-bold text-white shadow-md hover:bg-emerald-700 active:scale-95 transition ring-4 ring-emerald-100"
                   >
                     <MessageCircle className="h-4 w-4" />
-                    <span>Confirmar no WhatsApp da Empresa</span>
+                    <span>🟢 Confirmar Agendamento no WhatsApp</span>
                   </a>
                 )}
 

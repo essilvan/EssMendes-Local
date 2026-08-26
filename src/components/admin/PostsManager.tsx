@@ -6,6 +6,7 @@ import {
   deletePostAction,
   togglePostStatusAction,
 } from "@/services/post.actions";
+import { generateLocalSeoPost } from "@/services/ai-post.actions";
 import type { TenantPost } from "@/types";
 import {
   Newspaper,
@@ -24,6 +25,8 @@ import {
   Tag,
   Globe,
   Search,
+  Bot,
+  Wand2,
 } from "lucide-react";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 
@@ -52,6 +55,7 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
   } | null>(null);
 
   const [isPending, startTransition] = useTransition();
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const handleApplyPreset = (preset: {
@@ -71,6 +75,39 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
     setCtaLabel(preset.ctaLabel);
     if (preset.imageUrl) setImageUrl(preset.imageUrl);
     setIsAdding(true);
+  };
+
+  const handleGenerateAiPost = async () => {
+    setIsGeneratingAi(true);
+    setFeedback(null);
+    try {
+      const res = await generateLocalSeoPost();
+      if (res.success && res.data) {
+        setTitle(res.data.title);
+        setContent(res.data.content);
+        setTags(res.data.tags || "");
+        setMetaDescription(res.data.metaDescription || "");
+        setCtaType(res.data.ctaType);
+        setCtaLabel(res.data.ctaLabel);
+        setIsAdding(true);
+        setFeedback({
+          type: "success",
+          message: "✨ Publicação semanal gerada com IA! Revise os detalhes abaixo e publique no site.",
+        });
+      } else {
+        setFeedback({
+          type: "error",
+          message: res.error || "Não foi possível gerar a publicação com IA.",
+        });
+      }
+    } catch (err) {
+      setFeedback({
+        type: "error",
+        message: "Erro de comunicação ao acionar a IA.",
+      });
+    } finally {
+      setIsGeneratingAi(false);
+    }
   };
 
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
@@ -193,14 +230,36 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setIsAdding(!isAdding)}
-          className="inline-flex items-center gap-2 rounded-xl bg-teal-800 px-4 py-2.5 text-xs sm:text-sm font-bold text-white shadow-sm hover:bg-teal-900 transition self-start sm:self-auto"
-        >
-          <Plus className="h-4 w-4" />
-          <span>{isAdding ? "Fechar Formulário" : "Nova Publicação SEO"}</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
+          {/* Botão de Criação com IA */}
+          <button
+            type="button"
+            disabled={isGeneratingAi}
+            onClick={handleGenerateAiPost}
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-2.5 text-xs sm:text-sm font-bold text-white shadow-sm hover:from-indigo-700 hover:to-purple-700 active:scale-95 disabled:opacity-60 transition"
+          >
+            {isGeneratingAi ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Gerando com IA...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4 text-amber-300" />
+                <span>✨ Criar Post Semanal com IA</span>
+              </>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsAdding(!isAdding)}
+            className="inline-flex items-center gap-2 rounded-xl bg-teal-800 px-4 py-2.5 text-xs sm:text-sm font-bold text-white shadow-sm hover:bg-teal-900 transition"
+          >
+            <Plus className="h-4 w-4" />
+            <span>{isAdding ? "Fechar Formulário" : "Nova Publicação Manual"}</span>
+          </button>
+        </div>
       </div>
 
       {/* Feedback Alert */}
@@ -317,8 +376,11 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
         >
           <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
             <div>
-              <h3 className="text-base font-bold text-slate-900">
-                Criar Publicação Otimizada para SEO
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <span>Publicação Otimizada para SEO Local</span>
+                <span className="text-[10px] font-extrabold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full">
+                  IA & Rich Snippets
+                </span>
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
                 Esta novidade aparecerá na vitrine pública e no Schema JSON-LD para indexação do Google.
@@ -352,11 +414,11 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
               </label>
               <textarea
                 required
-                rows={4}
+                rows={5}
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 placeholder="Descreva a novidade, dicas especializadas ou a oferta com clareza..."
-                className="mt-1.5 block w-full rounded-xl border border-slate-300 bg-white p-3 text-xs sm:text-sm text-slate-900 focus:border-teal-600 focus:outline-none"
+                className="mt-1.5 block w-full rounded-xl border border-slate-300 bg-white p-3 text-xs sm:text-sm text-slate-900 focus:border-teal-600 focus:outline-none leading-relaxed"
               />
             </div>
 
@@ -417,7 +479,7 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
                 onChange={(e) => {
                   const val = e.target.value as "booking" | "whatsapp" | "link";
                   setCtaType(val);
-                  if (val === "booking") setCtaLabel("Agendar Horário");
+                  if (val === "booking") setCtaLabel("Agendar Horário Online");
                   if (val === "whatsapp") setCtaLabel("Chamar no WhatsApp");
                   if (val === "link") setCtaLabel("Saiba Mais");
                 }}
@@ -508,7 +570,7 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
               Nenhuma publicação cadastrada no momento.
             </p>
             <p className="text-[11px] text-slate-400">
-              Use os modelos prontos acima para criar seu primeiro comunicado em 1 clique.
+              Clique em &ldquo;✨ Criar Post Semanal com IA&rdquo; para gerar sua primeira publicação em 1 clique.
             </p>
           </div>
         ) : (
