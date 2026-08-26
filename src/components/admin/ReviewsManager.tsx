@@ -184,7 +184,7 @@ export function ReviewsManager({
         </div>
       )}
 
-      {/* Header com Botão de Adicionar */}
+      {/* Header com Botões */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <p className="text-xs text-slate-500">
           Gerencie depoimentos oficiais do Google e responda com IA para acelerar a reputação do seu negócio.
@@ -221,7 +221,7 @@ export function ReviewsManager({
           className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4"
         >
           <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-            <Sparkles className="h-4 w-4 text-teal-700" />
+            <Sparkles className="h-4 w-4 text-purple-600" />
             <h3 className="text-sm font-bold text-slate-900">
               Cadastrar Depoimento de Cliente
             </h3>
@@ -238,7 +238,7 @@ export function ReviewsManager({
                 value={authorName}
                 onChange={(e) => setAuthorName(e.target.value)}
                 placeholder="Ex: Mariana Albuquerque"
-                className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-900 focus:border-teal-600 focus:outline-none"
+                className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-900 focus:border-purple-600 focus:outline-none"
               />
             </div>
 
@@ -249,7 +249,7 @@ export function ReviewsManager({
               <select
                 value={rating}
                 onChange={(e) => setRating(Number(e.target.value))}
-                className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-900 focus:border-teal-600 focus:outline-none"
+                className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-900 focus:border-purple-600 focus:outline-none"
               >
                 <option value={5}>★★★★★ (5 Estrelas - Excelente)</option>
                 <option value={4}>★★★★☆ (4 Estrelas - Muito Bom)</option>
@@ -269,7 +269,7 @@ export function ReviewsManager({
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder="Ex: Atendimento impecável, equipe pontual e resultado maravilhoso!"
-                className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-900 focus:border-teal-600 focus:outline-none"
+                className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-900 focus:border-purple-600 focus:outline-none"
               />
             </div>
 
@@ -282,7 +282,7 @@ export function ReviewsManager({
                 value={relativeTime}
                 onChange={(e) => setRelativeTime(e.target.value)}
                 placeholder="Ex: há 3 dias, há 1 semana"
-                className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-900 focus:border-teal-600 focus:outline-none"
+                className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-900 focus:border-purple-600 focus:outline-none"
               />
             </div>
           </div>
@@ -291,7 +291,7 @@ export function ReviewsManager({
             <button
               type="submit"
               disabled={isPending}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-teal-800 px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-teal-900 disabled:opacity-60 transition"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-purple-700 px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-purple-800 disabled:opacity-60 transition"
             >
               {isPending ? (
                 <>
@@ -309,10 +309,25 @@ export function ReviewsManager({
       {/* Lista de Avaliações Cadastradas */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {reviews.length === 0 ? (
-          <div className="sm:col-span-2 lg:col-span-3 rounded-2xl border border-slate-200 bg-white p-10 text-center text-xs text-slate-500 space-y-2">
+          <div className="sm:col-span-2 lg:col-span-3 rounded-2xl border border-slate-200 bg-white p-10 text-center text-xs text-slate-500 space-y-3">
             <Star className="h-8 w-8 text-slate-300 mx-auto" />
             <p className="font-bold text-slate-700">Nenhuma avaliação cadastrada ainda.</p>
-            <p>Utilize o importador automático do Google Maps em Perfil ou adicione avaliações manualmente.</p>
+            <p>Utilize o importador automático do Google Maps em Perfil ou adicione uma avaliação manual para testar a resposta com IA.</p>
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthorName("Cliente Exemplo");
+                  setRating(5);
+                  setText("Atendimento excelente, profissionais dedicados e pontualidade nota 10!");
+                  setIsAdding(true);
+                }}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 px-3 py-1.5 rounded-md border border-purple-200 transition-colors"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Preencher Avaliação de Teste</span>
+              </button>
+            </div>
           </div>
         ) : (
           reviews.map((rev) => {
@@ -350,104 +365,104 @@ export function ReviewsManager({
                     </div>
                   </div>
 
-                  <p className="text-xs text-slate-600 italic leading-relaxed">
+                  {/* Texto do Comentário do Cliente */}
+                  <p className="text-xs text-slate-700 italic leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-100">
                     &ldquo;{rev.text || rev.review_text || "Sem comentário escrito."}&rdquo;
                   </p>
-                </div>
 
-                {/* Card de Resposta Inteligente com IA */}
-                {hasAiResponse && (
-                  <div className="rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50/70 to-purple-50/40 p-3.5 space-y-2 text-xs animate-in fade-in zoom-in-95 duration-200">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-indigo-900 font-bold text-[11px]">
-                        <Bot className="h-3.5 w-3.5 text-indigo-600" />
-                        <span>Sugestão de Resposta com IA</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleCloseAiResponse(rev.id)}
-                        className="text-slate-400 hover:text-slate-600 p-0.5"
-                        title="Fechar sugestão"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-
-                    <textarea
-                      rows={3}
-                      value={aiResponses[rev.id]}
-                      onChange={(e) =>
-                        setAiResponses((prev) => ({
-                          ...prev,
-                          [rev.id]: e.target.value,
-                        }))
-                      }
-                      className="w-full rounded-lg border border-indigo-200/80 bg-white/90 p-2 text-xs text-slate-800 focus:border-indigo-500 focus:outline-none leading-relaxed"
-                    />
-
-                    <div className="flex items-center justify-between gap-1.5 pt-1">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleCopyText(rev.id, aiResponses[rev.id])
-                        }
-                        className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-2.5 py-1.5 text-[11px] font-bold text-white shadow-2xs hover:bg-indigo-700 active:scale-95 transition"
-                      >
-                        {copiedReviewId === rev.id ? (
-                          <>
-                            <Check className="h-3 w-3 text-emerald-200" />
-                            <span>Copiado!</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="h-3 w-3" />
-                            <span>Copiar Resposta</span>
-                          </>
-                        )}
-                      </button>
-
-                      {googleMapsUrl ? (
-                        <a
-                          href={googleMapsUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-700 hover:text-indigo-900 hover:underline"
-                        >
-                          <ExternalLink className="h-3 w-3" />
-                          <span>Google Maps</span>
-                        </a>
-                      ) : (
+                  {/* Card de Resposta Inteligente com IA Exibida Diretamente Abaixo do Comentário */}
+                  {hasAiResponse && (
+                    <div className="rounded-xl border border-purple-200 bg-gradient-to-br from-purple-50/80 to-indigo-50/50 p-3.5 space-y-2 text-xs animate-in fade-in zoom-in-95 duration-200">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 text-purple-900 font-bold text-[11px]">
+                          <Bot className="h-3.5 w-3.5 text-purple-600" />
+                          <span>Resposta Gerada por IA:</span>
+                        </div>
                         <button
                           type="button"
-                          disabled={isGeneratingThis}
-                          onClick={() => handleGenerateAiResponse(rev)}
-                          className="inline-flex items-center gap-1 text-[11px] text-slate-500 hover:text-slate-700"
+                          onClick={() => handleCloseAiResponse(rev.id)}
+                          className="text-slate-400 hover:text-slate-600 p-0.5"
+                          title="Fechar sugestão"
                         >
-                          <RefreshCw className={`h-3 w-3 ${isGeneratingThis ? "animate-spin" : ""}`} />
-                          <span>Regerar</span>
+                          <X className="h-3.5 w-3.5" />
                         </button>
-                      )}
-                    </div>
-                  </div>
-                )}
+                      </div>
 
-                {/* Rodapé do Card com Ações */}
-                <div className="flex items-center justify-between pt-2.5 border-t border-slate-100">
+                      <textarea
+                        rows={3}
+                        value={aiResponses[rev.id]}
+                        onChange={(e) =>
+                          setAiResponses((prev) => ({
+                            ...prev,
+                            [rev.id]: e.target.value,
+                          }))
+                        }
+                        className="w-full rounded-lg border border-purple-200 bg-white p-2 text-xs text-slate-800 focus:border-purple-500 focus:outline-none leading-relaxed"
+                      />
+
+                      <div className="flex items-center justify-between gap-1.5 pt-1">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleCopyText(rev.id, aiResponses[rev.id])
+                          }
+                          className="inline-flex items-center gap-1 rounded-lg bg-purple-600 px-3 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-purple-700 active:scale-95 transition"
+                        >
+                          {copiedReviewId === rev.id ? (
+                            <>
+                              <Check className="h-3.5 w-3.5 text-emerald-200" />
+                              <span>Copiado!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3.5 w-3.5" />
+                              <span>Copiar Resposta</span>
+                            </>
+                          )}
+                        </button>
+
+                        {googleMapsUrl ? (
+                          <a
+                            href={googleMapsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-purple-700 hover:text-purple-900 hover:underline"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            <span>Responder no Maps</span>
+                          </a>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={isGeneratingThis}
+                            onClick={() => handleGenerateAiResponse(rev)}
+                            className="inline-flex items-center gap-1 text-[11px] text-slate-500 hover:text-slate-700"
+                          >
+                            <RefreshCw className={`h-3 w-3 ${isGeneratingThis ? "animate-spin" : ""}`} />
+                            <span>Regerar</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Rodapé do Card com o Botão Padronizado de IA */}
+                <div className="flex items-center justify-between pt-3 border-t border-slate-100 gap-2">
                   <button
                     type="button"
                     disabled={isGeneratingThis}
                     onClick={() => handleGenerateAiResponse(rev)}
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 hover:text-indigo-900 transition disabled:opacity-50"
+                    className="flex items-center gap-1 text-xs font-semibold text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 px-3 py-1.5 rounded-md border border-purple-200 transition-colors disabled:opacity-50"
                   >
                     {isGeneratingThis ? (
                       <>
-                        <Loader2 className="h-3.5 w-3.5 animate-spin text-indigo-600" />
-                        <span>Gerando...</span>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-purple-600" />
+                        <span>Gerando Resposta...</span>
                       </>
                     ) : (
                       <>
-                        <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
-                        <span>{hasAiResponse ? "Regerar com IA" : "✨ Gerar Resposta com IA"}</span>
+                        <span>{hasAiResponse ? "✨ Regerar com IA" : "✨ Gerar Resposta com IA"}</span>
                       </>
                     )}
                   </button>

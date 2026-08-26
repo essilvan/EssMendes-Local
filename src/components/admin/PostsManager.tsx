@@ -25,8 +25,6 @@ import {
   Tag,
   Globe,
   Search,
-  Bot,
-  Wand2,
 } from "lucide-react";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 
@@ -92,18 +90,18 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
         setIsAdding(true);
         setFeedback({
           type: "success",
-          message: "✨ Publicação semanal gerada com IA! Revise os detalhes abaixo e publique no site.",
+          message: "✨ Publicação semanal gerada com IA! Os campos foram preenchidos abaixo. Revise e clique em Publicar.",
         });
       } else {
         setFeedback({
           type: "error",
-          message: res.error || "Não foi possível gerar a publicação com IA.",
+          message: res.error || "Não foi possível gerar o post com IA.",
         });
       }
     } catch (err) {
       setFeedback({
         type: "error",
-        message: "Erro de comunicação ao acionar a IA.",
+        message: "Erro ao comunicar com a IA para criar o post.",
       });
     } finally {
       setIsGeneratingAi(false);
@@ -215,7 +213,7 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header com Botões de Ação */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-800 ring-1 ring-teal-600/20">
@@ -231,30 +229,20 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
-          {/* Botão de Criação com IA */}
+          {/* Botão de Criação com IA com Estilo Padronizado */}
           <button
             type="button"
-            disabled={isGeneratingAi}
             onClick={handleGenerateAiPost}
-            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-2.5 text-xs sm:text-sm font-bold text-white shadow-sm hover:from-indigo-700 hover:to-purple-700 active:scale-95 disabled:opacity-60 transition"
+            disabled={isGeneratingAi}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-medium rounded-lg shadow-sm transition-all text-sm disabled:opacity-50"
           >
-            {isGeneratingAi ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Gerando com IA...</span>
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4 text-amber-300" />
-                <span>✨ Criar Post Semanal com IA</span>
-              </>
-            )}
+            {isGeneratingAi ? "⏳ Criando Post..." : "✨ Criar Post Semanal com IA"}
           </button>
 
           <button
             type="button"
             onClick={() => setIsAdding(!isAdding)}
-            className="inline-flex items-center gap-2 rounded-xl bg-teal-800 px-4 py-2.5 text-xs sm:text-sm font-bold text-white shadow-sm hover:bg-teal-900 transition"
+            className="inline-flex items-center gap-2 rounded-lg bg-teal-800 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-teal-900 transition"
           >
             <Plus className="h-4 w-4" />
             <span>{isAdding ? "Fechar Formulário" : "Nova Publicação Manual"}</span>
@@ -282,17 +270,22 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
 
       {/* Sugestões Rápidas de Publicação Otimizadas para SEO */}
       {!isAdding && (
-        <div className="rounded-2xl border border-slate-200 bg-gradient-to-r from-teal-50/60 to-slate-50/60 p-5 space-y-3">
+        <div className="rounded-2xl border border-slate-200 bg-gradient-to-r from-purple-50/50 via-teal-50/40 to-slate-50/60 p-5 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-teal-700" />
+              <Sparkles className="h-4 w-4 text-purple-600" />
               <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800">
                 Modelos de Publicação com SEO Local (1 Clique)
               </h3>
             </div>
-            <span className="text-[11px] text-teal-800 font-semibold bg-teal-100/70 px-2.5 py-0.5 rounded-full">
-              Indexação Schema.org
-            </span>
+            <button
+              type="button"
+              onClick={handleGenerateAiPost}
+              disabled={isGeneratingAi}
+              className="text-xs font-bold text-purple-700 hover:text-purple-900 underline flex items-center gap-1"
+            >
+              {isGeneratingAi ? "⏳ Gerando com IA..." : "✨ Gerar Post Automático com IA"}
+            </button>
           </div>
 
           <div className="grid gap-2.5 sm:grid-cols-3">
@@ -372,23 +365,30 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
       {isAdding && (
         <form
           onSubmit={handleCreate}
-          className="rounded-2xl border-2 border-teal-500/30 bg-white p-6 sm:p-7 shadow-sm space-y-5"
+          className="rounded-2xl border-2 border-indigo-500/30 bg-white p-6 sm:p-7 shadow-sm space-y-5"
         >
-          <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+          <div className="border-b border-slate-100 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                 <span>Publicação Otimizada para SEO Local</span>
-                <span className="text-[10px] font-extrabold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full">
-                  IA & Rich Snippets
+                <span className="text-[10px] font-extrabold text-purple-700 bg-purple-50 border border-purple-200 px-2.5 py-0.5 rounded-full">
+                  Schema.org JSON-LD
                 </span>
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Esta novidade aparecerá na vitrine pública e no Schema JSON-LD para indexação do Google.
+                Esta novidade aparecerá na vitrine pública e nos snippets indexados no Google.
               </p>
             </div>
-            <span className="text-xs font-bold text-teal-800 bg-teal-50 border border-teal-200 px-3 py-1 rounded-xl">
-              SEO Ready
-            </span>
+
+            {/* Botão de Preenchimento com IA direto no Formulário */}
+            <button
+              type="button"
+              onClick={handleGenerateAiPost}
+              disabled={isGeneratingAi}
+              className="flex items-center gap-2 px-3.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-medium rounded-lg shadow-sm transition-all text-xs disabled:opacity-50 self-start sm:self-auto"
+            >
+              {isGeneratingAi ? "⏳ Criando Post..." : "✨ Preencher Campos com IA"}
+            </button>
           </div>
 
           <div className="grid gap-5 sm:grid-cols-2">
@@ -403,7 +403,7 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Ex: Dicas de Cuidados, Promoção da Semana ou Lançamento de Procedimento"
-                className="mt-1.5 block w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs sm:text-sm text-slate-900 focus:border-teal-600 focus:outline-none"
+                className="mt-1.5 block w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs sm:text-sm text-slate-900 focus:border-indigo-600 focus:outline-none"
               />
             </div>
 
@@ -418,14 +418,14 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 placeholder="Descreva a novidade, dicas especializadas ou a oferta com clareza..."
-                className="mt-1.5 block w-full rounded-xl border border-slate-300 bg-white p-3 text-xs sm:text-sm text-slate-900 focus:border-teal-600 focus:outline-none leading-relaxed"
+                className="mt-1.5 block w-full rounded-xl border border-slate-300 bg-white p-3 text-xs sm:text-sm text-slate-900 focus:border-indigo-600 focus:outline-none leading-relaxed"
               />
             </div>
 
             {/* Tags de SEO Local */}
             <div className="sm:col-span-2">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                <Tag className="h-3.5 w-3.5 text-teal-700" />
+                <Tag className="h-3.5 w-3.5 text-indigo-700" />
                 <span>Palavras-chave de SEO Local (Separadas por vírgula)</span>
               </label>
               <input
@@ -433,7 +433,7 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
                 value={tags}
                 onChange={(e) => setTags(e.target.value)}
                 placeholder="Ex: corte degradê, são paulo, estética, horário marcado, promoção"
-                className="mt-1.5 block w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs sm:text-sm text-slate-900 focus:border-teal-600 focus:outline-none"
+                className="mt-1.5 block w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs sm:text-sm text-slate-900 focus:border-indigo-600 focus:outline-none"
               />
               <p className="text-[11px] text-slate-400 mt-1">
                 Termos que seus clientes buscam no Google para encontrar seu estabelecimento na região.
@@ -443,7 +443,7 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
             {/* Meta Descrição */}
             <div className="sm:col-span-2">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                <Search className="h-3.5 w-3.5 text-teal-700" />
+                <Search className="h-3.5 w-3.5 text-indigo-700" />
                 <span>Resumo para o Google / Meta Descrição (Opcional)</span>
               </label>
               <input
@@ -452,7 +452,7 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
                 value={metaDescription}
                 onChange={(e) => setMetaDescription(e.target.value)}
                 placeholder="Breve resumo que aparece abaixo do link no Google (até 160 caracteres)"
-                className="mt-1.5 block w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs text-slate-900 focus:border-teal-600 focus:outline-none"
+                className="mt-1.5 block w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs text-slate-900 focus:border-indigo-600 focus:outline-none"
               />
             </div>
 
@@ -483,7 +483,7 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
                   if (val === "whatsapp") setCtaLabel("Chamar no WhatsApp");
                   if (val === "link") setCtaLabel("Saiba Mais");
                 }}
-                className="mt-1.5 block w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs sm:text-sm text-slate-900 focus:border-teal-600 focus:outline-none"
+                className="mt-1.5 block w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs sm:text-sm text-slate-900 focus:border-indigo-600 focus:outline-none"
               >
                 <option value="booking">📅 Abrir Agendamento Online</option>
                 <option value="whatsapp">💬 Iniciar Conversa no WhatsApp</option>
@@ -501,7 +501,7 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
                 value={ctaLabel}
                 onChange={(e) => setCtaLabel(e.target.value)}
                 placeholder="Ex: Agendar Horário"
-                className="mt-1.5 block w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs sm:text-sm text-slate-900 focus:border-teal-600 focus:outline-none"
+                className="mt-1.5 block w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs sm:text-sm text-slate-900 focus:border-indigo-600 focus:outline-none"
               />
             </div>
 
@@ -516,7 +516,7 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
                   value={ctaUrl}
                   onChange={(e) => setCtaUrl(e.target.value)}
                   placeholder="Ex: https://instagram.com/seu-perfil"
-                  className="mt-1.5 block w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs text-slate-900 focus:border-teal-600 focus:outline-none"
+                  className="mt-1.5 block w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs text-slate-900 focus:border-indigo-600 focus:outline-none"
                 />
               </div>
             )}
@@ -564,14 +564,21 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
         </div>
 
         {posts.length === 0 ? (
-          <div className="text-center py-10 space-y-2">
+          <div className="text-center py-10 space-y-3">
             <Newspaper className="mx-auto h-8 w-8 text-slate-300" />
             <p className="text-xs font-semibold text-slate-600">
               Nenhuma publicação cadastrada no momento.
             </p>
-            <p className="text-[11px] text-slate-400">
-              Clique em &ldquo;✨ Criar Post Semanal com IA&rdquo; para gerar sua primeira publicação em 1 clique.
-            </p>
+            <div>
+              <button
+                type="button"
+                onClick={handleGenerateAiPost}
+                disabled={isGeneratingAi}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-medium rounded-lg shadow-sm transition-all text-xs disabled:opacity-50"
+              >
+                {isGeneratingAi ? "⏳ Criando Post..." : "✨ Criar Primeiro Post com IA"}
+              </button>
+            </div>
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
