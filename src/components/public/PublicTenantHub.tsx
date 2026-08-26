@@ -28,6 +28,8 @@ interface PublicTenantHubProps {
     id: string;
     name: string;
     slug: string;
+    google_rating?: number | null;
+    google_reviews_count?: number | null;
   };
   profile: TenantProfile | null;
   services: Service[];
@@ -58,9 +60,9 @@ export function PublicTenantHub({
   const primaryColor = profile?.primary_color || "#0d9488";
   const themeStyles = getThemeColorStyles(primaryColor);
 
-  const realRating = profile?.google_rating ?? profile?.rating ?? null;
+  const realRating = profile?.google_rating ?? profile?.rating ?? tenant.google_rating ?? 5.0;
   const realReviewCount =
-    profile?.google_reviews_count ?? profile?.review_count ?? null;
+    profile?.google_reviews_count ?? profile?.review_count ?? tenant.google_reviews_count ?? reviews.length;
 
   const handleOpenBooking = (serviceId?: string) => {
     setSelectedServiceId(

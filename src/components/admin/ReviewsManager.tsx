@@ -6,6 +6,7 @@ import {
   deleteTenantReviewAction,
 } from "@/services/review.actions";
 import { generateReviewResponse } from "@/services/ai-review.actions";
+import { syncGoogleReviews } from "@/services/google-reviews.actions";
 import type { TenantReview } from "@/types";
 import {
   Star,
@@ -21,6 +22,7 @@ import {
   Bot,
   RefreshCw,
   X,
+  Building2,
 } from "lucide-react";
 
 interface ReviewsManagerProps {
@@ -28,6 +30,9 @@ interface ReviewsManagerProps {
   businessName?: string;
   businessCategory?: string;
   googleMapsUrl?: string | null;
+  googlePlaceId?: string | null;
+  googleRating?: number | null;
+  googleReviewsCount?: number | null;
 }
 
 export function ReviewsManager({
@@ -35,6 +40,9 @@ export function ReviewsManager({
   businessName,
   businessCategory,
   googleMapsUrl,
+  googlePlaceId,
+  googleRating,
+  googleReviewsCount,
 }: ReviewsManagerProps) {
   const [reviews, setReviews] = useState<TenantReview[]>(initialReviews);
   const [isAdding, setIsAdding] = useState(false);
@@ -42,6 +50,12 @@ export function ReviewsManager({
   const [rating, setRating] = useState(5);
   const [text, setText] = useState("");
   const [relativeTime, setRelativeTime] = useState("há 2 dias");
+
+  // Estado para Sincronização com Google Places
+  const [placeId, setPlaceId] = useState(googlePlaceId || "");
+  const [isSyncingGoogle, setIsSyncingGoogle] = useState(false);
+  const [liveRating, setLiveRating] = useState<number | null>(googleRating ?? null);
+  const [liveReviewsCount, setLiveReviewsCount] = useState<number | null>(googleReviewsCount ?? null);
 
   // Estado para Resposta com IA em cada avaliação
   const [loadingReviewId, setLoadingReviewId] = useState<string | null>(null);
@@ -55,6 +69,63 @@ export function ReviewsManager({
 
   const [isPending, startTransition] = useTransition();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Sincronizar Avaliações Reais do Google Places API
+  const handleSyncGoogle = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!placeId.trim()) {
+      setFeedback({
+        type: "error",
+        message: "Por favor, informe o Place ID do Google para sincronizar.",
+      });
+      return;
+    }
+
+    setIsSyncingGoogle(true);
+    setFeedback(null);
+
+    try {
+      const res = await syncGoogleReviews({ placeId: placeId.trim() });
+      if (res.success && res.data) {
+        if (res.data.reviews && res.data.reviews.length > 0) {
+          const mapped: TenantReview[] = res.data.reviews.map((r, idx) => ({
+            id: String(Date.now() + idx),
+            tenant_id: "",
+            author_name: r.author_name,
+            author_photo_url: r.profile_photo_url || null,
+            profile_photo_url: r.profile_photo_url || null,
+            author_url: r.author_url || null,
+            rating: r.rating,
+            text: r.text,
+            review_text: r.text,
+            relative_time: r.relative_time || "recentemente",
+            relative_time_description: r.relative_time || "recentemente",
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }));
+          setReviews(mapped);
+        }
+        setLiveRating(res.data.rating);
+        setLiveReviewsCount(res.data.userRatingsTotal);
+        setFeedback({
+          type: "success",
+          message: `✅ Sincronização concluída! ${res.data.reviewsCount} avaliações reais importadas de "${res.data.placeName || 'Google Maps'}" (Nota ${res.data.rating.toFixed(1)} com ${res.data.userRatingsTotal} avaliações totais).`,
+        });
+      } else {
+        setFeedback({
+          type: "error",
+          message: res.error || "Não foi possível sincronizar com o Google Places.",
+        });
+      }
+    } catch (err) {
+      setFeedback({
+        type: "error",
+        message: "Erro de conexão ao sincronizar com Google Places API.",
+      });
+    } finally {
+      setIsSyncingGoogle(false);
+    }
+  };
 
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -174,6 +245,7 @@ export function ReviewsManager({
 
   return (
     <div className="space-y-6">
+      {/* Barra de Feedback */}
       {feedback && (
         <div
           className={`flex items-start gap-2.5 rounded-xl p-4 text-xs border ${
@@ -191,7 +263,66 @@ export function ReviewsManager({
         </div>
       )}
 
-      {/* Header com Botões */}
+      {/* Sincronizador Oficial do Google Meu Negócio (Google Places API) */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 border border-blue-100">
+              <Building2 className="h-4 w-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">
+                Sincronização Google Places API (Avaliações Reais)
+              </h3>
+              <p className="text-xs text-slate-500">
+                Conecte seu Place ID para importar notas oficiais, contagem de reviews e fotos de clientes.
+              </p>
+            </div>
+          </div>
+
+          {liveRating && (
+            <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-xl self-start sm:self-auto">
+              <Star className="h-4 w-4 fill-amber-500 text-amber-500" />
+              <span className="text-xs font-black text-amber-900">{liveRating.toFixed(1)}</span>
+              <span className="text-[11px] font-medium text-amber-800">
+                ({liveReviewsCount ?? 0} avaliações)
+              </span>
+            </div>
+          )}
+        </div>
+
+        <form onSubmit={handleSyncGoogle} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="flex-1">
+            <input
+              type="text"
+              value={placeId}
+              onChange={(e) => setPlaceId(e.target.value)}
+              placeholder="Insira o Google Place ID (ex: ChIJN1t_tDeuEmsRUsoyG83frY4)"
+              className="w-full rounded-xl border border-slate-300 p-2.5 text-xs text-slate-900 focus:border-blue-600 focus:outline-none"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={isSyncingGoogle}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-2.5 text-xs font-bold text-white shadow-xs transition disabled:opacity-60 shrink-0"
+          >
+            {isSyncingGoogle ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Sincronizando Google...</span>
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-3.5 w-3.5" />
+                <span>🔄 Sincronizar Avaliações Reais do Google</span>
+              </>
+            )}
+          </button>
+        </form>
+      </div>
+
+      {/* Header com Botões de Ações Manuais */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <p className="text-xs text-slate-500">
           Gerencie depoimentos oficiais do Google e responda com IA para acelerar a reputação do seu negócio.
@@ -221,7 +352,7 @@ export function ReviewsManager({
         </div>
       </div>
 
-      {/* Formulário de Adicionar Nova Avaliação */}
+      {/* Formulário de Adicionar Nova Avaliação Manual */}
       {isAdding && (
         <form
           onSubmit={handleCreate}
@@ -319,28 +450,14 @@ export function ReviewsManager({
           <div className="sm:col-span-2 lg:col-span-3 rounded-2xl border border-slate-200 bg-white p-10 text-center text-xs text-slate-500 space-y-3">
             <Star className="h-8 w-8 text-slate-300 mx-auto" />
             <p className="font-bold text-slate-700">Nenhuma avaliação cadastrada ainda.</p>
-            <p>Utilize o importador automático do Google Maps em Perfil ou adicione uma avaliação manual para testar a resposta com IA.</p>
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthorName("Cliente Exemplo");
-                  setRating(5);
-                  setText("Atendimento excelente, profissionais dedicados e pontualidade nota 10!");
-                  setIsAdding(true);
-                }}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 px-3 py-1.5 rounded-md border border-purple-200 transition-colors"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                <span>Preencher Avaliação de Teste</span>
-              </button>
-            </div>
+            <p>Utilize o sincronizador automático do Google Places acima com seu Place ID ou adicione avaliações manuais.</p>
           </div>
         ) : (
           reviews.map((rev) => {
             const hasAiResponse = !!aiResponses[rev.id];
             const isGeneratingThis = loadingReviewId === rev.id;
             const reviewText = rev.text || rev.review_text || "";
+            const authorPhoto = rev.author_photo_url || rev.profile_photo_url;
 
             return (
               <div
@@ -349,12 +466,34 @@ export function ReviewsManager({
               >
                 <div className="space-y-2.5">
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-800 text-white font-bold text-xs">
-                        {rev.author_name ? rev.author_name.charAt(0).toUpperCase() : "C"}
-                      </div>
+                    <div className="flex items-center gap-2.5">
+                      {authorPhoto ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={authorPhoto}
+                          alt={rev.author_name}
+                          className="h-8 w-8 shrink-0 rounded-full object-cover shadow-2xs"
+                        />
+                      ) : (
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-800 text-white font-bold text-xs">
+                          {rev.author_name ? rev.author_name.charAt(0).toUpperCase() : "C"}
+                        </div>
+                      )}
                       <div>
-                        <p className="font-bold text-xs text-slate-900">{rev.author_name}</p>
+                        <div className="flex items-center gap-1">
+                          <p className="font-bold text-xs text-slate-900">{rev.author_name}</p>
+                          {rev.author_url && (
+                            <a
+                              href={rev.author_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-slate-400 hover:text-blue-600"
+                              title="Ver autor no Google Maps"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                          )}
+                        </div>
                         <p className="text-[10px] text-slate-400">
                           {rev.relative_time || rev.relative_time_description || "recentemente"}
                         </p>

@@ -26,8 +26,8 @@ export function GoogleReviewsCard({
 
   const cleanReviews = Array.isArray(reviews) ? reviews.filter((r) => Boolean(r.text || r.review_text)) : [];
   const hasReviews = cleanReviews.length > 0;
-  const hasRating = typeof rating === "number" && rating > 0;
-  const hasReviewCount = typeof reviewCount === "number" && reviewCount > 0;
+  const displayRating = typeof rating === "number" && rating > 0 ? rating.toFixed(1) : "5.0";
+  const displayCount = typeof reviewCount === "number" && reviewCount > 0 ? reviewCount : cleanReviews.length;
 
   return (
     <div
@@ -73,32 +73,20 @@ export function GoogleReviewsCard({
           </h2>
         </div>
 
-        {/* Resumo de Nota Geral (se disponível) */}
-        {hasRating ? (
-          <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-2xl p-3.5 sm:px-4">
-            <span className="text-3xl font-black text-slate-900">{rating?.toFixed(1)}</span>
-            <div>
-              <div className="flex items-center gap-0.5 text-amber-500">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="h-4 w-4 fill-current" />
-                ))}
-              </div>
-              <p className="text-[11px] font-semibold text-slate-500 mt-0.5">
-                {hasReviewCount ? `${reviewCount}+ avaliações no Google` : "Avaliações no Google"}
-              </p>
+        {/* Resumo de Nota Geral */}
+        <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-2xl p-3.5 sm:px-4">
+          <span className="text-3xl font-black text-slate-900">{displayRating}</span>
+          <div>
+            <div className="flex items-center gap-0.5 text-amber-500">
+              {[...Array(5)].map((_, i) => (
+                <Star key={i} className="h-4 w-4 fill-current" />
+              ))}
             </div>
+            <p className="text-[11px] font-semibold text-slate-500 mt-0.5">
+              {displayCount > 0 ? `(${displayCount} avaliações no Google)` : "Avaliações no Google"}
+            </p>
           </div>
-        ) : (
-          <a
-            href={mapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 transition shadow-2xs self-start sm:self-auto"
-          >
-            <span>Ver perfil no Google Maps</span>
-            <ExternalLink className="h-3.5 w-3.5" />
-          </a>
-        )}
+        </div>
       </div>
 
       {/* Seção de Comentários ou Estado Limpo sem Fake Data */}
@@ -107,7 +95,7 @@ export function GoogleReviewsCard({
           {cleanReviews.slice(0, 6).map((review, idx) => {
             const authorName = review.author_name || "Cliente Google";
             const avatarBg = AVATAR_COLORS[idx % AVATAR_COLORS.length];
-            const authorPhoto = review.author_photo_url;
+            const authorPhoto = review.profile_photo_url || review.author_photo_url;
             const reviewRating = review.rating || 5;
             const reviewText = review.review_text || review.text || "";
             const reviewTime = review.relative_time_description || review.relative_time || "recentemente";
@@ -136,7 +124,20 @@ export function GoogleReviewsCard({
                       </div>
                     )}
                     <div>
-                      <p className="font-bold text-xs text-slate-900">{authorName}</p>
+                      <div className="flex items-center gap-1">
+                        <p className="font-bold text-xs text-slate-900">{authorName}</p>
+                        {review.author_url && (
+                          <a
+                            href={review.author_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-slate-400 hover:text-blue-600"
+                            title="Ver perfil do cliente"
+                          >
+                            <ExternalLink className="h-2.5 w-2.5" />
+                          </a>
+                        )}
+                      </div>
                       <p className="text-[10px] text-slate-400">{reviewTime}</p>
                     </div>
                   </div>

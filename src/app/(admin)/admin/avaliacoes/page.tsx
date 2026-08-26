@@ -32,7 +32,7 @@ export default async function AdminAvaliacoesPage() {
   // Busca perfil e dados do negócio
   const { data: profile } = await supabase
     .from("tenant_profiles")
-    .select("name, business_category, google_maps_url, phone_whatsapp")
+    .select("name, business_category, google_maps_url, google_place_id, google_rating, google_reviews_count, rating, review_count, phone_whatsapp")
     .eq("tenant_id", tenantContext.tenantId)
     .maybeSingle();
 
@@ -44,6 +44,9 @@ export default async function AdminAvaliacoesPage() {
     .order("created_at", { ascending: false });
 
   const reviews = (rawReviews || []) as TenantReview[];
+
+  const initialRating = profile?.google_rating ?? profile?.rating ?? 5.0;
+  const initialReviewCount = profile?.google_reviews_count ?? profile?.review_count ?? 0;
 
   return (
     <div className="space-y-6">
@@ -57,7 +60,7 @@ export default async function AdminAvaliacoesPage() {
           Avaliações & Google Reviews
         </h1>
         <p className="mt-1 text-sm text-slate-600">
-          Acompanhe os depoimentos recebidos, responda rapidamente com Inteligência Artificial e impulsione seu ranqueamento local no Google.
+          Sincronize as avaliações reais do Google Meu Negócio usando a Places API, responda com IA e impulsione seu ranqueamento local no Google.
         </p>
       </div>
 
@@ -66,6 +69,9 @@ export default async function AdminAvaliacoesPage() {
         businessName={profile?.name || tenantContext.tenant?.name || "Meu Estabelecimento"}
         businessCategory={profile?.business_category || "Serviços Locais"}
         googleMapsUrl={profile?.google_maps_url || null}
+        googlePlaceId={profile?.google_place_id || null}
+        googleRating={initialRating}
+        googleReviewsCount={initialReviewCount}
       />
     </div>
   );

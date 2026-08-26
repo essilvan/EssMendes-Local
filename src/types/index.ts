@@ -14,6 +14,8 @@ export interface Tenant {
   slug: string;
   custom_domain?: string | null;
   plan_tier: "free" | "pro" | "enterprise";
+  google_rating?: number | null;
+  google_reviews_count?: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -51,6 +53,8 @@ export interface TenantReview {
   tenant_id: string;
   author_name: string;
   author_photo_url?: string | null;
+  profile_photo_url?: string | null;
+  author_url?: string | null;
   rating: number;
   text: string;
   review_text?: string | null;
