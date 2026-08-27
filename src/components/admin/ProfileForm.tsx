@@ -39,7 +39,7 @@ interface ServiceSummary {
   id: string;
   name: string;
   description?: string | null;
-  price: number;
+  price?: number | null;
   duration_minutes: number;
   is_active: boolean;
 }
@@ -703,10 +703,16 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                   )}
 
                   <div className="mt-3 flex items-center justify-between border-t border-slate-200/60 pt-2.5 text-xs">
-                    <span className="font-extrabold text-teal-800 flex items-center gap-1">
-                      <DollarSign className="h-3.5 w-3.5 text-teal-600" />
-                      {formatCurrency(srv.price)}
-                    </span>
+                    {srv.price !== null && srv.price !== undefined && Number(srv.price) > 0 ? (
+                      <span className="font-extrabold text-teal-800 flex items-center gap-1">
+                        <DollarSign className="h-3.5 w-3.5 text-teal-600" />
+                        {formatCurrency(Number(srv.price))}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                        Sob Consulta
+                      </span>
+                    )}
                     <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1">
                       <Clock className="h-3 w-3 text-slate-400" />
                       {srv.duration_minutes} min

@@ -30,7 +30,7 @@ export interface GooglePlaceSyncResult {
       id: string;
       name: string;
       description?: string | null;
-      price: number;
+      price?: number | null;
       duration_minutes: number;
       is_active: boolean;
     }>;
@@ -102,12 +102,14 @@ function generateSmartHeadlineAndSummary(
 interface ServiceTemplate {
   name: string;
   description: string;
-  price: number;
+  price?: number | null;
   duration_minutes: number;
 }
 
 /**
- * Sugere catálogo de serviços essenciais de acordo com o segmento da empresa
+ * Sugere catálogo de serviços essenciais de acordo com o segmento da empresa.
+ * Importa Nome e Descrição com preço nulo (sem valores mockados), permitindo
+ * exibição como "Sob Consulta" ou "Orçamento Gratuito".
  */
 function getDefaultServicesForCategory(
   category: string,
@@ -137,25 +139,25 @@ function getDefaultServicesForCategory(
       {
         name: "Revisão Preventiva Completa",
         description: "Checagem detalhada de suspensão, freios, fluidos, correias e componentes vitais do veículo.",
-        price: 250.0,
+        price: null,
         duration_minutes: 90,
       },
       {
         name: "Troca de Óleo e Filtros",
         description: "Substituição do óleo do motor especificado e troca de filtros de óleo, ar e combustível.",
-        price: 150.0,
+        price: null,
         duration_minutes: 45,
       },
       {
         name: "Alinhamento e Balanceamento",
         description: "Alinhamento computadorizado da geometria da direção e balanceamento 3D das rodas.",
-        price: 120.0,
+        price: null,
         duration_minutes: 60,
       },
       {
         name: "Diagnóstico e Manutenção Geral",
         description: "Varredura eletrônica por scanner, análise de falhas e orçamento técnico detalhado.",
-        price: 180.0,
+        price: null,
         duration_minutes: 60,
       },
     ];
@@ -178,25 +180,25 @@ function getDefaultServicesForCategory(
       {
         name: "Corte Feminino & Escova",
         description: "Higienização especial, corte personalizado de acordo com o visagismo e escova modeladora.",
-        price: 120.0,
+        price: null,
         duration_minutes: 60,
       },
       {
         name: "Corte Masculino Degradê",
         description: "Corte moderno na tesoura e máquina, acabamento com navalha e lavagem com produtos premium.",
-        price: 45.0,
+        price: null,
         duration_minutes: 30,
       },
       {
         name: "Hidratação e Nutrição Capilar",
         description: "Tratamento profundo com produtos profissionais para recuperação da maciez e brilho.",
-        price: 90.0,
+        price: null,
         duration_minutes: 45,
       },
       {
         name: "Manicure & Pedicure Completa",
         description: "Cuidado completo para mãos e pés, cuticulagem segura, esfoliação e esmaltação impecável.",
-        price: 65.0,
+        price: null,
         duration_minutes: 50,
       },
     ];
@@ -208,25 +210,25 @@ function getDefaultServicesForCategory(
       {
         name: "Corte Tradicional / Degradê",
         description: "Corte masculino com tesoura e máquina, acabamento com navalhete e finalização com pomada.",
-        price: 45.0,
+        price: null,
         duration_minutes: 30,
       },
       {
         name: "Barba Terapia com Toalha Quente",
         description: "Alinhamento e desenho de barba, aplicação de toalha quente, óleos essenciais e pós-barba calmante.",
-        price: 40.0,
+        price: null,
         duration_minutes: 30,
       },
       {
         name: "Combo Corte + Barba",
         description: "Experiência completa com corte de cabelo e tratamento completo da barba com desconto especial.",
-        price: 75.0,
+        price: null,
         duration_minutes: 50,
       },
       {
         name: "Acabamento de Pezinho e Sobrancelha",
         description: "Alinhamento e limpeza dos contornos do cabelo e sobrancelhas com lâmina descartável.",
-        price: 25.0,
+        price: null,
         duration_minutes: 20,
       },
     ];
@@ -249,19 +251,19 @@ function getDefaultServicesForCategory(
       {
         name: "Consulta e Avaliação Inicial",
         description: "Atendimento de triagem, análise diagnóstica e elaboração de plano de tratamento personalizado.",
-        price: 150.0,
+        price: null,
         duration_minutes: 50,
       },
       {
         name: "Sessão de Atendimento Especializado",
         description: "Execução do procedimento terapêutico ou preventivo com foco no seu bem-estar e saúde.",
-        price: 120.0,
+        price: null,
         duration_minutes: 50,
       },
       {
         name: "Procedimento e Manutenção Preventiva",
         description: "Cuidado contínuo para manutenção dos resultados com equipamentos modernos e esterilizados.",
-        price: 200.0,
+        price: null,
         duration_minutes: 60,
       },
     ];
@@ -272,19 +274,19 @@ function getDefaultServicesForCategory(
     {
       name: "Atendimento e Avaliação Técnica",
       description: "Avaliação completa das necessidades com elaboração de diagnóstico e orçamento sem compromisso.",
-      price: 100.0,
+      price: null,
       duration_minutes: 45,
     },
     {
       name: "Serviço Especializado Padrão",
       description: "Execução de serviço profissional especializado com pontualidade e garantia de qualidade.",
-      price: 180.0,
+      price: null,
       duration_minutes: 60,
     },
     {
       name: "Consultoria e Diagnóstico Completo",
       description: "Diagnóstico aprofundado e execução técnica das melhores soluções para sua necessidade.",
-      price: 250.0,
+      price: null,
       duration_minutes: 90,
     },
   ];
@@ -695,7 +697,7 @@ export async function syncGooglePlaceData(
       id: string;
       name: string;
       description?: string | null;
-      price: number;
+      price?: number | null;
       duration_minutes: number;
       is_active: boolean;
     }> = [];
@@ -712,33 +714,50 @@ export async function syncGooglePlaceData(
           id: s.id,
           name: s.name,
           description: s.description,
-          price: Number(s.price),
+          price: s.price !== null && s.price !== undefined ? Number(s.price) : null,
           duration_minutes: s.duration_minutes,
           is_active: s.is_active,
         }));
       } else {
-        // Gera e insere de 3 a 4 serviços sugeridos de acordo com o segmento
+        // Gera e insere de 3 a 4 serviços sugeridos de acordo com o segmento (sem preços mockados)
         const templates = getDefaultServicesForCategory(businessCategory, companyName);
         const rowsToInsert = templates.map((t) => ({
           tenant_id: tenantId,
           name: t.name,
           description: t.description,
-          price: t.price,
+          price: t.price ?? null,
           duration_minutes: t.duration_minutes,
           is_active: true,
         }));
 
-        const { data: inserted, error: insertServErr } = await supabase
+        let insertServRes = await supabase
           .from("services")
           .insert(rowsToInsert)
           .select("id, name, description, price, duration_minutes, is_active");
 
-        if (!insertServErr && inserted) {
+        // Fallback gracioso para 0.00 caso o banco legado possua restrição NOT NULL
+        if (insertServRes.error && insertServRes.error.message.includes("price") && insertServRes.error.message.includes("not-null")) {
+          const rowsWithZero = templates.map((t) => ({
+            tenant_id: tenantId,
+            name: t.name,
+            description: t.description,
+            price: 0.00,
+            duration_minutes: t.duration_minutes,
+            is_active: true,
+          }));
+          insertServRes = await supabase
+            .from("services")
+            .insert(rowsWithZero)
+            .select("id, name, description, price, duration_minutes, is_active");
+        }
+
+        const inserted = insertServRes.data;
+        if (!insertServRes.error && inserted) {
           tenantServicesList = inserted.map((s: any) => ({
             id: s.id,
             name: s.name,
             description: s.description,
-            price: Number(s.price),
+            price: s.price !== null && s.price !== undefined ? Number(s.price) : null,
             duration_minutes: s.duration_minutes,
             is_active: s.is_active,
           }));

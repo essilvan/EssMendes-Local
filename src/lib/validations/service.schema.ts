@@ -11,9 +11,11 @@ export const serviceSchema = z.object({
     .max(500, "A descrição não pode ultrapassar 500 caracteres.")
     .optional()
     .or(z.literal("")),
-  price: z.coerce
-    .number()
-    .min(0.01, "O preço deve ser maior que zero (R$ 0,01 no mínimo)."),
+  price: z.preprocess((val) => {
+    if (val === "" || val === null || val === undefined) return null;
+    const num = Number(val);
+    return isNaN(num) ? null : num;
+  }, z.number().min(0, "O preço não pode ser negativo.").nullable().optional()),
   durationMinutes: z.coerce
     .number()
     .int("A duração deve ser um número inteiro de minutos.")

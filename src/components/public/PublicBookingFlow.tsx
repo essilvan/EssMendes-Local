@@ -186,7 +186,7 @@ export function PublicBookingFlow({
         tenantId,
         serviceId: selectedService.id,
         serviceName: selectedService.name,
-        price: Number(selectedService.price),
+        price: selectedService.price ? Number(selectedService.price) : 0,
         durationMinutes: selectedService.duration_minutes,
         date: selectedDate,
         time: selectedTime,
@@ -304,7 +304,13 @@ export function PublicBookingFlow({
                 </div>
                 <div className="flex justify-between pb-2 border-b border-slate-200">
                   <span className="text-slate-500">Valor Previsto:</span>
-                  <span className="font-bold text-slate-900">{formatCurrency(Number(confirmedAppointment.price))}</span>
+                  {confirmedAppointment.price && Number(confirmedAppointment.price) > 0 ? (
+                    <span className="font-bold text-slate-900">{formatCurrency(Number(confirmedAppointment.price))}</span>
+                  ) : (
+                    <span className="font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded text-xs border border-amber-200">
+                      Orçamento sob consulta
+                    </span>
+                  )}
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Cliente:</span>
@@ -372,12 +378,18 @@ export function PublicBookingFlow({
                             {service.duration_minutes} min
                           </p>
                         </div>
-                        <span
-                          className="text-xs font-extrabold"
-                          style={{ color: "var(--primary-color, #0d9488)" }}
-                        >
-                          {formatCurrency(Number(service.price))}
-                        </span>
+                        {service.price !== null && Number(service.price) > 0 ? (
+                          <span
+                            className="text-xs font-extrabold"
+                            style={{ color: "var(--primary-color, #0d9488)" }}
+                          >
+                            {formatCurrency(Number(service.price))}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                            Sob Consulta
+                          </span>
+                        )}
                       </button>
                     );
                   })}

@@ -4,6 +4,7 @@ import React from "react";
 import type { Service, PortfolioItem, TenantProfile, TenantPost } from "@/types";
 import { BeforeAfterShowcase } from "./BeforeAfterShowcase";
 import { BookingWidgetCard } from "./BookingWidgetCard";
+import { generateWhatsAppUrl } from "@/utils/phone";
 import {
   Sparkles,
   Clock,
@@ -12,6 +13,7 @@ import {
   Copy,
   Check,
   ArrowRight,
+  MessageCircle,
 } from "lucide-react";
 
 interface ConversionDashboardProps {
@@ -129,49 +131,88 @@ export function ConversionDashboard({
           </div>
         ) : (
           <div className="space-y-3">
-            {services.map((service) => (
-              <div
-                key={service.id}
-                className="group rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4 space-y-2.5 hover:border-slate-300 hover:bg-slate-50 transition shadow-2xs"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="space-y-0.5">
-                    <h4 className="text-xs sm:text-sm font-black text-slate-900 group-hover:text-slate-700 transition">
-                      {service.name}
-                    </h4>
-                    {service.description && (
-                      <p className="text-[11px] sm:text-xs text-slate-600 line-clamp-2 leading-relaxed">
-                        {service.description}
-                      </p>
+            {services.map((service) => {
+              const hasPrice = service.price !== null && Number(service.price) > 0;
+              const phone = profile?.phone_whatsapp || profile?.phone;
+              const whatsappOrderText = `👋 Olá! Gostaria de um orçamento/agendamento para o serviço: *${service.name}*.`;
+
+              return (
+                <div
+                  key={service.id}
+                  className="group rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4 space-y-3 hover:border-slate-300 hover:bg-slate-50 transition shadow-2xs"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="space-y-0.5">
+                      <h4 className="text-xs sm:text-sm font-black text-slate-900 group-hover:text-slate-700 transition">
+                        {service.name}
+                      </h4>
+                      {service.description && (
+                        <p className="text-[11px] sm:text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                          {service.description}
+                        </p>
+                      )}
+                    </div>
+
+                    {hasPrice ? (
+                      <span
+                        className="text-sm sm:text-base font-black shrink-0"
+                        style={{ color: "var(--primary-color, #0d9488)" }}
+                      >
+                        {formatCurrency(Number(service.price))}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 shrink-0">
+                        Sob Consulta
+                      </span>
                     )}
                   </div>
 
-                  <span
-                    className="text-sm sm:text-base font-black shrink-0"
-                    style={{ color: "var(--primary-color, #0d9488)" }}
-                  >
-                    {formatCurrency(Number(service.price))}
-                  </span>
-                </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200/60">
+                    <span className="text-[11px] font-bold text-slate-500 flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {service.duration_minutes} min
+                    </span>
 
-                <div className="flex items-center justify-between pt-1.5 border-t border-slate-200/60">
-                  <span className="text-[11px] font-bold text-slate-500 flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    {service.duration_minutes} min
-                  </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {/* Botão de Orçamento no WhatsApp */}
+                      {phone && (
+                        <a
+                          href={generateWhatsAppUrl(phone, whatsappOrderText)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition shadow-2xs ${
+                            !hasPrice
+                              ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                              : "border border-slate-200 bg-white text-slate-700 hover:text-emerald-700 hover:border-emerald-200"
+                          }`}
+                          title="Solicitar orçamento diretamente no WhatsApp"
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" />
+                          <span>
+                            {!hasPrice ? "💬 Solicitar Orçamento via WhatsApp" : "WhatsApp"}
+                          </span>
+                        </a>
+                      )}
 
-                  <button
-                    type="button"
-                    onClick={() => onOpenBookingModal(service.id)}
-                    className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-black text-white shadow-2xs hover:opacity-95 active:scale-95 transition cursor-pointer"
-                    style={{ backgroundColor: "var(--primary-color, #0d9488)" }}
-                  >
-                    <Calendar className="h-3.5 w-3.5" />
-                    <span>Agendar Este Serviço</span>
-                  </button>
+                      {/* Botão de Agendamento */}
+                      <button
+                        type="button"
+                        onClick={() => onOpenBookingModal(service.id)}
+                        className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-black transition cursor-pointer shadow-2xs hover:opacity-95 active:scale-95 ${
+                          hasPrice
+                            ? "text-white"
+                            : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                        }`}
+                        style={hasPrice ? { backgroundColor: "var(--primary-color, #0d9488)" } : undefined}
+                      >
+                        <Calendar className="h-3.5 w-3.5" />
+                        <span>📅 Agendar Horário</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

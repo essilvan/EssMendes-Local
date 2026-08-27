@@ -144,41 +144,64 @@ export function PublicServicesView({
                   </div>
                 </div>
 
-                {/* Preço e Botão de Agendamento */}
+                {/* Preço e Botões de Conversão */}
                 <div className="flex sm:flex-col items-center sm:items-end justify-between gap-3 border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-200">
-                  <span
-                    className="text-lg sm:text-xl font-black"
-                    style={{ color: "var(--primary-color, #0d9488)" }}
-                  >
-                    {formatCurrency(Number(service.price))}
-                  </span>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleOpenBooking(service.id)}
-                      className="inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold text-white shadow-xs transition hover:opacity-90 active:scale-95"
-                      style={{ backgroundColor: "var(--primary-color, #0d9488)" }}
+                  {service.price !== null && Number(service.price) > 0 ? (
+                    <span
+                      className="text-lg sm:text-xl font-black"
+                      style={{ color: "var(--primary-color, #0d9488)" }}
                     >
-                      <Calendar className="h-3.5 w-3.5" />
-                      <span>Agendar</span>
-                    </button>
+                      {formatCurrency(Number(service.price))}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                      Sob Consulta
+                    </span>
+                  )}
 
+                  <div className="flex flex-wrap items-center gap-2">
                     {profile?.phone_whatsapp && (
                       <a
                         href={generateWhatsAppUrl(
                           profile.phone_whatsapp,
-                          `${tenant.name} - Dúvida sobre: ${service.name}`
+                          `👋 Olá! Gostaria de um orçamento/agendamento para o serviço: *${service.name}*.`
                         )}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={handleWhatsAppClick}
-                        className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white p-2 text-slate-600 hover:text-emerald-700 hover:border-emerald-200 transition shadow-2xs"
-                        title="Tirar dúvidas sobre este serviço no WhatsApp"
+                        className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition shadow-2xs ${
+                          service.price === null || Number(service.price) <= 0
+                            ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                            : "border border-slate-200 bg-white text-slate-700 hover:text-emerald-700 hover:border-emerald-200"
+                        }`}
+                        title="Solicitar orçamento via WhatsApp"
                       >
                         <MessageCircle className="h-4 w-4" />
+                        <span>
+                          {service.price === null || Number(service.price) <= 0
+                            ? "💬 Solicitar Orçamento via WhatsApp"
+                            : "WhatsApp"}
+                        </span>
                       </a>
                     )}
+
+                    <button
+                      type="button"
+                      onClick={() => handleOpenBooking(service.id)}
+                      className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition hover:opacity-90 active:scale-95 shadow-xs ${
+                        service.price !== null && Number(service.price) > 0
+                          ? "text-white"
+                          : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                      }`}
+                      style={
+                        service.price !== null && Number(service.price) > 0
+                          ? { backgroundColor: "var(--primary-color, #0d9488)" }
+                          : undefined
+                      }
+                    >
+                      <Calendar className="h-3.5 w-3.5" />
+                      <span>📅 Agendar Horário</span>
+                    </button>
                   </div>
                 </div>
               </div>

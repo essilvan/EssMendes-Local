@@ -27,7 +27,7 @@ export interface ServiceItem {
   id: string;
   name: string;
   description: string | null;
-  price: number;
+  price: number | null;
   duration_minutes: number;
   is_active: boolean;
   created_at: string;
@@ -312,10 +312,16 @@ export function ServicesManager({ initialServices }: ServicesManagerProps) {
                 {/* Detalhes de Preço e Duração */}
                 <div className="mt-5 border-t border-slate-100 pt-4 space-y-3">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="flex items-center gap-1.5 font-bold text-teal-800 text-sm">
-                      <DollarSign className="h-4 w-4 text-teal-600" />
-                      {formatCurrency(service.price)}
-                    </span>
+                    {service.price !== null && Number(service.price) > 0 ? (
+                      <span className="flex items-center gap-1.5 font-bold text-teal-800 text-sm">
+                        <DollarSign className="h-4 w-4 text-teal-600" />
+                        {formatCurrency(Number(service.price))}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                        Sob Consulta / Orçamento
+                      </span>
+                    )}
                     <span className="flex items-center gap-1 text-slate-500 font-medium">
                       <Clock className="h-3.5 w-3.5 text-slate-400" />
                       {service.duration_minutes} min
@@ -414,12 +420,15 @@ export function ServicesManager({ initialServices }: ServicesManagerProps) {
               {/* Preço e Duração */}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label
-                    htmlFor="price"
-                    className="block text-xs font-semibold uppercase tracking-wider text-slate-700"
-                  >
-                    Preço (R$) *
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label
+                      htmlFor="price"
+                      className="block text-xs font-semibold uppercase tracking-wider text-slate-700"
+                    >
+                      Preço (R$)
+                    </label>
+                    <span className="text-[10px] text-slate-400 font-medium">(Opcional)</span>
+                  </div>
                   <div className="relative mt-1.5">
                     <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-xs font-bold">
                       R$
@@ -429,14 +438,16 @@ export function ServicesManager({ initialServices }: ServicesManagerProps) {
                       name="price"
                       type="number"
                       step="0.01"
-                      min="0.01"
-                      required
+                      min="0"
                       disabled={isPending}
-                      defaultValue={editingService?.price || ""}
-                      placeholder="50.00"
+                      defaultValue={editingService?.price && editingService.price > 0 ? editingService.price : ""}
+                      placeholder="Deixe em branco para Sob Consulta"
                       className="block w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600 disabled:bg-slate-100 disabled:cursor-not-allowed"
                     />
                   </div>
+                  <p className="mt-1 text-[11px] text-slate-400">
+                    Deixe em branco para exibir &quot;Sob Consulta / Orçamento Gratuito&quot;.
+                  </p>
                 </div>
 
                 <div>

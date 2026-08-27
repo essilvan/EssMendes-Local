@@ -93,7 +93,7 @@ export interface Service {
   tenant_id: string;
   name: string;
   description?: string | null;
-  price: number;
+  price: number | null;
   duration_minutes: number;
   is_active: boolean;
   image_url?: string | null;

@@ -165,7 +165,7 @@ export function BookingWidgetCard({
         tenantId,
         serviceId: selectedService.id,
         serviceName: selectedService.name,
-        price: Number(selectedService.price),
+        price: selectedService.price ? Number(selectedService.price) : 0,
         durationMinutes: selectedService.duration_minutes,
         date: selectedDate,
         time: selectedTime,
@@ -321,12 +321,18 @@ export function BookingWidgetCard({
                         </p>
                       </div>
 
-                      <span
-                        className="text-xs font-black"
-                        style={{ color: "var(--primary-color, #0d9488)" }}
-                      >
-                        {formatCurrency(Number(service.price))}
-                      </span>
+                      {service.price !== null && Number(service.price) > 0 ? (
+                        <span
+                          className="text-xs font-black"
+                          style={{ color: "var(--primary-color, #0d9488)" }}
+                        >
+                          {formatCurrency(Number(service.price))}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                          Sob Consulta
+                        </span>
+                      )}
                     </button>
                   );
                 })}

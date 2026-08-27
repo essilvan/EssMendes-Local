@@ -19,10 +19,13 @@ export async function createServiceAction(
   _prevState: ServiceActionState,
   formData: FormData
 ): Promise<ServiceActionState> {
+  const rawPrice = formData.get("price")?.toString().trim();
+  const parsedPrice = rawPrice && rawPrice !== "" ? rawPrice.replace(",", ".") : null;
+
   const rawData = {
     name: formData.get("name")?.toString().trim() || "",
     description: formData.get("description")?.toString().trim() || "",
-    price: formData.get("price")?.toString().replace(",", ".") || 0,
+    price: parsedPrice,
     durationMinutes: formData.get("durationMinutes")?.toString() || 0,
     isActive: formData.get("isActive") === "true" || formData.get("isActive") === "on",
   };
@@ -60,19 +63,36 @@ export async function createServiceAction(
 
   const { name, description, price, durationMinutes, isActive } = validation.data;
 
-  // Inserção com tenant_id garantido
-  const { data, error } = await supabase
+  // Inserção com tenant_id garantido (com fallback para 0.00 se banco legado tiver not null)
+  let insertRes = await supabase
     .from("services")
     .insert({
       tenant_id: tenantContext.tenantId,
       name,
       description: description || null,
-      price,
+      price: price ?? null,
       duration_minutes: durationMinutes,
       is_active: isActive,
     })
     .select()
     .single();
+
+  if (insertRes.error && insertRes.error.message.includes("price") && insertRes.error.message.includes("not-null")) {
+    insertRes = await supabase
+      .from("services")
+      .insert({
+        tenant_id: tenantContext.tenantId,
+        name,
+        description: description || null,
+        price: 0.00,
+        duration_minutes: durationMinutes,
+        is_active: isActive,
+      })
+      .select()
+      .single();
+  }
+
+  const { data, error } = insertRes;
 
   if (error) {
     console.error("[createServiceAction] Erro no Supabase ao inserir serviço:", error);
@@ -104,11 +124,14 @@ export async function updateServiceAction(
     return { error: "ID do serviço não fornecido." };
   }
 
+  const rawPrice = formData.get("price")?.toString().trim();
+  const parsedPrice = rawPrice && rawPrice !== "" ? rawPrice.replace(",", ".") : null;
+
   const rawData = {
     id,
     name: formData.get("name")?.toString().trim() || "",
     description: formData.get("description")?.toString().trim() || "",
-    price: formData.get("price")?.toString().replace(",", ".") || 0,
+    price: parsedPrice,
     durationMinutes: formData.get("durationMinutes")?.toString() || 0,
     isActive: formData.get("isActive") === "true" || formData.get("isActive") === "on",
   };
@@ -131,12 +154,12 @@ export async function updateServiceAction(
   const supabase = await createClient();
 
   // Atualização restrita pelo ID do serviço E pelo tenant_id
-  const { data, error } = await supabase
+  let updateRes = await supabase
     .from("services")
     .update({
       name,
       description: description || null,
-      price,
+      price: price ?? null,
       duration_minutes: durationMinutes,
       is_active: isActive,
       updated_at: new Date().toISOString(),
@@ -145,6 +168,25 @@ export async function updateServiceAction(
     .eq("tenant_id", tenantContext.tenantId)
     .select()
     .single();
+
+  if (updateRes.error && updateRes.error.message.includes("price") && updateRes.error.message.includes("not-null")) {
+    updateRes = await supabase
+      .from("services")
+      .update({
+        name,
+        description: description || null,
+        price: 0.00,
+        duration_minutes: durationMinutes,
+        is_active: isActive,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .eq("tenant_id", tenantContext.tenantId)
+      .select()
+      .single();
+  }
+
+  const { data, error } = updateRes;
 
   if (error) {
     console.error("[updateServiceAction] Erro no Supabase ao atualizar serviço:", error);
