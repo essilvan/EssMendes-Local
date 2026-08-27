@@ -51,8 +51,10 @@ export function ReviewsManager({
   const [text, setText] = useState("");
   const [relativeTime, setRelativeTime] = useState("há 2 dias");
 
-  // Estado para Sincronização com Google Places
-  const [placeId, setPlaceId] = useState(googlePlaceId || "");
+  // Estado para Sincronização com Google Places (Link do Maps ou Place ID)
+  const [inputUrlOrPlaceId, setInputUrlOrPlaceId] = useState(
+    googleMapsUrl || googlePlaceId || ""
+  );
   const [isSyncingGoogle, setIsSyncingGoogle] = useState(false);
   const [liveRating, setLiveRating] = useState<number | null>(googleRating ?? null);
   const [liveReviewsCount, setLiveReviewsCount] = useState<number | null>(googleReviewsCount ?? null);
@@ -70,13 +72,13 @@ export function ReviewsManager({
   const [isPending, startTransition] = useTransition();
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Sincronizar Avaliações Reais do Google Places API
+  // Sincronizar Avaliações Reais via Link do Google Maps ou Place ID
   const handleSyncGoogle = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!placeId.trim()) {
+    if (!inputUrlOrPlaceId.trim()) {
       setFeedback({
         type: "error",
-        message: "Por favor, informe o Place ID do Google para sincronizar.",
+        message: "Por favor, cole o link da sua empresa no Google Maps ou informe o Place ID.",
       });
       return;
     }
@@ -85,7 +87,7 @@ export function ReviewsManager({
     setFeedback(null);
 
     try {
-      const res = await syncGoogleReviews({ placeId: placeId.trim() });
+      const res = await syncGoogleReviews({ input: inputUrlOrPlaceId.trim() });
       if (res.success && res.data) {
         if (res.data.reviews && res.data.reviews.length > 0) {
           const mapped: TenantReview[] = res.data.reviews.map((r, idx) => ({
@@ -109,7 +111,7 @@ export function ReviewsManager({
         setLiveReviewsCount(res.data.userRatingsTotal);
         setFeedback({
           type: "success",
-          message: `✅ Sincronização concluída! ${res.data.reviewsCount} avaliações reais importadas de "${res.data.placeName || 'Google Maps'}" (Nota ${res.data.rating.toFixed(1)} com ${res.data.userRatingsTotal} avaliações totais).`,
+          message: `✅ Sincronização concluída com sucesso! ${res.data.reviewsCount} avaliações reais e fotos importadas de "${res.data.placeName || 'Google Maps'}" (Nota ${res.data.rating.toFixed(1)} com ${res.data.userRatingsTotal} avaliações totais).`,
         });
       } else {
         setFeedback({
@@ -275,7 +277,7 @@ export function ReviewsManager({
                 Sincronização Google Places API (Avaliações Reais)
               </h3>
               <p className="text-xs text-slate-500">
-                Conecte seu Place ID para importar notas oficiais, contagem de reviews e fotos de clientes.
+                Cole o link da sua ficha no Google Maps ou seu Place ID para importar notas oficiais, depoimentos reais e fotos.
               </p>
             </div>
           </div>
@@ -291,34 +293,48 @@ export function ReviewsManager({
           )}
         </div>
 
-        <form onSubmit={handleSyncGoogle} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <div className="flex-1">
-            <input
-              type="text"
-              value={placeId}
-              onChange={(e) => setPlaceId(e.target.value)}
-              placeholder="Insira o Google Place ID (ex: ChIJN1t_tDeuEmsRUsoyG83frY4)"
-              className="w-full rounded-xl border border-slate-300 p-2.5 text-xs text-slate-900 focus:border-blue-600 focus:outline-none"
-            />
-          </div>
+        <form onSubmit={handleSyncGoogle} className="space-y-3">
+          <div>
+            <label
+              htmlFor="googleInput"
+              className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5"
+            >
+              Link do Google Maps ou Place ID
+            </label>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <div className="flex-1">
+                <input
+                  id="googleInput"
+                  type="text"
+                  value={inputUrlOrPlaceId}
+                  onChange={(e) => setInputUrlOrPlaceId(e.target.value)}
+                  placeholder="Cole o link da sua empresa no Google Maps (ex: https://maps.app.goo.gl/...)"
+                  className="w-full rounded-xl border border-slate-300 p-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none"
+                />
+              </div>
 
-          <button
-            type="submit"
-            disabled={isSyncingGoogle}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-2.5 text-xs font-bold text-white shadow-xs transition disabled:opacity-60 shrink-0"
-          >
-            {isSyncingGoogle ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Sincronizando Google...</span>
-              </>
-            ) : (
-              <>
-                <RefreshCw className="h-3.5 w-3.5" />
-                <span>🔄 Sincronizar Avaliações Reais do Google</span>
-              </>
-            )}
-          </button>
+              <button
+                type="submit"
+                disabled={isSyncingGoogle}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-2.5 text-xs font-bold text-white shadow-xs transition disabled:opacity-60 shrink-0"
+              >
+                {isSyncingGoogle ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Resolvendo link e sincronizando avaliações...</span>
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    <span>🔄 Sincronizar Avaliações pelo Link</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+          <p className="text-[11px] text-slate-400">
+            Suporta links curtos (<span className="font-mono text-slate-500">maps.app.goo.gl</span>), links completos do Maps ou identificador oficial (<span className="font-mono text-slate-500">ChIJ...</span>).
+          </p>
         </form>
       </div>
 

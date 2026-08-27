@@ -5,17 +5,20 @@ import { getAuthenticatedTenant } from "@/lib/supabase/tenant";
 import { revalidatePath } from "next/cache";
 
 export interface SyncGoogleReviewsParams {
-  placeId?: string;
+  input?: string; // URL do Google Maps, CID, nome da empresa ou Place ID
+  placeId?: string; // Mantido para compatibilidade regressiva
   tenantId?: string;
 }
 
 export interface SyncGoogleReviewsResult {
   success: boolean;
   data?: {
+    placeId: string;
     reviewsCount: number;
     rating: number;
     userRatingsTotal: number;
     placeName?: string;
+    placePhotos?: string[];
     reviews?: Array<{
       author_name: string;
       rating: number;
@@ -29,7 +32,33 @@ export interface SyncGoogleReviewsResult {
 }
 
 /**
- * Server Action: Sincroniza avaliações reais e métricas do Google Meu Negócio usando a Google Places API
+ * Resolve URLs encurtadas do Google Maps (ex: maps.app.goo.gl ou goo.gl/maps)
+ */
+async function resolveShortGoogleMapsUrl(url: string): Promise<string> {
+  if (!url.startsWith("http")) return url;
+  if (!url.includes("goo.gl") && !url.includes("maps.app.goo.gl")) {
+    return url;
+  }
+
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      redirect: "follow",
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+      },
+    });
+    return res.url || url;
+  } catch (err) {
+    console.warn("[resolveShortGoogleMapsUrl] Erro ao desencarar URL curta:", err);
+    return url;
+  }
+}
+
+/**
+ * Server Action: Sincroniza avaliações reais e métricas do Google Meu Negócio usando a Google Places API.
+ * Aceita URL do Google Maps (curta ou completa), CID, nome do estabelecimento ou Place ID direto.
  */
 export async function syncGoogleReviews(
   params?: SyncGoogleReviewsParams
@@ -53,53 +82,159 @@ export async function syncGoogleReviews(
       tenantSlug = tenantContext.tenant?.slug || "meu-negocio";
     }
 
-    // 2. Obter placeId se não foi fornecido
-    let targetPlaceId = params?.placeId?.trim();
-    if (!targetPlaceId) {
-      const { data: profile } = await supabase
-        .from("tenant_profiles")
-        .select("google_place_id, google_maps_url")
-        .eq("tenant_id", tenantId)
-        .maybeSingle();
+    // 2. Determinar o parâmetro de entrada
+    const rawInput = (params?.input || params?.placeId || "").trim();
 
-      targetPlaceId = profile?.google_place_id?.trim() || "";
-
-      // Se não tiver place_id mas tiver google_maps_url, tenta extrair
-      if (!targetPlaceId && profile?.google_maps_url) {
-        const url = profile.google_maps_url;
-        const placeIdMatch = url.match(/place_id[:=]([A-Za-z0-9_-]+)/i) || url.match(/1s([A-Za-z0-9_-]{27})/i);
-        if (placeIdMatch) {
-          targetPlaceId = placeIdMatch[1];
-        }
-      }
-    }
-
-    if (!targetPlaceId) {
-      return {
-        success: false,
-        error: "Informe o Place ID do Google para sincronizar as avaliações reais.",
-      };
-    }
-
-    // 3. Obter chave de API
+    // 3. Obter chave da API do Google
     const apiKey =
       process.env.GOOGLE_PLACES_API_KEY ||
+      process.env.GOOGLE_MAPS_API_KEY ||
       process.env.GOOGLE_API_KEY ||
       process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
     if (!apiKey) {
       return {
         success: false,
-        error: "Chave GOOGLE_PLACES_API_KEY não encontrada no arquivo de ambiente.",
+        error: "Chave GOOGLE_PLACES_API_KEY não configurada no ambiente da aplicação.",
       };
     }
 
-    // 4. Executar Fetch no endpoint oficial da Google Places API (Place Details)
-    const endpoint = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(
-      targetPlaceId
-    )}&fields=name,rating,user_ratings_total,reviews&language=pt-BR&key=${apiKey}`;
+    let targetPlaceId = "";
+    let resolvedUrl = "";
+    let textQuery = "";
 
-    const res = await fetch(endpoint, {
+    // 4. Se o usuário passou um input direto
+    if (rawInput) {
+      // 4.1 Se for um Place ID direto no formato ChIJ...
+      if (rawInput.startsWith("ChIJ") && rawInput.length >= 20) {
+        targetPlaceId = rawInput;
+      } else if (rawInput.startsWith("http")) {
+        // 4.2 Se for uma URL do Google Maps
+        resolvedUrl = await resolveShortGoogleMapsUrl(rawInput);
+
+        // Tenta extrair place_id explícito na URL
+        const explicitMatch =
+          resolvedUrl.match(/[?&]place_id=([a-zA-Z0-9_\-]+)/i) ||
+          resolvedUrl.match(/(ChIJ[a-zA-Z0-9_\-]{20,})/);
+
+        if (explicitMatch && explicitMatch[1]) {
+          targetPlaceId = explicitMatch[1];
+        } else {
+          // Extrai o nome da empresa ou query a partir da URL
+          const placeMatch = resolvedUrl.match(/\/place\/([^/@?]+)/);
+          if (placeMatch && placeMatch[1]) {
+            textQuery = decodeURIComponent(placeMatch[1].replace(/\+/g, " ")).trim();
+          } else {
+            const queryMatch =
+              resolvedUrl.match(/[?&]q=([^&]+)/) || resolvedUrl.match(/[?&]query=([^&]+)/);
+            if (queryMatch && queryMatch[1]) {
+              textQuery = decodeURIComponent(queryMatch[1].replace(/\+/g, " ")).trim();
+            } else {
+              textQuery = resolvedUrl;
+            }
+          }
+        }
+      } else {
+        // 4.3 Se for texto genérico (ex: nome da empresa)
+        textQuery = rawInput;
+      }
+    } else {
+      // Se não passou input, tenta recuperar do perfil existente no banco
+      const { data: profile } = await supabase
+        .from("tenant_profiles")
+        .select("google_place_id, google_maps_url, name")
+        .eq("tenant_id", tenantId)
+        .maybeSingle();
+
+      if (profile?.google_place_id?.startsWith("ChIJ")) {
+        targetPlaceId = profile.google_place_id.trim();
+      } else if (profile?.google_maps_url) {
+        resolvedUrl = await resolveShortGoogleMapsUrl(profile.google_maps_url);
+        const explicitMatch =
+          resolvedUrl.match(/[?&]place_id=([a-zA-Z0-9_\-]+)/i) ||
+          resolvedUrl.match(/(ChIJ[a-zA-Z0-9_\-]{20,})/);
+
+        if (explicitMatch && explicitMatch[1]) {
+          targetPlaceId = explicitMatch[1];
+        } else {
+          const placeMatch = resolvedUrl.match(/\/place\/([^/@?]+)/);
+          textQuery = placeMatch
+            ? decodeURIComponent(placeMatch[1].replace(/\+/g, " ")).trim()
+            : profile.name || "";
+        }
+      } else if (profile?.name) {
+        textQuery = profile.name;
+      }
+    }
+
+    // 5. Se ainda não possui o Place ID direto e possui texto de busca, realiza Find Place
+    if (!targetPlaceId && textQuery) {
+      try {
+        const findPlaceUrl = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(
+          textQuery
+        )}&inputtype=textquery&fields=place_id,name,formatted_address&key=${apiKey}`;
+
+        const findRes = await fetch(findPlaceUrl, {
+          method: "GET",
+          headers: { Accept: "application/json" },
+          next: { revalidate: 0 },
+        });
+
+        if (findRes.ok) {
+          const findData = await findRes.json();
+          if (
+            findData.status === "OK" &&
+            Array.isArray(findData.candidates) &&
+            findData.candidates.length > 0 &&
+            findData.candidates[0].place_id
+          ) {
+            targetPlaceId = findData.candidates[0].place_id;
+          }
+        }
+
+        // Fallback: Text Search caso Find Place não localize
+        if (!targetPlaceId) {
+          const textSearchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(
+            textQuery
+          )}&language=pt-BR&key=${apiKey}`;
+
+          const textRes = await fetch(textSearchUrl, {
+            method: "GET",
+            headers: { Accept: "application/json" },
+            next: { revalidate: 0 },
+          });
+
+          if (textRes.ok) {
+            const textData = await textRes.json();
+            if (
+              textData.status === "OK" &&
+              Array.isArray(textData.results) &&
+              textData.results.length > 0 &&
+              textData.results[0].place_id
+            ) {
+              targetPlaceId = textData.results[0].place_id;
+            }
+          }
+        }
+      } catch (findErr) {
+        console.warn("[syncGoogleReviews] Erro ao buscar Place ID via texto:", findErr);
+      }
+    }
+
+    if (!targetPlaceId) {
+      return {
+        success: false,
+        error:
+          "Não foi possível localizar o estabelecimento no Google Maps. Verifique o link ou informe o Place ID oficial.",
+      };
+    }
+
+    // 6. Consulta de Detalhes Oficiais (Place Details)
+    const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(
+      targetPlaceId
+    )}&fields=name,rating,user_ratings_total,reviews,photos,url&language=pt-BR&key=${apiKey}`;
+
+    const res = await fetch(detailsUrl, {
       method: "GET",
       headers: {
         Accept: "application/json",
@@ -110,14 +245,17 @@ export async function syncGoogleReviews(
     if (!res.ok) {
       return {
         success: false,
-        error: `Erro ao conectar com Google Places API: HTTP ${res.status}`,
+        error: `Erro de conexão com a Google Places API: HTTP ${res.status}`,
       };
     }
 
     const data = await res.json();
 
     if (data.status !== "OK" || !data.result) {
-      const errMsg = data.error_message || data.status || "Nenhum resultado encontrado para o Place ID informado.";
+      const errMsg =
+        data.error_message ||
+        data.status ||
+        "Nenhum detalhe retornado para o Place ID informado.";
       return {
         success: false,
         error: `Google Places API retornou erro: ${errMsg}`,
@@ -129,28 +267,73 @@ export async function syncGoogleReviews(
     const userRatingsTotal = Number(placeResult.user_ratings_total) || 0;
     const rawReviews = Array.isArray(placeResult.reviews) ? placeResult.reviews : [];
 
-    // 5. Atualizar na tabela tenants
+    // Extração das Fotos Oficiais em Alta Resolução
+    const photoUrls: string[] = Array.isArray(placeResult.photos)
+      ? placeResult.photos
+          .slice(0, 10)
+          .map((p: any) =>
+            p.photo_reference
+              ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=1200&photo_reference=${p.photo_reference}&key=${apiKey}`
+              : null
+          )
+          .filter((u: string | null): u is string => Boolean(u))
+      : [];
+
+    // 7. Atualizar na tabela tenants (incluindo a coluna google_place_id)
     await supabase
       .from("tenants")
       .update({
+        google_place_id: targetPlaceId,
         google_rating: rating,
         google_reviews_count: userRatingsTotal,
       })
       .eq("id", tenantId);
 
-    // 6. Atualizar na tabela tenant_profiles
+    // 8. Atualizar na tabela tenant_profiles
+    const profileUpdates: Record<string, any> = {
+      google_place_id: targetPlaceId,
+      google_rating: rating,
+      google_reviews_count: userRatingsTotal,
+      rating: rating,
+      review_count: userRatingsTotal,
+    };
+
+    if (photoUrls.length > 0) {
+      profileUpdates.place_photos = photoUrls;
+    }
+    if (resolvedUrl && resolvedUrl.startsWith("http")) {
+      profileUpdates.google_maps_url = resolvedUrl;
+    } else if (placeResult.url) {
+      profileUpdates.google_maps_url = placeResult.url;
+    }
+
     await supabase
       .from("tenant_profiles")
-      .update({
-        google_rating: rating,
-        google_reviews_count: userRatingsTotal,
-        rating: rating,
-        review_count: userRatingsTotal,
-        google_place_id: targetPlaceId,
-      })
+      .update(profileUpdates)
       .eq("tenant_id", tenantId);
 
-    // 7. Mapear e Inserir Avaliações Oficiais em tenant_reviews
+    // 9. Atualizar ou registrar na tabela tenant_integrations
+    try {
+      await supabase
+        .from("tenant_integrations")
+        .upsert(
+          {
+            tenant_id: tenantId,
+            provider: "google_places",
+            google_place_id: targetPlaceId,
+            status: "active",
+            is_connected: true,
+            sync_frequency: "daily",
+            last_sync_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "tenant_id,provider" }
+        );
+    } catch (intErr) {
+      console.warn("[syncGoogleReviews] Aviso ao registrar integração:", intErr);
+    }
+
+    // 10. Mapear e Inserir Avaliações Oficiais em tenant_reviews
     const reviewsToInsert = rawReviews.map((rev: any) => ({
       tenant_id: tenantId,
       author_name: rev.author_name || "Cliente Google",
@@ -182,23 +365,28 @@ export async function syncGoogleReviews(
       }
     }
 
-    // 8. Revalidação de Cache
+    // 11. Revalidação de Cache
     revalidatePath("/admin/avaliacoes");
     revalidatePath("/admin/perfil");
+    revalidatePath("/admin/integracoes");
+    revalidatePath("/admin/dashboard");
     revalidatePath(`/${tenantSlug}`);
 
     return {
       success: true,
       data: {
+        placeId: targetPlaceId,
         reviewsCount: reviewsToInsert.length,
         rating,
         userRatingsTotal,
         placeName: placeResult.name,
+        placePhotos: photoUrls,
         reviews: reviewsToInsert,
       },
     };
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Erro inesperado ao sincronizar avaliações.";
+    const msg =
+      err instanceof Error ? err.message : "Erro inesperado ao sincronizar avaliações.";
     console.error("[syncGoogleReviews] Exceção:", err);
     return { success: false, error: msg };
   }
