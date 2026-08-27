@@ -7,12 +7,14 @@ import type {
   PortfolioItem,
   TenantReview,
   TenantPost,
+  TenantProduct,
 } from "@/types";
 import { getThemeColorStyles } from "@/utils/color";
 import { PublicHeader } from "./PublicHeader";
 import { PublicHeroSplit } from "./PublicHeroSplit";
 import { TrustMetricsBar } from "./TrustMetricsBar";
 import { ConversionDashboard } from "./ConversionDashboard";
+import { PublicProductsSection } from "./PublicProductsSection";
 import { AboutBusinessSection } from "./AboutBusinessSection";
 import { PlacePhotoGallery } from "./PlacePhotoGallery";
 import { GoogleReviewsCard } from "./GoogleReviewsCard";
@@ -36,6 +38,7 @@ interface PublicTenantHubProps {
   portfolioItems: PortfolioItem[];
   reviews?: TenantReview[];
   posts?: TenantPost[];
+  products?: TenantProduct[];
   isOpenNow: boolean;
   statusBadgeText?: string;
   statusDetailText?: string;
@@ -48,6 +51,7 @@ export function PublicTenantHub({
   portfolioItems,
   reviews = [],
   posts = [],
+  products = [],
   isOpenNow,
   statusBadgeText,
   statusDetailText,
@@ -135,6 +139,13 @@ export function PublicTenantHub({
           portfolioItems={portfolioItems}
           posts={posts}
           onOpenBookingModal={handleOpenBooking}
+        />
+
+        {/* 4.1 Vitrine de Produtos Físicos & Peças para Pedido via WhatsApp */}
+        <PublicProductsSection
+          products={products}
+          tenantName={tenant.name}
+          phoneWhatsapp={profile?.phone_whatsapp || profile?.phone}
         />
 
         {/* 5. Sobre o Estabelecimento / Institucional */}

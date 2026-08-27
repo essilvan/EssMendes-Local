@@ -88,6 +88,10 @@ export default async function HomePage() {
           </Link>
 
           <nav className="hidden md:flex items-center gap-6 text-xs font-semibold text-slate-600">
+            <Link href="/diagnostico" className="text-teal-700 font-bold hover:underline flex items-center gap-1">
+              <Sparkles className="h-3 w-3" />
+              <span>Diagnóstico Grátis</span>
+            </Link>
             <a href="#recursos" className="hover:text-teal-700 transition">
               Recursos
             </a>
@@ -161,12 +165,20 @@ export default async function HomePage() {
             </Link>
 
             <Link
+              href="/diagnostico"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-teal-300/40 bg-teal-800/60 px-5 py-3.5 text-sm font-bold text-teal-100 backdrop-blur-xs hover:bg-teal-700 transition"
+            >
+              <Sparkles className="h-4 w-4 text-amber-300" />
+              <span>Diagnóstico Grátis da Empresa</span>
+            </Link>
+
+            <Link
               href="/minha-empresa-teste"
               target="_blank"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-5 py-3.5 text-sm font-bold text-white backdrop-blur-xs hover:bg-white/20 transition"
             >
               <Globe className="h-4 w-4 text-teal-300" />
-              <span>Ver Exemplo ao Vivo</span>
+              <span>Ver Vitrine ao Vivo</span>
               <ExternalLink className="h-3.5 w-3.5 opacity-70" />
             </Link>
           </div>

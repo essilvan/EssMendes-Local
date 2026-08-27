@@ -16,6 +16,8 @@ export interface Tenant {
   plan_tier: "free" | "pro" | "enterprise";
   google_rating?: number | null;
   google_reviews_count?: number | null;
+  presence_score?: number | null;
+  last_synced_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -60,6 +62,9 @@ export interface TenantReview {
   review_text?: string | null;
   relative_time?: string | null;
   relative_time_description?: string | null;
+  reply_text?: string | null;
+  replied_at?: string | null;
+  is_official_google?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -144,4 +149,90 @@ export interface PortfolioItem {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface TenantProduct {
+  id: string;
+  tenant_id: string;
+  name: string;
+  description?: string | null;
+  category?: string | null;
+  price: number;
+  promotional_price?: number | null;
+  image_url?: string | null;
+  is_available: boolean;
+  is_featured: boolean;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TenantOpportunity {
+  id: string;
+  tenant_id: string;
+  title: string;
+  description: string;
+  priority: "high" | "medium" | "low";
+  impact: "high" | "medium" | "low";
+  action_label: string;
+  action_url: string;
+  category: "profile" | "reputation" | "content" | "catalog" | "seo";
+  status: "pending" | "in_progress" | "completed" | "dismissed";
+  completed_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TenantIntegration {
+  id: string;
+  tenant_id: string;
+  provider: "google_business" | "google_places" | string;
+  is_connected: boolean;
+  account_id?: string | null;
+  location_id?: string | null;
+  location_name?: string | null;
+  last_synced_at?: string | null;
+  sync_status: "idle" | "syncing" | "success" | "error";
+  sync_message?: string | null;
+  metadata?: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LeadDiagnostic {
+  id: string;
+  company_name: string;
+  city: string;
+  whatsapp: string;
+  calculated_score: number;
+  google_found: boolean;
+  google_place_id?: string | null;
+  google_rating?: number | null;
+  google_reviews_count?: number | null;
+  issues_detected: string[];
+  opportunities_detected: string[];
+  created_at: string;
+}
+
+export interface PresenceScoreCategory {
+  category: "profile" | "reputation" | "content" | "catalog" | "seo";
+  title: string;
+  score: number;
+  maxScore: number;
+  weight: number;
+  status: "excellent" | "good" | "needs_attention" | "poor";
+  items: Array<{
+    name: string;
+    pointsEarned: number;
+    maxPoints: number;
+    completed: boolean;
+    recommendation?: string;
+  }>;
+}
+
+export interface LocalScoreResult {
+  totalScore: number; // 0 - 100
+  statusLevel: "excelente" | "forte" | "moderada" | "critica";
+  categories: PresenceScoreCategory[];
+  totalOpportunities: number;
 }

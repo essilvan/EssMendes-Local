@@ -5,7 +5,7 @@ import { PublicTenantHub } from "@/components/public/PublicTenantHub";
 import { sanitizePhoneNumber } from "@/utils/phone";
 import { getBusinessStatus } from "@/utils/opening-hours";
 import { extractNeighborhoodAndCity, sanitizeDescription } from "@/utils/address";
-import type { Service, TenantProfile, PortfolioItem, TenantReview, TenantPost } from "@/types";
+import type { Service, TenantProfile, PortfolioItem, TenantReview, TenantPost, TenantProduct } from "@/types";
 
 interface PublicPageProps {
   params: Promise<{
@@ -165,6 +165,7 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
     portfolioRes,
     reviewsRes,
     postsRes,
+    productsRes,
   ] = await Promise.all([
     supabase
       .from("tenant_profiles")
@@ -194,9 +195,33 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
       .select("*")
       .eq("tenant_id", tenant.id)
       .order("published_at", { ascending: false }),
+    supabase
+      .from("tenant_products")
+      .select("*")
+      .eq("tenant_id", tenant.id)
+      .eq("is_available", true)
+      .order("display_order", { ascending: true })
+      .order("created_at", { ascending: false }),
   ]);
 
   const profile = profileRes.data;
+
+  // 2.2.1 Tratamento Seguro de Produtos Físicos
+  const products: TenantProduct[] = (productsRes.data || []).map((p: any) => ({
+    id: p.id,
+    tenant_id: p.tenant_id,
+    name: p.name,
+    description: p.description || null,
+    category: p.category || null,
+    price: Number(p.price) || 0,
+    promotional_price: p.promotional_price ? Number(p.promotional_price) : null,
+    image_url: p.image_url || null,
+    is_available: p.is_available ?? true,
+    is_featured: p.is_featured ?? false,
+    display_order: p.display_order ?? 0,
+    created_at: p.created_at,
+    updated_at: p.updated_at,
+  }));
 
   // 2.3 Tratamento Seguro e Tipagem dos Serviços
   const activeServices: Service[] = (servicesRes.data || []).map((s: any) => ({
@@ -401,11 +426,32 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
     mainEntityOfPage: `${canonicalUrl}#novidades`,
   }));
 
-  const allStructuredData = [localBusinessJsonLd, ...articleJsonLdList];
+  // Schemas Estruturados para Catálogo de Produtos Físicos (Schema.org Product + Offer)
+  const productJsonLdList = products.map((prod) => ({
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: prod.name,
+    description: prod.description || `${prod.name} disponível em ${typedProfile?.name || tenant.name}`,
+    image: prod.image_url || undefined,
+    offers: {
+      "@type": "Offer",
+      price: (prod.promotional_price && prod.promotional_price > 0 ? prod.promotional_price : prod.price).toFixed(2),
+      priceCurrency: "BRL",
+      availability: "https://schema.org/InStock",
+      seller: {
+        "@type": "LocalBusiness",
+        name: typedProfile?.name || tenant.name,
+        address: typedProfile?.address || undefined,
+        telephone: internationalPhone,
+      },
+    },
+  }));
+
+  const allStructuredData = [localBusinessJsonLd, ...articleJsonLdList, ...productJsonLdList];
 
   return (
     <>
-      {/* Injeção JSON-LD para SEO Local e Artigos */}
+      {/* Injeção JSON-LD para SEO Local, Artigos e Produtos */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(allStructuredData) }}
@@ -419,6 +465,7 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
         portfolioItems={portfolioItems}
         reviews={reviews}
         posts={posts}
+        products={products}
         isOpenNow={businessStatus.isOpenNow}
         statusBadgeText={businessStatus.badgeText}
         statusDetailText={businessStatus.detailText}

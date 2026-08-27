@@ -83,16 +83,22 @@ export default async function AdminLayout({
               Serviços
             </a>
             <a
-              href="/admin/portfolio"
+              href="/admin/produtos"
               className="text-slate-600 font-medium hover:text-teal-700"
             >
-              Antes/Depois
+              Produtos
             </a>
             <a
-              href="/admin/faturamento"
+              href="/admin/resultados"
               className="text-slate-600 font-medium hover:text-teal-700"
             >
-              Planos
+              Resultados
+            </a>
+            <a
+              href="/admin/avaliacoes"
+              className="text-slate-600 font-medium hover:text-teal-700"
+            >
+              Avaliações
             </a>
             <a
               href="/admin/configuracoes"

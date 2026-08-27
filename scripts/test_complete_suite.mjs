@@ -86,6 +86,38 @@ async function runAllTests() {
   const { data: customers, error: custErr } = await supabase.from('customers').select('*').eq('tenant_id', tenant.id);
   assert(!custErr && customers !== null, 'Tabela customers', `Total de clientes: ${customers?.length || 0}`);
 
+  // 1.8 Tenant Products (Vitrine de Produtos Físicos & Peças)
+  const { data: products, error: prodErr } = await supabase.from('tenant_products').select('*').eq('tenant_id', tenant.id);
+  if (prodErr && prodErr.code === 'PGRST205') {
+    console.log('  ⚠️ [MIGRATION REQUIRED] Tabela tenant_products pendente de execução no Supabase SQL Editor (20260826000100_evolution_suite_products_and_scores.sql)');
+  } else {
+    assert(!prodErr && products !== null, 'Tabela tenant_products (Vitrine de Produtos)', `Total de produtos: ${products?.length || 0}`);
+  }
+
+  // 1.9 Tenant Integrations (Google Business Profile)
+  const { data: integrations, error: intErr } = await supabase.from('tenant_integrations').select('*').eq('tenant_id', tenant.id);
+  if (intErr && intErr.code === 'PGRST205') {
+    console.log('  ⚠️ [MIGRATION REQUIRED] Tabela tenant_integrations pendente de execução no Supabase SQL Editor');
+  } else {
+    assert(!intErr && integrations !== null, 'Tabela tenant_integrations (Google Places/GBP)', `Integrações configuradas: ${integrations?.length || 0}`);
+  }
+
+  // 1.10 Tenant Opportunities (Recomendações de Crescimento)
+  const { data: opportunities, error: oppErr } = await supabase.from('tenant_opportunities').select('*').eq('tenant_id', tenant.id);
+  if (oppErr && oppErr.code === 'PGRST205') {
+    console.log('  ⚠️ [MIGRATION REQUIRED] Tabela tenant_opportunities pendente de execução no Supabase SQL Editor');
+  } else {
+    assert(!oppErr && opportunities !== null, 'Tabela tenant_opportunities', `Oportunidades registradas: ${opportunities?.length || 0}`);
+  }
+
+  // 1.11 Lead Diagnostics (Captação Pública)
+  const { data: leads, error: leadErr } = await supabase.from('lead_diagnostics').select('*').limit(5);
+  if (leadErr && leadErr.code === 'PGRST205') {
+    console.log('  ⚠️ [MIGRATION REQUIRED] Tabela lead_diagnostics pendente de execução no Supabase SQL Editor');
+  } else {
+    assert(!leadErr && leads !== null, 'Tabela lead_diagnostics', `Total de leads analisados: ${leads?.length || 0}`);
+  }
+
   console.log('\n📅 2. TESTE DO MOTOR DE AGENDAMENTO & REGRAS DE CONFLITO');
   
   // Cria agendamento de teste temporário

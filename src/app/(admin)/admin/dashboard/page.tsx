@@ -1,6 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import { getAuthenticatedTenant } from "@/lib/supabase/tenant";
 import { getTenantAnalyticsSummary } from "@/services/analytics.actions";
+import { getTenantLocalScore } from "@/services/presence-score.service";
+import {
+  getTenantOpportunitiesAction,
+  getTenantRadarAlertsAction,
+} from "@/services/opportunity.actions";
+import { PresenceScoreCard } from "@/components/admin/PresenceScoreCard";
+import { RadarAlertsCard } from "@/components/admin/RadarAlertsCard";
+import { OpportunitiesCard } from "@/components/admin/OpportunitiesCard";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
@@ -49,47 +57,29 @@ export default async function AdminDashboardPage() {
   const supabase = await createClient();
   const tenantId = tenantContext.tenantId;
 
-  // 1. Busca perfil do tenant para o Diagnóstico de Presença
-  const { data: profile } = await supabase
-    .from("tenant_profiles")
-    .select("logo_url, description, phone_whatsapp, address")
-    .eq("tenant_id", tenantId)
-    .maybeSingle();
+  // 1. Busca dados em paralelo (Analytics, Score Modular, Radar e Oportunidades)
+  const [
+    analytics,
+    scoreResult,
+    oppsRes,
+    radarRes,
+    recentAppointmentsRaw,
+  ] = await Promise.all([
+    getTenantAnalyticsSummary(tenantId),
+    getTenantLocalScore(tenantId),
+    getTenantOpportunitiesAction(),
+    getTenantRadarAlertsAction(),
+    supabase
+      .from("appointments")
+      .select("*")
+      .eq("tenant_id", tenantId)
+      .order("created_at", { ascending: false })
+      .limit(3),
+  ]);
 
-  // 2. Busca quantidade de serviços cadastrados
-  let servicesCount = 0;
-  const { count: srvCount } = await supabase
-    .from("services")
-    .select("*", { count: "exact", head: true })
-    .eq("tenant_id", tenantId);
-  servicesCount = srvCount || 0;
-
-  // 3. Busca métricas de analytics dos últimos 30 dias
-  const analytics = await getTenantAnalyticsSummary(tenantId);
-
-  // 4. Busca os 3 agendamentos mais recentes
-  const { data: recentAppointmentsRaw } = await supabase
-    .from("appointments")
-    .select("*")
-    .eq("tenant_id", tenantId)
-    .order("created_at", { ascending: false })
-    .limit(3);
-
-  const recentAppointments = (recentAppointmentsRaw || []) as Appointment[];
-
-  // 5. Cálculo do Diagnóstico de Presença Local (0% a 100%)
-  const hasLogo = Boolean(profile?.logo_url);
-  const hasDescription = Boolean(profile?.description && profile.description.trim().length >= 20);
-  const hasPhone = Boolean(profile?.phone_whatsapp && profile.phone_whatsapp.trim().length >= 10);
-  const hasAddress = Boolean(profile?.address && profile.address.trim().length >= 5);
-  const hasServices = servicesCount >= 2;
-
-  let presenceScore = 0;
-  if (hasLogo) presenceScore += 20;
-  if (hasDescription) presenceScore += 20;
-  if (hasPhone) presenceScore += 20;
-  if (hasAddress) presenceScore += 20;
-  if (hasServices) presenceScore += 20;
+  const opportunities = oppsRes.data || [];
+  const radarAlerts = radarRes.data || [];
+  const recentAppointments = (recentAppointmentsRaw.data || []) as Appointment[];
 
   const user = tenantContext.user;
   const fullName =
@@ -154,138 +144,14 @@ export default async function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Diagnóstico de Presença Local (0% a 100%) */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold text-slate-900">
-                Diagnóstico de Presença Local
-              </h2>
-              <span
-                className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
-                  presenceScore === 100
-                    ? "bg-emerald-100 text-emerald-800"
-                    : presenceScore >= 60
-                    ? "bg-amber-100 text-amber-800"
-                    : "bg-red-100 text-red-800"
-                }`}
-              >
-                {presenceScore}% Concluído
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 mt-1">
-              Avaliação técnica baseada na clareza de informações e atratividade para novos clientes locais.
-            </p>
-          </div>
+      {/* 1. Score Modular de Presença Digital Local (0 a 100) */}
+      <PresenceScoreCard scoreData={scoreResult} />
 
-          {presenceScore < 100 && (
-            <Link
-              href="/admin/configuracoes"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-700 hover:text-teal-900 hover:underline"
-            >
-              <span>Completar perfil</span>
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          )}
-        </div>
+      {/* 2. Radar de Saúde Digital (Monitoramento & Alertas Ativos) */}
+      <RadarAlertsCard alerts={radarAlerts} />
 
-        {/* Barra de Progresso */}
-        <div className="space-y-2">
-          <div className="h-3 w-full rounded-full bg-slate-100 overflow-hidden">
-            <div
-              className={`h-full transition-all duration-500 rounded-full ${
-                presenceScore === 100
-                  ? "bg-emerald-500"
-                  : presenceScore >= 60
-                  ? "bg-amber-500"
-                  : "bg-red-500"
-              }`}
-              style={{ width: `${presenceScore}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Checklist de Presença */}
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 pt-1">
-          {/* Item 1: Logotipo */}
-          <div className="flex items-start gap-2.5 rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-xs">
-            {hasLogo ? (
-              <CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
-            ) : (
-              <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-            )}
-            <div>
-              <p className="font-bold text-slate-900">Logotipo / Foto do Negócio</p>
-              <p className="text-[11px] text-slate-500">
-                {hasLogo ? "Foto cadastrada com sucesso." : "Adicione seu logotipo em Ajustes."}
-              </p>
-            </div>
-          </div>
-
-          {/* Item 2: Descrição */}
-          <div className="flex items-start gap-2.5 rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-xs">
-            {hasDescription ? (
-              <CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
-            ) : (
-              <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-            )}
-            <div>
-              <p className="font-bold text-slate-900">Descrição Detalhada</p>
-              <p className="text-[11px] text-slate-500">
-                {hasDescription ? "Apresentação clara configurada." : "Explique seus diferenciais."}
-              </p>
-            </div>
-          </div>
-
-          {/* Item 3: WhatsApp */}
-          <div className="flex items-start gap-2.5 rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-xs">
-            {hasPhone ? (
-              <CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
-            ) : (
-              <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-            )}
-            <div>
-              <p className="font-bold text-slate-900">WhatsApp de Atendimento</p>
-              <p className="text-[11px] text-slate-500">
-                {hasPhone ? "Contato direto habilitado." : "Adicione seu número com DDD."}
-              </p>
-            </div>
-          </div>
-
-          {/* Item 4: Endereço */}
-          <div className="flex items-start gap-2.5 rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-xs">
-            {hasAddress ? (
-              <CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
-            ) : (
-              <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-            )}
-            <div>
-              <p className="font-bold text-slate-900">Endereço & Localização</p>
-              <p className="text-[11px] text-slate-500">
-                {hasAddress ? "Localização visível para clientes." : "Informe rua, número e bairro."}
-              </p>
-            </div>
-          </div>
-
-          {/* Item 5: Serviços */}
-          <div className="flex items-start gap-2.5 rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-xs sm:col-span-2 lg:col-span-2">
-            {hasServices ? (
-              <CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
-            ) : (
-              <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-            )}
-            <div>
-              <p className="font-bold text-slate-900">Catálogo de Serviços (Mínimo 2)</p>
-              <p className="text-[11px] text-slate-500">
-                {hasServices
-                  ? `${servicesCount} serviços cadastrados e disponíveis para reserva.`
-                  : `Apenas ${servicesCount} serviço cadastrado. Recomendamos pelo menos 2.`}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* 3. Painel de Oportunidades de Crescimento & Conversão */}
+      <OpportunitiesCard opportunities={opportunities} />
 
       {/* Métricas Rápidas & Conversão (Últimos 30 dias) */}
       <div className="space-y-4">

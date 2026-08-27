@@ -15,6 +15,9 @@ import {
   ExternalLink,
   Star,
   Newspaper,
+  ShoppingBag,
+  BarChart3,
+  Building2,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 
@@ -53,6 +56,12 @@ export function AdminSidebar({
       current: pathname.startsWith("/admin/servicos"),
     },
     {
+      name: "Vitrine Produtos",
+      href: "/admin/produtos",
+      icon: ShoppingBag,
+      current: pathname.startsWith("/admin/produtos"),
+    },
+    {
       name: "Antes & Depois",
       href: "/admin/portfolio",
       icon: Sparkles,
@@ -65,10 +74,22 @@ export function AdminSidebar({
       current: pathname.startsWith("/admin/avaliacoes"),
     },
     {
-      name: "Posts & Novidades",
+      name: "Posts & SEO",
       href: "/admin/posts",
       icon: Newspaper,
       current: pathname.startsWith("/admin/posts"),
+    },
+    {
+      name: "Resultados & Relatórios",
+      href: "/admin/resultados",
+      icon: BarChart3,
+      current: pathname.startsWith("/admin/resultados"),
+    },
+    {
+      name: "Integrações Google",
+      href: "/admin/integracoes",
+      icon: Building2,
+      current: pathname.startsWith("/admin/integracoes"),
     },
     {
       name: "Faturamento",
