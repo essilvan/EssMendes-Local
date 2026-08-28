@@ -9,6 +9,7 @@ import {
   clearManagedTenantAction,
 } from "@/services/super-admin.actions";
 import type { SuperAdminTenantItem } from "@/types";
+import { NewTenantModal } from "@/components/admin/NewTenantModal";
 import {
   Building2,
   Plus,
@@ -47,15 +48,8 @@ export function SuperAdminDashboard({
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Estados do formulário de Setup Rápido
-  const [mapsUrl, setMapsUrl] = useState("");
-  const [whatsapp, setWhatsapp] = useState("");
-  const [formError, setFormError] = useState<string | null>(null);
-  const [formSuccess, setFormSuccess] = useState<string | null>(null);
-
   // Transitions
   const [isSelecting, startSelectTransition] = useTransition();
-  const [isCreating, startCreateTransition] = useTransition();
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
 
   // Métricas do Topo
@@ -95,38 +89,6 @@ export function SuperAdminDashboard({
         router.push(res.redirectUrl);
       } else {
         router.push(targetUrl);
-      }
-    });
-  };
-
-  const handleCreateTenant = (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormError(null);
-    setFormSuccess(null);
-
-    if (!mapsUrl.trim()) {
-      setFormError("Por favor, cole o link do Google Maps da empresa.");
-      return;
-    }
-
-    if (!whatsapp.trim()) {
-      setFormError("Informe o WhatsApp comercial da empresa.");
-      return;
-    }
-
-    startCreateTransition(async () => {
-      const res = await createTenantFromGoogleMapsAction(mapsUrl, whatsapp);
-      if (res.success && res.tenant) {
-        setFormSuccess(`Empresa "${res.tenant.name}" cadastrada e sincronizada com sucesso!`);
-        setMapsUrl("");
-        setWhatsapp("");
-        setTimeout(() => {
-          setIsModalOpen(false);
-          setFormSuccess(null);
-          router.refresh();
-        }, 1500);
-      } else {
-        setFormError(res.error || "Falha ao cadastrar empresa a partir do link do Google Maps.");
       }
     });
   };
@@ -416,127 +378,12 @@ export function SuperAdminDashboard({
         </div>
       </div>
 
-      {/* Modal / Formulário: ➕ Setup Rápido via Link do Google Maps */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-150">
-            {/* Header Modal */}
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-100 text-teal-800">
-                  <Plus className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900">
-                    Cadastrar Nova Empresa (Setup Rápido via Google Maps)
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Importação automática de perfil, notas, fotos e avaliações
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Explicação */}
-            <div className="rounded-xl border border-teal-100 bg-teal-50/70 p-3.5 text-xs text-teal-900">
-              <p className="font-semibold flex items-center gap-1.5">
-                <Sparkles className="h-4 w-4 text-teal-700 shrink-0" />
-                Setup Instantâneo em Menos de 1 Minuto
-              </p>
-              <p className="mt-1 text-teal-800 text-[11px] leading-relaxed">
-                Ao colar o link do estabelecimento no Google Maps, nosso motor inteligente identifica nome, endereço, categoria, fotos oficiais em alta definição e avaliações reais.
-              </p>
-            </div>
-
-            {/* Formulário */}
-            <form onSubmit={handleCreateTenant} className="space-y-4">
-              <div className="space-y-1">
-                <label className="block text-xs font-bold text-slate-700">
-                  Link do Google Maps *
-                </label>
-                <input
-                  type="text"
-                  placeholder="https://maps.app.goo.gl/... ou link completo do Maps"
-                  value={mapsUrl}
-                  onChange={(e) => setMapsUrl(e.target.value)}
-                  disabled={isCreating}
-                  required
-                  className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600 shadow-xs"
-                />
-                <span className="text-[10px] text-slate-400">
-                  Pode ser o link de compartilhamento gerado no celular ou copiado do navegador.
-                </span>
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-xs font-bold text-slate-700">
-                  WhatsApp Comercial da Empresa *
-                </label>
-                <input
-                  type="text"
-                  placeholder="(11) 99999-9999"
-                  value={whatsapp}
-                  onChange={(e) => setWhatsapp(e.target.value)}
-                  disabled={isCreating}
-                  required
-                  className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600 shadow-xs"
-                />
-                <span className="text-[10px] text-slate-400">
-                  Número principal que receberá os pedidos da vitrine e orçamentos.
-                </span>
-              </div>
-
-              {formError && (
-                <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
-                  <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
-                  <span>{formError}</span>
-                </div>
-              )}
-
-              {formSuccess && (
-                <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-                  <span>{formSuccess}</span>
-                </div>
-              )}
-
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  disabled={isCreating}
-                  className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isCreating}
-                  className="inline-flex items-center gap-2 rounded-xl bg-teal-700 px-4 py-2.5 text-xs font-bold text-white shadow-md hover:bg-teal-800 disabled:opacity-50 transition cursor-pointer"
-                >
-                  {isCreating ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Sincronizando com Google Places...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="h-4 w-4" />
-                      <span>Cadastrar Empresa Agora</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Modal / Formulário: ➕ Setup Rápido com Busca Instantânea */}
+      <NewTenantModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={() => router.refresh()}
+      />
     </div>
   );
 }
