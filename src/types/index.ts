@@ -13,6 +13,8 @@ export interface SuperAdminTenantItem {
   name: string;
   slug: string;
   city: string;
+  phone?: string | null;
+  logo_url?: string | null;
   google_rating: number | null;
   google_reviews_count: number | null;
   total_products: number;
@@ -25,6 +27,8 @@ export interface Tenant {
   id: string;
   name: string;
   slug: string;
+  city?: string | null;
+  phone?: string | null;
   custom_domain?: string | null;
   plan_tier: "free" | "pro" | "enterprise";
   google_rating?: number | null;

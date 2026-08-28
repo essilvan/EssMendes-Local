@@ -1,16 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
-import { getAuthenticatedTenant, checkIsSuperAdmin } from "@/lib/supabase/tenant";
+import { checkIsSuperAdmin } from "@/lib/supabase/tenant";
 import { getAllTenantsForSuperAdminAction } from "@/services/super-admin.actions";
-import { SuperAdminManager } from "@/components/super-admin/SuperAdminManager";
+import { SuperAdminDashboard } from "@/components/admin/SuperAdminDashboard";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { ShieldAlert } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export default async function SuperAdminPage() {
   const supabase = await createClient();
 
+  // 1. Obter usuário autenticado
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -19,21 +19,42 @@ export default async function SuperAdminPage() {
     redirect("/login?redirect=/super-admin");
   }
 
-  // Verifica papel do usuário
-  const { data: tenantUser } = await supabase
-    .from("tenant_users")
-    .select("role")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  // 2. Validar se o usuário possui role === 'super_admin' na tabela profiles
+  let isSuperAdmin = false;
 
-  const isSuper = checkIsSuperAdmin(user, tenantUser?.role);
+  try {
+    const { data: userProfile, error: profileError } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
 
-  // Se o usuário autenticado for lojista ('tenant_owner'), redireciona para o /admin de sua empresa
-  if (!isSuper) {
+    if (!profileError && userProfile?.role === "super_admin") {
+      isSuperAdmin = true;
+    }
+  } catch (err) {
+    console.warn("[SuperAdminPage] Aviso ao consultar tabela profiles:", err);
+  }
+
+  // Fallback seguro de permissão (metadata ou tenant_users)
+  if (!isSuperAdmin) {
+    const { data: tenantUser } = await supabase
+      .from("tenant_users")
+      .select("role")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (checkIsSuperAdmin(user, tenantUser?.role)) {
+      isSuperAdmin = true;
+    }
+  }
+
+  // Caso contrário, redirecionar para /admin
+  if (!isSuperAdmin) {
     redirect("/admin/dashboard");
   }
 
-  // Busca lista de todos os tenants cadastrados
+  // 3. Buscar todos os estabelecimentos cadastrados na tabela tenants e contagem de produtos
   const tenantsRes = await getAllTenantsForSuperAdminAction();
   const tenants = tenantsRes.data || [];
 
@@ -43,10 +64,10 @@ export default async function SuperAdminPage() {
   return (
     <div className="min-h-screen bg-slate-50 p-4 sm:p-8">
       <div className="mx-auto max-w-7xl">
-        <SuperAdminManager
+        <SuperAdminDashboard
           initialTenants={tenants}
           currentUserEmail={user.email}
-          activeImpersonatedTenantId={activeTenantId}
+          activeTenantId={activeTenantId}
         />
       </div>
     </div>

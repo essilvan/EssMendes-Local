@@ -35,13 +35,22 @@ export default async function AdminLayout({
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
-      {/* Banner Superior de Impersonação do Super Admin */}
-      {isImpersonating && (
-        <aside aria-label="Aviso de Super Admin" className="sticky top-0 z-50 flex items-center justify-between border-b border-amber-300 bg-amber-400 px-4 py-2 text-xs font-semibold text-slate-950 shadow-sm">
+      {/* Barra Superior Discreta do Super Admin */}
+      {isSuperAdmin && (
+        <aside
+          aria-label="Aviso de Super Admin"
+          className="sticky top-0 z-50 flex items-center justify-between border-b border-amber-300 bg-amber-400 px-4 py-2 text-xs font-semibold text-slate-950 shadow-xs"
+        >
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-slate-950 shrink-0" />
             <span>
-              <strong>MODO SUPER ADMIN:</strong> Atuando em nome de <u>{companyName}</u> (/{companySlug})
+              Você está gerenciando a empresa <strong>{companyName}</strong> —{" "}
+              <Link
+                href="/super-admin"
+                className="underline font-bold hover:text-slate-800 transition"
+              >
+                [Voltar ao Painel Master Super Admin]
+              </Link>
             </span>
           </div>
 
@@ -51,7 +60,7 @@ export default async function AdminLayout({
               className="inline-flex items-center gap-1 rounded-md bg-slate-950 px-2.5 py-1 text-[11px] font-bold text-amber-300 hover:bg-slate-900 transition"
             >
               <ArrowLeft className="h-3 w-3" />
-              <span>Lista de Lojistas</span>
+              <span>Voltar ao Painel Master Super Admin</span>
             </Link>
             <form action={clearManagedTenantAction}>
               <button
@@ -59,7 +68,7 @@ export default async function AdminLayout({
                 className="inline-flex items-center gap-1 rounded-md bg-white px-2 py-1 text-[11px] font-bold text-slate-800 hover:bg-slate-100 transition"
               >
                 <X className="h-3 w-3" />
-                <span>Encerrar Atuação</span>
+                <span>Encerrar</span>
               </button>
             </form>
           </div>

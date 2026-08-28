@@ -53,18 +53,37 @@ export async function getAllTenantsForSuperAdminAction(): Promise<{
       return { success: false, error: "Usuário não autenticado." };
     }
 
-    // Checa role em tenant_users
-    const { data: tenantUser } = await supabase
-      .from("tenant_users")
-      .select("role")
-      .eq("user_id", user.id)
-      .maybeSingle();
+    // Checa papel de super_admin na tabela profiles
+    let isSuper = false;
+    try {
+      const { data: profileRow } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
 
-    if (!checkIsSuperAdmin(user, tenantUser?.role)) {
+      if (profileRow?.role === "super_admin") {
+        isSuper = true;
+      }
+    } catch {}
+
+    if (!isSuper) {
+      const { data: tenantUser } = await supabase
+        .from("tenant_users")
+        .select("role")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (checkIsSuperAdmin(user, tenantUser?.role)) {
+        isSuper = true;
+      }
+    }
+
+    if (!isSuper) {
       return { success: false, error: "Acesso restrito ao Super Admin." };
     }
 
-    // 1. Busca todos os tenants
+    // 1. Busca todos os estabelecimentos cadastrados na tabela tenants
     const { data: tenants, error: tenantsError } = await supabase
       .from("tenants")
       .select("id, name, slug, google_rating, google_reviews_count, presence_score, created_at")
@@ -80,10 +99,10 @@ export async function getAllTenantsForSuperAdminAction(): Promise<{
 
     const tenantIds = tenants.map((t) => t.id);
 
-    // 2. Busca profiles para obter endereços/cidades
+    // 2. Busca dados de perfil vinculados (endereço, telefone, logo)
     const { data: profiles } = await supabase
       .from("tenant_profiles")
-      .select("tenant_id, address, rating, google_rating, google_reviews_count")
+      .select("tenant_id, address, phone_whatsapp, logo_url, rating, google_rating, google_reviews_count")
       .in("tenant_id", tenantIds);
 
     const profileMap = new Map<string, any>();
@@ -93,7 +112,7 @@ export async function getAllTenantsForSuperAdminAction(): Promise<{
       }
     }
 
-    // 3. Busca contagem de produtos por tenant
+    // 3. Contagem de produtos cadastrados em tenant_products para cada tenant
     const { data: products } = await supabase
       .from("tenant_products")
       .select("tenant_id")
@@ -111,7 +130,9 @@ export async function getAllTenantsForSuperAdminAction(): Promise<{
     const tenantItems: SuperAdminTenantItem[] = tenants.map((t) => {
       const p = profileMap.get(t.id);
       const rawAddress = p?.address || "";
-      const city = extractNeighborhoodAndCity(rawAddress) || "Não informada";
+      const city = (t as any).city || extractNeighborhoodAndCity(rawAddress) || "Não informada";
+      const phone = (t as any).phone || p?.phone_whatsapp || null;
+      const logoUrl = p?.logo_url || null;
       const googleRating = t.google_rating ?? p?.google_rating ?? p?.rating ?? null;
       const googleReviews = t.google_reviews_count ?? p?.google_reviews_count ?? null;
       const totalProducts = productCountMap.get(t.id) || 0;
@@ -127,6 +148,8 @@ export async function getAllTenantsForSuperAdminAction(): Promise<{
         name: t.name,
         slug: t.slug,
         city,
+        phone,
+        logo_url: logoUrl,
         google_rating: googleRating,
         google_reviews_count: googleReviews,
         total_products: totalProducts,

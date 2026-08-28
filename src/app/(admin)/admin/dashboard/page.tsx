@@ -38,8 +38,14 @@ import type { Appointment } from "@/types";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminDashboardPage() {
-  const { data: tenantContext, error: tenantError } = await getAuthenticatedTenant();
+export default async function AdminDashboardPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ tenantId?: string }>;
+}) {
+  const resolvedParams = searchParams ? await searchParams : undefined;
+  const overrideTenantId = resolvedParams?.tenantId;
+  const { data: tenantContext, error: tenantError } = await getAuthenticatedTenant(overrideTenantId);
 
   if (tenantError || !tenantContext) {
     if (!tenantContext && !tenantError) {

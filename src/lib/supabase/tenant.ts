@@ -60,9 +60,9 @@ export function checkIsSuperAdmin(
 
 /**
  * Obtém o usuário autenticado e seu respectivo tenant_id.
- * Suporta modo Super Admin com atuação em nome de tenant (impersonação segura).
+ * Suporta modo Super Admin com atuação em nome de tenant (impersonação segura via cookie ou customTenantId).
  */
-export async function getAuthenticatedTenant(): Promise<{
+export async function getAuthenticatedTenant(overrideTenantId?: string): Promise<{
   data: AuthenticatedTenantContext | null;
   error: string | null;
 }> {
@@ -85,7 +85,23 @@ export async function getAuthenticatedTenant(): Promise<{
       };
     }
 
-    // 2. Obter vínculo em tenant_users
+    // 2. Checa se o usuário possui papel super_admin na tabela profiles
+    let isSuperAdminUser = false;
+    try {
+      const { data: profileRow } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profileRow?.role === "super_admin") {
+        isSuperAdminUser = true;
+      }
+    } catch (profErr) {
+      console.warn("[getAuthenticatedTenant] Aviso ao checar tabela profiles:", profErr);
+    }
+
+    // 3. Obter vínculo em tenant_users
     const { data: tenantUser, error: tenantUserError } = await supabase
       .from("tenant_users")
       .select("tenant_id, role, tenants(id, name, slug, plan_tier)")
@@ -96,21 +112,35 @@ export async function getAuthenticatedTenant(): Promise<{
       console.error("[getAuthenticatedTenant] Erro na consulta de tenant_users:", tenantUserError);
     }
 
-    const isSuperAdminUser = checkIsSuperAdmin(user, tenantUser?.role);
+    if (!isSuperAdminUser) {
+      isSuperAdminUser = checkIsSuperAdmin(user, tenantUser?.role);
+    }
 
-    // 3. Suporte a Super Admin com tenant selecionado via cookie (impersonação)
+    // 4. Suporte a Super Admin com tenant selecionado via overrideTenantId ou cookie (impersonação)
     if (isSuperAdminUser) {
       const cookieStore = await cookies();
-      const activeTenantId = cookieStore.get("em_active_tenant_id")?.value;
+      const cookieTenantId = cookieStore.get("em_active_tenant_id")?.value;
+      const targetTenantId = overrideTenantId || cookieTenantId;
 
-      if (activeTenantId) {
+      if (targetTenantId) {
         const { data: targetTenant, error: targetError } = await supabase
           .from("tenants")
           .select("id, name, slug, plan_tier")
-          .eq("id", activeTenantId)
+          .eq("id", targetTenantId)
           .maybeSingle();
 
         if (targetTenant && !targetError) {
+          // Se veio via query param, sincroniza o cookie para as próximas requisições
+          if (overrideTenantId && overrideTenantId !== cookieTenantId) {
+            cookieStore.set("em_active_tenant_id", overrideTenantId, {
+              path: "/",
+              httpOnly: true,
+              secure: process.env.NODE_ENV === "production",
+              sameSite: "lax",
+              maxAge: 60 * 60 * 24 * 7,
+            });
+          }
+
           return {
             data: {
               user: {
@@ -197,7 +227,7 @@ export async function getAuthenticatedTenant(): Promise<{
       }
     }
 
-    // 4. Fluxo Padrão: Lojista / Proprietário (tenant_owner)
+    // 5. Fluxo Padrão: Lojista / Proprietário (tenant_owner)
     if (!tenantUser || !tenantUser.tenant_id) {
       console.error("[getAuthenticatedTenant] Usuário sem registro na tabela tenant_users:", user.id);
       return {
