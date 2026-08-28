@@ -45,7 +45,7 @@ export function checkIsSuperAdmin(
   const envAdmins = (
     process.env.SUPER_ADMIN_EMAILS ||
     process.env.SUPER_ADMIN_EMAIL ||
-    "admin@essmendes.com,superadmin@essmendes.com,contato@essmendes.com.br"
+    "essilvanmendes@gmail.com,admin@essmendes.com,superadmin@essmendes.com,contato@essmendes.com.br"
   )
     .split(",")
     .map((e) => e.trim().toLowerCase())

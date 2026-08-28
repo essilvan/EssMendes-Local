@@ -53,19 +53,26 @@ export async function getAllTenantsForSuperAdminAction(): Promise<{
       return { success: false, error: "Usuário não autenticado." };
     }
 
-    // Checa papel de super_admin na tabela profiles
     let isSuper = false;
-    try {
-      const { data: profileRow } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle();
+    const userEmail = (user.email || "").toLowerCase().trim();
+    if (userEmail === "essilvanmendes@gmail.com") {
+      isSuper = true;
+    }
 
-      if (profileRow?.role === "super_admin") {
-        isSuper = true;
-      }
-    } catch {}
+    // Checa papel de super_admin na tabela profiles
+    if (!isSuper) {
+      try {
+        const { data: profileRow } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (profileRow?.role === "super_admin") {
+          isSuper = true;
+        }
+      } catch {}
+    }
 
     if (!isSuper) {
       const { data: tenantUser } = await supabase

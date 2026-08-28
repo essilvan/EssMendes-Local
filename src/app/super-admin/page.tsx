@@ -39,15 +39,21 @@ export default async function SuperAdminPage() {
     console.warn("[SuperAdminPage] Aviso ao consultar tabela profiles:", err);
   }
 
-  // Permite acesso se for super_admin no profiles, em metadados, ou em ambiente de desenvolvimento
-  const isDev = process.env.NODE_ENV === "development";
+  // 2. Verificação de permissão direta e prioritária
+  const userEmail = (user.email || "").toLowerCase().trim();
+  const isMasterOwnerEmail = userEmail === "essilvanmendes@gmail.com";
   const hasProfileSuperAdmin = profileRole === "super_admin";
   const hasMetadataSuperAdmin =
     user.user_metadata?.role === "super_admin" ||
-    user.app_metadata?.role === "super_admin" ||
-    checkIsSuperAdmin(user);
+    user.app_metadata?.role === "super_admin";
 
-  let isSuperAdmin = hasProfileSuperAdmin || hasMetadataSuperAdmin || isDev;
+  // Se qualquer uma dessas condições for verdadeira (ou dev), libere imediatamente
+  let isSuperAdmin =
+    isMasterOwnerEmail ||
+    hasProfileSuperAdmin ||
+    hasMetadataSuperAdmin ||
+    checkIsSuperAdmin(user) ||
+    process.env.NODE_ENV === "development";
 
   // Fallback: Checa também tenant_users caso role esteja lá
   if (!isSuperAdmin) {
