@@ -52,38 +52,8 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
-    // 2. Proteção da rota Master (/super-admin)
-    if (pathname.startsWith("/super-admin")) {
-      const isMetadataSuperAdmin =
-        user.user_metadata?.role === "super_admin" ||
-        user.app_metadata?.role === "super_admin";
-
-      const envAdmins = (
-        process.env.SUPER_ADMIN_EMAILS ||
-        process.env.SUPER_ADMIN_EMAIL ||
-        "admin@essmendes.com,superadmin@essmendes.com,contato@essmendes.com.br"
-      )
-        .split(",")
-        .map((e) => e.trim().toLowerCase())
-        .filter(Boolean);
-
-      const isEmailSuperAdmin =
-        !!user.email && envAdmins.includes(user.email.toLowerCase());
-
-      // Se for tenant_owner tentando acessar /super-admin, redireciona para seu /admin
-      if (!isMetadataSuperAdmin && !isEmailSuperAdmin) {
-        // Checagem rápida de tenant_users se aplicável
-        const { data: tenantUser } = await supabase
-          .from("tenant_users")
-          .select("role")
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-        if (tenantUser?.role !== "super_admin") {
-          return NextResponse.redirect(new URL("/admin/dashboard", request.url));
-        }
-      }
-    }
+    // 2. Proteção de autenticação básica para /super-admin e /admin
+    // (O controle detalhado de role de super_admin é feito na própria página para feedback claro ao desenvolvedor)
 
     return response;
   }

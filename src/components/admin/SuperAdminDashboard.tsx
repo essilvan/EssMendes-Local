@@ -86,21 +86,15 @@ export function SuperAdminDashboard({
 
   const handleGerenciarEmpresa = (
     tenantId: string,
-    targetPath: string = "/admin/dashboard"
+    targetUrl: string = `/admin?tenantId=${tenantId}`
   ) => {
     setSelectedTenantId(tenantId);
     startSelectTransition(async () => {
-      // Redireciona com query param e salva o cookie de sessão para persistência
-      const redirectWithParam = targetPath.includes("?")
-        ? `${targetPath}&tenantId=${tenantId}`
-        : `${targetPath}?tenantId=${tenantId}`;
-
-      const res = await selectManagedTenantAction(tenantId, redirectWithParam);
+      const res = await selectManagedTenantAction(tenantId, targetUrl);
       if (res.success && res.redirectUrl) {
         router.push(res.redirectUrl);
       } else {
-        alert(res.error || "Erro ao selecionar empresa.");
-        setSelectedTenantId(null);
+        router.push(targetUrl);
       }
     });
   };
@@ -159,7 +153,7 @@ export function SuperAdminDashboard({
           <div>
             <button
               onClick={() => setIsModalOpen(true)}
-              className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-5 py-3 text-xs font-bold text-white shadow-md hover:bg-teal-500 transition hover:scale-102"
+              className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-5 py-3 text-xs font-bold text-white shadow-md hover:bg-teal-500 transition hover:scale-102 cursor-pointer"
             >
               <Plus className="h-4 w-4" />
               <span>➕ Cadastrar Nova Empresa (Setup Rápido via Link do Google Maps)</span>
@@ -218,7 +212,7 @@ export function SuperAdminDashboard({
           <form action={clearManagedTenantAction}>
             <button
               type="submit"
-              className="rounded-lg bg-amber-200/80 px-3 py-1 font-bold text-amber-950 hover:bg-amber-300 transition"
+              className="rounded-lg bg-amber-200/80 px-3 py-1 font-bold text-amber-950 hover:bg-amber-300 transition cursor-pointer"
             >
               Desconectar Empresa Ativa
             </button>
@@ -249,8 +243,8 @@ export function SuperAdminDashboard({
           <table className="min-w-full divide-y divide-slate-200 text-left text-xs">
             <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider">
               <tr>
-                <th scope="col" className="px-5 py-3.5">Logo / Empresa e Cidade</th>
-                <th scope="col" className="px-5 py-3.5">Vitrine Pública</th>
+                <th scope="col" className="px-5 py-3.5">Logo / Nome da Empresa e Cidade</th>
+                <th scope="col" className="px-5 py-3.5">Slug Público</th>
                 <th scope="col" className="px-5 py-3.5">Nota do Google</th>
                 <th scope="col" className="px-5 py-3.5">Total de Produtos</th>
                 <th scope="col" className="px-5 py-3.5 text-right">Ação Master</th>
@@ -271,6 +265,7 @@ export function SuperAdminDashboard({
                 filteredTenants.map((t) => {
                   const isCurrent = activeTenantId === t.id;
                   const isRowSelecting = isSelecting && selectedTenantId === t.id;
+                  const adminUrl = `/admin?tenantId=${t.id}`;
 
                   return (
                     <tr
@@ -357,12 +352,15 @@ export function SuperAdminDashboard({
                         </div>
                       </td>
 
-                      {/* Botão de Destaque: "🏢 Gerenciar / Acessar Painel" */}
+                      {/* Botão de Destaque: "🏢 Gerenciar" */}
                       <td className="px-5 py-4 text-right">
                         <div className="inline-flex items-center gap-1.5">
-                          <button
-                            onClick={() => handleGerenciarEmpresa(t.id, "/admin/dashboard")}
-                            disabled={isRowSelecting}
+                          <Link
+                            href={adminUrl}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleGerenciarEmpresa(t.id, adminUrl);
+                            }}
                             className="inline-flex items-center gap-1.5 rounded-xl bg-teal-700 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-teal-800 disabled:opacity-50 transition hover:scale-102"
                           >
                             {isRowSelecting ? (
@@ -370,34 +368,43 @@ export function SuperAdminDashboard({
                             ) : (
                               <Building2 className="h-3.5 w-3.5" />
                             )}
-                            <span>🏢 Gerenciar / Acessar Painel</span>
-                          </button>
+                            <span>🏢 Gerenciar</span>
+                          </Link>
 
                           {/* Acesso rápido específico solicitado */}
-                          <button
-                            onClick={() => handleGerenciarEmpresa(t.id, "/admin/produtos")}
-                            disabled={isRowSelecting}
+                          <Link
+                            href={`/admin/produtos?tenantId=${t.id}`}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleGerenciarEmpresa(t.id, `/admin/produtos?tenantId=${t.id}`);
+                            }}
                             title="Editar Produtos da Empresa"
                             className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition"
                           >
                             <ShoppingBag className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleGerenciarEmpresa(t.id, "/admin/avaliacoes")}
-                            disabled={isRowSelecting}
+                          </Link>
+                          <Link
+                            href={`/admin/avaliacoes?tenantId=${t.id}`}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleGerenciarEmpresa(t.id, `/admin/avaliacoes?tenantId=${t.id}`);
+                            }}
                             title="Gerenciar Reviews Google & IA"
                             className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition"
                           >
                             <Star className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleGerenciarEmpresa(t.id, "/admin/posts")}
-                            disabled={isRowSelecting}
+                          </Link>
+                          <Link
+                            href={`/admin/posts?tenantId=${t.id}`}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleGerenciarEmpresa(t.id, `/admin/posts?tenantId=${t.id}`);
+                            }}
                             title="Gerar Posts de IA & SEO"
                             className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition"
                           >
                             <FileText className="h-3.5 w-3.5" />
-                          </button>
+                          </Link>
                         </div>
                       </td>
                     </tr>
@@ -504,14 +511,14 @@ export function SuperAdminDashboard({
                   type="button"
                   onClick={() => setIsModalOpen(false)}
                   disabled={isCreating}
-                  className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                  className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isCreating}
-                  className="inline-flex items-center gap-2 rounded-xl bg-teal-700 px-4 py-2.5 text-xs font-bold text-white shadow-md hover:bg-teal-800 disabled:opacity-50 transition"
+                  className="inline-flex items-center gap-2 rounded-xl bg-teal-700 px-4 py-2.5 text-xs font-bold text-white shadow-md hover:bg-teal-800 disabled:opacity-50 transition cursor-pointer"
                 >
                   {isCreating ? (
                     <>
