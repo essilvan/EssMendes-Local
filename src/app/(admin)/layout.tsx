@@ -1,120 +1,137 @@
-import { createClient } from "@/lib/supabase/server";
+import { getAuthenticatedTenant } from "@/lib/supabase/tenant";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { clearManagedTenantAction } from "@/services/super-admin.actions";
 import { redirect } from "next/navigation";
+import Link from "next/link";
+import { ShieldCheck, ArrowLeft, X } from "lucide-react";
 
 export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
+  const { data: tenantContext, error: tenantError } = await getAuthenticatedTenant();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  if (tenantError || !tenantContext) {
     redirect("/login");
   }
 
-  // Busca dados do tenant
-  const { data: tenantUserData } = await supabase
-    .from("tenant_users")
-    .select("role, tenants (id, name, slug)")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  const rawTenant = tenantUserData?.tenants;
-  const tenant = Array.isArray(rawTenant) ? rawTenant[0] : rawTenant;
+  const user = tenantContext.user;
+  const tenant = tenantContext.tenant;
+  const isSuperAdmin = tenantContext.isSuperAdmin;
+  const isImpersonating = tenantContext.isImpersonating;
 
   const fullName =
-    user.user_metadata?.full_name ||
+    (user.user_metadata?.full_name as string) ||
     user.email?.split("@")[0] ||
     "Proprietário(a)";
+
   const companyName =
     tenant?.name ||
-    user.user_metadata?.company_name ||
+    (user.user_metadata?.company_name as string) ||
     "Meu Estabelecimento";
+
   const companySlug = tenant?.slug || "meu-negocio";
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
-      
-      {/* Sidebar Fixa Desktop */}
-      <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 z-40">
-        <AdminSidebar
-          companyName={companyName}
-          companySlug={companySlug}
-          userEmail={user.email || ""}
-          fullName={fullName}
-        />
-      </div>
-
-      {/* Área Principal de Conteúdo */}
-      <div className="flex flex-1 flex-col md:pl-64">
-        
-        {/* Mobile Header */}
-        <header className="flex md:hidden items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
+    <div className="flex min-h-screen flex-col bg-slate-50">
+      {/* Banner Superior de Impersonação do Super Admin */}
+      {isImpersonating && (
+        <aside aria-label="Aviso de Super Admin" className="sticky top-0 z-50 flex items-center justify-between border-b border-amber-300 bg-amber-400 px-4 py-2 text-xs font-semibold text-slate-950 shadow-sm">
           <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded bg-teal-700 font-bold text-white text-xs">
-              EM
-            </div>
-            <span className="text-xs font-bold text-slate-900 truncate max-w-[120px]">
-              {companyName}
+            <ShieldCheck className="h-4 w-4 text-slate-950 shrink-0" />
+            <span>
+              <strong>MODO SUPER ADMIN:</strong> Atuando em nome de <u>{companyName}</u> (/{companySlug})
             </span>
           </div>
-          <div className="flex items-center gap-2.5 text-xs overflow-x-auto">
-            <a
-              href="/admin/dashboard"
-              className="text-slate-600 font-medium hover:text-teal-700"
+
+          <div className="flex items-center gap-2">
+            <Link
+              href="/super-admin"
+              className="inline-flex items-center gap-1 rounded-md bg-slate-950 px-2.5 py-1 text-[11px] font-bold text-amber-300 hover:bg-slate-900 transition"
             >
-              Início
-            </a>
-            <a
-              href="/admin/agendamentos"
-              className="text-slate-600 font-medium hover:text-teal-700"
-            >
-              Agenda
-            </a>
-            <a
-              href="/admin/servicos"
-              className="text-slate-600 font-medium hover:text-teal-700"
-            >
-              Serviços
-            </a>
-            <a
-              href="/admin/produtos"
-              className="text-slate-600 font-medium hover:text-teal-700"
-            >
-              Produtos
-            </a>
-            <a
-              href="/admin/resultados"
-              className="text-slate-600 font-medium hover:text-teal-700"
-            >
-              Resultados
-            </a>
-            <a
-              href="/admin/avaliacoes"
-              className="text-slate-600 font-medium hover:text-teal-700"
-            >
-              Avaliações
-            </a>
-            <a
-              href="/admin/configuracoes"
-              className="text-slate-600 font-medium hover:text-teal-700"
-            >
-              Ajustes
-            </a>
+              <ArrowLeft className="h-3 w-3" />
+              <span>Lista de Lojistas</span>
+            </Link>
+            <form action={clearManagedTenantAction}>
+              <button
+                type="submit"
+                className="inline-flex items-center gap-1 rounded-md bg-white px-2 py-1 text-[11px] font-bold text-slate-800 hover:bg-slate-100 transition"
+              >
+                <X className="h-3 w-3" />
+                <span>Encerrar Atuação</span>
+              </button>
+            </form>
           </div>
-        </header>
+        </aside>
+      )}
 
-        {/* Conteúdo das Páginas */}
-        <main className="flex-1 p-4 sm:p-8 max-w-6xl w-full mx-auto">
-          {children}
-        </main>
+      <div className="flex flex-1">
+        {/* Sidebar Fixa Desktop */}
+        <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 z-40">
+          <AdminSidebar
+            companyName={companyName}
+            companySlug={companySlug}
+            userEmail={user.email || ""}
+            fullName={fullName}
+            isSuperAdmin={isSuperAdmin}
+          />
+        </div>
+
+        {/* Área Principal de Conteúdo */}
+        <div className="flex flex-1 flex-col md:pl-64">
+          {/* Mobile Header */}
+          <header className="flex md:hidden items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
+            <div className="flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded bg-teal-700 font-bold text-white text-xs">
+                EM
+              </div>
+              <span className="text-xs font-bold text-slate-900 truncate max-w-[120px]">
+                {companyName}
+              </span>
+            </div>
+            <div className="flex items-center gap-2.5 text-xs overflow-x-auto">
+              <Link
+                href="/admin/dashboard"
+                className="text-slate-600 font-medium hover:text-teal-700 shrink-0"
+              >
+                Início
+              </Link>
+              <Link
+                href="/admin/produtos"
+                className="text-slate-600 font-medium hover:text-teal-700 shrink-0"
+              >
+                Produtos
+              </Link>
+              <Link
+                href="/admin/avaliacoes"
+                className="text-slate-600 font-medium hover:text-teal-700 shrink-0"
+              >
+                Avaliações
+              </Link>
+              <Link
+                href="/admin/agendamentos"
+                className="text-slate-600 font-medium hover:text-teal-700 shrink-0"
+              >
+                Agenda
+              </Link>
+              {isSuperAdmin && (
+                <Link
+                  href="/super-admin"
+                  className="font-bold text-amber-700 hover:text-amber-800 shrink-0"
+                >
+                  Super Admin
+                </Link>
+              )}
+            </div>
+          </header>
+
+          {/* Conteúdo das Páginas */}
+          <main className="flex-1 p-4 sm:p-8 max-w-6xl w-full mx-auto">
+            {children}
+          </main>
+        </div>
       </div>
-
     </div>
   );
 }

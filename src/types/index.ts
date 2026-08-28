@@ -6,7 +6,20 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
-export type UserRole = "owner" | "admin" | "staff";
+export type UserRole = "super_admin" | "tenant_owner" | "owner" | "admin" | "staff";
+
+export interface SuperAdminTenantItem {
+  id: string;
+  name: string;
+  slug: string;
+  city: string;
+  google_rating: number | null;
+  google_reviews_count: number | null;
+  total_products: number;
+  presence_score: number;
+  status: string;
+  created_at: string;
+}
 
 export interface Tenant {
   id: string;

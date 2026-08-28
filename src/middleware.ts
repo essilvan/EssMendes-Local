@@ -1,68 +1,96 @@
-import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 
+/**
+ * Middleware para proteção de rotas e separação entre Super Admin e Tenant Owner
+ */
 export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
-    request,
-  });
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    return supabaseResponse;
-  }
-
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
-      },
-      setAll(cookiesToSet: Array<{ name: string; value: string; options?: Record<string, unknown> }>) {
-        cookiesToSet.forEach(({ name, value }) =>
-          request.cookies.set(name, value)
-        );
-        supabaseResponse = NextResponse.next({
-          request,
-        });
-        cookiesToSet.forEach(({ name, value, options }) =>
-          supabaseResponse.cookies.set(name, value, options as Parameters<typeof supabaseResponse.cookies.set>[2])
-        );
-      },
-    },
-  });
-
-  // Atualiza a sessão nos cookies
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
   const { pathname } = request.nextUrl;
 
-  // 1. Proteção de rotas administrativas
-  if (pathname.startsWith("/admin")) {
+  // Aplica validação estrita em rotas administrativas
+  if (pathname.startsWith("/super-admin") || pathname.startsWith("/admin")) {
+    let response = NextResponse.next({
+      request: {
+        headers: request.headers,
+      },
+    });
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return response;
+    }
+
+    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet: Array<{ name: string; value: string; options?: any }>) {
+          cookiesToSet.forEach(({ name, value }: { name: string; value: string }) =>
+            request.cookies.set(name, value)
+          );
+          response = NextResponse.next({
+            request,
+          });
+          cookiesToSet.forEach(({ name, value, options }: { name: string; value: string; options?: any }) =>
+            response.cookies.set(name, value, options)
+          );
+        },
+      },
+    });
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    // 1. Se não estiver autenticado, redireciona para login
     if (!user) {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("redirect", pathname);
       return NextResponse.redirect(loginUrl);
     }
-  }
 
-  // 2. Redirecionamento de usuários já autenticados nas telas de auth
-  if (pathname === "/login" || pathname === "/register") {
-    if (user) {
-      return NextResponse.redirect(new URL("/admin/dashboard", request.url));
+    // 2. Proteção da rota Master (/super-admin)
+    if (pathname.startsWith("/super-admin")) {
+      const isMetadataSuperAdmin =
+        user.user_metadata?.role === "super_admin" ||
+        user.app_metadata?.role === "super_admin";
+
+      const envAdmins = (
+        process.env.SUPER_ADMIN_EMAILS ||
+        process.env.SUPER_ADMIN_EMAIL ||
+        "admin@essmendes.com,superadmin@essmendes.com,contato@essmendes.com.br"
+      )
+        .split(",")
+        .map((e) => e.trim().toLowerCase())
+        .filter(Boolean);
+
+      const isEmailSuperAdmin =
+        !!user.email && envAdmins.includes(user.email.toLowerCase());
+
+      // Se for tenant_owner tentando acessar /super-admin, redireciona para seu /admin
+      if (!isMetadataSuperAdmin && !isEmailSuperAdmin) {
+        // Checagem rápida de tenant_users se aplicável
+        const { data: tenantUser } = await supabase
+          .from("tenant_users")
+          .select("role")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (tenantUser?.role !== "super_admin") {
+          return NextResponse.redirect(new URL("/admin/dashboard", request.url));
+        }
+      }
     }
+
+    return response;
   }
 
-  return supabaseResponse;
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: [
-    /*
-     * Intercepta todas as rotas exceto arquivos estáticos, _next, favicon.ico, etc.
-     */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
-  ],
+  matcher: ["/super-admin/:path*", "/admin/:path*"],
 };
