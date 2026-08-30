@@ -25,6 +25,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { ImageUpload } from "@/components/ui/ImageUpload";
+import { getTenantPublicUrl } from "@/utils/tenant-url";
 
 interface ProductsManagerProps {
   initialProducts: TenantProduct[];
@@ -228,7 +229,7 @@ export function ProductsManager({
 
         <div className="flex items-center gap-2">
           <a
-            href={`/${slug}#produtos`}
+            href={getTenantPublicUrl(slug, "#produtos")}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-2xs transition"

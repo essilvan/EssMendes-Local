@@ -30,7 +30,10 @@ import {
   AlertCircle,
   X,
   Store,
+  Copy,
+  Check,
 } from "lucide-react";
+import { getTenantPublicUrl, getTenantDisplayDomain } from "@/utils/tenant-url";
 
 interface SuperAdminDashboardProps {
   initialTenants: SuperAdminTenantItem[];
@@ -51,6 +54,31 @@ export function SuperAdminDashboard({
   // Transitions
   const [isSelecting, startSelectTransition] = useTransition();
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
+  const [copiedSlugId, setCopiedSlugId] = useState<string | null>(null);
+
+  const handleCopyLink = async (slug: string, id: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const url = getTenantPublicUrl(slug);
+    try {
+      if (navigator?.clipboard) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = url;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+      }
+      setCopiedSlugId(id);
+      setTimeout(() => {
+        setCopiedSlugId((current) => (current === id ? null : current));
+      }, 2000);
+    } catch (err) {
+      console.error("Falha ao copiar link:", err);
+    }
+  };
 
   // Métricas do Topo
   const totalEmpresas = tenants.length;
@@ -275,17 +303,36 @@ export function SuperAdminDashboard({
                         </div>
                       </td>
 
-                      {/* Slug público com link direto para vitrine pública (/{slug}) */}
+                      {/* Slug público com link direto para vitrine oficial no subdomínio */}
                       <td className="px-5 py-4">
-                        <Link
-                          href={`/${t.slug}`}
-                          target="_blank"
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-teal-200 bg-teal-50/60 px-2.5 py-1 text-xs font-semibold text-teal-800 hover:bg-teal-100 transition"
-                        >
-                          <Globe className="h-3.5 w-3.5 text-teal-600" />
-                          <span className="font-mono">/{t.slug}</span>
-                          <ExternalLink className="h-3 w-3 text-teal-600" />
-                        </Link>
+                        <div className="flex items-center gap-1.5">
+                          <a
+                            href={getTenantPublicUrl(t.slug)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-teal-200 bg-teal-50/60 px-2.5 py-1 text-xs font-semibold text-teal-800 hover:bg-teal-100 hover:border-teal-300 transition shadow-2xs max-w-[210px]"
+                            title={`Abrir https://${t.slug}.essmendes.com.br`}
+                          >
+                            <Globe className="h-3.5 w-3.5 text-teal-600 shrink-0" />
+                            <span className="font-mono text-[11px] truncate">
+                              {getTenantDisplayDomain(t.slug)}
+                            </span>
+                            <ExternalLink className="h-3 w-3 text-teal-600 shrink-0" />
+                          </a>
+
+                          <button
+                            type="button"
+                            onClick={(e) => handleCopyLink(t.slug, t.id, e)}
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition shadow-2xs cursor-pointer"
+                            title={copiedSlugId === t.id ? "Link copiado!" : "Copiar link do subdomínio"}
+                          >
+                            {copiedSlugId === t.id ? (
+                              <Check className="h-3.5 w-3.5 text-emerald-600" />
+                            ) : (
+                              <Copy className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                        </div>
                       </td>
 
                       {/* Badge com Nota do Google (ex: ⭐ 5.0 (12 reviews)) */}

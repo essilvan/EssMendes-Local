@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logoutAction } from "@/services/auth.actions";
@@ -19,8 +20,11 @@ import {
   BarChart3,
   Building2,
   ShieldCheck,
+  Copy,
+  Check,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
+import { getTenantPublicUrl, getTenantDisplayDomain } from "@/utils/tenant-url";
 
 interface AdminSidebarProps {
   companyName: string;
@@ -38,6 +42,30 @@ export function AdminSidebar({
   isSuperAdmin = false,
 }: AdminSidebarProps) {
   const pathname = usePathname();
+
+  const [copied, setCopied] = React.useState(false);
+
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const url = getTenantPublicUrl(companySlug);
+    try {
+      if (navigator?.clipboard) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = url;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Erro ao copiar link:", err);
+    }
+  };
 
   const allNavItems = [
     {
@@ -163,19 +191,38 @@ export function AdminSidebar({
           </div>
         )}
 
-        {/* Public Page Button */}
+        {/* Public Page Subdomain Showcase Button */}
         <div className="px-1">
-          <Link
-            href={`/${companySlug}`}
-            target="_blank"
-            className="flex items-center justify-between rounded-lg border border-teal-100 bg-teal-50/60 px-3 py-2 text-xs font-medium text-teal-900 hover:bg-teal-100/70 transition"
-          >
-            <span className="flex items-center gap-2">
-              <Globe className="h-3.5 w-3.5 text-teal-700" />
-              Ver Página Pública
-            </span>
-            <ExternalLink className="h-3 w-3 text-teal-600" />
-          </Link>
+          <div className="flex items-center gap-1 rounded-lg border border-teal-100 bg-teal-50/60 p-1 transition hover:border-teal-200">
+            <a
+              href={getTenantPublicUrl(companySlug)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex flex-1 items-center justify-between px-2 py-1.5 text-xs font-medium text-teal-900 hover:text-teal-950 transition"
+              title={`Acessar ${getTenantDisplayDomain(companySlug)}`}
+            >
+              <span className="flex items-center gap-2 truncate">
+                <Globe className="h-3.5 w-3.5 text-teal-700 shrink-0" />
+                <span className="truncate font-mono text-[11px]">
+                  {getTenantDisplayDomain(companySlug)}
+                </span>
+              </span>
+              <ExternalLink className="h-3 w-3 text-teal-600 shrink-0 ml-1" />
+            </a>
+
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition shadow-2xs shrink-0 cursor-pointer"
+              title={copied ? "Link copiado!" : "Copiar link do subdomínio"}
+            >
+              {copied ? (
+                <Check className="h-3.5 w-3.5 text-emerald-600" />
+              ) : (
+                <Copy className="h-3.5 w-3.5" />
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Navigation Menu */}

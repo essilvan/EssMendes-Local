@@ -29,7 +29,10 @@ import {
   CheckCircle2,
   AlertCircle,
   X,
+  Copy,
+  Check,
 } from "lucide-react";
+import { getTenantPublicUrl, getTenantDisplayDomain } from "@/utils/tenant-url";
 
 interface SuperAdminManagerProps {
   initialTenants: SuperAdminTenantItem[];
@@ -50,6 +53,31 @@ export function SuperAdminManager({
   // Transitions
   const [isSelecting, startSelectTransition] = useTransition();
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
+  const [copiedSlugId, setCopiedSlugId] = useState<string | null>(null);
+
+  const handleCopyLink = async (slug: string, id: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const url = getTenantPublicUrl(slug);
+    try {
+      if (navigator?.clipboard) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = url;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+      }
+      setCopiedSlugId(id);
+      setTimeout(() => {
+        setCopiedSlugId((current) => (current === id ? null : current));
+      }, 2000);
+    } catch (err) {
+      console.error("Falha ao copiar link:", err);
+    }
+  };
 
   const filteredTenants = tenants.filter(
     (t) =>
@@ -256,16 +284,31 @@ export function SuperAdminManager({
                                 </span>
                               )}
                             </div>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-[11px] font-mono text-slate-500">/{t.slug}</span>
-                              <Link
-                                href={`/${t.slug}`}
+                            <div className="flex items-center gap-2 mt-1">
+                              <a
+                                href={getTenantPublicUrl(t.slug)}
                                 target="_blank"
-                                className="inline-flex items-center gap-1 text-[11px] font-medium text-teal-700 hover:underline"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-[11px] font-mono text-teal-700 hover:text-teal-900 transition hover:underline"
+                                title={`Abrir https://${t.slug}.essmendes.com.br`}
                               >
-                                <span>Ver Vitrine</span>
-                                <ExternalLink className="h-3 w-3" />
-                              </Link>
+                                <Globe className="h-3 w-3 text-teal-600" />
+                                <span>{getTenantDisplayDomain(t.slug)}</span>
+                                <ExternalLink className="h-2.5 w-2.5" />
+                              </a>
+
+                              <button
+                                type="button"
+                                onClick={(e) => handleCopyLink(t.slug, t.id, e)}
+                                className="inline-flex h-5 w-5 items-center justify-center rounded border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition cursor-pointer"
+                                title={copiedSlugId === t.id ? "Link copiado!" : "Copiar link do subdomínio"}
+                              >
+                                {copiedSlugId === t.id ? (
+                                  <Check className="h-3 w-3 text-emerald-600" />
+                                ) : (
+                                  <Copy className="h-3 w-3" />
+                                )}
+                              </button>
                             </div>
                           </div>
                         </div>

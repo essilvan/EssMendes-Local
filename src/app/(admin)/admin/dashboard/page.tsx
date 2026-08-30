@@ -9,6 +9,7 @@ import {
 import { PresenceScoreCard } from "@/components/admin/PresenceScoreCard";
 import { RadarAlertsCard } from "@/components/admin/RadarAlertsCard";
 import { OpportunitiesCard } from "@/components/admin/OpportunitiesCard";
+import { DashboardShowcaseButton } from "@/components/admin/DashboardShowcaseButton";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
@@ -149,15 +150,7 @@ export default async function AdminDashboardPage({
                 <span>Super Admin</span>
               </Link>
             )}
-            <Link
-              href={`/${companySlug}`}
-              target="_blank"
-              className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-teal-900 shadow-sm hover:bg-teal-50 transition"
-            >
-              <Globe className="h-4 w-4 text-teal-700" />
-              <span>Ver Vitrine Pública</span>
-              <ExternalLink className="h-3.5 w-3.5 text-slate-400" />
-            </Link>
+            <DashboardShowcaseButton slug={companySlug} />
           </div>
         </div>
       </div>

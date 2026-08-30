@@ -4,6 +4,7 @@ import { clearManagedTenantAction } from "@/services/super-admin.actions";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ShieldCheck, ArrowLeft, X } from "lucide-react";
+import { getTenantPublicUrl } from "@/utils/tenant-url";
 
 export default async function AdminLayout({
   children,
@@ -124,6 +125,14 @@ export default async function AdminLayout({
               >
                 Agenda
               </Link>
+              <a
+                href={getTenantPublicUrl(companySlug)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-teal-700 font-bold hover:text-teal-800 shrink-0 inline-flex items-center gap-1"
+              >
+                <span>Vitrine</span>
+              </a>
               {isSuperAdmin && (
                 <Link
                   href="/super-admin"
