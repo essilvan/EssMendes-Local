@@ -12,6 +12,8 @@ import {
   Calendar,
 } from "lucide-react";
 import { getBusinessStatus } from "@/utils/opening-hours";
+import type { NicheThemeConfig } from "@/config/tenant-themes";
+import { NICHE_THEMES } from "@/config/tenant-themes";
 
 interface MapLocationCardProps {
   tenantName: string;
@@ -23,6 +25,7 @@ interface MapLocationCardProps {
   isOpenNow: boolean;
   statusDetailText?: string;
   statusBadgeText?: string;
+  theme?: NicheThemeConfig;
 }
 
 export function MapLocationCard({
@@ -35,8 +38,10 @@ export function MapLocationCard({
   isOpenNow,
   statusDetailText,
   statusBadgeText,
+  theme,
 }: MapLocationCardProps) {
   const [isCopied, setIsCopied] = useState(false);
+  const currentTheme = theme || NICHE_THEMES.retail_default;
 
   const displayAddress = address || "Atendimento Presencial";
   const hasCoords = typeof latitude === "number" && typeof longitude === "number";
@@ -73,24 +78,19 @@ export function MapLocationCard({
   return (
     <div
       id="contato"
-      className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-6"
+      className={`${currentTheme.roundedClass} ${currentTheme.bgCard} p-6 sm:p-8 space-y-6`}
     >
       {/* Header da Seção */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b ${currentTheme.borderClass} pb-4`}>
         <div>
-          <div className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold"
-            style={{
-              backgroundColor: "var(--primary-alpha-10, rgba(13, 148, 136, 0.1))",
-              color: "var(--primary-color, #0d9488)",
-            }}
-          >
+          <div className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold ${currentTheme.badgeBg} ${currentTheme.badgeText}`}>
             <MapPin className="h-3.5 w-3.5" />
             <span>Localização & Horários</span>
           </div>
-          <h2 className="mt-1 text-lg sm:text-xl font-black text-slate-900">
+          <h2 className={`mt-1 text-lg sm:text-xl font-black ${currentTheme.textPrimary}`}>
             Endereço, Horários da Semana & Rotas GPS
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className={`text-xs ${currentTheme.textMuted} mt-0.5`}>
             Venha nos visitar ou trace sua rota direta pelo Waze ou Google Maps.
           </p>
         </div>

@@ -3,6 +3,8 @@
 import React from "react";
 import { Star, ShieldCheck, ExternalLink, CheckCircle2, MessageSquare } from "lucide-react";
 import type { TenantReview } from "@/types";
+import type { NicheThemeConfig } from "@/config/tenant-themes";
+import { NICHE_THEMES } from "@/config/tenant-themes";
 
 const AVATAR_COLORS = ["#0284c7", "#059669", "#d97706", "#7c3aed", "#e11d48", "#0891b2"];
 
@@ -12,6 +14,7 @@ interface GoogleReviewsCardProps {
   reviewCount?: number | null;
   reviews?: TenantReview[];
   googleMapsUrl?: string | null;
+  theme?: NicheThemeConfig;
 }
 
 export function GoogleReviewsCard({
@@ -20,6 +23,7 @@ export function GoogleReviewsCard({
   reviewCount,
   reviews = [],
   googleMapsUrl,
+  theme,
 }: GoogleReviewsCardProps) {
   const mapsUrl =
     googleMapsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(tenantName)}`;
@@ -29,13 +33,15 @@ export function GoogleReviewsCard({
   const displayRating = typeof rating === "number" && rating > 0 ? rating.toFixed(1) : "5.0";
   const displayCount = typeof reviewCount === "number" && reviewCount > 0 ? reviewCount : cleanReviews.length;
 
+  const currentTheme = theme || NICHE_THEMES.retail_default;
+
   return (
     <div
       id="avaliacoes"
-      className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-6"
+      className={`${currentTheme.roundedClass} ${currentTheme.bgCard} p-6 sm:p-8 space-y-6`}
     >
       {/* Header do Google Business Profile */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b ${currentTheme.borderClass} pb-5`}>
         <div className="space-y-1.5">
           {/* Badge Google + Selo Verificado */}
           <div className="flex items-center gap-2">
@@ -103,7 +109,9 @@ export function GoogleReviewsCard({
             return (
               <div
                 key={review.id || idx}
-                className="flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-slate-50/50 p-4 sm:p-5 hover:bg-slate-50/90 transition shadow-2xs space-y-3"
+                className={`flex flex-col justify-between ${currentTheme.roundedClass} border ${currentTheme.borderClass} ${
+                  currentTheme.isDark ? "bg-zinc-800/60 hover:bg-zinc-800" : "bg-slate-50/50 hover:bg-slate-50/90"
+                } p-4 sm:p-5 transition shadow-2xs space-y-3`}
               >
                 {/* Topo do Comentário: Avatar, Nome e Tempo */}
                 <div className="flex items-start justify-between gap-2">
@@ -125,20 +133,20 @@ export function GoogleReviewsCard({
                     )}
                     <div>
                       <div className="flex items-center gap-1">
-                        <p className="font-bold text-xs text-slate-900">{authorName}</p>
+                        <p className={`font-bold text-xs ${currentTheme.textPrimary}`}>{authorName}</p>
                         {review.author_url && (
                           <a
                             href={review.author_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-slate-400 hover:text-blue-600"
+                            className="text-slate-400 hover:text-blue-500"
                             title="Ver perfil do cliente"
                           >
                             <ExternalLink className="h-2.5 w-2.5" />
                           </a>
                         )}
                       </div>
-                      <p className="text-[10px] text-slate-400">{reviewTime}</p>
+                      <p className={`text-[10px] ${currentTheme.textMuted}`}>{reviewTime}</p>
                     </div>
                   </div>
 
@@ -152,15 +160,15 @@ export function GoogleReviewsCard({
 
                 {/* Texto do Depoimento */}
                 {reviewText && (
-                  <p className="text-xs text-slate-600 leading-relaxed italic">
+                  <p className={`text-xs ${currentTheme.textMuted} leading-relaxed italic`}>
                     &ldquo;{reviewText}&rdquo;
                   </p>
                 )}
 
                 {/* Tag de Cliente */}
                 <div className="pt-1">
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-md">
-                    <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                  <span className={`inline-flex items-center gap-1 text-[10px] font-bold ${currentTheme.badgeText} ${currentTheme.badgeBg} px-2 py-0.5 rounded-md`}>
+                    <CheckCircle2 className="h-3 w-3 text-emerald-500" />
                     <span>Avaliação Verificada</span>
                   </span>
                 </div>

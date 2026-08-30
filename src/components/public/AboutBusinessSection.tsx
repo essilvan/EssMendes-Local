@@ -11,6 +11,8 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { generateWhatsAppUrl } from "@/utils/phone";
+import type { NicheThemeConfig } from "@/config/tenant-themes";
+import { NICHE_THEMES } from "@/config/tenant-themes";
 
 interface AboutBusinessSectionProps {
   tenantName: string;
@@ -19,6 +21,7 @@ interface AboutBusinessSectionProps {
   address?: string | null;
   phoneWhatsapp?: string | null;
   businessCategory?: string | null;
+  theme?: NicheThemeConfig;
   onOpenBooking: () => void;
 }
 
@@ -29,6 +32,7 @@ export function AboutBusinessSection({
   address,
   phoneWhatsapp,
   businessCategory,
+  theme,
   onOpenBooking,
 }: AboutBusinessSectionProps) {
   const whatsappUrl = generateWhatsAppUrl(phoneWhatsapp || "", tenantName);
@@ -43,8 +47,10 @@ export function AboutBusinessSection({
     ? `O ${tenantName} é referência em ${businessCategory.toLowerCase()} na região, oferecendo atendimento dedicado, pontualidade e serviços de alta qualidade para todos os clientes.`
     : `O ${tenantName} é referência na região pela qualidade do atendimento, pontualidade e dedicação aos seus clientes. Agende seu horário ou tire dúvidas online.`;
 
+  const currentTheme = theme || NICHE_THEMES.retail_default;
+
   return (
-    <section id="sobre" className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 lg:p-10 shadow-sm space-y-6">
+    <section id="sobre" className={`${currentTheme.roundedClass} ${currentTheme.bgCard} p-6 sm:p-8 lg:p-10 space-y-6`}>
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
         {/* Lado Esquerdo: Descrição & História (7 Colunas) */}
         <div className="lg:col-span-7 space-y-4">
@@ -59,13 +65,13 @@ export function AboutBusinessSection({
             <span>Sobre o Estabelecimento</span>
           </div>
 
-          <h2 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
+          <h2 className={`text-xl sm:text-2xl font-black ${currentTheme.textPrimary} leading-tight`}>
             Compromisso com a Excelência e Satisfação dos Clientes
           </h2>
 
-          <div className="space-y-2.5 text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
+          <div className={`space-y-2.5 text-xs sm:text-sm ${currentTheme.textMuted} leading-relaxed font-normal`}>
             <p>{mainText || defaultDescription}</p>
-            {secondaryText && <p className="text-slate-500">{secondaryText}</p>}
+            {secondaryText && <p className={currentTheme.textMuted}>{secondaryText}</p>}
           </div>
 
           {/* Botões de Ação */}

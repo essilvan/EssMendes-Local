@@ -15,6 +15,8 @@ import {
   ArrowRight,
   MessageCircle,
 } from "lucide-react";
+import type { NicheThemeConfig } from "@/config/tenant-themes";
+import { NICHE_THEMES } from "@/config/tenant-themes";
 
 interface ConversionDashboardProps {
   tenant: {
@@ -32,6 +34,7 @@ interface ConversionDashboardProps {
     discountText?: string;
     description?: string;
   } | null;
+  theme?: NicheThemeConfig;
   onOpenBookingModal: (serviceId?: string) => void;
 }
 
@@ -42,6 +45,7 @@ export function ConversionDashboard({
   portfolioItems,
   posts = [],
   activeCoupon,
+  theme,
   onOpenBookingModal,
 }: ConversionDashboardProps) {
   const [copiedCoupon, setCopiedCoupon] = React.useState(false);
@@ -87,6 +91,8 @@ export function ConversionDashboard({
     }).format(val);
   };
 
+  const currentTheme = theme || NICHE_THEMES.retail_default;
+
   return (
     <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
       
@@ -97,26 +103,22 @@ export function ConversionDashboard({
         id="servicos"
         className={`${
           hasMiddleColumn ? "lg:col-span-4" : "lg:col-span-7"
-        } rounded-3xl border border-slate-200 bg-white p-6 sm:p-7 shadow-sm space-y-4`}
+        } ${currentTheme.roundedClass} ${currentTheme.bgCard} p-6 sm:p-7 space-y-4`}
       >
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
+        <div className={`flex items-center justify-between border-b ${currentTheme.borderClass} pb-3.5`}>
           <div>
             <div
-              className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold"
-              style={{
-                backgroundColor: "var(--primary-alpha-10, rgba(13, 148, 136, 0.1))",
-                color: "var(--primary-color, #0d9488)",
-              }}
+              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold ${currentTheme.badgeBg} ${currentTheme.badgeText}`}
             >
               <Sparkles className="h-3.5 w-3.5" />
               <span>Nossos Serviços</span>
             </div>
-            <h3 className="mt-1 text-base sm:text-lg font-black text-slate-900">
+            <h3 className={`mt-1 text-base sm:text-lg font-black ${currentTheme.textPrimary}`}>
               Catálogo & Preços
             </h3>
           </div>
 
-          <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
+          <span className={`text-xs font-bold ${currentTheme.badgeText} ${currentTheme.badgeBg} px-2.5 py-1 rounded-full`}>
             {services.length} {services.length === 1 ? "opção" : "opções"}
           </span>
         </div>
@@ -124,8 +126,8 @@ export function ConversionDashboard({
         {/* Lista de Cards de Serviços Reais */}
         {services.length === 0 ? (
           <div className="text-center py-8 text-slate-500 text-xs space-y-2">
-            <p className="font-semibold text-slate-700">Nenhum serviço cadastrado no momento.</p>
-            <p className="text-slate-400">
+            <p className={`font-semibold ${currentTheme.textPrimary}`}>Nenhum serviço cadastrado no momento.</p>
+            <p className={currentTheme.textMuted}>
               Faça seu agendamento ou tire dúvidas diretamente pelo WhatsApp.
             </p>
           </div>
@@ -139,15 +141,17 @@ export function ConversionDashboard({
               return (
                 <div
                   key={service.id}
-                  className="group rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4 space-y-3 hover:border-slate-300 hover:bg-slate-50 transition shadow-2xs"
+                  className={`group ${currentTheme.roundedClass} border ${currentTheme.borderClass} ${
+                    currentTheme.isDark ? 'bg-zinc-800/60 hover:bg-zinc-800' : 'bg-slate-50/60 hover:bg-slate-50'
+                  } p-4 space-y-3 transition shadow-2xs`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="space-y-0.5">
-                      <h4 className="text-xs sm:text-sm font-black text-slate-900 group-hover:text-slate-700 transition">
+                      <h4 className={`text-xs sm:text-sm font-black ${currentTheme.textPrimary} transition`}>
                         {service.name}
                       </h4>
                       {service.description && (
-                        <p className="text-[11px] sm:text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                        <p className={`text-[11px] sm:text-xs ${currentTheme.textMuted} line-clamp-2 leading-relaxed`}>
                           {service.description}
                         </p>
                       )}
@@ -161,14 +165,14 @@ export function ConversionDashboard({
                         {formatCurrency(Number(service.price))}
                       </span>
                     ) : (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 shrink-0">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-amber-500/10 text-amber-500 border border-amber-500/30 shrink-0">
                         Sob Consulta
                       </span>
                     )}
                   </div>
 
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200/60">
-                    <span className="text-[11px] font-bold text-slate-500 flex items-center gap-1">
+                  <div className={`flex flex-wrap items-center justify-between gap-2 pt-2 border-t ${currentTheme.borderClass}`}>
+                    <span className={`text-[11px] font-bold ${currentTheme.textMuted} flex items-center gap-1`}>
                       <Clock className="h-3 w-3" />
                       {service.duration_minutes} min
                     </span>
@@ -180,10 +184,12 @@ export function ConversionDashboard({
                           href={generateWhatsAppUrl(phone, whatsappOrderText)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition shadow-2xs ${
+                          className={`inline-flex items-center gap-1.5 ${currentTheme.roundedClass} px-3 py-1.5 text-xs font-bold transition shadow-2xs ${
                             !hasPrice
                               ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                              : "border border-slate-200 bg-white text-slate-700 hover:text-emerald-700 hover:border-emerald-200"
+                              : currentTheme.isDark
+                                ? "border border-zinc-700 bg-zinc-800 text-zinc-300 hover:text-emerald-400 hover:border-emerald-600"
+                                : "border border-slate-200 bg-white text-slate-700 hover:text-emerald-700 hover:border-emerald-200"
                           }`}
                           title="Solicitar orçamento diretamente no WhatsApp"
                         >
@@ -198,10 +204,12 @@ export function ConversionDashboard({
                       <button
                         type="button"
                         onClick={() => onOpenBookingModal(service.id)}
-                        className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-black transition cursor-pointer shadow-2xs hover:opacity-95 active:scale-95 ${
+                        className={`inline-flex items-center gap-1.5 ${currentTheme.roundedClass} px-3.5 py-1.5 text-xs font-black transition cursor-pointer shadow-2xs hover:opacity-95 active:scale-95 ${
                           hasPrice
                             ? "text-white"
-                            : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                            : currentTheme.isDark
+                              ? "border border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+                              : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
                         }`}
                         style={hasPrice ? { backgroundColor: "var(--primary-color, #0d9488)" } : undefined}
                       >

@@ -2,14 +2,19 @@
 
 import React from "react";
 import { Award, Clock, ShieldCheck, MessageSquare } from "lucide-react";
+import type { NicheThemeConfig } from "@/config/tenant-themes";
+import { NICHE_THEMES } from "@/config/tenant-themes";
 
 interface TrustMetricsBarProps {
   rating?: number | null;
   reviewCount?: number | null;
   businessCategory?: string | null;
+  theme?: NicheThemeConfig;
 }
 
-export function TrustMetricsBar({}: TrustMetricsBarProps) {
+export function TrustMetricsBar({ theme }: TrustMetricsBarProps) {
+  const currentTheme = theme || NICHE_THEMES.retail_default;
+
   const pillars = [
     {
       icon: Award,
@@ -34,14 +39,16 @@ export function TrustMetricsBar({}: TrustMetricsBarProps) {
   ];
 
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm">
+    <section className={`${currentTheme.roundedClass} ${currentTheme.bgCard} p-6 sm:p-8 space-y-4`}>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {pillars.map((item) => {
           const Icon = item.icon;
           return (
             <div
               key={item.title}
-              className="flex items-start gap-3.5 p-3 rounded-2xl bg-slate-50/70 border border-slate-100 transition hover:bg-slate-50 hover:border-slate-200"
+              className={`flex items-start gap-3.5 p-3 ${currentTheme.roundedClass} ${
+                currentTheme.isDark ? 'bg-zinc-800/60 border border-zinc-700/60' : 'bg-slate-50/70 border border-slate-100'
+              } transition hover:scale-[1.01]`}
             >
               <div
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white shadow-2xs mt-0.5"
@@ -50,10 +57,10 @@ export function TrustMetricsBar({}: TrustMetricsBarProps) {
                 <Icon className="h-5 w-5" />
               </div>
               <div className="space-y-0.5">
-                <h3 className="text-xs sm:text-sm font-black text-slate-900 leading-snug">
+                <h3 className={`text-xs sm:text-sm font-black ${currentTheme.textPrimary} leading-snug`}>
                   {item.title}
                 </h3>
-                <p className="text-[11px] sm:text-xs text-slate-500 leading-relaxed font-normal">
+                <p className={`text-[11px] sm:text-xs ${currentTheme.textMuted} leading-relaxed font-normal`}>
                   {item.description}
                 </p>
               </div>

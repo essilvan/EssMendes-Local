@@ -15,6 +15,8 @@ import {
 import type { TenantReview } from "@/types";
 import { generateWhatsAppUrl } from "@/utils/phone";
 import { sanitizeDescription } from "@/utils/address";
+import type { NicheThemeConfig } from "@/config/tenant-themes";
+import { NICHE_THEMES } from "@/config/tenant-themes";
 
 interface PublicHeroSplitProps {
   tenantName: string;
@@ -30,6 +32,7 @@ interface PublicHeroSplitProps {
   reviewCount?: number | null;
   reviews?: TenantReview[];
   googleMapsUrl?: string | null;
+  theme?: NicheThemeConfig;
   onOpenBooking: () => void;
 }
 
@@ -47,8 +50,10 @@ export function PublicHeroSplit({
   reviewCount,
   reviews = [],
   googleMapsUrl: customGoogleMapsUrl,
+  theme,
   onOpenBooking,
 }: PublicHeroSplitProps) {
+  const currentTheme = theme || NICHE_THEMES.retail_default;
   const displayAddress = address || "Atendimento Presencial com Estacionamento";
   const cleanDescription = sanitizeDescription(description, address);
   const whatsappUrl = generateWhatsAppUrl(phoneWhatsapp || "", tenantName);
@@ -73,7 +78,7 @@ export function PublicHeroSplit({
   const displayRating = hasRating ? rating.toFixed(1) : "5.0";
 
   return (
-    <section className="relative overflow-hidden rounded-3xl border border-slate-200/90 bg-gradient-to-b from-white via-slate-50/50 to-slate-100/70 p-6 sm:p-8 lg:p-10 shadow-sm">
+    <section className={`relative overflow-hidden ${currentTheme.roundedClass} ${currentTheme.bgCard} p-6 sm:p-8 lg:p-10 shadow-sm`}>
       {/* Luz ambiente de fundo */}
       <div
         className="pointer-events-none absolute -left-24 -top-24 h-96 w-96 rounded-full blur-3xl opacity-15"
@@ -94,26 +99,22 @@ export function PublicHeroSplit({
           
           {/* Badge com a Categoria Real */}
           <div
-            className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1 text-xs font-black tracking-wide uppercase shadow-2xs"
-            style={{
-              backgroundColor: "var(--primary-alpha-10, rgba(13, 148, 136, 0.1))",
-              color: "var(--primary-color, #0d9488)",
-            }}
+            className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1 text-xs font-black tracking-wide uppercase shadow-2xs ${currentTheme.badgeBg} ${currentTheme.badgeText}`}
           >
             <Sparkles className="h-3.5 w-3.5 fill-current" />
-            <span>{businessCategory ? `Especialistas em ${businessCategory}` : "Atendimento Profissional na Região"}</span>
+            <span>{businessCategory ? `Especialistas em ${businessCategory}` : currentTheme.heroTagline}</span>
           </div>
 
           {/* Nome da Empresa e Headline Dinâmica */}
           <div className="space-y-3">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 leading-[1.12]">
+            <h1 className={`text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight ${currentTheme.textPrimary} leading-[1.12]`}>
               Excelência & Confiança no{" "}
               <span style={{ color: "var(--primary-color, #0d9488)" }}>
                 {tenantName}
               </span>
             </h1>
 
-            <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-normal">
+            <p className={`text-sm sm:text-base ${currentTheme.textMuted} leading-relaxed font-normal`}>
               {cleanDescription ||
                 `Conheça nossos serviços e faça seu agendamento de horário no ${tenantName}. Atendimento de excelência, pontualidade e satisfação garantida.`}
             </p>
@@ -125,7 +126,7 @@ export function PublicHeroSplit({
             <button
               type="button"
               onClick={onOpenBooking}
-              className="inline-flex items-center justify-center gap-2 rounded-xl px-5 sm:px-6 py-3.5 text-xs sm:text-sm font-black text-white shadow-md transition hover:opacity-95 active:scale-95 cursor-pointer"
+              className={`inline-flex items-center justify-center gap-2 ${currentTheme.roundedClass} px-5 sm:px-6 py-3.5 text-xs sm:text-sm font-black text-white shadow-md transition hover:opacity-95 active:scale-95 cursor-pointer`}
               style={{ backgroundColor: "var(--primary-color, #0d9488)" }}
             >
               <Calendar className="h-4 w-4" />
@@ -139,16 +140,18 @@ export function PublicHeroSplit({
                 href={whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-600/30 bg-emerald-50/80 hover:bg-emerald-100/80 px-5 sm:px-6 py-3.5 text-xs sm:text-sm font-extrabold text-emerald-800 transition shadow-2xs"
+                className={`inline-flex items-center justify-center gap-2 ${currentTheme.roundedClass} border border-emerald-600/30 bg-emerald-500/10 hover:bg-emerald-500/20 px-5 sm:px-6 py-3.5 text-xs sm:text-sm font-extrabold text-emerald-400 transition shadow-2xs`}
               >
-                <MessageCircle className="h-4 w-4 text-emerald-600 fill-current" />
+                <MessageCircle className="h-4 w-4 text-emerald-500 fill-current" />
                 <span>Conversar no WhatsApp</span>
               </a>
             )}
           </div>
 
           {/* Mini-card de Autoridade Google (Applewood Style) */}
-          <div className="rounded-2xl border border-slate-200/90 bg-white/95 p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className={`${currentTheme.roundedClass} border ${currentTheme.borderClass} ${
+            currentTheme.isDark ? 'bg-zinc-800/80' : 'bg-white/95'
+          } p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3`}>
             <div className="flex items-center gap-3">
               {/* Google G Icon */}
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 border border-slate-200 shadow-2xs">

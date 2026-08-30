@@ -12,11 +12,14 @@ import {
   Tag,
 } from "lucide-react";
 import { generateWhatsAppUrl } from "@/utils/phone";
+import type { NicheThemeConfig } from "@/config/tenant-themes";
+import { NICHE_THEMES } from "@/config/tenant-themes";
 
 interface PublicPostsSectionProps {
   posts: TenantPost[];
   tenantName: string;
   phoneWhatsapp?: string | null;
+  theme?: NicheThemeConfig;
   onOpenBooking: () => void;
 }
 
@@ -24,8 +27,10 @@ export function PublicPostsSection({
   posts,
   tenantName,
   phoneWhatsapp,
+  theme,
   onOpenBooking,
 }: PublicPostsSectionProps) {
+  const currentTheme = theme || NICHE_THEMES.retail_default;
   const activePosts = posts.filter((p) => p.is_active);
 
   if (!activePosts || activePosts.length === 0) {
@@ -56,24 +61,20 @@ export function PublicPostsSection({
   };
 
   return (
-    <section id="novidades" className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-6">
+    <section id="novidades" className={`${currentTheme.roundedClass} ${currentTheme.bgCard} p-6 sm:p-8 space-y-6`}>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b ${currentTheme.borderClass} pb-4`}>
         <div>
           <div
-            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold"
-            style={{
-              backgroundColor: "var(--primary-alpha-10, rgba(13, 148, 136, 0.1))",
-              color: "var(--primary-color, #0d9488)",
-            }}
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold ${currentTheme.badgeBg} ${currentTheme.badgeText}`}
           >
             <Newspaper className="h-3.5 w-3.5" />
             <span>Novidades & Destaques</span>
           </div>
-          <h2 className="mt-1 text-lg sm:text-xl font-black text-slate-900">
+          <h2 className={`mt-1 text-lg sm:text-xl font-black ${currentTheme.textPrimary}`}>
             Avisos, Ofertas & Atualizações
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className={`text-xs ${currentTheme.textMuted} mt-0.5`}>
             Acompanhe as novidades e comunicados oficiais de {tenantName}.
           </p>
         </div>
@@ -84,7 +85,9 @@ export function PublicPostsSection({
         {activePosts.map((post) => (
           <div
             key={post.id}
-            className="group flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-slate-50/50 overflow-hidden hover:bg-white hover:border-slate-300 hover:shadow-sm transition"
+            className={`group flex flex-col justify-between ${currentTheme.roundedClass} border ${currentTheme.borderClass} ${
+              currentTheme.isDark ? 'bg-zinc-800/60 hover:bg-zinc-800' : 'bg-slate-50/50 hover:bg-white'
+            } overflow-hidden hover:shadow-sm transition`}
           >
             {/* Foto do Post */}
             {post.image_url && (
@@ -110,13 +113,13 @@ export function PublicPostsSection({
 
             <div className="p-5 space-y-3 flex-1 flex flex-col justify-between">
               <div className="space-y-2">
-                <span className="text-[11px] font-semibold text-slate-400">
+                <span className={`text-[11px] font-semibold ${currentTheme.textMuted}`}>
                   {formatDate(post.published_at)}
                 </span>
-                <h3 className="text-sm font-extrabold text-slate-900 leading-snug group-hover:text-teal-900 transition">
+                <h3 className={`text-sm font-extrabold ${currentTheme.textPrimary} leading-snug transition`}>
                   {post.title}
                 </h3>
-                <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">
+                <p className={`text-xs ${currentTheme.textMuted} leading-relaxed line-clamp-3`}>
                   {post.content}
                 </p>
 

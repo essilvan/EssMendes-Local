@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { sanitizePhoneNumber } from "@/utils/phone";
 import { extractNeighborhoodAndCity } from "@/utils/address";
+import type { NicheThemeConfig } from "@/config/tenant-themes";
+import { NICHE_THEMES } from "@/config/tenant-themes";
 
 interface PublicHeaderProps {
   tenantName: string;
@@ -26,6 +28,7 @@ interface PublicHeaderProps {
   isOpenNow: boolean;
   statusBadgeText?: string;
   statusDetailText?: string;
+  theme?: NicheThemeConfig;
   onOpenBooking: () => void;
 }
 
@@ -40,9 +43,11 @@ export function PublicHeader({
   isOpenNow,
   statusBadgeText,
   statusDetailText,
+  theme,
   onOpenBooking,
 }: PublicHeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const currentTheme = theme || NICHE_THEMES.retail_default;
 
   const cleanPhone = phoneWhatsapp ? sanitizePhoneNumber(phoneWhatsapp) : "";
   const displayAddress = address || "Atendimento Presencial";
