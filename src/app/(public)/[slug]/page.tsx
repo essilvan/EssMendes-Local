@@ -297,18 +297,21 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
     }
   }
 
-  // 2.8 Parsing Robusto de Horários de Funcionamento (opening_hours_json)
+  // 2.8 Parsing Robusto de Horários de Funcionamento (opening_hours_json ou tenant.opening_hours)
+  const rawHoursSource = profile?.opening_hours_json || (tenant as any)?.opening_hours || (profile as any)?.opening_hours;
   let cleanOpeningHours: string[] = [];
-  if (profile?.opening_hours_json) {
-    if (Array.isArray(profile.opening_hours_json)) {
-      cleanOpeningHours = profile.opening_hours_json.filter((h: any) => Boolean(h) && typeof h === "string");
-    } else if (typeof profile.opening_hours_json === "string") {
+  if (rawHoursSource) {
+    if (Array.isArray(rawHoursSource)) {
+      cleanOpeningHours = rawHoursSource.filter((h: any) => Boolean(h) && typeof h === "string");
+    } else if (typeof rawHoursSource === "string") {
       try {
-        const parsed = JSON.parse(profile.opening_hours_json);
+        const parsed = JSON.parse(rawHoursSource);
         if (Array.isArray(parsed)) {
           cleanOpeningHours = parsed.filter((h: any) => Boolean(h) && typeof h === "string");
         }
-      } catch {}
+      } catch {
+        cleanOpeningHours = [rawHoursSource];
+      }
     }
   }
 

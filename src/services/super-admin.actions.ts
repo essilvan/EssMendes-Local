@@ -309,6 +309,7 @@ export async function createTenantFromGoogleMapsAction(
     let latitude: number | null = null;
     let longitude: number | null = null;
     let editorialSummary = "";
+    let openingHours: string[] | null = null;
     const reviewsToSave: Array<{
       author_name: string;
       rating: number;
@@ -362,6 +363,8 @@ export async function createTenantFromGoogleMapsAction(
             "photos",
             "primaryTypeDisplayName",
             "location",
+            "regularOpeningHours",
+            "currentOpeningHours",
           ].join(",");
 
           const detailsRes = await fetch(detailsUrl, {
@@ -392,6 +395,8 @@ export async function createTenantFromGoogleMapsAction(
             "places.photos",
             "places.primaryTypeDisplayName",
             "places.location",
+            "places.regularOpeningHours",
+            "places.currentOpeningHours",
           ].join(",");
 
           const searchRes = await fetch(searchUrl, {
@@ -458,6 +463,15 @@ export async function createTenantFromGoogleMapsAction(
                 author_photo_url: r.authorAttribution?.photoUri || null,
               });
             }
+          }
+          const rawHours =
+            placeDetailsData.currentOpeningHours?.weekdayDescriptions ||
+            placeDetailsData.regularOpeningHours?.weekdayDescriptions ||
+            placeDetailsData.current_opening_hours?.weekday_text ||
+            placeDetailsData.opening_hours?.weekday_text ||
+            null;
+          if (rawHours) {
+            openingHours = rawHours;
           }
         }
       } catch (apiErr) {
@@ -541,6 +555,7 @@ export async function createTenantFromGoogleMapsAction(
       review_count: reviewCount,
       google_reviews_count: reviewCount,
       business_category: category,
+      opening_hours_json: openingHours,
       place_photos: placePhotos,
       latitude: latitude,
       longitude: longitude,

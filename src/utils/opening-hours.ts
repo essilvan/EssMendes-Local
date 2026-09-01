@@ -6,12 +6,25 @@ export interface BusinessScheduleItem {
 
 export interface BusinessStatusResult {
   isOpenNow: boolean;
+  hasOfficialHours: boolean;
   badgeText: string;
   detailText: string;
   statusLine: string;
   todayHoursText: string;
   scheduleList: BusinessScheduleItem[];
 }
+
+export const daysMap: Record<string, string> = {
+  domingo: "Domingo",
+  "segunda-feira": "Segunda-feira",
+  "terça-feira": "Terça-feira",
+  "terca-feira": "Terça-feira",
+  "quarta-feira": "Quarta-feira",
+  "quinta-feira": "Quinta-feira",
+  "sexta-feira": "Sexta-feira",
+  sábado: "Sábado",
+  sabado: "Sábado",
+};
 
 const WEEKDAY_NAMES_PT = [
   "domingo",
@@ -34,16 +47,39 @@ const DEFAULT_WEEKDAY_DESCRIPTIONS = [
 ];
 
 /**
+ * Faz o parsing do array de horários retornados pelo Google Places
+ */
+export function parseGoogleOpeningHours(
+  rawOpeningHours?: string[] | null
+): Array<{ day: string; time: string }> | null {
+  if (!rawOpeningHours || !Array.isArray(rawOpeningHours) || rawOpeningHours.length === 0) {
+    return null;
+  }
+  return rawOpeningHours.map((line: string) => {
+    const [day, ...timeParts] = line.split(":");
+    const time = timeParts.join(":").trim();
+    const cleanDay = day.trim().toLowerCase();
+    const formattedDay = daysMap[cleanDay] || day.trim();
+    return {
+      day: formattedDay,
+      time: time || "Fechado",
+    };
+  });
+}
+
+/**
  * Normaliza e analisa os horários de funcionamento fornecidos pela Google Places API
  * e calcula dinamicamente se o estabelecimento está aberto no momento atual.
  */
 export function getBusinessStatus(
   rawOpeningHours?: string[] | null
 ): BusinessStatusResult {
-  const descriptions =
+  const hasOfficialHours = Boolean(
     rawOpeningHours && Array.isArray(rawOpeningHours) && rawOpeningHours.length > 0
-      ? rawOpeningHours
-      : DEFAULT_WEEKDAY_DESCRIPTIONS;
+  );
+  const descriptions = hasOfficialHours
+    ? (rawOpeningHours as string[])
+    : DEFAULT_WEEKDAY_DESCRIPTIONS;
 
   const now = new Date();
   const currentDayIndex = now.getDay(); // 0 = Domingo, 1 = Segunda ... 6 = Sábado
@@ -189,6 +225,7 @@ export function getBusinessStatus(
 
   return {
     isOpenNow,
+    hasOfficialHours,
     badgeText,
     detailText,
     statusLine,

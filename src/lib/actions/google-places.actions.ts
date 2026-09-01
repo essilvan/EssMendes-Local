@@ -507,10 +507,14 @@ export async function syncGooglePlaceData(
           if (place.primaryTypeDisplayName?.text) {
             businessCategory = place.primaryTypeDisplayName.text;
           }
-          if (place.regularOpeningHours?.weekdayDescriptions) {
-            weeklyHours = place.regularOpeningHours.weekdayDescriptions;
-          } else if (place.currentOpeningHours?.weekdayDescriptions) {
+          if (place.currentOpeningHours?.weekdayDescriptions) {
             weeklyHours = place.currentOpeningHours.weekdayDescriptions;
+          } else if (place.regularOpeningHours?.weekdayDescriptions) {
+            weeklyHours = place.regularOpeningHours.weekdayDescriptions;
+          } else if (place.current_opening_hours?.weekday_text) {
+            weeklyHours = place.current_opening_hours.weekday_text;
+          } else if (place.opening_hours?.weekday_text) {
+            weeklyHours = place.opening_hours.weekday_text;
           }
           if (place.editorialSummary?.text) {
             description = place.editorialSummary.text;
