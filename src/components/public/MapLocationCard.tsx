@@ -7,7 +7,6 @@ import {
   ExternalLink,
   Copy,
   Check,
-  Building2,
   Clock,
   Calendar,
 } from "lucide-react";
@@ -120,44 +119,17 @@ export function MapLocationCard({
            ========================================================================= */}
         <div className="lg:col-span-7 space-y-4 flex flex-col justify-between">
           
-          {/* Card Visual do Mapa */}
-          <div className="relative min-h-[220px] sm:min-h-[240px] rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-100 via-slate-200/80 to-slate-100 overflow-hidden shadow-inner flex flex-col items-center justify-center p-6 text-center">
-            {/* Grid Pattern */}
-            <div className="absolute inset-0 opacity-25 pointer-events-none bg-[radial-gradient(#0f172a_1px,transparent_1px)] [background-size:16px_16px]" />
-
-            {/* Marcador Centralizado */}
-            <div className="relative z-10 flex flex-col items-center">
-              <div
-                className="relative flex h-14 w-14 items-center justify-center rounded-2xl text-white shadow-xl ring-4 ring-white transition transform hover:scale-105"
-                style={{ backgroundColor: "var(--primary-color, #0d9488)" }}
-              >
-                <Building2 className="h-7 w-7" />
-                <span
-                  className="absolute -bottom-2 h-3 w-3 rotate-45"
-                  style={{ backgroundColor: "var(--primary-color, #0d9488)" }}
-                />
-              </div>
-
-              <div className="mt-3.5 rounded-xl bg-white/95 backdrop-blur-xs px-3.5 py-1.5 shadow-md border border-slate-200 text-xs font-black text-slate-900">
-                {tenantName}
-              </div>
-              <p className="mt-1 text-[11px] text-slate-600 max-w-sm font-medium truncate">
-                {displayAddress}
-              </p>
-            </div>
-
-            {/* Botão Flutuante Expandir Mapa */}
-            <div className="absolute bottom-3 right-3 z-10">
-              <a
-                href={googleMapsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-lg bg-white/95 backdrop-blur-xs px-2.5 py-1.5 text-[11px] font-bold text-slate-800 border border-slate-200 shadow-xs hover:bg-white transition"
-              >
-                <ExternalLink className="h-3 w-3" />
-                <span>Expandir Mapa</span>
-              </a>
-            </div>
+          {/* Iframe Interativo do Google Maps */}
+          <div className="relative w-full h-72 sm:h-80 rounded-xl overflow-hidden border border-slate-300 shadow-md">
+            <iframe
+              title={`Localização Google Maps - ${tenantName}`}
+              src={`https://www.google.com/maps?q=${encodeURIComponent(
+                address || tenantName + " " + displayAddress
+              )}&output=embed`}
+              className="w-full h-full border-0"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
           </div>
 
           {/* Bloco de Endereço + Botão Copiar */}
