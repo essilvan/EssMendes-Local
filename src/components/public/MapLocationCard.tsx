@@ -84,7 +84,7 @@ export function MapLocationCard({
       <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b ${currentTheme.borderClass} pb-4`}>
         <div>
           <div className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold ${currentTheme.badgeBg} ${currentTheme.badgeText}`}>
-            <MapPin className="h-3.5 w-3.5" />
+            <span>{currentTheme.icons?.contact || "📍"}</span>
             <span>Localização & Horários</span>
           </div>
           <h2 className={`mt-1 text-lg sm:text-xl font-black ${currentTheme.textPrimary}`}>

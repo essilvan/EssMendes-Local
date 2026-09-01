@@ -31,9 +31,11 @@ import {
   Clock,
   FileText,
   HelpCircle,
+  Layers,
 } from "lucide-react";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 import { COLOR_PRESETS } from "@/utils/color";
+import { NICHE_THEMES, type ThemeNiche } from "@/config/tenant-themes";
 
 interface ServiceSummary {
   id: string;
@@ -54,6 +56,7 @@ interface ProfileFormProps {
     logoUrl: string;
     placePhotos?: string[];
     primaryColor?: string;
+    themeNiche?: string;
     googleMapsUrl?: string;
     rating?: number;
     reviewCount?: number;
@@ -73,6 +76,9 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
   // Controlled form states
   const [companyName, setCompanyName] = useState(initialData.companyName || "");
   const [phoneWhatsapp, setPhoneWhatsapp] = useState(initialData.phoneWhatsapp || "");
+  const [selectedNiche, setSelectedNiche] = useState<ThemeNiche>(
+    (initialData.themeNiche as ThemeNiche) || "retail_default"
+  );
   const [address, setAddress] = useState(initialData.address || "");
   const [description, setDescription] = useState(initialData.description || "");
   const [editorialSummary, setEditorialSummary] = useState(
@@ -836,20 +842,138 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
           </div>
         </div>
 
-        {/* Bloco 4: Identidade Visual & Cor Primária do Tema */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-6">
+        {/* Bloco 4: Nicho de Atuação & Identidade Visual */}
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-8">
           <div className="border-b border-slate-100 pb-5">
             <div className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-semibold text-teal-800 ring-1 ring-teal-600/20">
-              <Palette className="h-3 w-3" />
-              <span>Personalização Visual</span>
+              <Layers className="h-3 w-3" />
+              <span>Nicho & Estilo Visual</span>
             </div>
             <h3 className="mt-1.5 text-base font-bold text-slate-900">
-              Cor Primária do Tema (`primary_color`)
+              Seletor de Nicho & Ícones Contextuais
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Escolha a cor de destaque da sua marca para personalizar botões, badges, estrelas e detalhes da sua vitrine pública.
+              Escolha o segmento do seu negócio para adaptar automaticamente o tema (Dark/Light), fontes, estilo dos cards e os ícones contextuais de toda a vitrine.
             </p>
           </div>
+
+          {/* Hidden input para submissão do formulário */}
+          <input type="hidden" name="themeNiche" value={selectedNiche} />
+
+          {/* Grid dos 4 Nichos */}
+          <div className="space-y-3">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
+              Selecione o Nicho do Seu Negócio
+            </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {(Object.keys(NICHE_THEMES) as ThemeNiche[]).map((nicheKey) => {
+                const niche = NICHE_THEMES[nicheKey];
+                const isSelected = selectedNiche === nicheKey;
+
+                return (
+                  <div
+                    key={nicheKey}
+                    onClick={() => setSelectedNiche(nicheKey)}
+                    className={`relative flex flex-col justify-between rounded-2xl border-2 p-5 cursor-pointer transition text-left ${
+                      isSelected
+                        ? "border-teal-600 bg-teal-50/40 ring-2 ring-teal-600/20 shadow-md"
+                        : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/60"
+                    }`}
+                  >
+                    <div>
+                      {/* Top Header do Card */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <span className="text-3xl p-2 rounded-xl bg-slate-100/80 shadow-xs">
+                            {niche.icon}
+                          </span>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-sm font-bold text-slate-900">
+                                {niche.name}
+                              </h4>
+                              {niche.isDark ? (
+                                <span className="rounded-md bg-zinc-900 px-1.5 py-0.5 text-[10px] font-bold text-zinc-100">
+                                  Dark Mode
+                                </span>
+                              ) : (
+                                <span className="rounded-md bg-slate-100 border border-slate-200 px-1.5 py-0.5 text-[10px] font-bold text-slate-700">
+                                  Light Mode
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                              {niche.description}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Radio / Check Indicator */}
+                        <div
+                          className={`h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition ${
+                            isSelected
+                              ? "border-teal-600 bg-teal-600 text-white"
+                              : "border-slate-300 bg-white"
+                          }`}
+                        >
+                          {isSelected && <CheckCircle2 className="h-4 w-4 fill-white text-teal-600" />}
+                        </div>
+                      </div>
+
+                      {/* Tagline do Nicho */}
+                      <div className="mt-3.5 rounded-lg bg-slate-100/70 px-3 py-1.5 text-xs text-slate-600 italic">
+                        "{niche.heroTagline}"
+                      </div>
+                    </div>
+
+                    {/* Ícones Contextuais do Nicho */}
+                    <div className="mt-4 pt-3 border-t border-slate-100">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-2">
+                        Ícones Contextuais Adaptativos:
+                      </span>
+                      <div className="grid grid-cols-5 gap-1.5 text-center">
+                        <div className="rounded-lg bg-white border border-slate-200/80 p-1.5">
+                          <div className="text-base">{niche.icons.hero}</div>
+                          <span className="text-[9px] text-slate-500 font-medium block mt-0.5">Hero</span>
+                        </div>
+                        <div className="rounded-lg bg-white border border-slate-200/80 p-1.5">
+                          <div className="text-base">{niche.icons.services}</div>
+                          <span className="text-[9px] text-slate-500 font-medium block mt-0.5">Serviços</span>
+                        </div>
+                        <div className="rounded-lg bg-white border border-slate-200/80 p-1.5">
+                          <div className="text-base">{niche.icons.products}</div>
+                          <span className="text-[9px] text-slate-500 font-medium block mt-0.5">Produtos</span>
+                        </div>
+                        <div className="rounded-lg bg-white border border-slate-200/80 p-1.5">
+                          <div className="text-base">{niche.icons.reviews}</div>
+                          <span className="text-[9px] text-slate-500 font-medium block mt-0.5">Avaliações</span>
+                        </div>
+                        <div className="rounded-lg bg-white border border-slate-200/80 p-1.5">
+                          <div className="text-base">{niche.icons.contact}</div>
+                          <span className="text-[9px] text-slate-500 font-medium block mt-0.5">Contato</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Divisor para Personalização de Cor */}
+          <div className="border-t border-slate-100 pt-6 space-y-6">
+            <div className="border-b border-slate-100 pb-4">
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-semibold text-teal-800 ring-1 ring-teal-600/20">
+                <Palette className="h-3 w-3" />
+                <span>Personalização Visual</span>
+              </div>
+              <h3 className="mt-1.5 text-base font-bold text-slate-900">
+                Cor Primária do Tema (`primary_color`)
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Escolha a cor de destaque da sua marca para personalizar botões, badges, estrelas e detalhes da sua vitrine pública.
+              </p>
+            </div>
 
           {/* Presets Rápidos */}
           <div className="space-y-3">
@@ -957,6 +1081,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
             </div>
           </div>
         </div>
+      </div>
 
         {/* Botão de Ação com Feedback de Loading */}
         <div className="flex justify-end">

@@ -10,7 +10,7 @@ import type {
   TenantProduct,
 } from "@/types";
 import { getThemeColorStyles } from "@/utils/color";
-import { detectNicheTheme, NICHE_THEMES } from "@/config/tenant-themes";
+import { getTenantTheme, NICHE_THEMES } from "@/config/tenant-themes";
 import { PublicHeader } from "./PublicHeader";
 import { PublicHeroSplit } from "./PublicHeroSplit";
 import { TrustMetricsBar } from "./TrustMetricsBar";
@@ -84,11 +84,13 @@ export function PublicTenantHub({
     setSelectedServiceId(null);
   };
 
-  const detectedTheme = (tenant.theme_niche as any) || detectNicheTheme(
+  const theme = getTenantTheme(
+    profile?.template_id && profile.template_id !== "default"
+      ? profile.template_id
+      : (tenant.theme_niche as any),
     tenant.category || profile?.business_category,
     tenant.google_types || []
   );
-  const theme = NICHE_THEMES[detectedTheme as keyof typeof NICHE_THEMES] || NICHE_THEMES.retail_default;
 
   return (
     <div

@@ -74,8 +74,9 @@ export function GoogleReviewsCard({
             </div>
           </div>
 
-          <h2 className="text-lg sm:text-xl font-black text-slate-900">
-            Avaliações e Reputação no Google
+          <h2 className={`text-lg sm:text-xl font-black ${currentTheme.textPrimary} flex items-center gap-2`}>
+            <span>{currentTheme.icons?.reviews || "⭐"}</span>
+            <span>Avaliações e Reputação no Google</span>
           </h2>
         </div>
 

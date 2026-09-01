@@ -39,6 +39,10 @@ export const updateProfileSchema = z.object({
   rating: z.coerce.number().min(1).max(5).optional(),
   reviewCount: z.coerce.number().min(0).max(99999).optional(),
   placePhotos: z.string().optional().or(z.literal("")),
+  themeNiche: z
+    .enum(["auto", "health_beauty", "food", "retail_default"])
+    .optional()
+    .or(z.literal("")),
 });
 
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;

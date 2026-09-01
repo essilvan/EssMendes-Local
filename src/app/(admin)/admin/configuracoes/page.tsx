@@ -78,6 +78,7 @@ export default async function ConfiguracoesPage() {
     logoUrl: profile?.logo_url || (cleanPlacePhotos.length > 0 ? cleanPlacePhotos[0] : ""),
     placePhotos: cleanPlacePhotos,
     primaryColor: profile?.primary_color || "#0d9488",
+    themeNiche: profile?.template_id || (tenantContext.tenant as any)?.theme_niche || "retail_default",
     googleMapsUrl: profile?.google_maps_url || "",
     rating: profile?.rating || 4.9,
     reviewCount: profile?.review_count || 128,

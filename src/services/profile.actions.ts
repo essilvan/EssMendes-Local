@@ -27,6 +27,7 @@ export async function updateTenantProfileAction(
     rating: formData.get("rating") ? Number(formData.get("rating")) : 4.9,
     reviewCount: formData.get("reviewCount") ? Number(formData.get("reviewCount")) : 128,
     placePhotos: formData.get("placePhotos")?.toString().trim() || "",
+    themeNiche: formData.get("themeNiche")?.toString().trim() || "",
   };
 
   // 1. Validação com Zod
@@ -49,6 +50,7 @@ export async function updateTenantProfileAction(
     rating,
     reviewCount,
     placePhotos: rawPlacePhotos,
+    themeNiche,
   } = validation.data;
 
   // 2. Obter tenant_id e usuário autenticado com tratamento de erros
@@ -101,6 +103,7 @@ export async function updateTenantProfileAction(
       address: address || null,
       logo_url: logoUrl || null,
       primary_color: primaryColor || "#0d9488",
+      template_id: themeNiche || "retail_default",
       google_maps_url: googleMapsUrl || null,
       rating: rating ?? 4.9,
       review_count: reviewCount ?? 128,

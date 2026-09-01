@@ -51,7 +51,7 @@ export function PublicProductsSection({
       <div className={`flex flex-col sm:flex-row sm:items-end justify-between gap-3 border-b ${currentTheme.borderClass} pb-4`}>
         <div>
           <div className={`inline-flex items-center gap-1.5 rounded-full ${currentTheme.badgeBg} px-3 py-1 text-xs font-bold ${currentTheme.badgeText}`}>
-            <ShoppingBag className="h-3.5 w-3.5" />
+            <span>{currentTheme.icons?.products || "🛍️"}</span>
             <span>Vitrine & Produtos Físicos</span>
           </div>
           <h2 className={`mt-2 text-2xl sm:text-3xl font-extrabold tracking-tight ${currentTheme.textPrimary}`}>

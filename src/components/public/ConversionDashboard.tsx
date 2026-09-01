@@ -110,7 +110,7 @@ export function ConversionDashboard({
             <div
               className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold ${currentTheme.badgeBg} ${currentTheme.badgeText}`}
             >
-              <Sparkles className="h-3.5 w-3.5" />
+              <span>{currentTheme.icons?.services || "🛠️"}</span>
               <span>Nossos Serviços</span>
             </div>
             <h3 className={`mt-1 text-base sm:text-lg font-black ${currentTheme.textPrimary}`}>
