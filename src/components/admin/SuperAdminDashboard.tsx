@@ -142,6 +142,7 @@ export function SuperAdminDashboard({
           {/* 2. Botão de Ação Rápida: Cadastrar Nova Empresa */}
           <div>
             <button
+              type="button"
               onClick={() => setIsModalOpen(true)}
               className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-5 py-3 text-xs font-bold text-white shadow-md hover:bg-teal-500 transition hover:scale-102 cursor-pointer"
             >

@@ -188,6 +188,7 @@ export function ServicesManager({ initialServices }: ServicesManagerProps) {
         </div>
 
         <button
+          type="button"
           onClick={handleOpenCreateModal}
           disabled={isPending}
           className="inline-flex items-center gap-2 rounded-lg bg-teal-700 px-4 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-teal-800 focus:outline-none focus:ring-2 focus:ring-teal-600 disabled:opacity-60 transition"
@@ -218,6 +219,7 @@ export function ServicesManager({ initialServices }: ServicesManagerProps) {
             <p className="mt-0.5 text-xs">{feedback.message}</p>
           </div>
           <button
+            type="button"
             onClick={() => setFeedback(null)}
             className="text-slate-400 hover:text-slate-600"
           >
@@ -239,6 +241,7 @@ export function ServicesManager({ initialServices }: ServicesManagerProps) {
             Cadastre seu primeiro serviço para que ele fique visível no catálogo e no sistema de agendamento online.
           </p>
           <button
+            type="button"
             onClick={handleOpenCreateModal}
             className="mt-5 inline-flex items-center gap-2 rounded-lg bg-teal-700 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-teal-800 transition"
           >
@@ -275,6 +278,7 @@ export function ServicesManager({ initialServices }: ServicesManagerProps) {
                       </span>
                     </div>
                     <button
+                      type="button"
                       onClick={() => handleToggleStatus(service)}
                       disabled={isPending}
                       title={
@@ -331,6 +335,7 @@ export function ServicesManager({ initialServices }: ServicesManagerProps) {
                   {/* Botões de Ação */}
                   <div className="flex items-center justify-end gap-2 border-t border-slate-50 pt-2">
                     <button
+                      type="button"
                       onClick={() => handleOpenEditModal(service)}
                       disabled={isPending}
                       className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50 transition"
@@ -339,6 +344,7 @@ export function ServicesManager({ initialServices }: ServicesManagerProps) {
                       <span>Editar</span>
                     </button>
                     <button
+                      type="button"
                       onClick={() => handleDelete(service.id, service.name)}
                       disabled={isPending}
                       className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 transition"
@@ -375,6 +381,7 @@ export function ServicesManager({ initialServices }: ServicesManagerProps) {
                 </p>
               </div>
               <button
+                type="button"
                 onClick={handleCloseModal}
                 disabled={isPending}
                 className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-50 transition"

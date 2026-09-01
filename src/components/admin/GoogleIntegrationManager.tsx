@@ -51,9 +51,15 @@ export function GoogleIntegrationManager({
   const formatLastSync = (dateString?: string | null) => {
     if (!dateString) return "Nunca sincronizado";
     const d = new Date(dateString);
-    return `Última sincronização: ${d.toLocaleDateString("pt-BR")} às ${d.toLocaleTimeString("pt-BR", {
+    return `Última sincronização: ${d.toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      timeZone: "UTC",
+    })} às ${d.toLocaleTimeString("pt-BR", {
       hour: "2-digit",
       minute: "2-digit",
+      timeZone: "UTC",
     })}`;
   };
 

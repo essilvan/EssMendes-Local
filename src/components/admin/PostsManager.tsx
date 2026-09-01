@@ -208,6 +208,7 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
       day: "2-digit",
       month: "short",
       year: "numeric",
+      timeZone: "UTC",
     });
   };
 

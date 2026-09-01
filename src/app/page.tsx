@@ -175,6 +175,7 @@ export default async function HomePage() {
             <Link
               href="/minha-empresa-teste"
               target="_blank"
+              rel="noopener noreferrer"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-5 py-3.5 text-sm font-bold text-white backdrop-blur-xs hover:bg-white/20 transition"
             >
               <Globe className="h-4 w-4 text-teal-300" />

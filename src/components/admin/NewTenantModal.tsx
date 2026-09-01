@@ -181,6 +181,7 @@ export function NewTenantModal({ isOpen, onClose, onSuccess }: NewTenantModalPro
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 cursor-pointer"
           >

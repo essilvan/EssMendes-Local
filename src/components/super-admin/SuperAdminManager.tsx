@@ -152,6 +152,7 @@ export function SuperAdminManager({
 
           <div className="flex items-center gap-3 flex-wrap">
             <button
+              type="button"
               onClick={() => setIsModalOpen(true)}
               className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-xs font-bold text-white shadow-md hover:bg-teal-500 transition"
             >
@@ -356,6 +357,7 @@ export function SuperAdminManager({
                       <td className="px-5 py-4 text-right">
                         <div className="inline-flex items-center gap-1.5">
                           <button
+                            type="button"
                             onClick={() => handleSelectTenant(t.id, "/admin/dashboard")}
                             disabled={isRowSelecting}
                             className="inline-flex items-center gap-1.5 rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-teal-800 disabled:opacity-50 transition"
@@ -370,6 +372,7 @@ export function SuperAdminManager({
 
                           {/* Quick shortcuts para o Super Admin */}
                           <button
+                            type="button"
                             onClick={() => handleSelectTenant(t.id, "/admin/produtos")}
                             disabled={isRowSelecting}
                             title="Acessar Vitrine de Produtos"
@@ -378,6 +381,7 @@ export function SuperAdminManager({
                             <ShoppingBag className="h-3.5 w-3.5" />
                           </button>
                           <button
+                            type="button"
                             onClick={() => handleSelectTenant(t.id, "/admin/avaliacoes")}
                             disabled={isRowSelecting}
                             title="Acessar Avaliações & IA"
@@ -386,6 +390,7 @@ export function SuperAdminManager({
                             <Star className="h-3.5 w-3.5" />
                           </button>
                           <button
+                            type="button"
                             onClick={() => handleSelectTenant(t.id, "/admin/posts")}
                             disabled={isRowSelecting}
                             title="Acessar Posts & SEO"

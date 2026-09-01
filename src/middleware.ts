@@ -128,7 +128,11 @@ export async function middleware(request: NextRequest) {
         request.url
       );
       rewriteUrl.search = url.search;
-      return NextResponse.rewrite(rewriteUrl);
+      return NextResponse.rewrite(rewriteUrl, {
+        request: {
+          headers: request.headers,
+        },
+      });
     }
   }
 
