@@ -93,7 +93,7 @@ export async function getAllTenantsForSuperAdminAction(): Promise<{
     // 1. Busca todos os estabelecimentos cadastrados na tabela tenants
     const { data: tenants, error: tenantsError } = await supabase
       .from("tenants")
-      .select("id, name, slug, google_rating, google_reviews_count, presence_score, created_at")
+      .select("id, name, slug, google_rating, google_reviews_count, google_place_id, opening_hours, presence_score, created_at")
       .order("created_at", { ascending: false });
 
     if (tenantsError) {
@@ -106,10 +106,10 @@ export async function getAllTenantsForSuperAdminAction(): Promise<{
 
     const tenantIds = tenants.map((t) => t.id);
 
-    // 2. Busca dados de perfil vinculados (endereço, telefone, logo)
+    // 2. Busca dados de perfil vinculados (endereço, telefone, logo, google_place_id, opening_hours_json)
     const { data: profiles } = await supabase
       .from("tenant_profiles")
-      .select("tenant_id, address, phone_whatsapp, logo_url, rating, google_rating, google_reviews_count")
+      .select("tenant_id, address, phone_whatsapp, logo_url, rating, google_rating, google_reviews_count, google_place_id, opening_hours_json")
       .in("tenant_id", tenantIds);
 
     const profileMap = new Map<string, any>();
@@ -142,6 +142,8 @@ export async function getAllTenantsForSuperAdminAction(): Promise<{
       const logoUrl = p?.logo_url || null;
       const googleRating = t.google_rating ?? p?.google_rating ?? p?.rating ?? null;
       const googleReviews = t.google_reviews_count ?? p?.google_reviews_count ?? null;
+      const googlePlaceId = (t as any).google_place_id || p?.google_place_id || null;
+      const openingHours = (t as any).opening_hours || p?.opening_hours_json || null;
       const totalProducts = productCountMap.get(t.id) || 0;
       const score = t.presence_score ?? 60;
 
@@ -157,8 +159,10 @@ export async function getAllTenantsForSuperAdminAction(): Promise<{
         city,
         phone,
         logo_url: logoUrl,
+        google_place_id: googlePlaceId,
         google_rating: googleRating,
         google_reviews_count: googleReviews,
+        opening_hours: openingHours,
         total_products: totalProducts,
         presence_score: score,
         status,
@@ -670,5 +674,155 @@ export async function createTenantFromGoogleMapsAction(
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Erro ao cadastrar estabelecimento";
     return { success: false, error: msg };
+  }
+}
+
+/**
+ * Ressincroniza os horários de funcionamento do Google Places para um tenant existente
+ */
+export async function syncTenantGoogleHoursAction(
+  tenantId: string,
+  googlePlaceId?: string
+): Promise<{ success: boolean; opening_hours?: string[]; error?: string }> {
+  try {
+    if (!tenantId) {
+      return { success: false, error: "ID da empresa não informado." };
+    }
+
+    const supabase = await createClient();
+
+    let placeId = googlePlaceId;
+    if (!placeId) {
+      const { data: tenant } = await supabase
+        .from("tenants")
+        .select("google_place_id")
+        .eq("id", tenantId)
+        .maybeSingle();
+
+      if (tenant?.google_place_id) {
+        placeId = tenant.google_place_id;
+      } else {
+        const { data: profile } = await supabase
+          .from("tenant_profiles")
+          .select("google_place_id")
+          .eq("tenant_id", tenantId)
+          .maybeSingle();
+
+        if (profile?.google_place_id) {
+          placeId = profile.google_place_id;
+        }
+      }
+    }
+
+    if (!placeId) {
+      return {
+        success: false,
+        error: "Esta empresa não possui um Google Place ID vinculado para sincronização.",
+      };
+    }
+
+    const apiKey =
+      process.env.GOOGLE_PLACES_API_KEY ||
+      process.env.GOOGLE_MAPS_API_KEY ||
+      process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
+
+    if (!apiKey) {
+      return {
+        success: false,
+        error: "Chave da Google Places API não configurada no servidor.",
+      };
+    }
+
+    let hours: string[] = [];
+
+    // 1. Tenta consulta via Google Places Details API (Legacy)
+    try {
+      const legacyUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(
+        placeId
+      )}&fields=current_opening_hours,opening_hours&language=pt-BR&key=${apiKey}`;
+
+      const legacyRes = await fetch(legacyUrl);
+      if (legacyRes.ok) {
+        const legacyData = await legacyRes.json();
+        const legacyHours =
+          legacyData.result?.current_opening_hours?.weekday_text ||
+          legacyData.result?.opening_hours?.weekday_text;
+
+        if (Array.isArray(legacyHours) && legacyHours.length > 0) {
+          hours = legacyHours;
+        }
+      }
+    } catch (err) {
+      console.warn("[syncTenantGoogleHoursAction] Aviso na API Legacy:", err);
+    }
+
+    // 2. Fallback para Google Places API (New) se não obteve horários
+    if (hours.length === 0) {
+      try {
+        const newUrl = `https://places.googleapis.com/v1/places/${encodeURIComponent(
+          placeId
+        )}?languageCode=pt-BR`;
+
+        const newRes = await fetch(newUrl, {
+          headers: {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": apiKey,
+            "X-Goog-FieldMask": "currentOpeningHours,regularOpeningHours",
+          },
+        });
+
+        if (newRes.ok) {
+          const newData = await newRes.json();
+          const newHours =
+            newData.currentOpeningHours?.weekdayDescriptions ||
+            newData.regularOpeningHours?.weekdayDescriptions;
+
+          if (Array.isArray(newHours) && newHours.length > 0) {
+            hours = newHours;
+          }
+        }
+      } catch (err) {
+        console.warn("[syncTenantGoogleHoursAction] Aviso na API New:", err);
+      }
+    }
+
+    if (hours.length === 0) {
+      return {
+        success: false,
+        error: "A ficha do Google Places não possui horários cadastrados ou a API não retornou dados.",
+      };
+    }
+
+    // 3. Atualiza tenants e tenant_profiles
+    await supabase
+      .from("tenants")
+      .update({
+        opening_hours: hours,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", tenantId);
+
+    await supabase
+      .from("tenant_profiles")
+      .update({
+        opening_hours_json: hours,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("tenant_id", tenantId);
+
+    revalidatePath("/super-admin");
+    revalidatePath("/admin/dashboard");
+    revalidatePath("/admin/configuracoes");
+
+    return {
+      success: true,
+      opening_hours: hours,
+    };
+  } catch (err: any) {
+    console.error("[syncTenantGoogleHoursAction] Erro:", err);
+    return {
+      success: false,
+      error: err.message || "Erro inesperado ao sincronizar horários do Google.",
+    };
   }
 }

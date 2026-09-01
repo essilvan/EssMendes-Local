@@ -7,6 +7,7 @@ import {
   selectManagedTenantAction,
   createTenantFromGoogleMapsAction,
   clearManagedTenantAction,
+  syncTenantGoogleHoursAction,
 } from "@/services/super-admin.actions";
 import type { SuperAdminTenantItem } from "@/types";
 import { NewTenantModal } from "@/components/admin/NewTenantModal";
@@ -32,6 +33,7 @@ import {
   Store,
   Copy,
   Check,
+  RefreshCw,
 } from "lucide-react";
 import { getTenantPublicUrl, getTenantDisplayDomain } from "@/utils/tenant-url";
 
@@ -55,6 +57,51 @@ export function SuperAdminDashboard({
   const [isSelecting, startSelectTransition] = useTransition();
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
   const [copiedSlugId, setCopiedSlugId] = useState<string | null>(null);
+  const [syncingTenantId, setSyncingTenantId] = useState<string | null>(null);
+  const [syncStatusMsg, setSyncStatusMsg] = useState<{ id: string; text: string; isError?: boolean } | null>(null);
+
+  const handleSyncGoogleHours = async (tenantId: string, googlePlaceId?: string | null, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    setSyncingTenantId(tenantId);
+    setSyncStatusMsg(null);
+    try {
+      const res = await syncTenantGoogleHoursAction(tenantId, googlePlaceId || undefined);
+      if (res.success) {
+        setSyncStatusMsg({
+          id: tenantId,
+          text: `✅ ${res.opening_hours?.length || 0} dias de horários sincronizados com sucesso!`,
+        });
+        setTenants((prev) =>
+          prev.map((t) =>
+            t.id === tenantId
+              ? { ...t, opening_hours: res.opening_hours || t.opening_hours }
+              : t
+          )
+        );
+        router.refresh();
+      } else {
+        setSyncStatusMsg({
+          id: tenantId,
+          text: `❌ ${res.error || "Erro ao sincronizar"}`,
+          isError: true,
+        });
+      }
+    } catch (err: any) {
+      setSyncStatusMsg({
+        id: tenantId,
+        text: `❌ ${err?.message || "Falha na requisição"}`,
+        isError: true,
+      });
+    } finally {
+      setSyncingTenantId(null);
+      setTimeout(() => {
+        setSyncStatusMsg((curr) => (curr?.id === tenantId ? null : curr));
+      }, 5000);
+    }
+  };
 
   const handleCopyLink = async (slug: string, id: string, e: React.MouseEvent) => {
     e.preventDefault();
@@ -362,59 +409,89 @@ export function SuperAdminDashboard({
                         </div>
                       </td>
 
-                      {/* Botão de Destaque: "🏢 Gerenciar" */}
+                      {/* Botão de Destaque: "🏢 Gerenciar" & Ações */}
                       <td className="px-5 py-4 text-right">
-                        <div className="inline-flex items-center gap-1.5">
-                          <Link
-                            href={adminUrl}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              handleGerenciarEmpresa(t.id, adminUrl);
-                            }}
-                            className="inline-flex items-center gap-1.5 rounded-xl bg-teal-700 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-teal-800 disabled:opacity-50 transition hover:scale-102"
-                          >
-                            {isRowSelecting ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Building2 className="h-3.5 w-3.5" />
-                            )}
-                            <span>🏢 Gerenciar</span>
-                          </Link>
+                        <div className="flex flex-col items-end gap-1.5">
+                          <div className="inline-flex items-center gap-1.5">
+                            {/* Botão Ressincronizar Horários Google Places */}
+                            <button
+                              type="button"
+                              onClick={(e) => handleSyncGoogleHours(t.id, t.google_place_id, e)}
+                              disabled={syncingTenantId === t.id}
+                              title="🔄 Sincronizar Horários Oficiais do Google Places"
+                              className="inline-flex items-center gap-1 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-[11px] font-bold text-amber-900 hover:bg-amber-100 transition shadow-2xs disabled:opacity-50"
+                            >
+                              {syncingTenantId === t.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-700" />
+                              ) : (
+                                <RefreshCw className="h-3.5 w-3.5 text-amber-700" />
+                              )}
+                              <span>🔄 Atualizar Google</span>
+                            </button>
 
-                          {/* Acesso rápido específico solicitado */}
-                          <Link
-                            href={`/admin/produtos?tenantId=${t.id}`}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              handleGerenciarEmpresa(t.id, `/admin/produtos?tenantId=${t.id}`);
-                            }}
-                            title="Editar Produtos da Empresa"
-                            className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition"
-                          >
-                            <ShoppingBag className="h-3.5 w-3.5" />
-                          </Link>
-                          <Link
-                            href={`/admin/avaliacoes?tenantId=${t.id}`}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              handleGerenciarEmpresa(t.id, `/admin/avaliacoes?tenantId=${t.id}`);
-                            }}
-                            title="Gerenciar Reviews Google & IA"
-                            className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition"
-                          >
-                            <Star className="h-3.5 w-3.5" />
-                          </Link>
-                          <Link
-                            href={`/admin/posts?tenantId=${t.id}`}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              handleGerenciarEmpresa(t.id, `/admin/posts?tenantId=${t.id}`);
-                            }}
-                            title="Gerar Posts de IA & SEO"
-                            className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition"
-                          >
-                            <FileText className="h-3.5 w-3.5" />
-                          </Link>
+                            <Link
+                              href={adminUrl}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                handleGerenciarEmpresa(t.id, adminUrl);
+                              }}
+                              className="inline-flex items-center gap-1.5 rounded-xl bg-teal-700 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-teal-800 disabled:opacity-50 transition hover:scale-102"
+                            >
+                              {isRowSelecting ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Building2 className="h-3.5 w-3.5" />
+                              )}
+                              <span>🏢 Gerenciar</span>
+                            </Link>
+
+                            {/* Acesso rápido específico solicitado */}
+                            <Link
+                              href={`/admin/produtos?tenantId=${t.id}`}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                handleGerenciarEmpresa(t.id, `/admin/produtos?tenantId=${t.id}`);
+                              }}
+                              title="Editar Produtos da Empresa"
+                              className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition"
+                            >
+                              <ShoppingBag className="h-3.5 w-3.5" />
+                            </Link>
+                            <Link
+                              href={`/admin/avaliacoes?tenantId=${t.id}`}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                handleGerenciarEmpresa(t.id, `/admin/avaliacoes?tenantId=${t.id}`);
+                              }}
+                              title="Gerenciar Reviews Google & IA"
+                              className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition"
+                            >
+                              <Star className="h-3.5 w-3.5" />
+                            </Link>
+                            <Link
+                              href={`/admin/posts?tenantId=${t.id}`}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                handleGerenciarEmpresa(t.id, `/admin/posts?tenantId=${t.id}`);
+                              }}
+                              title="Gerar Posts de IA & SEO"
+                              className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition"
+                            >
+                              <FileText className="h-3.5 w-3.5" />
+                            </Link>
+                          </div>
+
+                          {syncStatusMsg?.id === t.id && (
+                            <span
+                              className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
+                                syncStatusMsg.isError
+                                  ? "bg-rose-50 text-rose-700 border border-rose-200"
+                                  : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              }`}
+                            >
+                              {syncStatusMsg.text}
+                            </span>
+                          )}
                         </div>
                       </td>
                     </tr>

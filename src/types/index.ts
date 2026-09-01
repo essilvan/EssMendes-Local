@@ -15,8 +15,10 @@ export interface SuperAdminTenantItem {
   city: string;
   phone?: string | null;
   logo_url?: string | null;
+  google_place_id?: string | null;
   google_rating: number | null;
   google_reviews_count: number | null;
+  opening_hours?: string[] | null;
   total_products: number;
   presence_score: number;
   status: string;

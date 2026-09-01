@@ -220,7 +220,7 @@ export function MapLocationCard({
               </div>
 
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                Semana Oficial
+                {businessStatus.hasOfficialHours ? "Google Maps Oficial" : "Semana Padrão"}
               </span>
             </div>
 
