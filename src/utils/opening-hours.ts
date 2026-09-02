@@ -5,11 +5,14 @@ export interface BusinessScheduleItem {
 }
 
 export interface BusinessStatusResult {
+  isOpen: boolean;
   isOpenNow: boolean;
-  hasOfficialHours: boolean;
+  label: string;
+  subLabel: string;
   badgeText: string;
   detailText: string;
   statusLine: string;
+  hasOfficialHours: boolean;
   todayHoursText: string;
   scheduleList: BusinessScheduleItem[];
 }
@@ -26,7 +29,7 @@ export const daysMap: Record<string, string> = {
   sabado: "Sábado",
 };
 
-const WEEKDAY_NAMES_PT = [
+export const WEEKDAY_NAMES_PT = [
   "domingo",
   "segunda-feira",
   "terça-feira",
@@ -37,13 +40,13 @@ const WEEKDAY_NAMES_PT = [
 ];
 
 const DEFAULT_WEEKDAY_DESCRIPTIONS = [
+  "domingo: Fechado",
   "segunda-feira: 08:00 – 18:00",
   "terça-feira: 08:00 – 18:00",
   "quarta-feira: 08:00 – 18:00",
   "quinta-feira: 08:00 – 18:00",
   "sexta-feira: 08:00 – 18:00",
   "sábado: 08:00 – 14:00",
-  "domingo: Fechado",
 ];
 
 /**
@@ -72,29 +75,68 @@ export function parseGoogleOpeningHours(
  * e calcula dinamicamente se o estabelecimento está aberto no momento atual.
  */
 export function getBusinessStatus(
-  rawOpeningHours?: string[] | null
+  openingHoursJson?: any
 ): BusinessStatusResult {
-  const hasOfficialHours = Boolean(
-    rawOpeningHours && Array.isArray(rawOpeningHours) && rawOpeningHours.length > 0
-  );
-  const descriptions = hasOfficialHours
-    ? (rawOpeningHours as string[])
-    : DEFAULT_WEEKDAY_DESCRIPTIONS;
+  let hoursArray: string[] | null = null;
+
+  if (Array.isArray(openingHoursJson)) {
+    hoursArray = openingHoursJson.filter((h) => typeof h === "string" && h.trim().length > 0);
+  } else if (typeof openingHoursJson === "string") {
+    try {
+      const parsed = JSON.parse(openingHoursJson);
+      if (Array.isArray(parsed)) {
+        hoursArray = parsed.filter((h) => typeof h === "string" && h.trim().length > 0);
+      } else if (openingHoursJson.trim().length > 0) {
+        hoursArray = [openingHoursJson];
+      }
+    } catch {
+      if (openingHoursJson.trim().length > 0) {
+        hoursArray = [openingHoursJson];
+      }
+    }
+  }
 
   const now = new Date();
-  const currentDayIndex = now.getDay(); // 0 = Domingo, 1 = Segunda ... 6 = Sábado
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const dayOfWeek = now.getDay(); // 0 = Domingo, 1 = Segunda, ..., 6 = Sábado
+  const dayNamesMap = [
+    "domingo",
+    "segunda-feira",
+    "terça-feira",
+    "quarta-feira",
+    "quinta-feira",
+    "sexta-feira",
+    "sábado",
+  ];
+  const currentDayName = dayNamesMap[dayOfWeek];
 
-  // Mapeia descrições para a lista formatada da semana
-  const scheduleList: BusinessScheduleItem[] = [];
+  // Se não houver horários configurados
+  if (!hoursArray || hoursArray.length === 0) {
+    const label = "Aberto para Atendimento";
+    const subLabel = "Consulte horários via WhatsApp";
+    const defaultSchedule: BusinessScheduleItem[] = dayNamesMap.map((d, i) => ({
+      day: d.charAt(0).toUpperCase() + d.slice(1),
+      hours: i === 0 ? "Fechado" : i === 6 ? "08:00 – 14:00" : "08:00 – 18:00",
+      isToday: i === dayOfWeek,
+    }));
 
-  for (let i = 0; i < 7; i++) {
-    const dayName = WEEKDAY_NAMES_PT[i];
-    const isToday = i === currentDayIndex;
+    return {
+      isOpen: true,
+      isOpenNow: true,
+      label,
+      subLabel,
+      badgeText: label,
+      detailText: subLabel,
+      statusLine: `🟢 ${label} — ${subLabel}`,
+      hasOfficialHours: false,
+      todayHoursText: "Atendimento Normal",
+      scheduleList: defaultSchedule,
+    };
+  }
 
-    // Procura na lista da API a linha correspondente ao dia
-    const matchedLine = descriptions.find((desc) => {
-      const lower = desc.toLowerCase().trim();
+  // Constrói a lista dos 7 dias lendo diretamente as 7 entradas do array
+  const scheduleList: BusinessScheduleItem[] = dayNamesMap.map((dayName, i) => {
+    const matched = hoursArray!.find((line: string) => {
+      const lower = line.toLowerCase().trim();
       return (
         lower.startsWith(dayName) ||
         (dayName === "terça-feira" && (lower.startsWith("terca") || lower.startsWith("terça"))) ||
@@ -102,134 +144,81 @@ export function getBusinessStatus(
       );
     });
 
-    let hoursText = "08:00 – 18:00";
-    if (matchedLine) {
-      const parts = matchedLine.split(/:\s*/);
-      if (parts.length >= 2) {
-        hoursText = parts.slice(1).join(": ").trim();
-      } else {
-        hoursText = matchedLine;
-      }
+    let hours = "Consulte";
+    if (matched) {
+      const parts = matched.split(/:\s*/);
+      hours = parts.length >= 2 ? parts.slice(1).join(": ").trim() : matched.trim();
     } else if (i === 0) {
-      hoursText = "Fechado";
-    } else if (i === 6) {
-      hoursText = "08:00 – 14:00";
+      hours = "Fechado";
     }
 
-    scheduleList.push({
+    return {
       day: dayName.charAt(0).toUpperCase() + dayName.slice(1),
-      hours: hoursText,
-      isToday,
+      hours: hours || "Consulte",
+      isToday: i === dayOfWeek,
+    };
+  });
+
+  // Localiza a linha correspondente ao dia atual
+  const todayLine = hoursArray.find((line: string) => {
+    const lower = line.toLowerCase().trim();
+    return (
+      lower.startsWith(currentDayName) ||
+      (currentDayName === "terça-feira" && (lower.startsWith("terca") || lower.startsWith("terça"))) ||
+      (currentDayName === "sábado" && (lower.startsWith("sabado") || lower.startsWith("sábado")))
+    );
+  });
+
+  if (!todayLine || todayLine.toLowerCase().includes("fechado")) {
+    // Procura o próximo dia que abre
+    const nextDayIndex = (dayOfWeek + 1) % 7;
+    const nextDayLine = hoursArray.find((line: string) => {
+      const targetDay = dayNamesMap[nextDayIndex];
+      const lower = line.toLowerCase().trim();
+      return (
+        lower.startsWith(targetDay) ||
+        (targetDay === "terça-feira" && (lower.startsWith("terca") || lower.startsWith("terça"))) ||
+        (targetDay === "sábado" && (lower.startsWith("sabado") || lower.startsWith("sábado")))
+      );
     });
+
+    const nextTime =
+      nextDayLine && !nextDayLine.toLowerCase().includes("fechado")
+        ? nextDayLine.split(":").slice(1).join(":").trim().split("–")[0]?.trim() || "em breve"
+        : "em breve";
+
+    const label = "Fechado no momento";
+    const subLabel = `Abre amanhã às ${nextTime}`;
+
+    return {
+      isOpen: false,
+      isOpenNow: false,
+      label,
+      subLabel,
+      badgeText: label,
+      detailText: subLabel,
+      statusLine: `🟡 ${label} — ${subLabel}`,
+      hasOfficialHours: true,
+      todayHoursText: "Fechado",
+      scheduleList,
+    };
   }
 
-  // Identifica o horário de hoje
-  const todayItem = scheduleList[currentDayIndex];
-  const todayHours = todayItem ? todayItem.hours : "08:00 – 18:00";
-
-  let isOpenNow = false;
-  let badgeText = "Fechado no momento";
-  let detailText = "Abre amanhã às 08:00";
-  let closeTimeStr = "18:00";
-
-  const lowerTodayHours = todayHours.toLowerCase();
-
-  if (lowerTodayHours.includes("24 horas") || lowerTodayHours.includes("aberto 24h")) {
-    isOpenNow = true;
-    badgeText = "Aberto agora";
-    detailText = "Atendimento 24 horas";
-  } else if (lowerTodayHours.includes("fechado")) {
-    isOpenNow = false;
-    badgeText = "Fechado no momento";
-
-    // Procura o próximo dia aberto a partir de amanhã
-    const nextOpenDay =
-      scheduleList.find(
-        (item, idx) => idx > currentDayIndex && !item.hours.toLowerCase().includes("fechado")
-      ) || scheduleList.find((item) => !item.hours.toLowerCase().includes("fechado"));
-
-    if (nextOpenDay) {
-      const isTomorrow =
-        (currentDayIndex + 1) % 7 ===
-        scheduleList.findIndex((item) => item.day === nextOpenDay.day);
-      const openHourMatch = nextOpenDay.hours.match(/(\d{1,2}:\d{2})/);
-      const nextOpenHour = openHourMatch ? openHourMatch[1] : "08:00";
-
-      detailText = isTomorrow
-        ? `Abre amanhã às ${nextOpenHour}`
-        : `Abre ${nextOpenDay.day.toLowerCase()} às ${nextOpenHour}`;
-    } else {
-      detailText = "Consulte horários para agendamento";
-    }
-  } else {
-    // Tenta extrair intervalos no formato "08:00 – 18:00" ou "08:00 - 12:00, 14:00 - 18:00"
-    const timeRanges = todayHours.split(/[,;]/);
-    let matchedOpen = false;
-    let nextOpenLaterToday: string | null = null;
-
-    for (const range of timeRanges) {
-      const match = range.match(/(\d{1,2}):(\d{2})\s*[–\-—a]\s*(\d{1,2}):(\d{2})/);
-      if (match) {
-        const openMin = parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
-        const closeMin = parseInt(match[3], 10) * 60 + parseInt(match[4], 10);
-        const formattedClose = `${match[3].padStart(2, "0")}:${match[4].padStart(2, "0")}`;
-
-        if (currentMinutes >= openMin && currentMinutes < closeMin) {
-          matchedOpen = true;
-          closeTimeStr = formattedClose;
-          break;
-        } else if (currentMinutes < openMin && !nextOpenLaterToday) {
-          nextOpenLaterToday = `${match[1].padStart(2, "0")}:${match[2].padStart(2, "0")}`;
-        }
-      }
-    }
-
-    if (matchedOpen) {
-      isOpenNow = true;
-      badgeText = "Aberto agora";
-      detailText = `Atendimento até às ${closeTimeStr}`;
-    } else if (nextOpenLaterToday) {
-      isOpenNow = false;
-      badgeText = "Fechado no momento";
-      detailText = `Abre hoje às ${nextOpenLaterToday}`;
-    } else {
-      isOpenNow = false;
-      badgeText = "Fechado no momento";
-      const tomorrowIndex = (currentDayIndex + 1) % 7;
-      const tomorrowItem = scheduleList[tomorrowIndex];
-
-      if (tomorrowItem && !tomorrowItem.hours.toLowerCase().includes("fechado")) {
-        const openMatch = tomorrowItem.hours.match(/(\d{1,2}:\d{2})/);
-        const tomorrowOpenHour = openMatch ? openMatch[1] : "08:00";
-        detailText = `Abre amanhã às ${tomorrowOpenHour}`;
-      } else {
-        const nextOpenDay =
-          scheduleList.find(
-            (item, idx) => idx > currentDayIndex && !item.hours.toLowerCase().includes("fechado")
-          ) || scheduleList.find((item) => !item.hours.toLowerCase().includes("fechado"));
-
-        if (nextOpenDay) {
-          const openHourMatch = nextOpenDay.hours.match(/(\d{1,2}:\d{2})/);
-          const nextOpenHour = openHourMatch ? openHourMatch[1] : "08:00";
-          detailText = `Abre ${nextOpenDay.day.toLowerCase()} às ${nextOpenHour}`;
-        } else {
-          detailText = "Consulte horários para agendamento";
-        }
-      }
-    }
-  }
-
-  const statusLine = isOpenNow
-    ? `🟢 ${badgeText} — ${detailText}`
-    : `🟡 ${badgeText} — ${detailText}`;
+  // Se tiver horários no dia de hoje
+  const timeRange = todayLine.split(":").slice(1).join(":").trim();
+  const label = "Aberto agora";
+  const subLabel = `Hoje: ${timeRange}`;
 
   return {
-    isOpenNow,
-    hasOfficialHours,
-    badgeText,
-    detailText,
-    statusLine,
-    todayHoursText: todayHours,
+    isOpen: true,
+    isOpenNow: true,
+    label,
+    subLabel,
+    badgeText: label,
+    detailText: subLabel,
+    statusLine: `🟢 ${label} — ${subLabel}`,
+    hasOfficialHours: true,
+    todayHoursText: timeRange,
     scheduleList,
   };
 }

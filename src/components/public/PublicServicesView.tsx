@@ -15,6 +15,9 @@ import {
   CheckCircle2,
 } from "lucide-react";
 
+import type { NicheThemeConfig } from "@/config/tenant-themes";
+import { NICHE_THEMES } from "@/config/tenant-themes";
+
 interface PublicServicesViewProps {
   tenant: {
     id: string;
@@ -24,6 +27,7 @@ interface PublicServicesViewProps {
   profile: TenantProfile | null;
   services: Service[];
   isBookingOpen?: boolean;
+  theme?: NicheThemeConfig;
   onOpenBooking?: (serviceId?: string) => void;
   onCloseBooking?: () => void;
 }
@@ -33,9 +37,11 @@ export function PublicServicesView({
   profile,
   services,
   isBookingOpen: externalIsOpen,
+  theme,
   onOpenBooking: externalOnOpen,
   onCloseBooking: externalOnClose,
 }: PublicServicesViewProps) {
+  const currentTheme = theme || NICHE_THEMES.retail_default;
   const [internalIsOpen, setInternalIsOpen] = useState<boolean>(false);
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
 
@@ -84,25 +90,25 @@ export function PublicServicesView({
     <>
       <div
         id="servicos"
-        className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-6"
+        className={`${currentTheme.roundedClass} border ${currentTheme.borderClass} ${currentTheme.bgCard} p-6 sm:p-8 shadow-sm space-y-6`}
       >
         {/* Header do Catálogo */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+        <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b ${currentTheme.borderClass} pb-4`}>
           <div>
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-semibold text-teal-800 ring-1 ring-teal-600/20">
-              <Scissors className="h-3.5 w-3.5 text-teal-600" />
+            <div className={`inline-flex items-center gap-1.5 rounded-full ${currentTheme.badgeBg} px-2.5 py-0.5 text-xs font-semibold ${currentTheme.badgeText}`}>
+              <span>{currentTheme.icons?.services || "✂️"}</span>
               <span>Catálogo de Serviços</span>
             </div>
-            <h2 className="mt-1 text-lg font-bold text-slate-900">
+            <h2 className={`mt-1 text-lg font-bold ${currentTheme.textPrimary}`}>
               Nossos Serviços & Agendamento
             </h2>
-            <p className="text-xs text-slate-500">
+            <p className={`text-xs ${currentTheme.textMuted}`}>
               Selecione o serviço desejado para reservar seu horário de forma rápida e segura.
             </p>
           </div>
 
           <div className="flex items-center gap-2 self-start sm:self-auto">
-            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
+            <span className={`rounded-full ${currentTheme.badgeBg} ${currentTheme.badgeText} px-3 py-1 text-xs font-bold`}>
               {services.length} {services.length === 1 ? "serviço disponível" : "serviços disponíveis"}
             </span>
           </div>

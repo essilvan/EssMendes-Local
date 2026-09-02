@@ -81,15 +81,15 @@ export function GoogleReviewsCard({
         </div>
 
         {/* Resumo de Nota Geral */}
-        <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-2xl p-3.5 sm:px-4">
-          <span className="text-3xl font-black text-slate-900">{displayRating}</span>
+        <div className={`flex items-center gap-3 ${currentTheme.isDark ? 'bg-zinc-800 border-zinc-700' : 'bg-slate-50 border-slate-100'} border ${currentTheme.roundedClass} p-3.5 sm:px-4`}>
+          <span className={`text-3xl font-black ${currentTheme.textPrimary}`}>{displayRating}</span>
           <div>
             <div className="flex items-center gap-0.5 text-amber-500">
               {[...Array(5)].map((_, i) => (
                 <Star key={i} className="h-4 w-4 fill-current" />
               ))}
             </div>
-            <p className="text-[11px] font-semibold text-slate-500 mt-0.5">
+            <p className={`text-[11px] font-semibold ${currentTheme.textMuted} mt-0.5`}>
               {displayCount > 0 ? `(${displayCount} avaliações no Google)` : "Avaliações no Google"}
             </p>
           </div>

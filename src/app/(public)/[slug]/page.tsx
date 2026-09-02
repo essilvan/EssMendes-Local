@@ -150,7 +150,7 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
   // 2.1 Busca o tenant pelo slug
   const { data: tenant } = await supabase
     .from("tenants")
-    .select("id, name, slug, google_rating, google_reviews_count")
+    .select("*")
     .eq("slug", slug)
     .maybeSingle();
 

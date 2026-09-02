@@ -36,6 +36,7 @@ interface PublicTenantHubProps {
     theme_niche?: string | null;
     google_rating?: number | null;
     google_reviews_count?: number | null;
+    opening_hours?: string[] | null;
   };
   profile: TenantProfile | null;
   services: Service[];
@@ -84,10 +85,8 @@ export function PublicTenantHub({
     setSelectedServiceId(null);
   };
 
-  const theme = getTenantTheme(
-    profile?.template_id && profile.template_id !== "default"
-      ? profile.template_id
-      : (tenant.theme_niche as any),
+  const currentTheme = getTenantTheme(
+    tenant.theme_niche || (profile?.template_id && profile.template_id !== "default" ? profile.template_id : null),
     tenant.category || profile?.business_category,
     tenant.google_types || []
   );
@@ -95,7 +94,7 @@ export function PublicTenantHub({
   return (
     <div
       style={themeStyles}
-      className={`min-h-screen ${theme.bgPage} selection:bg-slate-900 selection:text-white`}
+      className={`min-h-screen ${currentTheme.bgPage} selection:bg-slate-900 selection:text-white`}
     >
       {/* Tracker de Analytics (Zero PII) */}
       <PublicPageTracker tenantId={tenant.id} />
@@ -112,7 +111,7 @@ export function PublicTenantHub({
         isOpenNow={isOpenNow}
         statusBadgeText={statusBadgeText}
         statusDetailText={statusDetailText}
-        theme={theme}
+        theme={currentTheme}
         onOpenBooking={() => handleOpenBooking()}
       />
 
@@ -134,7 +133,7 @@ export function PublicTenantHub({
           reviewCount={realReviewCount}
           reviews={reviews}
           googleMapsUrl={profile?.google_maps_url}
-          theme={theme}
+          theme={currentTheme}
           onOpenBooking={() => handleOpenBooking()}
         />
 
@@ -143,7 +142,7 @@ export function PublicTenantHub({
           rating={realRating}
           reviewCount={realReviewCount}
           businessCategory={profile?.business_category}
-          theme={theme}
+          theme={currentTheme}
         />
 
         {/* 4. Dashboard de Conversão (Catálogo de Serviços + Antes & Depois / Promo + Widget de Agendamento) */}
@@ -153,7 +152,7 @@ export function PublicTenantHub({
           services={services}
           portfolioItems={portfolioItems}
           posts={posts}
-          theme={theme}
+          theme={currentTheme}
           onOpenBookingModal={handleOpenBooking}
         />
 
@@ -162,7 +161,7 @@ export function PublicTenantHub({
           products={products}
           tenantName={tenant.name}
           phoneWhatsapp={profile?.phone_whatsapp || profile?.phone}
-          theme={theme}
+          theme={currentTheme}
         />
 
         {/* 5. Sobre o Estabelecimento / Institucional */}
@@ -173,7 +172,7 @@ export function PublicTenantHub({
           address={profile?.address}
           phoneWhatsapp={profile?.phone_whatsapp || profile?.phone}
           businessCategory={profile?.business_category}
-          theme={theme}
+          theme={currentTheme}
           onOpenBooking={() => handleOpenBooking()}
         />
 
@@ -191,7 +190,7 @@ export function PublicTenantHub({
           reviewCount={realReviewCount}
           reviews={reviews}
           googleMapsUrl={profile?.google_maps_url}
-          theme={theme}
+          theme={currentTheme}
         />
 
         {/* 8. Posts, Novidades & Artigos de SEO (se houver) */}
@@ -199,7 +198,7 @@ export function PublicTenantHub({
           posts={posts}
           tenantName={tenant.name}
           phoneWhatsapp={profile?.phone_whatsapp || profile?.phone}
-          theme={theme}
+          theme={currentTheme}
           onOpenBooking={() => handleOpenBooking()}
         />
 
@@ -209,12 +208,12 @@ export function PublicTenantHub({
           address={profile?.address}
           latitude={profile?.latitude}
           longitude={profile?.longitude}
-          openingHours={profile?.opening_hours_json}
+          openingHours={tenant.opening_hours || profile?.opening_hours_json}
           googleMapsUrl={profile?.google_maps_url}
           isOpenNow={isOpenNow}
           statusDetailText={statusDetailText}
           statusBadgeText={statusBadgeText}
-          theme={theme}
+          theme={currentTheme}
         />
 
       </main>
@@ -226,8 +225,9 @@ export function PublicTenantHub({
         address={profile?.address}
         latitude={profile?.latitude}
         longitude={profile?.longitude}
-        openingHours={profile?.opening_hours_json}
+        openingHours={tenant.opening_hours || profile?.opening_hours_json}
         isOpenNow={isOpenNow}
+        statusBadgeText={statusBadgeText}
         statusDetailText={statusDetailText}
         googleMapsUrl={profile?.google_maps_url}
         onOpenBooking={() => handleOpenBooking()}
@@ -242,6 +242,11 @@ export function PublicTenantHub({
         latitude={profile?.latitude}
         longitude={profile?.longitude}
         googleMapsUrl={profile?.google_maps_url}
+        isOpenNow={isOpenNow}
+        statusBadgeText={statusBadgeText}
+        statusDetailText={statusDetailText}
+        openingHours={tenant.opening_hours || profile?.opening_hours_json}
+        theme={currentTheme}
         onOpenBooking={() => handleOpenBooking()}
       />
 

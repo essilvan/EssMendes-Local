@@ -186,8 +186,24 @@ export function SuperAdminDashboard({
             </p>
           </div>
 
-          {/* 2. Botão de Ação Rápida: Cadastrar Nova Empresa */}
-          <div>
+          {/* 2. Botão de Ação Rápida: Cadastrar Nova Empresa & Logoff */}
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={async () => {
+                const { createClient } = await import('@/lib/supabase/client');
+                const supabase = createClient();
+                await supabase.auth.signOut();
+                document.cookie = 'active_tenant_id=; path=/; max-age=0';
+                document.cookie = 'sb-access-token=; path=/; max-age=0';
+                document.cookie = 'em_active_tenant_id=; path=/; max-age=0';
+                window.location.href = '/login';
+              }}
+              className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-rose-300 bg-rose-950/60 hover:bg-rose-900/80 border border-rose-800/60 rounded-xl transition-all cursor-pointer shadow-sm"
+            >
+              🚪 Sair da Conta (Logoff)
+            </button>
+
             <button
               type="button"
               onClick={() => setIsModalOpen(true)}

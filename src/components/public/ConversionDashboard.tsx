@@ -200,18 +200,17 @@ export function ConversionDashboard({
                         </a>
                       )}
 
-                      {/* Botão de Agendamento */}
+                      {/* Botão de Agendamento com CTA do tema */}
                       <button
                         type="button"
                         onClick={() => onOpenBookingModal(service.id)}
-                        className={`inline-flex items-center gap-1.5 ${currentTheme.roundedClass} px-3.5 py-1.5 text-xs font-black transition cursor-pointer shadow-2xs hover:opacity-95 active:scale-95 ${
+                        className={`inline-flex items-center gap-1.5 ${currentTheme.roundedClass} ${
                           hasPrice
-                            ? "text-white"
+                            ? currentTheme.ctaButtonClass
                             : currentTheme.isDark
                               ? "border border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
                               : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-                        }`}
-                        style={hasPrice ? { backgroundColor: "var(--primary-color, #0d9488)" } : undefined}
+                        } px-3.5 py-1.5 text-xs font-black transition cursor-pointer shadow-2xs`}
                       >
                         <Calendar className="h-3.5 w-3.5" />
                         <span>📅 Agendar Horário</span>

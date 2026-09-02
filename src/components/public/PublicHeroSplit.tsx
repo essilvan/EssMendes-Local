@@ -97,19 +97,19 @@ export function PublicHeroSplit({
            ========================================================================= */}
         <div className="lg:col-span-7 space-y-6">
           
-          {/* Badge com a Categoria Real */}
+          {/* Badge com a Tagline do Tema Dinâmico */}
           <div
-            className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1 text-xs font-black tracking-wide uppercase shadow-2xs ${currentTheme.badgeBg} ${currentTheme.badgeText}`}
+            className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1 text-xs font-black tracking-wide uppercase shadow-2xs ${currentTheme.badgeBg}`}
           >
             <span>{currentTheme.icons?.hero || "✨"}</span>
-            <span>{businessCategory ? `Especialistas em ${businessCategory}` : currentTheme.heroTagline}</span>
+            <span className={currentTheme.accentText}>{currentTheme.heroTagline}</span>
           </div>
 
           {/* Nome da Empresa e Headline Dinâmica */}
           <div className="space-y-3">
             <h1 className={`text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight ${currentTheme.textPrimary} leading-[1.12]`}>
               Excelência & Confiança no{" "}
-              <span style={{ color: "var(--primary-color, #0d9488)" }}>
+              <span className={currentTheme.accentText}>
                 {tenantName}
               </span>
             </h1>
@@ -122,12 +122,11 @@ export function PublicHeroSplit({
 
           {/* 2 Botões de Ação Imediata */}
           <div className="flex flex-wrap items-center gap-3 pt-1">
-            {/* Botão Primário: Agendar Horário Online */}
+            {/* Botão Primário: Agendar Horário Online com CTA do tema */}
             <button
               type="button"
               onClick={onOpenBooking}
-              className={`inline-flex items-center justify-center gap-2 ${currentTheme.roundedClass} px-5 sm:px-6 py-3.5 text-xs sm:text-sm font-black text-white shadow-md transition hover:opacity-95 active:scale-95 cursor-pointer`}
-              style={{ backgroundColor: "var(--primary-color, #0d9488)" }}
+              className={`inline-flex items-center justify-center gap-2 ${currentTheme.roundedClass} ${currentTheme.ctaButtonClass} px-5 sm:px-6 py-3.5 text-xs sm:text-sm font-black transition cursor-pointer`}
             >
               <Calendar className="h-4 w-4" />
               <span>Agendar Horário Online</span>
@@ -177,7 +176,7 @@ export function PublicHeroSplit({
 
               <div>
                 <div className="flex items-center gap-1.5">
-                  <span className="font-black text-sm text-slate-900">
+                  <span className={`font-black text-sm ${currentTheme.textPrimary}`}>
                     {displayRating}
                   </span>
                   <div className="flex items-center gap-0.5 text-amber-500">
@@ -185,11 +184,11 @@ export function PublicHeroSplit({
                       <Star key={i} className="h-3.5 w-3.5 fill-current" />
                     ))}
                   </div>
-                  <span className="text-xs font-bold text-slate-500">
+                  <span className={`text-xs font-bold ${currentTheme.textMuted}`}>
                     ({hasReviewCount ? `${reviewCount} avaliações` : "Google Business"})
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-500 font-medium">
+                <p className={`text-[11px] ${currentTheme.textMuted} font-medium`}>
                   Avaliações oficiais e presença verificada no Google Maps.
                 </p>
               </div>
@@ -197,7 +196,7 @@ export function PublicHeroSplit({
 
             <a
               href="#avaliacoes"
-              className="text-xs font-bold hover:underline self-start sm:self-auto text-slate-700 hover:text-slate-900"
+              className={`text-xs font-bold hover:underline self-start sm:self-auto ${currentTheme.accentText}`}
             >
               Ver depoimentos →
             </a>

@@ -97,17 +97,17 @@ export function MapLocationCard({
         {/* Badge Aberto / Fechado em Tempo Real */}
         <span
           className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ring-1 self-start sm:self-auto ${
-            isOpenNow
+            businessStatus.isOpen
               ? "bg-emerald-50 text-emerald-800 ring-emerald-600/20"
               : "bg-amber-50 text-amber-800 ring-amber-600/20"
           }`}
         >
           <span
             className={`h-2 w-2 rounded-full ${
-              isOpenNow ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
+              businessStatus.isOpen ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
             }`}
           />
-          <span>{statusLabel}</span>
+          <span>{businessStatus.label} — {businessStatus.subLabel}</span>
         </span>
       </div>
 
@@ -133,12 +133,14 @@ export function MapLocationCard({
           </div>
 
           {/* Bloco de Endereço + Botão Copiar */}
-          <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4 space-y-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-              <MapPin className="h-3.5 w-3.5 text-slate-600" />
+          <div className={`${currentTheme.roundedClass} border ${currentTheme.borderClass} ${
+            currentTheme.isDark ? "bg-zinc-800/70" : "bg-slate-50/80"
+          } p-4 space-y-2`}>
+            <span className={`text-[10px] font-bold uppercase tracking-wider ${currentTheme.textMuted} flex items-center gap-1.5`}>
+              <MapPin className="h-3.5 w-3.5" />
               Endereço Completo
             </span>
-            <p className="text-xs sm:text-sm font-semibold text-slate-800 leading-relaxed">
+            <p className={`text-xs sm:text-sm font-semibold ${currentTheme.textPrimary} leading-relaxed`}>
               {displayAddress}
             </p>
 
@@ -146,8 +148,7 @@ export function MapLocationCard({
               <button
                 type="button"
                 onClick={handleCopyAddress}
-                className="mt-1 inline-flex items-center gap-1.5 text-xs font-bold hover:underline cursor-pointer"
-                style={{ color: "var(--primary-color, #0d9488)" }}
+                className={`mt-1 inline-flex items-center gap-1.5 text-xs font-bold hover:underline cursor-pointer ${currentTheme.accentText}`}
               >
                 {isCopied ? (
                   <>
@@ -202,24 +203,26 @@ export function MapLocationCard({
         {/* =========================================================================
             LADO DIREITO: Tabela Detalhada de Horários da Semana (5 Colunas)
            ========================================================================= */}
-        <div className="lg:col-span-5 rounded-2xl border border-slate-200/90 bg-slate-50/60 p-5 space-y-4 flex flex-col justify-between">
+        <div className={`lg:col-span-5 ${currentTheme.roundedClass} border ${currentTheme.borderClass} ${
+          currentTheme.isDark ? "bg-zinc-800/60" : "bg-slate-50/60"
+        } p-5 space-y-4 flex flex-col justify-between`}>
           
           <div className="space-y-3">
             {/* Header dos Horários */}
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+            <div className={`flex items-center justify-between border-b ${currentTheme.borderClass} pb-3`}>
               <div className="flex items-center gap-2">
                 <div
-                  className="flex h-7 w-7 items-center justify-center rounded-lg text-white shadow-2xs"
+                  className={`flex h-7 w-7 items-center justify-center ${currentTheme.roundedClass} text-white shadow-2xs`}
                   style={{ backgroundColor: "var(--primary-color, #0d9488)" }}
                 >
                   <Clock className="h-3.5 w-3.5" />
                 </div>
-                <h3 className="text-xs sm:text-sm font-black text-slate-900">
+                <h3 className={`text-xs sm:text-sm font-black ${currentTheme.textPrimary}`}>
                   Horários de Atendimento
                 </h3>
               </div>
 
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+              <span className={`text-[10px] font-bold ${currentTheme.textMuted} uppercase tracking-wider`}>
                 {businessStatus.hasOfficialHours ? "Google Maps Oficial" : "Semana Padrão"}
               </span>
             </div>
@@ -229,27 +232,26 @@ export function MapLocationCard({
               {scheduleList.map((item) => (
                 <div
                   key={item.day}
-                  className={`flex items-center justify-between py-2 px-3 rounded-xl transition ${
+                  className={`flex items-center justify-between py-2 px-3 ${currentTheme.roundedClass} transition ${
                     item.isToday
-                      ? "bg-white border border-slate-200 shadow-2xs font-extrabold text-slate-900"
+                      ? currentTheme.isDark
+                        ? "bg-zinc-800 border border-zinc-700 shadow-2xs font-extrabold text-zinc-100"
+                        : "bg-white border border-slate-200 shadow-2xs font-extrabold text-slate-900"
+                      : currentTheme.isDark
+                      ? "text-zinc-400 hover:bg-zinc-800/50"
                       : "text-slate-600 hover:bg-white/60"
                   }`}
                 >
                   <div className="flex items-center gap-2">
                     {item.isToday && (
                       <span
-                        className="flex h-2 w-2 rounded-full"
-                        style={{ backgroundColor: "var(--primary-color, #0d9488)" }}
+                        className="flex h-2 w-2 rounded-full bg-emerald-500"
                       />
                     )}
                     <span>{item.day}</span>
                     {item.isToday && (
                       <span
-                        className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md"
-                        style={{
-                          backgroundColor: "var(--primary-alpha-10, rgba(13, 148, 136, 0.1))",
-                          color: "var(--primary-color, #0d9488)",
-                        }}
+                        className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${currentTheme.badgeBg} ${currentTheme.badgeText}`}
                       >
                         Hoje
                       </span>
@@ -259,10 +261,10 @@ export function MapLocationCard({
                   <span
                     className={
                       item.hours.toLowerCase().includes("fechado")
-                        ? "text-slate-400 font-medium"
+                        ? `${currentTheme.textMuted} font-medium`
                         : item.isToday
-                        ? "font-black"
-                        : "font-semibold text-slate-700"
+                        ? `font-black ${currentTheme.textPrimary}`
+                        : `font-semibold ${currentTheme.textPrimary}`
                     }
                   >
                     {item.hours}
@@ -273,8 +275,8 @@ export function MapLocationCard({
           </div>
 
           {/* Dica de Atendimento Pontual */}
-          <div className="pt-2 border-t border-slate-200/80 text-[11px] text-slate-500 space-y-1">
-            <p className="flex items-center gap-1.5 font-bold text-slate-700">
+          <div className={`pt-2 border-t ${currentTheme.borderClass} text-[11px] ${currentTheme.textMuted} space-y-1`}>
+            <p className={`flex items-center gap-1.5 font-bold ${currentTheme.textPrimary}`}>
               <Calendar className="h-3.5 w-3.5 text-slate-500" />
               <span>Atendimento com Horário Marcado</span>
             </p>

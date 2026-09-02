@@ -17,8 +17,9 @@ interface PublicFooterProps {
   address?: string | null;
   latitude?: number | null;
   longitude?: number | null;
-  openingHours?: string[] | null;
-  isOpenNow: boolean;
+  openingHours?: any;
+  isOpenNow?: boolean;
+  statusBadgeText?: string;
   statusDetailText?: string;
   googleMapsUrl?: string | null;
   onOpenBooking: () => void;
@@ -32,6 +33,7 @@ export function PublicFooter({
   longitude,
   openingHours,
   isOpenNow,
+  statusBadgeText,
   statusDetailText,
   googleMapsUrl: customGoogleMapsUrl,
   onOpenBooking,
@@ -47,9 +49,14 @@ export function PublicFooter({
       ? `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`
       : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(displayAddress)}`);
 
-  // Horário de funcionamento real
-  const todayHourDisplay =
-    statusDetailText || (isOpenNow ? "Aberto Hoje" : "Fechado no Momento");
+  const { getBusinessStatus } = require("@/utils/opening-hours");
+  const status = openingHours
+    ? getBusinessStatus(openingHours)
+    : {
+        isOpen: isOpenNow ?? true,
+        label: statusBadgeText || (isOpenNow ? "Aberto agora" : "Fechado no momento"),
+        subLabel: statusDetailText || (isOpenNow ? "Atendimento Normal" : "Consulte horários"),
+      };
 
   return (
     <footer
@@ -114,7 +121,7 @@ export function PublicFooter({
           <div className="flex items-center gap-3 rounded-2xl bg-white/15 p-4 backdrop-blur-xs">
             <div
               className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-950 shadow-xs ${
-                isOpenNow ? "bg-emerald-400" : "bg-amber-400"
+                status.isOpen ? "bg-emerald-400" : "bg-amber-400"
               }`}
             >
               <Clock className="h-5 w-5" />
@@ -123,13 +130,13 @@ export function PublicFooter({
               <p className="text-[10px] uppercase font-black tracking-wider text-white/80 flex items-center gap-1.5">
                 <span
                   className={`h-1.5 w-1.5 rounded-full ${
-                    isOpenNow ? "bg-emerald-300 animate-pulse" : "bg-amber-300"
+                    status.isOpen ? "bg-emerald-300 animate-pulse" : "bg-amber-300"
                   }`}
                 />
-                <span>{isOpenNow ? "Aberto agora" : "Fechado no momento"}</span>
+                <span>{status.label}</span>
               </p>
               <p className="text-xs sm:text-sm font-black text-white truncate">
-                {statusDetailText || (isOpenNow ? "Atendimento até às 18:00" : "Abre amanhã às 08:00")}
+                {status.subLabel}
               </p>
             </div>
           </div>
