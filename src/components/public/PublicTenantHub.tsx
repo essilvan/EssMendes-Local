@@ -49,6 +49,52 @@ interface PublicTenantHubProps {
   statusDetailText?: string;
 }
 
+export function getThemeClasses(themeNiche: string | null | undefined) {
+  switch (themeNiche) {
+    case "auto":
+      return {
+        root: "bg-zinc-950 text-zinc-100 dark",
+        card: "bg-zinc-900/95 border-zinc-800 text-zinc-100 shadow-xl shadow-black/50",
+        textMuted: "text-zinc-400",
+        accentText: "text-amber-400",
+        badge: "bg-amber-500/10 text-amber-400 border-amber-500/30",
+        button: "bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold",
+        heroTagline: "Serviço de Confiança e Agilidade Mecânica",
+      };
+    case "health_beauty":
+      return {
+        root: "bg-slate-50 text-slate-800",
+        card: "bg-white/95 border-slate-200 text-slate-800 shadow-md",
+        textMuted: "text-slate-500",
+        accentText: "text-teal-700",
+        badge: "bg-teal-50 text-teal-800 border-teal-200",
+        button: "bg-gradient-to-r from-teal-600 to-emerald-600 text-white font-semibold",
+        heroTagline: "Cuidado Especializado & Bem-Estar",
+      };
+    case "food":
+      return {
+        root: "bg-stone-950 text-stone-100 dark",
+        card: "bg-stone-900 border-stone-800 text-stone-100 shadow-xl",
+        textMuted: "text-stone-400",
+        accentText: "text-red-500",
+        badge: "bg-red-950/60 text-red-400 border-red-800/40",
+        button: "bg-gradient-to-r from-red-600 to-rose-600 text-white font-bold",
+        heroTagline: "Sabor Incomparável & Pedido Rápido",
+      };
+    case "retail_default":
+    default:
+      return {
+        root: "bg-white text-gray-900",
+        card: "bg-white border-gray-200 text-gray-900 shadow-sm",
+        textMuted: "text-gray-500",
+        accentText: "text-blue-600",
+        badge: "bg-blue-50 text-blue-700 border-blue-200",
+        button: "bg-blue-600 hover:bg-blue-700 text-white font-semibold",
+        heroTagline: "Qualidade, Variedade e Atendimento Direto",
+      };
+  }
+}
+
 export function PublicTenantHub({
   tenant,
   profile,
@@ -67,7 +113,7 @@ export function PublicTenantHub({
   );
 
   const primaryColor = profile?.primary_color || "#0d9488";
-  const themeStyles = getThemeColorStyles(primaryColor);
+  const colorStyles = getThemeColorStyles(primaryColor);
 
   const realRating = profile?.google_rating ?? profile?.rating ?? tenant.google_rating ?? 5.0;
   const realReviewCount =
@@ -85,6 +131,10 @@ export function PublicTenantHub({
     setSelectedServiceId(null);
   };
 
+  const themeStyles = getThemeClasses(
+    tenant.theme_niche || (profile?.template_id && profile.template_id !== "default" ? profile.template_id : null)
+  );
+
   const currentTheme = getTenantTheme(
     tenant.theme_niche || (profile?.template_id && profile.template_id !== "default" ? profile.template_id : null),
     tenant.category || profile?.business_category,
@@ -93,8 +143,8 @@ export function PublicTenantHub({
 
   return (
     <div
-      style={themeStyles}
-      className={`min-h-screen ${currentTheme.bgPage} selection:bg-slate-900 selection:text-white`}
+      style={colorStyles}
+      className={`min-h-screen w-full transition-colors duration-300 ${themeStyles.root} selection:bg-slate-900 selection:text-white`}
     >
       {/* Tracker de Analytics (Zero PII) */}
       <PublicPageTracker tenantId={tenant.id} />

@@ -99,10 +99,10 @@ export function PublicHeroSplit({
           
           {/* Badge com a Tagline do Tema Dinâmico */}
           <div
-            className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1 text-xs font-black tracking-wide uppercase shadow-2xs ${currentTheme.badgeBg}`}
+            className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1 text-xs shadow-2xs ${currentTheme.badgeBg}`}
           >
             <span>{currentTheme.icons?.hero || "✨"}</span>
-            <span className={currentTheme.accentText}>{currentTheme.heroTagline}</span>
+            <span className={`text-xs font-bold tracking-wider uppercase ${currentTheme.accentText}`}>{currentTheme.heroTagline}</span>
           </div>
 
           {/* Nome da Empresa e Headline Dinâmica */}
