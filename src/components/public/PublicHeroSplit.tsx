@@ -102,7 +102,25 @@ export function PublicHeroSplit({
             className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1 text-xs shadow-2xs ${currentTheme.badgeBg}`}
           >
             <span>{currentTheme.icons?.hero || "✨"}</span>
-            <span className={`text-xs font-bold tracking-wider uppercase ${currentTheme.accentText}`}>{currentTheme.heroTagline}</span>
+            <span
+              className={`text-xs font-bold uppercase tracking-wider ${
+                currentTheme.id === "auto"
+                  ? "text-amber-400"
+                  : currentTheme.id === "food"
+                  ? "text-rose-500"
+                  : currentTheme.id === "health_beauty"
+                  ? "text-teal-700"
+                  : "text-blue-600"
+              }`}
+            >
+              {currentTheme.id === "auto"
+                ? "Serviço de Confiança e Agilidade Mecânica"
+                : currentTheme.id === "food"
+                ? "Sabor Incomparável & Pedido Rápido"
+                : currentTheme.id === "health_beauty"
+                ? "Cuidado Especializado & Bem-Estar"
+                : "Qualidade, Variedade e Atendimento Direto"}
+            </span>
           </div>
 
           {/* Nome da Empresa e Headline Dinâmica */}

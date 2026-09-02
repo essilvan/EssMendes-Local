@@ -338,7 +338,13 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
       </div>
 
       {/* Formulário Principal de Edição */}
-      <form action={formAction} className="space-y-6">
+      <form
+        action={formAction}
+        onSubmit={() => {
+          console.log("Salvando nicho no Supabase:", selectedNiche);
+        }}
+        className="space-y-6"
+      >
         
         {/* Campo oculto com array de fotos atualizado */}
         <input

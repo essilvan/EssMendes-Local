@@ -131,6 +131,10 @@ export function PublicTenantHub({
     setSelectedServiceId(null);
   };
 
+  const isAuto = tenant.theme_niche === "auto";
+  const isFood = tenant.theme_niche === "food";
+  const isHealth = tenant.theme_niche === "health_beauty";
+
   const themeStyles = getThemeClasses(
     tenant.theme_niche || (profile?.template_id && profile.template_id !== "default" ? profile.template_id : null)
   );
@@ -144,7 +148,15 @@ export function PublicTenantHub({
   return (
     <div
       style={colorStyles}
-      className={`min-h-screen w-full transition-colors duration-300 ${themeStyles.root} selection:bg-slate-900 selection:text-white`}
+      className={`min-h-screen w-full transition-colors duration-200 ${
+        isAuto
+          ? "bg-zinc-950 text-zinc-100"
+          : isFood
+          ? "bg-stone-950 text-stone-100"
+          : isHealth
+          ? "bg-slate-50 text-slate-800"
+          : "bg-white text-gray-900"
+      } selection:bg-slate-900 selection:text-white`}
     >
       {/* Tracker de Analytics (Zero PII) */}
       <PublicPageTracker tenantId={tenant.id} />

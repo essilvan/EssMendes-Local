@@ -79,11 +79,13 @@ export async function updateTenantProfileAction(
   }
 
   try {
-    // 3. Atualizar nome na tabela `tenants`
+    // 3. Atualizar nome e theme_niche na tabela `tenants`
+    console.log("[updateTenantProfileAction] Salvando nicho no Supabase:", themeNiche);
     const { error: tenantError } = await supabase
       .from("tenants")
       .update({
         name: companyName,
+        theme_niche: themeNiche || "retail_default",
         updated_at: new Date().toISOString(),
       })
       .eq("id", tenantId);
