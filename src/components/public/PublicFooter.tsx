@@ -10,6 +10,7 @@ import {
   Navigation,
 } from "lucide-react";
 import { generateWhatsAppUrl, sanitizePhoneNumber } from "@/utils/phone";
+import { getBusinessStatus } from "@/utils/opening-hours";
 
 interface PublicFooterProps {
   tenantName: string;
@@ -49,11 +50,12 @@ export function PublicFooter({
       ? `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`
       : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(displayAddress)}`);
 
-  const { getBusinessStatus } = require("@/utils/opening-hours");
   const status = openingHours
     ? getBusinessStatus(openingHours)
     : {
-        isOpen: isOpenNow ?? true,
+        isOpen: isOpenNow ?? false,
+        badgeText: statusBadgeText || (isOpenNow ? "Aberto agora" : "Fechado no momento"),
+        subText: statusDetailText || (isOpenNow ? "Atendimento Normal" : "Consulte horários"),
         label: statusBadgeText || (isOpenNow ? "Aberto agora" : "Fechado no momento"),
         subLabel: statusDetailText || (isOpenNow ? "Atendimento Normal" : "Consulte horários"),
       };

@@ -52,9 +52,11 @@ export function MobileStickyBar({
   const status = openingHours
     ? getBusinessStatus(openingHours)
     : {
-        isOpen: isOpenNow ?? true,
+        isOpen: isOpenNow ?? false,
+        badgeText: statusBadgeText || (isOpenNow ? "Aberto agora" : "Fechado no momento"),
+        subText: statusDetailText || (isOpenNow ? "Atendimento Normal" : "Consulte horários"),
         label: statusBadgeText || (isOpenNow ? "Aberto agora" : "Fechado no momento"),
-        subLabel: statusDetailText || (isOpenNow ? "Aberto para Atendimento" : "Consulte horários"),
+        subLabel: statusDetailText || (isOpenNow ? "Atendimento Normal" : "Consulte horários"),
       };
 
   const handlePhoneClick = () => {
@@ -90,9 +92,9 @@ export function MobileStickyBar({
               status.isOpen ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
             }`}
           />
-          <span>{status.label}</span>
+          <span>{status.badgeText || status.label}</span>
         </span>
-        <span className="text-slate-600 truncate text-[10px] font-medium">{status.subLabel}</span>
+        <span className="text-slate-600 truncate text-[10px] font-medium">{status.subText || status.subLabel}</span>
       </div>
 
       <div className="flex items-center gap-1.5 max-w-lg mx-auto">

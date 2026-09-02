@@ -108,6 +108,7 @@ export function PublicTenantHub({
         address={profile?.address}
         latitude={profile?.latitude}
         longitude={profile?.longitude}
+        openingHours={tenant.opening_hours || profile?.opening_hours_json}
         isOpenNow={isOpenNow}
         statusBadgeText={statusBadgeText}
         statusDetailText={statusDetailText}

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { sanitizePhoneNumber } from "@/utils/phone";
 import { extractNeighborhoodAndCity } from "@/utils/address";
+import { getBusinessStatus } from "@/utils/opening-hours";
 import type { NicheThemeConfig } from "@/config/tenant-themes";
 import { NICHE_THEMES } from "@/config/tenant-themes";
 
@@ -25,7 +26,8 @@ interface PublicHeaderProps {
   address?: string | null;
   latitude?: number | null;
   longitude?: number | null;
-  isOpenNow: boolean;
+  openingHours?: any;
+  isOpenNow?: boolean;
   statusBadgeText?: string;
   statusDetailText?: string;
   theme?: NicheThemeConfig;
@@ -40,6 +42,7 @@ export function PublicHeader({
   address,
   latitude,
   longitude,
+  openingHours,
   isOpenNow,
   statusBadgeText,
   statusDetailText,
@@ -61,8 +64,13 @@ export function PublicHeader({
     ? `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(displayAddress)}`;
 
-  const badgeLabel = statusBadgeText || (isOpenNow ? "Aberto agora" : "Fechado no momento");
-  const detailLabel = statusDetailText || (isOpenNow ? "Atendimento até às 18:00" : "Abre amanhã às 08:00");
+  const status = openingHours
+    ? getBusinessStatus(openingHours)
+    : {
+        isOpen: isOpenNow ?? false,
+        badgeText: statusBadgeText || (isOpenNow ? "Aberto agora" : "Fechado no momento"),
+        subText: statusDetailText || "Consulte horários",
+      };
 
   return (
     <header className="w-full relative z-40">
@@ -83,25 +91,22 @@ export function PublicHeader({
           </div>
 
           {/* Centro: Status Dinâmico de Funcionamento */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 text-xs">
             <span
-              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-black tracking-wide ring-1 ${
-                isOpenNow
-                  ? "bg-emerald-950/80 text-emerald-300 ring-emerald-500/30"
-                  : "bg-amber-950/80 text-amber-300 ring-amber-500/30"
+              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-medium ${
+                status.isOpen
+                  ? "bg-emerald-950/80 text-emerald-400 border border-emerald-800"
+                  : "bg-rose-950/80 text-rose-400 border border-rose-800"
               }`}
             >
               <span
-                className={`h-2 w-2 rounded-full ${
-                  isOpenNow ? "bg-emerald-400 animate-pulse" : "bg-amber-400"
+                className={`w-1.5 h-1.5 rounded-full ${
+                  status.isOpen ? "bg-emerald-400 animate-pulse" : "bg-rose-400"
                 }`}
               />
-              <span>{badgeLabel}</span>
+              {status.badgeText}
             </span>
-
-            <span className="hidden sm:inline text-slate-400 text-xs font-medium">
-              — {detailLabel}
-            </span>
+            <span className="text-zinc-400">— {status.subText}</span>
           </div>
 
           {/* Lado Direito: Telefone de Contato + Rotas GPS */}
