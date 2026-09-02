@@ -14,6 +14,7 @@ interface PublicPageProps {
 }
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 /**
  * 1. Geração Dinâmica de Metadados SEO Local Avançado
@@ -145,14 +146,17 @@ export async function generateMetadata({
  */
 export default async function PublicTenantPage({ params }: PublicPageProps) {
   const { slug } = await params;
+  const cleanSlug = typeof slug === "string" ? slug.trim() : slug;
   const supabase = await createClient();
 
-  // 2.1 Busca o tenant pelo slug
+  // 2.1 Busca o tenant pelo slug selecionando todas as colunas
   const { data: tenant } = await supabase
     .from("tenants")
     .select("*")
-    .eq("slug", slug)
+    .eq("slug", cleanSlug)
     .maybeSingle();
+
+  console.log("Dados do Tenant carregados:", { slug: cleanSlug, theme_niche: tenant?.theme_niche });
 
   if (!tenant) {
     notFound();

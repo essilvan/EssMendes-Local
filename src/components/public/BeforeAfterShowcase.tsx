@@ -3,12 +3,16 @@
 import React, { useState } from "react";
 import { Sparkles, ArrowRightLeft, ChevronLeft, ChevronRight, Eye } from "lucide-react";
 import type { PortfolioItem } from "@/types";
+import type { NicheThemeConfig } from "@/config/tenant-themes";
+import { NICHE_THEMES } from "@/config/tenant-themes";
 
 interface BeforeAfterShowcaseProps {
   items: PortfolioItem[];
+  theme?: NicheThemeConfig;
 }
 
-export function BeforeAfterShowcase({ items }: BeforeAfterShowcaseProps) {
+export function BeforeAfterShowcase({ items, theme }: BeforeAfterShowcaseProps) {
+  const currentTheme = theme || NICHE_THEMES.retail_default;
   const [currentIndex, setCurrentIndex] = useState(0);
   const [sliderPosition, setSliderPosition] = useState(50); // percentage (0 to 100)
   const [isDragging, setIsDragging] = useState(false);
@@ -40,19 +44,19 @@ export function BeforeAfterShowcase({ items }: BeforeAfterShowcaseProps) {
   return (
     <div
       id="antes-depois"
-      className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-6"
+      className={`${currentTheme.roundedClass} border ${currentTheme.borderClass} ${currentTheme.bgCard} p-6 sm:p-8 shadow-sm space-y-6`}
     >
       {/* Header da Seção */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b ${currentTheme.borderClass} pb-4`}>
         <div>
-          <div className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-semibold text-teal-800 ring-1 ring-teal-600/20">
-            <Sparkles className="h-3.5 w-3.5 text-teal-600" />
+          <div className={`inline-flex items-center gap-1.5 rounded-full ${currentTheme.badgeBg} px-2.5 py-0.5 text-xs font-semibold ${currentTheme.badgeText}`}>
+            <Sparkles className="h-3.5 w-3.5" />
             <span>Galeria de Transformações</span>
           </div>
-          <h2 className="mt-1 text-lg font-bold text-slate-900">
+          <h2 className={`mt-1 text-lg font-bold ${currentTheme.textPrimary}`}>
             Antes & Depois dos Trabalhos
           </h2>
-          <p className="text-xs text-slate-500">
+          <p className={`text-xs ${currentTheme.textMuted}`}>
             Arraste o divisor central para conferir a precisão e o impacto do resultado.
           </p>
         </div>

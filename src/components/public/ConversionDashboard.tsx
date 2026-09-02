@@ -230,7 +230,7 @@ export function ConversionDashboard({
       {hasMiddleColumn && (
         <div className="lg:col-span-4 space-y-6">
           {/* Card Antes & Depois (Apenas itens reais do banco) */}
-          {hasPortfolio && <BeforeAfterShowcase items={portfolioItems} />}
+          {hasPortfolio && <BeforeAfterShowcase items={portfolioItems} theme={currentTheme} />}
 
           {/* Banner Promocional Verde / Tema (Apenas se houver cupom ativo real) */}
           {hasCoupon && couponData && (
@@ -298,6 +298,7 @@ export function ConversionDashboard({
           tenantName={tenant.name}
           services={services}
           businessPhone={profile?.phone_whatsapp}
+          theme={currentTheme}
           onSuccessOpenModal={() => {}}
         />
       </div>

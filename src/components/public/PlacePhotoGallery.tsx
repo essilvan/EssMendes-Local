@@ -10,17 +10,23 @@ import {
   ZoomIn,
 } from "lucide-react";
 
+import type { NicheThemeConfig } from "@/config/tenant-themes";
+import { NICHE_THEMES } from "@/config/tenant-themes";
+
 interface PlacePhotoGalleryProps {
   photos: string[];
   tenantName: string;
   address?: string | null;
+  theme?: NicheThemeConfig;
 }
 
 export function PlacePhotoGallery({
   photos,
   tenantName,
   address,
+  theme,
 }: PlacePhotoGalleryProps) {
+  const currentTheme = theme || NICHE_THEMES.retail_default;
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(
     null
   );
@@ -72,33 +78,30 @@ export function PlacePhotoGallery({
   return (
     <section
       id="fotos"
-      className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-6"
+      className={`${currentTheme.roundedClass} border ${currentTheme.borderClass} ${currentTheme.bgCard} p-6 sm:p-8 shadow-sm space-y-6`}
     >
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b ${currentTheme.borderClass} pb-4`}>
         <div>
           <div
-            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold"
-            style={{
-              backgroundColor:
-                "var(--primary-alpha-10, rgba(13, 148, 136, 0.1))",
-              color: "var(--primary-color, #0d9488)",
-            }}
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold ${currentTheme.badgeBg} ${currentTheme.badgeText}`}
           >
             <Camera className="h-3.5 w-3.5" />
             <span>Ambiente & Estrutura</span>
           </div>
-          <h2 className="mt-1 text-lg sm:text-xl font-black text-slate-900">
+          <h2 className={`mt-1 text-lg sm:text-xl font-black ${currentTheme.textPrimary}`}>
             Conheça as Instalações de {tenantName}
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className={`text-xs ${currentTheme.textMuted} mt-0.5`}>
             Fotos oficiais e registros reais do espaço sincronizados do Google
             Maps.
           </p>
         </div>
 
         {address && (
-          <div className="flex items-center gap-1.5 text-xs text-slate-600 font-semibold bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-xl self-start sm:self-auto">
+          <div className={`flex items-center gap-1.5 text-xs ${currentTheme.textMuted} font-semibold ${
+            currentTheme.isDark ? 'bg-zinc-800 border-zinc-700' : 'bg-slate-50 border-slate-100'
+          } border px-3 py-1.5 ${currentTheme.roundedClass} self-start sm:self-auto`}>
             <MapPin className="h-3.5 w-3.5 text-slate-500 shrink-0" />
             <span className="truncate max-w-xs">{address}</span>
           </div>

@@ -21,12 +21,15 @@ import {
 } from "@/services/appointment.actions";
 import { recordAnalyticsEvent } from "@/actions/analytics";
 import type { Service, AvailableSlot, Appointment } from "@/types";
+import type { NicheThemeConfig } from "@/config/tenant-themes";
+import { NICHE_THEMES } from "@/config/tenant-themes";
 
 interface BookingWidgetCardProps {
   tenantId: string;
   tenantName: string;
   services: Service[];
   businessPhone?: string | null;
+  theme?: NicheThemeConfig;
   onSuccessOpenModal?: (appointment: Appointment) => void;
 }
 
@@ -35,8 +38,10 @@ export function BookingWidgetCard({
   tenantName,
   services,
   businessPhone,
+  theme,
   onSuccessOpenModal,
 }: BookingWidgetCardProps) {
+  const currentTheme = theme || NICHE_THEMES.retail_default;
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
 
   // Form states
@@ -191,29 +196,25 @@ export function BookingWidgetCard({
   };
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-7 shadow-sm space-y-5 flex flex-col justify-between h-full">
+    <div className={`${currentTheme.roundedClass} border ${currentTheme.borderClass} ${currentTheme.bgCard} p-6 sm:p-7 shadow-sm space-y-5 flex flex-col justify-between h-full`}>
       {/* Header do Widget */}
       <div>
-        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+        <div className={`flex items-center justify-between border-b ${currentTheme.borderClass} pb-4`}>
           <div className="space-y-0.5">
-            <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+            <h3 className={`text-base font-black ${currentTheme.textPrimary} flex items-center gap-2`}>
               <CalendarIcon
                 className="h-4 w-4"
                 style={{ color: "var(--primary-color, #0d9488)" }}
               />
               <span>Faça seu Agendamento</span>
             </h3>
-            <p className="text-[11px] text-slate-500">
+            <p className={`text-[11px] ${currentTheme.textMuted}`}>
               Reserve seu horário em 3 etapas simples.
             </p>
           </div>
 
           <span
-            className="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full"
-            style={{
-              backgroundColor: "var(--primary-alpha-10, rgba(13, 148, 136, 0.1))",
-              color: "var(--primary-color, #0d9488)",
-            }}
+            className={`text-[11px] font-extrabold px-2.5 py-0.5 rounded-full ${currentTheme.badgeBg} ${currentTheme.badgeText}`}
           >
             Passo {currentStep} de 3
           </span>

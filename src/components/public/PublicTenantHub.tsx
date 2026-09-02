@@ -182,6 +182,7 @@ export function PublicTenantHub({
           photos={profile?.place_photos || []}
           tenantName={tenant.name}
           address={profile?.address}
+          theme={currentTheme}
         />
 
         {/* 7. Prova Social Oficial (Google Reviews) */}
