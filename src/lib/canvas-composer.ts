@@ -358,22 +358,22 @@ export async function createBeforeAfterCard(
   ctx.font = "bold 20px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
   const phoneTextWidth = ctx.measureText(phoneFormatted).width;
 
-  const waIconSize = 24;
-  const waIconGap = 10;
-  const pillPaddingH = 20;
-  const waPillH = 46;
-  const waPillR = 23;
+  const waIconSize = 22;
+  const waIconGap = 8;
+  const pillPaddingH = 18;
+  const waPillH = 42;
+  const waPillR = 21;
   const waPillW = pillPaddingH * 2 + waIconSize + waIconGap + phoneTextWidth;
 
   const rightMargin = 44;
   const waPillX = 1080 - rightMargin - waPillW;
-  const waPillY = 1004;
+  const waPillY = 992;
 
   // Micro-label de Atendimento
   ctx.font = "bold 11px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
   ctx.fillStyle = "#38bdf8";
   ctx.textAlign = "right";
-  ctx.fillText("ATENDIMENTO & AGENDAMENTO", 1080 - rightMargin, 990);
+  ctx.fillText("ATENDIMENTO & AGENDAMENTO", 1080 - rightMargin, 980);
 
   // Pílula verde do WhatsApp
   ctx.fillStyle = "#22c55e"; // Emerald / WhatsApp Green
@@ -393,11 +393,21 @@ export async function createBeforeAfterCard(
   }
 
   // Número / Texto de contato
-  ctx.font = "bold 20px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+  ctx.font = "bold 19px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
   ctx.fillStyle = "#ffffff";
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
   ctx.fillText(phoneFormatted, iconDrawX + waIconSize + waIconGap, waPillY + waPillH / 2);
+
+  // Assinatura Automática EssMendes Tecnologia (canto inferior direito com 80% opacidade)
+  ctx.save();
+  ctx.globalAlpha = 0.8;
+  ctx.font = "bold 18px sans-serif";
+  ctx.fillStyle = "#94a3b8";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+  ctx.fillText("⚡ Tecnologia: essmendes.com.br", 750, 1055);
+  ctx.restore();
 
   ctx.restore();
 

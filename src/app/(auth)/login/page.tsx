@@ -21,7 +21,19 @@ export default function LoginPage() {
   );
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12 sm:px-6 lg:px-8">
+    <div className="relative flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12 sm:px-6 lg:px-8">
+      {/* Logo Oficial no canto superior esquerdo */}
+      <div className="absolute top-6 left-6 sm:top-8 sm:left-8">
+        <Link href="/" className="inline-flex items-center gap-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/images/logo-essmendes.png"
+            alt="EssMendes Tecnologia"
+            className="h-9 w-auto object-contain"
+          />
+        </Link>
+      </div>
+
       <div className="w-full max-w-md space-y-8 rounded-2xl border border-slate-200 bg-white p-8 shadow-sm sm:p-10">
         
         {/* Cabeçalho */}

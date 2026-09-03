@@ -208,7 +208,19 @@ ON CONFLICT (id) DO UPDATE SET role = 'super_admin';`}
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 sm:p-8">
-      <div className="mx-auto max-w-7xl">
+      <div className="mx-auto max-w-7xl space-y-4">
+        {/* Cabeçalho Super Admin - Logo Oficial */}
+        <div className="flex items-center justify-between pb-1">
+          <Link href="/super-admin" className="inline-flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/images/logo-essmendes.png"
+              alt="EssMendes Tecnologia"
+              className="h-9 w-auto object-contain"
+            />
+          </Link>
+        </div>
+
         <SuperAdminDashboard
           initialTenants={initialTenants}
           currentUserEmail={user.email}

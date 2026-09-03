@@ -61,16 +61,17 @@ export function PublicFooter({
       };
 
   return (
-    <footer
-      className="text-white pt-12 pb-24 sm:pb-12 mt-12 shadow-lg transition-colors"
-      style={{
-        backgroundColor: "var(--primary-color, #0d9488)",
-      }}
-    >
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 space-y-8">
-        
-        {/* Topo do Footer com Botões de Ação Rápida */}
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 items-center border-b border-white/20 pb-8">
+    <>
+      <section
+        className="text-white pt-12 pb-12 mt-12 shadow-lg transition-colors"
+        style={{
+          backgroundColor: "var(--primary-color, #0d9488)",
+        }}
+      >
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 space-y-8">
+          
+          {/* Topo com Botões de Ação Rápida */}
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 items-center">
           
           {/* Ação 1: Ligar Agora */}
           {phoneWhatsapp ? (
@@ -163,33 +164,36 @@ export function PublicFooter({
             </div>
           </a>
 
-        </div>
-
-        {/* Linha Inferior: Branding e Direitos */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-white/85 pt-2">
-          <div className="flex items-center gap-2">
-            <span className="font-extrabold text-white text-sm">
-              {tenantName}
-            </span>
-            <span>•</span>
-            <span className="text-white/70">
-              © {new Date().getFullYear()} Todos os direitos reservados.
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1 text-white/95">
-            <span>Presença Digital por</span>
-            <Link
-              href="/"
-              className="font-black text-white hover:underline inline-flex items-center gap-1 bg-white/20 px-2 py-0.5 rounded-md backdrop-blur-xs"
-            >
-              <Sparkles className="h-3 w-3" />
-              EssMendes Local
-            </Link>
           </div>
         </div>
+      </section>
 
-      </div>
-    </footer>
+      {/* Rodapé das Vitrines Públicas - Selo EssMendes Tecnologia */}
+      <footer className="w-full py-8 border-t border-zinc-800/60 bg-[#07080a] text-center pb-24 sm:pb-8">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-xs text-zinc-500">
+            © {new Date().getFullYear()} {tenantName}. Todos os direitos reservados.
+          </p>
+
+          {/* Selo EssMendes Tecnologia */}
+          <a
+            href="https://essmendes.com.br"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-zinc-900/80 border border-zinc-700/60 hover:border-blue-500/50 hover:bg-zinc-800 transition-all group"
+          >
+            <span className="text-[11px] text-zinc-400 group-hover:text-zinc-200">
+              Plataforma & Presença Digital por
+            </span>
+            <span className="text-xs font-bold tracking-wide bg-gradient-to-r from-blue-400 via-indigo-300 to-amber-400 bg-clip-text text-transparent">
+              EssMendes Tecnologia
+            </span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-mono">
+              Crie a Sua ↗
+            </span>
+          </a>
+        </div>
+      </footer>
+    </>
   );
 }
