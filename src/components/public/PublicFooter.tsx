@@ -189,9 +189,9 @@ export function PublicFooter({
             <Image
               src="/images/logo-essmendes.png"
               alt="EssMendes Tecnologia"
-              width={110}
-              height={32}
-              className="h-7 w-auto object-contain group-hover:scale-105 transition-transform"
+              width={160}
+              height={50}
+              className="h-10 sm:h-11 w-auto object-contain group-hover:scale-105 transition-transform"
             />
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-mono">
               Crie a Sua ↗

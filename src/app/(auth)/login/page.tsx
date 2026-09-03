@@ -40,14 +40,14 @@ export default function LoginPage() {
         
         {/* Cabeçalho */}
         <div className="text-center">
-          <div className="flex justify-center mb-6">
+          <div className="flex justify-center mb-8">
             <Image
               src="/images/logo-essmendes.png"
               alt="EssMendes Tecnologia"
-              width={240}
-              height={80}
+              width={320}
+              height={110}
               priority
-              className="h-16 w-auto object-contain drop-shadow-md"
+              className="h-24 sm:h-28 w-auto object-contain drop-shadow-xl"
             />
           </div>
           <div className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-700 ring-1 ring-teal-600/20">

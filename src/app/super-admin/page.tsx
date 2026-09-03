@@ -216,9 +216,10 @@ ON CONFLICT (id) DO UPDATE SET role = 'super_admin';`}
             <Image
               src="/images/logo-essmendes.png"
               alt="EssMendes Tecnologia"
-              width={140}
-              height={42}
-              className="h-9 w-auto object-contain"
+              width={200}
+              height={65}
+              priority
+              className="h-12 sm:h-14 w-auto object-contain"
             />
           </Link>
         </div>
