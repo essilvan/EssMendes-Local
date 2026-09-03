@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Phone,
   Clock,
@@ -185,9 +186,13 @@ export function PublicFooter({
             <span className="text-[11px] text-zinc-400 group-hover:text-zinc-200">
               Plataforma & Presença Digital por
             </span>
-            <span className="text-xs font-bold tracking-wide bg-gradient-to-r from-blue-400 via-indigo-300 to-amber-400 bg-clip-text text-transparent">
-              EssMendes Tecnologia
-            </span>
+            <Image
+              src="/images/logo-essmendes.png"
+              alt="EssMendes Tecnologia"
+              width={110}
+              height={32}
+              className="h-7 w-auto object-contain group-hover:scale-105 transition-transform"
+            />
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-mono">
               Crie a Sua ↗
             </span>

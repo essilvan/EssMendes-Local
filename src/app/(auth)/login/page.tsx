@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { loginAction, type ActionState } from "@/services/auth.actions";
 import {
   Mail,
@@ -25,10 +26,11 @@ export default function LoginPage() {
       {/* Logo Oficial no canto superior esquerdo */}
       <div className="absolute top-6 left-6 sm:top-8 sm:left-8">
         <Link href="/" className="inline-flex items-center gap-2">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src="/images/logo-essmendes.png"
             alt="EssMendes Tecnologia"
+            width={140}
+            height={42}
             className="h-9 w-auto object-contain"
           />
         </Link>
@@ -38,6 +40,16 @@ export default function LoginPage() {
         
         {/* Cabeçalho */}
         <div className="text-center">
+          <div className="flex justify-center mb-6">
+            <Image
+              src="/images/logo-essmendes.png"
+              alt="EssMendes Tecnologia"
+              width={240}
+              height={80}
+              priority
+              className="h-16 w-auto object-contain drop-shadow-md"
+            />
+          </div>
           <div className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-700 ring-1 ring-teal-600/20">
             <Sparkles className="h-3.5 w-3.5" />
             <span>EssMendes Local</span>

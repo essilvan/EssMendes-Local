@@ -5,6 +5,7 @@ import { extractNeighborhoodAndCity } from "@/utils/address";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import Link from "next/link";
+import Image from "next/image";
 import { ShieldAlert, LogOut, ArrowRight, Database } from "lucide-react";
 import type { SuperAdminTenantItem } from "@/types";
 
@@ -212,10 +213,11 @@ ON CONFLICT (id) DO UPDATE SET role = 'super_admin';`}
         {/* Cabeçalho Super Admin - Logo Oficial */}
         <div className="flex items-center justify-between pb-1">
           <Link href="/super-admin" className="inline-flex items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src="/images/logo-essmendes.png"
               alt="EssMendes Tecnologia"
+              width={140}
+              height={42}
               className="h-9 w-auto object-contain"
             />
           </Link>
