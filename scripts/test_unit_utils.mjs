@@ -65,6 +65,20 @@ assert(formatted === '(11) 99999-8888', 'Formatação de telefone celular BR', f
 const slug = slugify('Novoh de Novo Embreagens & Direção');
 assert(slug.length > 0 && !slug.includes(' ') && !slug.includes('&'), 'Slugify remove caracteres especiais', slug);
 
+// 4. Canvas Composer File Naming
+function sanitizeFileName(businessName) {
+  const sanitized = (businessName || "empresa")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return `antes-e-depois-${sanitized || "trabalho"}.png`;
+}
+
+const fileName = sanitizeFileName('Clínica Estética & Spa São Paulo');
+assert(fileName === 'antes-e-depois-clinica-estetica-spa-sao-paulo.png', 'Geração de nome de arquivo PNG para Antes e Depois', fileName);
+
 console.log('\n====================================================');
 console.log(`📊 RESULTADO DOS TESTES UNITÁRIOS: ${passed} PASSOU | ${failed} FALHOU`);
 console.log('====================================================');

@@ -29,6 +29,17 @@ export default async function AdminPortfolioPage() {
 
   const supabase = await createClient();
 
+  // Busca perfil do estabelecimento para personalização do card e WhatsApp
+  const { data: profile } = await supabase
+    .from("tenant_profiles")
+    .select("name, phone_whatsapp, phone")
+    .eq("tenant_id", tenantContext.tenantId)
+    .maybeSingle();
+
+  const businessName = profile?.name || tenantContext.tenant?.name || "Nosso Estabelecimento";
+  const whatsapp = profile?.phone_whatsapp || profile?.phone || "";
+  const slug = tenantContext.tenant?.slug || "";
+
   // Busca itens de portfólio do tenant
   const { data: rawItems, error: itemsError } = await supabase
     .from("portfolio_items")
@@ -69,7 +80,12 @@ export default async function AdminPortfolioPage() {
       )}
 
       {/* Gerenciador */}
-      <PortfolioManager initialItems={items} />
+      <PortfolioManager
+        initialItems={items}
+        businessName={businessName}
+        whatsapp={whatsapp}
+        slug={slug}
+      />
     </div>
   );
 }

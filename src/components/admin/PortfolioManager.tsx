@@ -11,6 +11,11 @@ import {
 import { ImageUpload } from "@/components/ui/ImageUpload";
 import type { PortfolioItem } from "@/types";
 import {
+  createBeforeAfterCard,
+  downloadCard,
+  type BeforeAfterCardResult,
+} from "@/lib/canvas-composer";
+import {
   Sparkles,
   Plus,
   Edit2,
@@ -23,17 +28,38 @@ import {
   ToggleRight,
   ArrowRightLeft,
   Eye,
+  Share2,
+  Download,
+  Smartphone,
+  MessageCircle,
 } from "lucide-react";
 
-interface PortfolioManagerProps {
+export interface PortfolioManagerProps {
   initialItems: PortfolioItem[];
+  businessName?: string;
+  whatsapp?: string;
+  slug?: string;
 }
 
-export function PortfolioManager({ initialItems }: PortfolioManagerProps) {
+export function PortfolioManager({
+  initialItems,
+  businessName,
+  whatsapp,
+  slug,
+}: PortfolioManagerProps) {
   const router = useRouter();
   const [items, setItems] = useState<PortfolioItem[]>(initialItems);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<PortfolioItem | null>(null);
+
+  // Modal de Divulgação Imediata & Card gerado
+  const [shareModalData, setShareModalData] = useState<{
+    card: BeforeAfterCardResult;
+    title: string;
+    isNewPublish: boolean;
+  } | null>(null);
+  const [isGeneratingCard, setIsGeneratingCard] = useState(false);
+  const [shareStatus, setShareStatus] = useState<string | null>(null);
 
   // Form image states
   const [beforeUrl, setBeforeUrl] = useState<string>("");
@@ -72,6 +98,40 @@ export function PortfolioManager({ initialItems }: PortfolioManagerProps) {
     setModalError(null);
   };
 
+  const handleGenerateCard = async (
+    bUrl: string,
+    aUrl: string,
+    itemTitle: string,
+    isNewPublish: boolean = false
+  ) => {
+    setIsGeneratingCard(true);
+    setShareStatus(null);
+    try {
+      const card = await createBeforeAfterCard({
+        beforeUrl: bUrl,
+        afterUrl: aUrl,
+        businessName: businessName || "Nosso Estabelecimento",
+        whatsapp: whatsapp || "",
+        serviceTitle: itemTitle,
+      });
+
+      setShareModalData({
+        card,
+        title: itemTitle,
+        isNewPublish,
+      });
+    } catch (err: any) {
+      console.error("Erro ao gerar card de Antes e Depois:", err);
+      setFeedback({
+        type: "error",
+        message:
+          "Transformação salva com sucesso, mas o card social não pôde ser gerado (verifique as fotos).",
+      });
+    } finally {
+      setIsGeneratingCard(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setModalError(null);
@@ -84,6 +144,10 @@ export function PortfolioManager({ initialItems }: PortfolioManagerProps) {
 
     formData.set("beforeImageUrl", beforeUrl);
     formData.set("afterImageUrl", afterUrl);
+
+    const title = formData.get("title")?.toString().trim() || "";
+    const savedBefore = beforeUrl;
+    const savedAfter = afterUrl;
 
     startTransition(async () => {
       let result;
@@ -103,6 +167,9 @@ export function PortfolioManager({ initialItems }: PortfolioManagerProps) {
         });
         handleClose();
         router.refresh();
+
+        // Imediatamente gera o card e abre o Modal de Divulgação
+        handleGenerateCard(savedBefore, savedAfter, title, true);
       }
     });
   };
@@ -304,6 +371,24 @@ export function PortfolioManager({ initialItems }: PortfolioManagerProps) {
                 <div className="mt-5 flex items-center justify-end gap-2 border-t border-slate-100 pt-3">
                   <button
                     type="button"
+                    onClick={() =>
+                      handleGenerateCard(
+                        item.before_image_url,
+                        item.after_image_url,
+                        item.title,
+                        false
+                      )
+                    }
+                    disabled={isPending || isGeneratingCard}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-teal-50 px-2.5 py-1.5 text-xs font-semibold text-teal-700 hover:bg-teal-100 transition disabled:opacity-50"
+                    title="Gerar card de Antes & Depois para redes sociais"
+                  >
+                    <Share2 className="h-3.5 w-3.5" />
+                    <span>Divulgar</span>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={() => handleOpenEdit(item)}
                     disabled={isPending}
                     className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 transition disabled:opacity-50"
@@ -466,6 +551,168 @@ export function PortfolioManager({ initialItems }: PortfolioManagerProps) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Divulgação Imediata */}
+      {shareModalData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-lg max-h-[92vh] flex flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">
+                  {shareModalData.isNewPublish
+                    ? "🎉 Trabalho Publicado com Sucesso!"
+                    : "📸 Divulgar Antes & Depois"}
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Montagem de alta resolução (1080x1080) pronta para atrair novos clientes.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShareModalData(null)}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {/* Preview Visual da Montagem */}
+              <div className="relative aspect-square w-full max-h-[340px] bg-slate-950 rounded-xl overflow-hidden border border-slate-200 shadow-sm flex items-center justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={shareModalData.card.dataUrl}
+                  alt={shareModalData.title}
+                  className="h-full w-full object-contain"
+                />
+              </div>
+
+              {/* Status de Compartilhamento / Download */}
+              {shareStatus && (
+                <div className="rounded-lg bg-teal-50 border border-teal-200 p-2.5 text-xs font-semibold text-teal-800 text-center">
+                  {shareStatus}
+                </div>
+              )}
+
+              {/* Ações de Compartilhamento */}
+              <div className="space-y-2.5 pt-1">
+                {/* Botão 1: Compartilhar no Celular / Apps */}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const showcaseUrl =
+                      typeof window !== "undefined"
+                        ? slug
+                          ? `${window.location.origin}/${slug}`
+                          : window.location.origin
+                        : "";
+                    const shareText = "Confira a transformação que realizamos!";
+
+                    if (
+                      typeof navigator !== "undefined" &&
+                      navigator.canShare &&
+                      navigator.canShare({ files: [shareModalData.card.file] })
+                    ) {
+                      try {
+                        await navigator.share({
+                          files: [shareModalData.card.file],
+                          title: businessName || "Antes e Depois",
+                          text: shareText,
+                        });
+                        setShareStatus("Compartilhado com sucesso!");
+                      } catch (err: any) {
+                        if (err.name !== "AbortError") {
+                          console.error("Erro ao compartilhar nativamente:", err);
+                        }
+                      }
+                    } else if (typeof navigator !== "undefined" && navigator.share) {
+                      try {
+                        await navigator.share({
+                          title: businessName || "Antes e Depois",
+                          text: `${shareText} Veja mais em nossa vitrine:`,
+                          url: showcaseUrl,
+                        });
+                        setShareStatus("Link compartilhado com sucesso!");
+                      } catch (err: any) {
+                        if (err.name !== "AbortError") {
+                          console.error("Erro ao compartilhar link:", err);
+                        }
+                      }
+                    } else {
+                      downloadCard(shareModalData.card.file, shareModalData.card.dataUrl);
+                      setShareStatus(
+                        "Imagem baixada! O compartilhamento direto é suportado pelo navegador do celular."
+                      );
+                    }
+                  }}
+                  className="w-full inline-flex items-center justify-center gap-2.5 rounded-xl bg-teal-700 px-4 py-3 text-sm font-bold text-white shadow-sm hover:bg-teal-800 transition cursor-pointer"
+                >
+                  <Smartphone className="h-4 w-4" />
+                  <span>📱 Compartilhar no Celular / Apps</span>
+                </button>
+
+                {/* Botão 2: Baixar Imagem (Instagram Feed / Stories) */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    downloadCard(shareModalData.card.file, shareModalData.card.dataUrl);
+                    setShareStatus("Download da imagem em alta resolução concluído!");
+                  }}
+                  className="w-full inline-flex items-center justify-center gap-2.5 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-800 shadow-2xs hover:bg-slate-50 transition cursor-pointer"
+                >
+                  <Download className="h-4 w-4 text-slate-600" />
+                  <span>📸 Baixar Imagem (Instagram Feed / Stories)</span>
+                </button>
+
+                {/* Botão 3: Mandar no WhatsApp */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const showcaseUrl =
+                      typeof window !== "undefined"
+                        ? slug
+                          ? `${window.location.origin}/${slug}`
+                          : window.location.origin
+                        : "";
+                    const waText = `Olá! Confira este trabalho incrível (${shareModalData.title}) realizado por *${businessName || "nossa equipe"}*! ✨\n\nVeja este e outros trabalhos em nossa vitrine oficial: ${showcaseUrl}`;
+                    const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(waText)}`;
+                    window.open(waUrl, "_blank");
+                  }}
+                  className="w-full inline-flex items-center justify-center gap-2.5 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 transition cursor-pointer"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  <span>💬 Mandar no WhatsApp</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-slate-100 bg-slate-50/70 px-6 py-3 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShareModalData(null)}
+                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+              >
+                Concluir e Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Overlay de Geração de Imagem */}
+      {isGeneratingCard && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs">
+          <div className="flex items-center gap-3 rounded-2xl bg-white px-6 py-4 shadow-xl border border-slate-200">
+            <Loader2 className="h-5 w-5 animate-spin text-teal-600" />
+            <span className="text-sm font-semibold text-slate-800">
+              Compondo card de alta resolução (1080x1080)...
+            </span>
           </div>
         </div>
       )}
