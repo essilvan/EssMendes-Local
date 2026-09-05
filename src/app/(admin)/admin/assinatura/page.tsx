@@ -215,7 +215,7 @@ export default async function AdminAssinaturaPage({ searchParams }: AssinaturaPa
               <span>Formas de Pagamento Aceitas:</span>
             </div>
             <p className="text-xs text-slate-600 font-medium">
-              Pix Instantâneo (liberação imediata) ou Cartão de Crédito
+              Pix Instantâneo e Cartões de Crédito (Visa, Mastercard, Elo, Hipercard)
             </p>
             <p className="text-[11px] text-slate-400">
               Processado em ambiente de segurança nível bancário Mercado Pago.
@@ -223,7 +223,7 @@ export default async function AdminAssinaturaPage({ searchParams }: AssinaturaPa
           </div>
         </div>
 
-        {/* Botão de Ação Direto para Checkout Pro do Mercado Pago */}
+        {/* Área de Ação de Pagamento com Pix e Cartão */}
         <div className="pt-2 border-t border-slate-100">
           <MercadoPagoSubscribeButton
             tenantId={tenantContext.tenantId}
@@ -231,7 +231,6 @@ export default async function AdminAssinaturaPage({ searchParams }: AssinaturaPa
             userEmail={user.email || ""}
             payerName={(user.user_metadata?.full_name as string) || (user.user_metadata?.name as string) || tenant?.name || ""}
             payerCpf={(user.user_metadata?.cpf as string) || (user.user_metadata?.cnpj as string) || ""}
-            label="Renovar / Assinar Plano Mensal (R$ 97,00) via Pix ou Cartão"
           />
         </div>
       </div>

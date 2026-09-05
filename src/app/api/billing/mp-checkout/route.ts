@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { MercadoPagoConfig, Payment } from "mercadopago";
+import { MercadoPagoConfig, Payment, Preference } from "mercadopago";
 import { getAuthenticatedTenant } from "@/lib/supabase/tenant";
 
 export async function POST(req: Request) {
@@ -27,6 +27,7 @@ export async function POST(req: Request) {
     let email = body.email || body.payerEmail;
     let payerCpf = body.payerCpf || body.cpf || body.cnpj || body.identification;
     let payerName = body.payerName || body.name || body.fullName;
+    const method = body.method || "pix";
 
     // Se estiver autenticado, garante ou complementa com os dados reais da sessão do tenant
     const { data: authContext } = await getAuthenticatedTenant();
@@ -55,6 +56,55 @@ export async function POST(req: Request) {
 
     tenantName = tenantName || "Estabelecimento";
 
+    // 1. Meio de pagamento: Cartão de Crédito via Preference (excluindo boleto e pix)
+    if (method === "card") {
+      const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://local.essmendes.com.br").replace(/\/$/, "");
+      const isLocalhost = appUrl.includes("localhost") || appUrl.includes("127.0.0.1");
+
+      const preference = new Preference(client);
+      const prefResult = await preference.create({
+        body: {
+          items: [
+            {
+              id: "plano-pro-mensal",
+              title: `Mensalidade Vitrine EssMendes - ${tenantName}`,
+              quantity: 1,
+              unit_price: 97.00,
+              currency_id: "BRL",
+            },
+          ],
+          payment_methods: {
+            // Exclui boleto e pix nesta preferência para abrir direto o formulário de cartão
+            excluded_payment_types: [
+              { id: "ticket" }, // exclui boleto
+              { id: "bank_transfer" }, // exclui pix
+            ],
+            installments: 12,
+          },
+          payer: {
+            email: email || "financeiro@essmendes.com.br",
+          },
+          external_reference: tenantId,
+          back_urls: {
+            success: `${appUrl}/admin/assinatura?status=success`,
+            pending: `${appUrl}/admin/assinatura?status=pending`,
+            failure: `${appUrl}/admin/assinatura?status=failure`,
+          },
+          ...(isLocalhost ? {} : { auto_return: "approved" as const }),
+          ...(appUrl.startsWith("https://")
+            ? { notification_url: `${appUrl}/api/webhooks/mercadopago` }
+            : {}),
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        method: "card",
+        checkoutUrl: prefResult.init_point,
+      });
+    }
+
+    // 2. Meio de pagamento: Pix Instantâneo Transparente via Payment
     const payment = new Payment(client);
 
     const result = await payment.create({
@@ -79,15 +129,16 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
+      method: "pix",
       paymentId: result.id,
       qrCode: pointOfInteraction?.qr_code, // Código copia e cola
       qrCodeBase64: pointOfInteraction?.qr_code_base64, // Imagem do QR Code em base64
       ticketUrl: pointOfInteraction?.ticket_url,
     });
   } catch (error: any) {
-    console.error("Erro ao gerar Pix MP:", error);
+    console.error("Erro ao processar pagamento MP:", error);
     return NextResponse.json(
-      { error: error?.message || "Falha ao gerar Pix" },
+      { error: error?.message || "Falha ao processar pagamento" },
       { status: 500 }
     );
   }

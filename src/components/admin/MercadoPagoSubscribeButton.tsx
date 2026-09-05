@@ -5,7 +5,6 @@ import {
   CreditCard,
   Loader2,
   AlertCircle,
-  ArrowRight,
   ShieldCheck,
   Check,
   Copy,
@@ -40,18 +39,16 @@ export function MercadoPagoSubscribeButton({
   userEmail = "",
   payerName = "",
   payerCpf = "",
-  label = "Renovar / Assinar Plano Mensal (R$ 97,00) via Pix Instantâneo",
   className = "",
-  size = "lg",
 }: MercadoPagoSubscribeButtonProps) {
-  const [loading, setLoading] = useState(false);
+  const [loadingMethod, setLoadingMethod] = useState<"pix" | "card" | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [pixData, setPixData] = useState<PixPaymentData | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const handleCheckout = async () => {
+  const handleCheckout = async (method: "pix" | "card") => {
     try {
-      setLoading(true);
+      setLoadingMethod(method);
       setErrorMessage(null);
 
       const response = await fetch("/api/billing/mp-checkout", {
@@ -65,16 +62,27 @@ export function MercadoPagoSubscribeButton({
           email: userEmail,
           payerName,
           payerCpf,
+          method,
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Não foi possível gerar a cobrança Pix.");
+        throw new Error(data.error || "Não foi possível gerar a cobrança.");
       }
 
-      // Se retornou dados do Pix transparente direto
+      // Se for pagamento via Cartão, redireciona para a preferência de Cartão
+      if (method === "card") {
+        const redirectUrl = data.checkoutUrl || data.init_point;
+        if (!redirectUrl) {
+          throw new Error("Link de checkout com cartão não retornado pelo servidor.");
+        }
+        window.location.href = redirectUrl;
+        return;
+      }
+
+      // Se for pagamento via Pix, abre o modal com QR Code e Copia e Cola
       if (data.qrCode || data.qrCodeBase64) {
         setPixData({
           qrCode: data.qrCode,
@@ -82,28 +90,31 @@ export function MercadoPagoSubscribeButton({
           ticketUrl: data.ticketUrl,
           paymentId: data.paymentId,
         });
-        setLoading(false);
+        setLoadingMethod(null);
         return;
       }
 
-      // Se retornou init_point (Checkout Pro fallback)
-      if (data.init_point) {
-        window.location.href = data.init_point;
-        return;
-      }
-
-      // Se retornou ticketUrl
+      // Fallbacks para Pix
       if (data.ticketUrl) {
         window.location.href = data.ticketUrl;
         return;
       }
 
+      if (data.checkoutUrl || data.init_point) {
+        window.location.href = data.checkoutUrl || data.init_point;
+        return;
+      }
+
       throw new Error("Dados de pagamento não retornados pelo servidor.");
     } catch (err: any) {
-      console.error("[MercadoPagoSubscribeButton] Erro ao gerar Pix:", err);
+      console.error("[MercadoPagoSubscribeButton] Erro ao processar pagamento:", err);
       setErrorMessage(err.message || "Erro de conexão ao comunicar com Mercado Pago.");
-      setLoading(false);
+      setLoadingMethod(null);
     }
+  };
+
+  const handlePayWithCard = () => {
+    handleCheckout("card");
   };
 
   const handleCopyPix = async () => {
@@ -113,7 +124,6 @@ export function MercadoPagoSubscribeButton({
       setCopied(true);
       setTimeout(() => setCopied(false), 3000);
     } catch {
-      // Fallback simples
       const textArea = document.createElement("textarea");
       textArea.value = pixData.qrCode;
       document.body.appendChild(textArea);
@@ -126,31 +136,43 @@ export function MercadoPagoSubscribeButton({
   };
 
   return (
-    <div className="w-full space-y-2">
-      <button
-        type="button"
-        onClick={handleCheckout}
-        disabled={loading}
-        className={cn(
-          "flex w-full items-center justify-center gap-2.5 rounded-xl font-bold text-white shadow-md transition cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed",
-          size === "lg" ? "px-6 py-3.5 text-sm sm:text-base" : "px-4 py-2.5 text-xs sm:text-sm",
-          "bg-teal-700 hover:bg-teal-800 active:scale-[0.99] ring-2 ring-teal-600/30",
-          className
-        )}
-      >
-        {loading ? (
-          <>
-            <Loader2 className="h-5 w-5 animate-spin shrink-0 text-teal-200" />
-            <span>Gerando Pix no Mercado Pago...</span>
-          </>
-        ) : (
-          <>
-            <QrCode className="h-5 w-5 shrink-0 text-teal-200" />
-            <span>{label}</span>
-            <ArrowRight className="h-4 w-4 shrink-0 text-teal-300 ml-1 hidden sm:inline" />
-          </>
-        )}
-      </button>
+    <div className={cn("w-full space-y-3", className)}>
+      {/* 2 Botões de Ação: Pix e Cartão */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+        {/* Botão 1: Pix Instantâneo */}
+        <button
+          type="button"
+          onClick={() => handleCheckout("pix")}
+          disabled={!!loadingMethod}
+          className="flex w-full items-center justify-center gap-2 rounded-xl font-bold text-white shadow-md transition py-3.5 px-4 text-xs sm:text-sm bg-teal-700 hover:bg-teal-800 active:scale-[0.99] ring-2 ring-teal-600/30 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
+        >
+          {loadingMethod === "pix" ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin text-teal-200 shrink-0" />
+              <span>Gerando Pix...</span>
+            </>
+          ) : (
+            <span>⚡ Pagar via Pix Instantâneo (R$ 97,00)</span>
+          )}
+        </button>
+
+        {/* Botão 2: Cartão de Crédito */}
+        <button
+          type="button"
+          onClick={() => handleCheckout("card")}
+          disabled={!!loadingMethod}
+          className="flex w-full items-center justify-center gap-2 rounded-xl font-bold text-slate-800 bg-white border border-slate-300 hover:bg-slate-50 hover:border-slate-400 active:scale-[0.99] shadow-sm transition py-3.5 px-4 text-xs sm:text-sm cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
+        >
+          {loadingMethod === "card" ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin text-slate-500 shrink-0" />
+              <span>Conectando ao Cartão...</span>
+            </>
+          ) : (
+            <span>💳 Pagar com Cartão de Crédito (em até 12x)</span>
+          )}
+        </button>
+      </div>
 
       {errorMessage && (
         <div className="flex items-start gap-2 rounded-lg bg-red-50 p-3 text-xs text-red-700 border border-red-200">
@@ -162,10 +184,10 @@ export function MercadoPagoSubscribeButton({
       <div className="flex items-center justify-center gap-3 text-[11px] text-slate-500 pt-1">
         <span className="flex items-center gap-1">
           <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-          Pix Direto & Seguro Mercado Pago
+          Ambiente Seguro Mercado Pago
         </span>
         <span>•</span>
-        <span>Liberação Imediata</span>
+        <span>Pix Instantâneo ou Cartão de Crédito em até 12x</span>
       </div>
 
       {/* Modal / Card com QR Code Pix Transparente */}
@@ -176,7 +198,7 @@ export function MercadoPagoSubscribeButton({
             <button
               type="button"
               onClick={() => setPixData(null)}
-              className="absolute right-4 top-4 p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition"
+              className="absolute right-4 top-4 p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition cursor-pointer"
               title="Fechar"
             >
               <X className="h-5 w-5" />
@@ -274,8 +296,22 @@ export function MercadoPagoSubscribeButton({
               )}
             </div>
 
+            {/* Link de contingência para Cartão de Crédito */}
+            <div className="text-center pt-1 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={handlePayWithCard}
+                disabled={loadingMethod === "card"}
+                className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-4 cursor-pointer"
+              >
+                {loadingMethod === "card"
+                  ? "Conectando ao Cartão..."
+                  : "Prefere pagar com cartão de crédito? Clique aqui."}
+              </button>
+            </div>
+
             <p className="text-[11px] text-center text-slate-400">
-              Assim que confirmado pelo seu banco, a liberação é automática.
+              Assim que confirmado pelo seu banco ou operadora, a liberação é automática.
             </p>
           </div>
         </div>
