@@ -42,24 +42,26 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
   },
   pro: {
     id: 'pro',
-    name: 'Profissional Pro',
-    badge: 'Mais Recomendado',
-    priceMonthly: 49.90,
-    priceYearly: 499.00, // Equivalente a ~R$ 41,58/mês
-    description: 'Para negócios locais que buscam máxima conversão, agendamentos ilimitados e destaque no Google.',
+    name: 'Plano Pro EssMendes',
+    badge: 'Mais Recomendado • Teste Grátis 7 Dias',
+    priceMonthly: 97.00,
+    priceYearly: 970.00, // 2 meses grátis
+    description: 'A solução definitiva para dominar o Google Maps, automatizar agendamentos e gerar autoridade local.',
     maxServices: Infinity,
     maxMonthlyAppointments: Infinity,
     features: [
-      'Serviços e procedimentos ilimitados',
+      'Teste Grátis de 7 Dias sem compromisso',
+      'Sincronização em Tempo Real com Google Maps & Reviews',
+      'Cálculo Preciso de Horários com Fuso de Brasília',
+      'Gerador Canvas de Antes e Depois para Redes Sociais',
+      'Temas especializados por nicho (Oficinas, Saúde, Gastronomia, Varejo)',
       'Agendamentos e base de clientes ilimitados',
-      'SEO Local Avançado com Schema.org Rich Data',
-      'Diagnóstico de Presença Local completo',
-      'Métricas de conversão em tempo real',
-      'Painel de gestão de agenda com status',
-      'Suporte para Domínio Próprio (.com.br)',
+      'Agendamento e conversão direta pelo WhatsApp',
+      'SEO Local Avançado com Schema.org LocalBusiness',
+      'Pagamento facilitado via Pix Instantâneo ou Cartão em 12x',
       'Suporte prioritário via WhatsApp',
     ],
-    ctaLabel: 'Assinar Plano Pro',
+    ctaLabel: 'Começar Teste Grátis de 7 Dias',
   },
 };
 

@@ -2,26 +2,24 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import {
   Sparkles,
-  Scissors,
   CalendarCheck,
   MessageCircle,
-  TrendingUp,
-  Search,
   CheckCircle2,
-  XCircle,
   ArrowRight,
   ShieldCheck,
   Clock,
   Globe,
   ExternalLink,
-  ChevronRight,
-  Zap,
   HelpCircle,
-  Building2,
-  Users,
-  Star,
+  CreditCard,
+  QrCode,
+  Palette,
+  Layers,
+  MapPin,
+  Check,
+  Zap,
+  Store,
 } from "lucide-react";
-import { PLANS } from "@/config/plans";
 
 export const dynamic = "force-dynamic";
 
@@ -47,24 +45,32 @@ export default async function HomePage() {
 
   const faqItems = [
     {
-      q: "Preciso saber programar ou criar sites para usar?",
-      a: "Não! O EssMendes Local gera sua página profissional automaticamente em menos de 3 minutos. Você apenas informa seu nome, WhatsApp, endereço e serviços.",
+      q: "Como funciona o Teste Grátis de 7 Dias?",
+      a: "Você cria sua conta em menos de 3 minutos e tem acesso ilimitado a todos os recursos da plataforma: sincronização com Google Maps, agendamentos sem conflito, gerador de Antes & Depois e vitrine completa. Você testa sem compromisso.",
     },
     {
-      q: "Como os clientes realizam os agendamentos?",
-      a: "O cliente acessa sua página pelo celular ou computador, escolhe o serviço desejado, seleciona o dia e o horário livre em tempo real, e a reserva é registrada sem risco de horários duplicados.",
+      q: "Preciso cadastrar cartão de crédito para iniciar o teste?",
+      a: "Não! Você pode iniciar seu teste grátis de 7 dias imediatamente sem precisar fornecer nenhum cartão de crédito ou dado financeiro.",
     },
     {
-      q: "O Plano Gratuito é realmente grátis?",
-      a: "Sim! O Plano Gratuito é permanente e permite cadastrar até 3 serviços ativos, receber agendamentos online e divulgar sua página sem qualquer cobrança.",
+      q: "Quais são as formas de pagamento aceitas?",
+      a: "Após os 7 dias de teste, você pode assinar via Pix Instantâneo (com liberação imediata por QR Code / Copia e Cola) ou Cartão de Crédito em até 12x, tudo processado com a segurança de nível bancário do Mercado Pago.",
     },
     {
-      q: "Posso usar meu próprio domínio (ex: meunegocio.com.br)?",
-      a: "Sim! No Plano Pro você tem suporte para conectar seu próprio domínio personalizado (.com.br) e fortalecer ainda mais a sua marca local.",
+      q: "Como funciona a sincronização com o Google Maps em tempo real?",
+      a: "Basta colar o link da sua empresa no Google Maps no painel. O sistema importa automaticamente suas avaliações 5 estrelas reais, notas, fotos oficiais de clientes e horário de Brasília, atualizando sua vitrine em tempo real sem dados falsos.",
     },
     {
-      q: "Existe fidelidade ou multa para cancelamento?",
-      a: "Não há fidelidade ou contratos de longo prazo. Você tem total liberdade para alterar ou cancelar sua assinatura a qualquer momento.",
+      q: "Qual a vantagem do Plano Anual de R$ 970,00?",
+      a: "No plano anual você ganha 2 meses inteiramente grátis (economia direta de R$ 194,00 no ano), além de onboarding com setup assistido pela nossa equipe para configurar seu perfil, catálogo de serviços e integração do Google.",
+    },
+    {
+      q: "O sistema funciona para o meu tipo de negócio?",
+      a: "Sim! O EssMendes Local possui temas especializados pré-configurados para diversos nichos locais: Oficinas mecânicas e estética automotiva, Gastronomia e restaurantes, Clínicas e profissionais de Saúde, Barbearias, Salões de Beleza e Comércio Varejista.",
+    },
+    {
+      q: "Posso conectar meu próprio domínio personalizado (.com.br)?",
+      a: "Com certeza! Você pode utilizar o link rápido do EssMendes Local ou conectar seu próprio domínio (ex: www.suaempresa.com.br) para fortalecer ainda mais sua marca na sua cidade.",
     },
   ];
 
@@ -82,14 +88,14 @@ export default async function HomePage() {
                 EssMendes <span className="text-teal-700">Local</span>
               </span>
               <span className="block text-[10px] font-semibold text-slate-500">
-                Presença Digital & Agendamentos
+                SEO Local & Vitrines Inteligentes
               </span>
             </div>
           </Link>
 
           <nav className="hidden md:flex items-center gap-6 text-xs font-semibold text-slate-600">
             <Link href="/diagnostico" className="text-teal-700 font-bold hover:underline flex items-center gap-1">
-              <Sparkles className="h-3 w-3" />
+              <Sparkles className="h-3 w-3 text-amber-500" />
               <span>Diagnóstico Grátis</span>
             </Link>
             <a href="#recursos" className="hover:text-teal-700 transition">
@@ -102,7 +108,7 @@ export default async function HomePage() {
               Planos & Preços
             </a>
             <a href="#faq" className="hover:text-teal-700 transition">
-              Dúvidas
+              Dúvidas Frequentes
             </a>
           </nav>
 
@@ -127,7 +133,7 @@ export default async function HomePage() {
                   href="/register"
                   className="inline-flex items-center gap-1.5 rounded-xl bg-teal-800 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-teal-900 transition"
                 >
-                  <span>Criar Conta Grátis</span>
+                  <span>Testar 7 Dias Grátis</span>
                   <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
               </>
@@ -139,34 +145,34 @@ export default async function HomePage() {
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-b from-teal-950 via-teal-900 to-teal-800 text-white pt-16 pb-24 px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-4xl text-center space-y-6">
-          <div className="inline-flex items-center gap-2 rounded-full bg-teal-800/80 px-3.5 py-1 text-xs font-semibold text-teal-200 ring-1 ring-white/15 backdrop-blur-xs">
+          <div className="inline-flex items-center gap-2 rounded-full bg-teal-800/80 px-4 py-1.5 text-xs font-semibold text-teal-200 ring-1 ring-white/15 backdrop-blur-xs">
             <Sparkles className="h-3.5 w-3.5 text-amber-300" />
-            <span>A Plataforma Definitiva para Negócios Locais</span>
+            <span>Sincronização com Google Maps em Tempo Real • Cálculo Preciso de Horários</span>
           </div>
 
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white leading-tight">
-            Transforme seu negócio local em uma máquina de{" "}
+            Domine as buscas locais no Google e receba agendamentos no{" "}
             <span className="text-teal-300 underline decoration-teal-500 underline-offset-8">
-              agendamentos online
+              piloto automático
             </span>
           </h1>
 
           <p className="mx-auto max-w-2xl text-sm sm:text-base text-teal-100/90 leading-relaxed">
-            Destaque-se nas buscas do Google, elimine conflitos de horário e feche atendimentos 24 horas por dia com catálogo interativo e confirmação rápida pelo WhatsApp.
+            Conecte sua ficha do Google Maps em tempo real, tenha cálculo preciso de horários com fuso de Brasília sem sobreposição de agenda e gere comparativos profissionais de Antes & Depois para bombar suas redes sociais.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 pt-4">
             <Link
               href="/register"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3.5 text-sm font-extrabold text-teal-950 shadow-xl hover:bg-teal-50 transition"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-white px-7 py-4 text-sm font-extrabold text-teal-950 shadow-xl hover:bg-teal-50 active:scale-[0.99] transition cursor-pointer"
             >
-              <span>Criar Minha Página Grátis</span>
+              <span>Começar Teste Grátis de 7 Dias</span>
               <ArrowRight className="h-4 w-4 text-teal-800" />
             </Link>
 
             <Link
               href="/diagnostico"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-teal-300/40 bg-teal-800/60 px-5 py-3.5 text-sm font-bold text-teal-100 backdrop-blur-xs hover:bg-teal-700 transition"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-teal-300/40 bg-teal-800/60 px-5 py-4 text-sm font-bold text-teal-100 backdrop-blur-xs hover:bg-teal-700 transition"
             >
               <Sparkles className="h-4 w-4 text-amber-300" />
               <span>Diagnóstico Grátis da Empresa</span>
@@ -176,7 +182,7 @@ export default async function HomePage() {
               href="/minha-empresa-teste"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-5 py-3.5 text-sm font-bold text-white backdrop-blur-xs hover:bg-white/20 transition"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-5 py-4 text-sm font-bold text-white backdrop-blur-xs hover:bg-white/20 transition"
             >
               <Globe className="h-4 w-4 text-teal-300" />
               <span>Ver Vitrine ao Vivo</span>
@@ -188,60 +194,101 @@ export default async function HomePage() {
           <div className="pt-8 flex flex-wrap items-center justify-center gap-6 text-xs text-teal-200/90 border-t border-white/10">
             <div className="flex items-center gap-1.5">
               <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-              <span>Sem necessidade de cartão</span>
+              <span>Teste Grátis de 7 Dias sem compromisso</span>
             </div>
             <div className="flex items-center gap-1.5">
               <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-              <span>Configuração em 3 minutos</span>
+              <span>Sincronização Google Maps em Tempo Real</span>
             </div>
             <div className="flex items-center gap-1.5">
               <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-              <span>Anti Double-Booking nativo</span>
+              <span>Cálculo Preciso com Horário de Brasília</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+              <span>Gerador de Antes e Depois para Redes</span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Demonstração Visual dos Pilares */}
+      {/* Seção de Recursos - 4 Cards */}
       <section id="recursos" className="mx-auto max-w-6xl -mt-10 px-4 sm:px-6">
-        <div className="grid gap-6 md:grid-cols-3">
-          {/* Pilar 1: Vitrine & SEO */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm hover:border-teal-300 hover:shadow-md transition space-y-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-teal-50 text-teal-800">
-              <Search className="h-6 w-6" />
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Card 1: Sincronização Google Maps & Horário de Brasília real */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:border-teal-400 hover:shadow-md transition space-y-3.5 flex flex-col justify-between">
+            <div className="space-y-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-50 text-teal-800">
+                <MapPin className="h-5 w-5" />
+              </div>
+              <h3 className="text-sm font-bold text-slate-900 leading-snug">
+                Sincronização Google Maps & Horário Real
+              </h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Importe avaliações reais 5 estrelas, fotos oficiais e status de abertura calculados no <strong>fuso horário de Brasília</strong> em tempo real, sem dados fictícios.
+              </p>
             </div>
-            <h3 className="text-base font-bold text-slate-900">
-              SEO Local & Google Rich Data
-            </h3>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Estruturação automática em <strong>Schema.org LocalBusiness</strong> para seu negócio aparecer nas pesquisas locais do Google ("perto de mim") com informações claras.
-            </p>
+            <div className="pt-2 text-[11px] font-semibold text-teal-700 flex items-center gap-1">
+              <span>Google Places API (New)</span>
+              <Check className="h-3 w-3" />
+            </div>
           </div>
 
-          {/* Pilar 2: Motor de Agendamento */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm hover:border-teal-300 hover:shadow-md transition space-y-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
-              <CalendarCheck className="h-6 w-6" />
+          {/* Card 2: Ferramenta Canvas de Antes e Depois para Redes */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:border-teal-400 hover:shadow-md transition space-y-3.5 flex flex-col justify-between">
+            <div className="space-y-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
+                <Layers className="h-5 w-5" />
+              </div>
+              <h3 className="text-sm font-bold text-slate-900 leading-snug">
+                Gerador Canvas de Antes e Depois
+              </h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Crie artes comparativas impressionantes prontas para <strong>Instagram Stories, Feed e WhatsApp</strong> em segundos, gerando autoridade visual inquestionável.
+              </p>
             </div>
-            <h3 className="text-base font-bold text-slate-900">
-              Agendamento Online 24/7
-            </h3>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Seus clientes escolhem o serviço e o horário disponível em tempo real. O sistema previne matematicamente conflitos e sobreposições de agenda.
-            </p>
+            <div className="pt-2 text-[11px] font-semibold text-amber-700 flex items-center gap-1">
+              <span>Exportação Instantânea HD</span>
+              <Check className="h-3 w-3" />
+            </div>
           </div>
 
-          {/* Pilar 3: WhatsApp Integrado */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm hover:border-teal-300 hover:shadow-md transition space-y-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
-              <MessageCircle className="h-6 w-6" />
+          {/* Card 3: Temas Especializados por Nicho */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:border-teal-400 hover:shadow-md transition space-y-3.5 flex flex-col justify-between">
+            <div className="space-y-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
+                <Palette className="h-5 w-5" />
+              </div>
+              <h3 className="text-sm font-bold text-slate-900 leading-snug">
+                Temas Especializados por Nicho
+              </h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Modelos desenhados sob medida para <strong>Oficinas, Gastronomia, Saúde, Estética e Varejo</strong>, com design responsivo e foco obsessivo em conversão.
+              </p>
             </div>
-            <h3 className="text-base font-bold text-slate-900">
-              Conversão Direta no WhatsApp
-            </h3>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Receba reservas com mensagens pré-formatadas diretamente no seu WhatsApp, facilitando a confirmação e o relacionamento com o cliente.
-            </p>
+            <div className="pt-2 text-[11px] font-semibold text-blue-700 flex items-center gap-1">
+              <span>Customização Completa de Cores</span>
+              <Check className="h-3 w-3" />
+            </div>
+          </div>
+
+          {/* Card 4: Agendamento Direto no WhatsApp */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:border-teal-400 hover:shadow-md transition space-y-3.5 flex flex-col justify-between">
+            <div className="space-y-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                <MessageCircle className="h-5 w-5" />
+              </div>
+              <h3 className="text-sm font-bold text-slate-900 leading-snug">
+                Agendamento Direto no WhatsApp
+              </h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Motor inteligente com <strong>prevenção matemática de conflitos</strong> (anti double-booking) e disparo de mensagens pré-formatadas para o seu WhatsApp.
+              </p>
+            </div>
+            <div className="pt-2 text-[11px] font-semibold text-emerald-700 flex items-center gap-1">
+              <span>Confirmação em 1 Toque</span>
+              <Check className="h-3 w-3" />
+            </div>
           </div>
         </div>
       </section>
@@ -251,44 +298,44 @@ export default async function HomePage() {
         <div className="mx-auto max-w-5xl space-y-12">
           <div className="text-center space-y-2">
             <h2 className="text-xs font-bold uppercase tracking-wider text-teal-700">
-              Simples & Rápido
+              Passo a Passo Descomplicado
             </h2>
             <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
-              Como funciona o EssMendes Local em 3 passos
+              Sua vitrine no ar e vendendo em 3 etapas simples
             </h3>
             <p className="text-xs sm:text-sm text-slate-500 max-w-xl mx-auto">
-              Sem burocracia técnica. Em poucos cliques sua empresa está pronta para receber novos clientes.
+              Sem necessidade de contratar programador ou agência. Você mesmo ativa tudo em minutos.
             </p>
           </div>
 
           <div className="grid gap-8 md:grid-cols-3">
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-teal-800 text-xs font-black text-white">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-800 text-xs font-black text-white">
                 1
               </span>
-              <h4 className="text-sm font-bold text-slate-900">Cadastre seus Serviços</h4>
+              <h4 className="text-sm font-bold text-slate-900">Conecte o Google Maps</h4>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Adicione procedimentos, valores e tempo estimado de atendimento no seu catálogo.
+                Cole o link da sua empresa. O sistema importa fotos, avaliações 5 estrelas e localização instantaneamente.
               </p>
             </div>
 
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-teal-800 text-xs font-black text-white">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-800 text-xs font-black text-white">
                 2
               </span>
-              <h4 className="text-sm font-bold text-slate-900">Divulgue seu Link</h4>
+              <h4 className="text-sm font-bold text-slate-900">Cadastre Serviços e Fotos</h4>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Coloque o link da sua página profissional na bio do Instagram, WhatsApp Business e Google Meu Negócio.
+                Defina valores, tempo de atendimento e crie artes de Antes & Depois com nosso gerador Canvas integrado.
               </p>
             </div>
 
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-teal-800 text-xs font-black text-white">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-800 text-xs font-black text-white">
                 3
               </span>
-              <h4 className="text-sm font-bold text-slate-900">Receba Agendamentos</h4>
+              <h4 className="text-sm font-bold text-slate-900">Receba Clientes 24h por Dia</h4>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Acompanhe as reservas no painel da agenda e receba confirmações prontas pelo WhatsApp.
+                Divulgue seu link na bio do Instagram, WhatsApp e Google. Os agendamentos chegam prontos e confirmados.
               </p>
             </div>
           </div>
@@ -299,109 +346,189 @@ export default async function HomePage() {
       <section id="planos" className="py-20 px-4 sm:px-6">
         <div className="mx-auto max-w-5xl space-y-12">
           <div className="text-center space-y-2">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-teal-700">
-              Transparência Total
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-800 border border-teal-200/60">
+              <Zap className="h-3.5 w-3.5 text-amber-500" />
+              <span>Comece com 7 Dias Grátis sem Cartão</span>
+            </div>
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 pt-1">
+              Planos Transparentes para o seu Negócio Local
             </h2>
-            <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
-              Planos desenhados para cada etapa do seu negócio
-            </h3>
-            <p className="text-xs sm:text-sm text-slate-500 max-w-lg mx-auto">
-              Comece no plano gratuito e faça upgrade apenas quando precisar de escala e recursos avançados.
+            <p className="text-xs sm:text-sm text-slate-500 max-w-xl mx-auto">
+              Experimente todas as ferramentas por 7 dias inteiramente grátis. Escolha o plano que melhor se adapta à sua empresa.
             </p>
           </div>
 
-          <div className="grid gap-8 lg:grid-cols-2 max-w-4xl mx-auto">
-            {/* Card: Free */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-8 space-y-6 flex flex-col justify-between shadow-2xs">
-              <div className="space-y-4">
-                <div>
-                  <h4 className="text-lg font-bold text-slate-900">{PLANS.free.name}</h4>
-                  <p className="text-xs text-slate-500">{PLANS.free.description}</p>
-                </div>
-
-                <div>
-                  <span className="text-4xl font-black text-slate-900">R$ 0</span>
-                  <span className="text-xs text-slate-500"> / mês (para sempre)</span>
-                </div>
-
-                <div className="space-y-2.5 pt-3 border-t border-slate-100">
-                  <p className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                    Incluso no Plano:
-                  </p>
-                  <ul className="space-y-2 text-xs text-slate-600">
-                    {PLANS.free.features.map((f) => (
-                      <li key={f} className="flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                        <span>{f}</span>
-                      </li>
-                    ))}
-                    {PLANS.free.notIncluded?.map((f) => (
-                      <li key={f} className="flex items-center gap-2 text-slate-400">
-                        <XCircle className="h-4 w-4 text-slate-300 shrink-0" />
-                        <span>{f}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-
-              <Link
-                href="/register"
-                className="w-full text-center rounded-xl border border-slate-200 bg-slate-50 py-3 text-xs font-bold text-slate-800 hover:bg-slate-100 transition"
-              >
-                Começar Grátis Agora
-              </Link>
-            </div>
-
-            {/* Card: Pro */}
+          <div className="grid gap-8 lg:grid-cols-2 max-w-4xl mx-auto items-stretch">
+            {/* Card: Plano Pro Mensal */}
             <div className="relative rounded-2xl border-2 border-teal-700 bg-white p-8 space-y-6 flex flex-col justify-between shadow-xl ring-4 ring-teal-700/10">
               <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
                 <span className="inline-flex items-center gap-1 rounded-full bg-teal-800 px-3.5 py-1 text-xs font-bold text-white shadow-sm">
                   <Sparkles className="h-3 w-3 text-amber-300" />
-                  {PLANS.pro.badge}
+                  Mais Popular • Teste Grátis 7 Dias
                 </span>
               </div>
 
               <div className="space-y-4 pt-1">
                 <div>
-                  <h4 className="text-lg font-bold text-slate-900">{PLANS.pro.name}</h4>
-                  <p className="text-xs text-slate-500">{PLANS.pro.description}</p>
+                  <h3 className="text-xl font-bold text-slate-900">Plano Pro Mensal</h3>
+                  <p className="text-xs text-slate-500">
+                    Acesso completo com pagamento mensal sem fidelidade ou multa.
+                  </p>
                 </div>
 
                 <div>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-black text-slate-900">
-                      {formatCurrency(PLANS.pro.priceMonthly)}
-                    </span>
+                    <span className="text-4xl font-black text-slate-900">R$ 97,00</span>
                     <span className="text-xs text-slate-500"> / mês</span>
                   </div>
-                  <p className="text-[11px] text-teal-700 font-semibold mt-0.5">
-                    ou {formatCurrency(PLANS.pro.priceYearly)} no plano anual (2 meses grátis)
+                  <p className="text-[11px] text-teal-700 font-semibold mt-1 flex items-center gap-1">
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    <span>Pix Instantâneo ou Cartão de Crédito em até 12x via Mercado Pago</span>
                   </p>
                 </div>
 
-                <div className="space-y-2.5 pt-3 border-t border-slate-100">
+                <div className="space-y-2.5 pt-4 border-t border-slate-100">
                   <p className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                    Tudo do Gratuito mais:
+                    Recursos Inclusos:
                   </p>
-                  <ul className="space-y-2 text-xs text-slate-700">
-                    {PLANS.pro.features.map((f) => (
-                      <li key={f} className="flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0" />
-                        <span className="font-medium">{f}</span>
-                      </li>
-                    ))}
+                  <ul className="space-y-2.5 text-xs text-slate-700">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0" />
+                      <span className="font-semibold text-slate-900">7 Dias de Teste Grátis</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0" />
+                      <span>Sincronização em tempo real com Google Maps & Reviews</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0" />
+                      <span>Cálculo preciso de horários (Fuso de Brasília)</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0" />
+                      <span>Gerador Canvas de Antes & Depois para redes sociais</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0" />
+                      <span>Temas especializados por nicho (Oficina, Saúde, Gastronomia, etc.)</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0" />
+                      <span>Agendamentos e clientes ilimitados com anti double-booking</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0" />
+                      <span>Confirmação e conversão direta no WhatsApp</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0" />
+                      <span>SEO Local Avançado com Schema.org LocalBusiness</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0" />
+                      <span>Suporte prioritário via WhatsApp</span>
+                    </li>
                   </ul>
                 </div>
               </div>
 
-              <Link
-                href="/register"
-                className="flex items-center justify-center gap-2 w-full text-center rounded-xl bg-teal-800 py-3.5 text-sm font-bold text-white shadow-md hover:bg-teal-900 transition"
-              >
-                <span>Criar Conta no Plano Pro</span>
-                <ArrowRight className="h-4 w-4" />
-              </Link>
+              <div className="pt-2">
+                <Link
+                  href="/register"
+                  className="flex items-center justify-center gap-2 w-full text-center rounded-xl bg-teal-800 py-3.5 text-sm font-bold text-white shadow-md hover:bg-teal-900 active:scale-[0.99] transition cursor-pointer"
+                >
+                  <span>Começar Teste Grátis de 7 Dias</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <p className="text-[11px] text-center text-slate-400 mt-2">
+                  Sem cartão necessário para iniciar o teste.
+                </p>
+              </div>
+            </div>
+
+            {/* Card: Plano Pro Anual */}
+            <div className="relative rounded-2xl border border-amber-300 bg-gradient-to-b from-amber-50/40 via-white to-white p-8 space-y-6 flex flex-col justify-between shadow-lg">
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-600 px-3.5 py-1 text-xs font-bold text-white shadow-sm">
+                  <Sparkles className="h-3 w-3 text-amber-200" />
+                  Melhor Custo-Benefício • 2 Meses Grátis
+                </span>
+              </div>
+
+              <div className="space-y-4 pt-1">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">Plano Pro Anual</h3>
+                  <p className="text-xs text-slate-500">
+                    Máxima economia com 2 meses gratuitos e setup assistido pela equipe.
+                  </p>
+                </div>
+
+                <div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-4xl font-black text-slate-900">R$ 970,00</span>
+                    <span className="text-xs text-slate-500"> / ano</span>
+                  </div>
+                  <p className="text-[11px] text-amber-700 font-bold mt-1">
+                    Equivalente a R$ 80,83/mês • Economia real de R$ 194,00 no ano
+                  </p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Parcelamento em até 12x no cartão ou Pix via Mercado Pago
+                  </p>
+                </div>
+
+                <div className="space-y-2.5 pt-4 border-t border-slate-100">
+                  <p className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                    Tudo do Plano Pro mais:
+                  </p>
+                  <ul className="space-y-2.5 text-xs text-slate-700">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-amber-600 shrink-0" />
+                      <span className="font-semibold text-slate-900">2 Meses Inteiramente Grátis</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-amber-600 shrink-0" />
+                      <span className="font-semibold text-slate-900">Setup Assistido & Configuração Inicial Guiada</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-amber-600 shrink-0" />
+                      <span>Sincronização em tempo real com Google Maps & Reviews</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-amber-600 shrink-0" />
+                      <span>Cálculo preciso de horários com Horário de Brasília</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-amber-600 shrink-0" />
+                      <span>Gerador Canvas de Antes & Depois para redes sociais</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-amber-600 shrink-0" />
+                      <span>Temas especializados por nicho (Oficina, Saúde, Gastronomia, etc.)</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-amber-600 shrink-0" />
+                      <span>Suporte VIP e consultoria de SEO Local via WhatsApp</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-amber-600 shrink-0" />
+                      <span>Suporte para conexão de domínio próprio (.com.br)</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <Link
+                  href="/register"
+                  className="flex items-center justify-center gap-2 w-full text-center rounded-xl bg-amber-600 py-3.5 text-sm font-bold text-white shadow-md hover:bg-amber-700 active:scale-[0.99] transition cursor-pointer"
+                >
+                  <span>Assinar Plano Anual com Desconto</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <p className="text-[11px] text-center text-slate-400 mt-2">
+                  Ativação imediata com 2 meses grátis.
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -417,6 +544,9 @@ export default async function HomePage() {
             <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
               Perguntas Frequentes
             </h3>
+            <p className="text-xs sm:text-sm text-slate-500">
+              Tudo o que você precisa saber sobre o teste grátis, planos e integrações.
+            </p>
           </div>
 
           <div className="space-y-4">
@@ -441,18 +571,22 @@ export default async function HomePage() {
       {/* Final CTA Banner */}
       <section className="bg-gradient-to-r from-teal-950 via-teal-900 to-teal-800 text-white py-16 px-4 sm:px-6 text-center">
         <div className="mx-auto max-w-3xl space-y-6">
+          <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3.5 py-1 text-xs font-semibold text-teal-200">
+            <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+            <span>Sem burocracia • Ativação em 3 minutos</span>
+          </div>
           <h2 className="text-2xl sm:text-4xl font-extrabold">
-            Pronto para profissionalizar a presença digital do seu negócio?
+            Pronto para colocar seu negócio local no topo do Google?
           </h2>
           <p className="text-xs sm:text-sm text-teal-100/90 max-w-xl mx-auto">
-            Crie sua conta agora mesmo e comece a receber agendamentos online hoje.
+            Comece seu teste grátis de 7 dias agora mesmo e transforme sua presença digital em uma máquina de agendamentos.
           </p>
           <div className="pt-2">
             <Link
               href="/register"
-              className="inline-flex items-center gap-2 rounded-xl bg-white px-8 py-3.5 text-sm font-extrabold text-teal-950 shadow-xl hover:bg-teal-50 transition"
+              className="inline-flex items-center gap-2 rounded-xl bg-white px-8 py-4 text-sm font-extrabold text-teal-950 shadow-xl hover:bg-teal-50 active:scale-[0.99] transition cursor-pointer"
             >
-              <span>Começar Grátis Agora</span>
+              <span>Começar Teste Grátis de 7 Dias</span>
               <ArrowRight className="h-4 w-4 text-teal-800" />
             </Link>
           </div>
@@ -467,13 +601,13 @@ export default async function HomePage() {
               EssMendes Local
             </span>
             <p className="text-slate-400 text-[11px]">
-              Plataforma de presença digital e geração de clientes para negócios locais.
+              Plataforma de presença digital, SEO local e agendamentos inteligentes para negócios locais.
             </p>
           </div>
 
           <div className="text-center sm:text-right text-[11px] text-slate-400 space-y-1">
             <p>© {new Date().getFullYear()} EssMendes Tecnologia. Todos os direitos reservados.</p>
-            <p>Desenvolvido com foco em performance, SEO e conversão.</p>
+            <p>Desenvolvido com foco em alta performance, SEO Schema.org e conversão.</p>
           </div>
         </div>
       </footer>
