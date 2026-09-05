@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { MercadoPagoConfig, Preference } from "mercadopago";
+import { MercadoPagoConfig, Payment } from "mercadopago";
 import { getAuthenticatedTenant } from "@/lib/supabase/tenant";
 
 export async function POST(req: Request) {
   try {
     const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
     if (!accessToken) {
-      console.error("[MP-Checkout] MERCADO_PAGO_ACCESS_TOKEN não configurado no ambiente.");
+      console.error("[MP-Checkout] MERCADO_PAGO_ACCESS_TOKEN não configurado no servidor.");
       return NextResponse.json(
         { error: "Configuração do Mercado Pago ausente no servidor." },
         { status: 500 }
@@ -15,7 +15,6 @@ export async function POST(req: Request) {
 
     const client = new MercadoPagoConfig({ accessToken });
 
-    // Tenta obter dados do corpo da requisição
     let body: any = {};
     try {
       body = await req.json();
@@ -26,8 +25,8 @@ export async function POST(req: Request) {
     let tenantId = body.tenantId;
     let tenantName = body.tenantName;
     let email = body.email || body.payerEmail;
-    let payerName = body.payerName || body.name || body.fullName;
     let payerCpf = body.payerCpf || body.cpf || body.cnpj || body.identification;
+    let payerName = body.payerName || body.name || body.fullName;
 
     // Se estiver autenticado, garante ou complementa com os dados reais da sessão do tenant
     const { data: authContext } = await getAuthenticatedTenant();
@@ -55,64 +54,40 @@ export async function POST(req: Request) {
     }
 
     tenantName = tenantName || "Estabelecimento";
-    payerCpf = payerCpf || process.env.DEFAULT_PAYER_CPF || "11144477735";
 
-    const rawAppUrl = process.env.NEXT_PUBLIC_APP_URL || "https://local.essmendes.com.br";
-    const appUrl = rawAppUrl.replace(/\/$/, "");
-    const isLocalhost = appUrl.includes("localhost") || appUrl.includes("127.0.0.1");
+    const payment = new Payment(client);
 
-    const preference = new Preference(client);
-    const response = await preference.create({
+    const result = await payment.create({
       body: {
-        items: [
-          {
-            id: "plano-pro-mensal",
-            title: `Mensalidade Vitrine EssMendes - ${tenantName}`,
-            quantity: 1,
-            unit_price: 97.00,
-            currency_id: "BRL",
-          },
-        ],
+        transaction_amount: 97.00,
+        description: `Mensalidade Vitrine EssMendes - ${tenantName}`,
+        payment_method_id: "pix",
         payer: {
-          name: payerName ? payerName.split(" ")[0] : "Cliente",
-          surname: payerName ? payerName.split(" ").slice(1).join(" ") || "Assinante" : "EssMendes",
-          email: email || "contato@essmendes.com.br",
-          ...(payerCpf ? {
-            identification: {
-              type: payerCpf.replace(/\D/g, "").length > 11 ? "CNPJ" : "CPF",
-              number: payerCpf.replace(/\D/g, ""),
-            },
-          } : {}),
-        },
-        payment_methods: {
-          excluded_payment_types: [],
-          installments: 12,
+          email: email || "cliente@essmendes.com.br",
+          first_name: payerName ? payerName.split(" ")[0] : "Cliente",
+          last_name: payerName ? payerName.split(" ").slice(1).join(" ") || "Local" : "EssMendes",
+          identification: {
+            type: payerCpf && payerCpf.replace(/\D/g, "").length > 11 ? "CNPJ" : "CPF",
+            number: payerCpf ? payerCpf.replace(/\D/g, "") : "00000000000",
+          },
         },
         external_reference: tenantId,
-        back_urls: {
-          success: `${appUrl}/admin/assinatura?status=success`,
-          pending: `${appUrl}/admin/assinatura?status=pending`,
-          failure: `${appUrl}/admin/assinatura?status=failure`,
-        },
-        // O Mercado Pago só aceita auto_return: 'approved' quando a URL de retorno não for localhost
-        ...(isLocalhost ? {} : { auto_return: "approved" as const }),
-        ...(appUrl.startsWith("https://")
-          ? { notification_url: `${appUrl}/api/webhooks/mercadopago` }
-          : {}),
       },
     });
 
+    const pointOfInteraction = result.point_of_interaction?.transaction_data;
+
     return NextResponse.json({
-      init_point: response.init_point,
-      id: response.id,
+      success: true,
+      paymentId: result.id,
+      qrCode: pointOfInteraction?.qr_code, // Código copia e cola
+      qrCodeBase64: pointOfInteraction?.qr_code_base64, // Imagem do QR Code em base64
+      ticketUrl: pointOfInteraction?.ticket_url,
     });
   } catch (error: any) {
-    console.error("[MP-Checkout] Erro ao criar preferência no Mercado Pago:", error);
+    console.error("Erro ao gerar Pix MP:", error);
     return NextResponse.json(
-      {
-        error: error?.message || "Falha ao processar checkout com Mercado Pago.",
-        details: error?.cause || null,
-      },
+      { error: error?.message || "Falha ao gerar Pix" },
       { status: 500 }
     );
   }
