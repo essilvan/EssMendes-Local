@@ -25,14 +25,26 @@ export async function POST(req: Request) {
 
     let tenantId = body.tenantId;
     let tenantName = body.tenantName;
-    let email = body.email;
+    let email = body.email || body.payerEmail;
+    let payerName = body.payerName || body.name || body.fullName;
+    let payerCpf = body.payerCpf || body.cpf || body.cnpj || body.identification;
 
     // Se estiver autenticado, garante ou complementa com os dados reais da sessão do tenant
     const { data: authContext } = await getAuthenticatedTenant();
     if (authContext?.tenant) {
-      tenantId = authContext.tenantId;
+      tenantId = authContext.tenantId || tenantId;
       tenantName = tenantName || authContext.tenant.name;
       email = email || authContext.user.email;
+      payerName =
+        payerName ||
+        (authContext.user.user_metadata?.full_name as string) ||
+        (authContext.user.user_metadata?.name as string) ||
+        authContext.tenant.name;
+      payerCpf =
+        payerCpf ||
+        (authContext.user.user_metadata?.cpf as string) ||
+        (authContext.user.user_metadata?.cnpj as string) ||
+        (authContext.tenant as any)?.document;
     }
 
     if (!tenantId) {
@@ -43,13 +55,14 @@ export async function POST(req: Request) {
     }
 
     tenantName = tenantName || "Estabelecimento";
-    const payerEmail = email || "cliente@essmendes.com.br";
+    payerCpf = payerCpf || process.env.DEFAULT_PAYER_CPF || "11144477735";
 
-    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
+    const rawAppUrl = process.env.NEXT_PUBLIC_APP_URL || "https://local.essmendes.com.br";
+    const appUrl = rawAppUrl.replace(/\/$/, "");
     const isLocalhost = appUrl.includes("localhost") || appUrl.includes("127.0.0.1");
 
     const preference = new Preference(client);
-    const preferencePayload: Parameters<typeof preference.create>[0] = {
+    const response = await preference.create({
       body: {
         items: [
           {
@@ -61,7 +74,19 @@ export async function POST(req: Request) {
           },
         ],
         payer: {
-          email: payerEmail,
+          name: payerName ? payerName.split(" ")[0] : "Cliente",
+          surname: payerName ? payerName.split(" ").slice(1).join(" ") || "Assinante" : "EssMendes",
+          email: email || "contato@essmendes.com.br",
+          ...(payerCpf ? {
+            identification: {
+              type: payerCpf.replace(/\D/g, "").length > 11 ? "CNPJ" : "CPF",
+              number: payerCpf.replace(/\D/g, ""),
+            },
+          } : {}),
+        },
+        payment_methods: {
+          excluded_payment_types: [],
+          installments: 12,
         },
         external_reference: tenantId,
         back_urls: {
@@ -75,9 +100,7 @@ export async function POST(req: Request) {
           ? { notification_url: `${appUrl}/api/webhooks/mercadopago` }
           : {}),
       },
-    };
-
-    const response = await preference.create(preferencePayload);
+    });
 
     return NextResponse.json({
       init_point: response.init_point,

@@ -229,6 +229,8 @@ export default async function AdminAssinaturaPage({ searchParams }: AssinaturaPa
             tenantId={tenantContext.tenantId}
             tenantName={tenant?.name || "Meu Estabelecimento"}
             userEmail={user.email || ""}
+            payerName={(user.user_metadata?.full_name as string) || (user.user_metadata?.name as string) || tenant?.name || ""}
+            payerCpf={(user.user_metadata?.cpf as string) || (user.user_metadata?.cnpj as string) || ""}
             label="Renovar / Assinar Plano Mensal (R$ 97,00) via Pix ou Cartão"
           />
         </div>

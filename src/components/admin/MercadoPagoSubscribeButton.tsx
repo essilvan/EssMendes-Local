@@ -8,6 +8,8 @@ interface MercadoPagoSubscribeButtonProps {
   tenantId: string;
   tenantName: string;
   userEmail?: string;
+  payerName?: string;
+  payerCpf?: string;
   label?: string;
   className?: string;
   size?: "default" | "lg";
@@ -17,6 +19,8 @@ export function MercadoPagoSubscribeButton({
   tenantId,
   tenantName,
   userEmail = "",
+  payerName = "",
+  payerCpf = "",
   label = "Renovar / Assinar Plano Mensal (R$ 97,00) via Pix ou Cartão",
   className = "",
   size = "lg",
@@ -38,6 +42,8 @@ export function MercadoPagoSubscribeButton({
           tenantId,
           tenantName,
           email: userEmail,
+          payerName,
+          payerCpf,
         }),
       });
 

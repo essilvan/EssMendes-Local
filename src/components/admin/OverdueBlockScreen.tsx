@@ -61,6 +61,7 @@ export function OverdueBlockScreen({
             tenantId={tenant.id}
             tenantName={tenant.name}
             userEmail={userEmail}
+            payerName={tenant.name}
             label="Regularizar e Pagar Agora (R$ 97,00) via Pix ou Cartão"
           />
         </div>
