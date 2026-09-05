@@ -132,9 +132,16 @@ export function AdminSidebar({
       superAdminOnly: true, // Oculto para lojista comum para simplificar a interface
     },
     {
-      name: "Faturamento",
-      href: "/admin/faturamento",
+      name: "Assinatura Pro",
+      href: "/admin/assinatura",
       icon: CreditCard,
+      current: pathname.startsWith("/admin/assinatura"),
+      superAdminOnly: false,
+    },
+    {
+      name: "Faturamento & Planos",
+      href: "/admin/faturamento",
+      icon: Sparkles,
       current: pathname.startsWith("/admin/faturamento"),
       superAdminOnly: false,
     },

@@ -17,6 +17,9 @@ export interface AuthenticatedTenantContext {
     name: string;
     slug: string;
     plan_tier: string;
+    subscription_status?: string | null;
+    current_period_end?: string | null;
+    mp_payment_id?: string | null;
   };
 }
 
@@ -104,7 +107,7 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
     // 3. Obter vínculo em tenant_users
     const { data: tenantUser, error: tenantUserError } = await supabase
       .from("tenant_users")
-      .select("tenant_id, role, tenants(id, name, slug, plan_tier)")
+      .select("tenant_id, role, tenants(id, name, slug, plan_tier, subscription_status, current_period_end, mp_payment_id)")
       .eq("user_id", user.id)
       .maybeSingle();
 
@@ -125,7 +128,7 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
       if (targetTenantId) {
         const { data: targetTenant, error: targetError } = await supabase
           .from("tenants")
-          .select("id, name, slug, plan_tier")
+          .select("id, name, slug, plan_tier, subscription_status, current_period_end, mp_payment_id")
           .eq("id", targetTenantId)
           .maybeSingle();
 
@@ -158,6 +161,9 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
                 name: targetTenant.name,
                 slug: targetTenant.slug,
                 plan_tier: targetTenant.plan_tier,
+                subscription_status: (targetTenant as any).subscription_status,
+                current_period_end: (targetTenant as any).current_period_end,
+                mp_payment_id: (targetTenant as any).mp_payment_id,
               },
             },
             error: null,
@@ -187,6 +193,9 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
                   name: currentT.name,
                   slug: currentT.slug,
                   plan_tier: currentT.plan_tier,
+                  subscription_status: (currentT as any).subscription_status,
+                  current_period_end: (currentT as any).current_period_end,
+                  mp_payment_id: (currentT as any).mp_payment_id,
                 }
               : undefined,
           },
@@ -197,7 +206,7 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
       // Se super admin não tem vínculo direto em tenant_users, pega o primeiro tenant do sistema
       const { data: firstTenant } = await supabase
         .from("tenants")
-        .select("id, name, slug, plan_tier")
+        .select("id, name, slug, plan_tier, subscription_status, current_period_end, mp_payment_id")
         .order("created_at", { ascending: true })
         .limit(1)
         .maybeSingle();
@@ -220,6 +229,9 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
               name: firstTenant.name,
               slug: firstTenant.slug,
               plan_tier: firstTenant.plan_tier,
+              subscription_status: (firstTenant as any).subscription_status,
+              current_period_end: (firstTenant as any).current_period_end,
+              mp_payment_id: (firstTenant as any).mp_payment_id,
             },
           },
           error: null,
@@ -257,6 +269,9 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
               name: tenant.name,
               slug: tenant.slug,
               plan_tier: tenant.plan_tier,
+              subscription_status: (tenant as any).subscription_status,
+              current_period_end: (tenant as any).current_period_end,
+              mp_payment_id: (tenant as any).mp_payment_id,
             }
           : undefined,
       },

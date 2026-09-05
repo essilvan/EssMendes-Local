@@ -1,7 +1,9 @@
 import { getAuthenticatedTenant } from "@/lib/supabase/tenant";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { OverdueBlockScreen } from "@/components/admin/OverdueBlockScreen";
 import { clearManagedTenantAction } from "@/services/super-admin.actions";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { ShieldCheck, ArrowLeft, X } from "lucide-react";
 import { getTenantPublicUrl } from "@/utils/tenant-url";
@@ -33,6 +35,12 @@ export default async function AdminLayout({
     "Meu Estabelecimento";
 
   const companySlug = tenant?.slug || "meu-negocio";
+
+  const headerList = await headers();
+  const currentPath = headerList.get("x-pathname") || "";
+
+  const isOverdue = !isSuperAdmin && tenant?.subscription_status === "overdue";
+  const isAssinaturaPage = currentPath.includes("/admin/assinatura");
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
@@ -146,7 +154,18 @@ export default async function AdminLayout({
 
           {/* Conteúdo das Páginas */}
           <main className="flex-1 p-4 sm:p-8 max-w-6xl w-full mx-auto">
-            {children}
+            {isOverdue && !isAssinaturaPage ? (
+              <OverdueBlockScreen
+                tenant={{
+                  id: tenantContext.tenantId,
+                  name: companyName,
+                  slug: companySlug,
+                }}
+                userEmail={user.email || ""}
+              />
+            ) : (
+              children
+            )}
           </main>
         </div>
       </div>

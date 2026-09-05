@@ -265,27 +265,24 @@ export default async function AdminFaturamentoPage() {
               </div>
             </div>
 
-            <div className="pt-4">
-              {currentPlanTier === "pro" ? (
-                <button
-                  type="button"
-                  disabled
-                  className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-xs font-bold text-white text-center shadow-sm cursor-default"
-                >
-                  ✓ Seu Plano Pro está Ativo
-                </button>
-              ) : (
-                <a
-                  href="https://wa.me/5511999999999?text=Olá!%20Gostaria%20de%20fazer%20upgrade%20para%20o%20Plano%20Pro%20do%20EssMendes%20Local."
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full rounded-xl bg-teal-800 px-4 py-3 text-sm font-bold text-white shadow-md hover:bg-teal-900 transition"
-                >
-                  <span>Fazer Upgrade para o Pro</span>
-                  <ArrowRight className="h-4 w-4" />
-                </a>
-              )}
-            </div>
+              <div className="pt-4">
+                {currentPlanTier === "pro" ? (
+                  <Link
+                    href="/admin/assinatura"
+                    className="block w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 transition px-4 py-3 text-xs font-bold text-white text-center shadow-sm"
+                  >
+                    ✓ Gerenciar Assinatura Pro
+                  </Link>
+                ) : (
+                  <Link
+                    href="/admin/assinatura"
+                    className="flex items-center justify-center gap-2 w-full rounded-xl bg-teal-800 px-4 py-3 text-sm font-bold text-white shadow-md hover:bg-teal-900 transition"
+                  >
+                    <span>Fazer Upgrade para o Pro (R$ 97/mês)</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                )}
+              </div>
           </div>
         </div>
       </div>

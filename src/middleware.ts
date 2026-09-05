@@ -26,9 +26,12 @@ export async function middleware(request: NextRequest) {
 
   // 2. Proteção de Autenticação para /admin e /super-admin
   if (url.pathname.startsWith("/super-admin") || url.pathname.startsWith("/admin")) {
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-pathname", url.pathname);
+
     let response = NextResponse.next({
       request: {
-        headers: request.headers,
+        headers: requestHeaders,
       },
     });
 
@@ -46,7 +49,9 @@ export async function middleware(request: NextRequest) {
               request.cookies.set(name, value)
             );
             response = NextResponse.next({
-              request,
+              request: {
+                headers: requestHeaders,
+              },
             });
             cookiesToSet.forEach(
               ({ name, value, options }: { name: string; value: string; options?: any }) =>

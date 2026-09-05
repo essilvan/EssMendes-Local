@@ -33,6 +33,9 @@ export interface Tenant {
   phone?: string | null;
   custom_domain?: string | null;
   plan_tier: "free" | "pro" | "enterprise";
+  subscription_status?: "active" | "trialing" | "pending" | "overdue" | "canceled" | null;
+  current_period_end?: string | null;
+  mp_payment_id?: string | null;
   google_rating?: number | null;
   google_reviews_count?: number | null;
   presence_score?: number | null;
