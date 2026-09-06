@@ -81,8 +81,10 @@ export function TenantAccessModal({
     setIsCopied(false);
   };
 
+  const loginUrl = "https://app.essmendes.com.br/login";
+
   const getWhatsAppMessage = () => {
-    return `Olá! Segue seu acesso à plataforma EssMendes:\nLink: https://essmendes.com.br/login\nLogin: ${email}\nSenha: ${password}`;
+    return `Olá! Segue seu acesso à plataforma EssMendes:\nLink: ${loginUrl}\nLogin: ${email}\nSenha: ${password}`;
   };
 
   const handleCopyWhatsApp = async () => {
@@ -225,7 +227,15 @@ export function TenantAccessModal({
               className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs text-slate-900 placeholder-slate-400 shadow-2xs focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
             />
             <span className="text-[10px] text-slate-400">
-              O lojista usará este e-mail para fazer login em essmendes.com.br/login
+              O lojista usará este e-mail para fazer login em{" "}
+              <a
+                href={loginUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-teal-700 hover:underline"
+              >
+                app.essmendes.com.br/login
+              </a>
             </span>
           </div>
 
@@ -362,10 +372,13 @@ export function TenantAccessModal({
 
         {/* Seção WhatsApp: Copiar Dados Prontos */}
         <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 space-y-2.5 text-xs">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-1">
             <span className="font-bold text-emerald-900 flex items-center gap-1.5">
               <MessageSquare className="h-4 w-4 text-emerald-600" />
               Dados de Acesso para Enviar no WhatsApp
+            </span>
+            <span className="font-mono text-[10px] text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200">
+              {loginUrl}
             </span>
           </div>
 
