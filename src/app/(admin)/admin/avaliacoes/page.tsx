@@ -27,6 +27,10 @@ export default async function AdminAvaliacoesPage() {
     );
   }
 
+  if (!tenantContext.isSuperAdmin && tenantContext.tenant?.permissions?.reviews === false) {
+    redirect("/admin/dashboard?error=recurso_indisponivel");
+  }
+
   const supabase = await createClient();
 
   // Busca perfil e dados do negócio

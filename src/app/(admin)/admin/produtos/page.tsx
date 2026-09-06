@@ -27,6 +27,10 @@ export default async function AdminProdutosPage() {
     );
   }
 
+  if (!tenantContext.isSuperAdmin && tenantContext.tenant?.permissions?.showcase === false) {
+    redirect("/admin/dashboard?error=recurso_indisponivel");
+  }
+
   const supabase = await createClient();
 
   // Busca dados de perfil (para obter telefone de WhatsApp)

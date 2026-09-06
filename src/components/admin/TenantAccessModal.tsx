@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import type { SuperAdminTenantItem } from "@/types";
+import type { SuperAdminTenantItem, TenantPermissions } from "@/types";
+import { DEFAULT_TENANT_PERMISSIONS } from "@/types";
 import {
   Key,
   X,
@@ -16,13 +17,16 @@ import {
   EyeOff,
   Store,
   ExternalLink,
+  Shield,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 
 interface TenantAccessModalProps {
   isOpen: boolean;
   onClose: () => void;
   tenant: SuperAdminTenantItem | null;
-  onSuccess?: (tenantId: string, updatedEmail: string) => void;
+  onSuccess?: (tenantId: string, updatedEmail: string, updatedPermissions?: TenantPermissions) => void;
 }
 
 function generateRandomPassword(length = 8): string {
@@ -44,6 +48,8 @@ export function TenantAccessModal({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(true);
+  const [permissions, setPermissions] = useState<TenantPermissions>(DEFAULT_TENANT_PERMISSIONS);
+  const [showPermissionsSection, setShowPermissionsSection] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -54,6 +60,14 @@ export function TenantAccessModal({
       setEmail(tenant.contact_email || "");
       setPassword(generateRandomPassword(8));
       setShowPassword(true);
+      setPermissions({
+        showcase: tenant.permissions?.showcase !== false,
+        services: tenant.permissions?.services !== false,
+        before_after: tenant.permissions?.before_after !== false,
+        reviews: tenant.permissions?.reviews !== false,
+        settings: tenant.permissions?.settings !== false,
+        billing: tenant.permissions?.billing !== false,
+      });
       setErrorMessage(null);
       setSuccessMessage(null);
       setIsCopied(false);
@@ -129,6 +143,7 @@ export function TenantAccessModal({
           tenantId: tenant.id,
           email: cleanEmail,
           password: cleanPassword,
+          permissions,
         }),
       });
 
@@ -136,9 +151,9 @@ export function TenantAccessModal({
 
       if (data.success) {
         setSuccessMessage(
-          data.message || "Acesso ativado com sucesso! As credenciais já estão prontas para envio."
+          data.message || "Acesso ativado com sucesso! As credenciais e permissões já estão ativas."
         );
-        onSuccess?.(tenant.id, cleanEmail);
+        onSuccess?.(tenant.id, cleanEmail, permissions);
       } else {
         setErrorMessage(data.error || "Erro ao gerar credenciais de acesso.");
       }
@@ -252,6 +267,63 @@ export function TenantAccessModal({
             <span className="text-[10px] text-slate-400">
               Mínimo de 6 dígitos. A senha é gerada automaticamente para facilitar o envio rápido.
             </span>
+          </div>
+
+          {/* Seção de Permissões de Menus */}
+          <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3.5 space-y-3">
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setShowPermissionsSection(!showPermissionsSection)}
+                className="flex items-center gap-1.5 text-xs font-bold text-slate-800 hover:text-slate-950 transition cursor-pointer"
+              >
+                <Shield className="h-3.5 w-3.5 text-purple-700" />
+                <span>Privilégios & Menus Liberados</span>
+                {showPermissionsSection ? (
+                  <ChevronUp className="h-3.5 w-3.5 text-slate-400" />
+                ) : (
+                  <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                )}
+              </button>
+              <span className="text-[10px] text-slate-500 font-medium">
+                {Object.values(permissions).filter(Boolean).length} de 6 liberados
+              </span>
+            </div>
+
+            {showPermissionsSection && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                {[
+                  { key: "showcase" as const, label: "Vitrine & Perfil (showcase)" },
+                  { key: "services" as const, label: "Serviços & Catálogo (services)" },
+                  { key: "before_after" as const, label: "Antes e Depois (before_after)" },
+                  { key: "reviews" as const, label: "Avaliações Google (reviews)" },
+                  { key: "settings" as const, label: "Configurações (settings)" },
+                  { key: "billing" as const, label: "Faturamento & Plano (billing)" },
+                ].map((item) => (
+                  <label
+                    key={item.key}
+                    className={`flex items-center gap-2 p-2 rounded-lg border text-[11px] font-semibold transition cursor-pointer ${
+                      permissions[item.key]
+                        ? "border-teal-300 bg-teal-50/50 text-teal-950"
+                        : "border-slate-200 bg-white text-slate-400"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={permissions[item.key]}
+                      onChange={() =>
+                        setPermissions((prev) => ({
+                          ...prev,
+                          [item.key]: !prev[item.key],
+                        }))
+                      }
+                      className="rounded border-slate-300 text-teal-700 focus:ring-teal-600 h-3.5 w-3.5"
+                    />
+                    <span className="truncate">{item.label}</span>
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
 
           {errorMessage && (

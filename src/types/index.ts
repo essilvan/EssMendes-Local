@@ -23,8 +23,27 @@ export interface SuperAdminTenantItem {
   total_products: number;
   presence_score: number;
   status: string;
+  permissions?: TenantPermissions | null;
   created_at: string;
 }
+
+export interface TenantPermissions {
+  showcase: boolean;    // Edição da Vitrine / Banner / Bio / Produtos
+  services: boolean;    // Catálogo de Serviços e Preços
+  before_after: boolean;// Gerador de Antes e Depois (Canvas)
+  reviews: boolean;     // Gerenciamento de Avaliações Google
+  settings: boolean;    // Configurações Gerais (Horários, WhatsApp, Cores)
+  billing: boolean;     // Assinatura e Pagamentos
+}
+
+export const DEFAULT_TENANT_PERMISSIONS: TenantPermissions = {
+  showcase: true,
+  services: true,
+  before_after: true,
+  reviews: true,
+  settings: true,
+  billing: true,
+};
 
 export interface Tenant {
   id: string;
@@ -38,6 +57,7 @@ export interface Tenant {
   subscription_status?: "active" | "trialing" | "pending" | "overdue" | "canceled" | null;
   current_period_end?: string | null;
   mp_payment_id?: string | null;
+  permissions?: TenantPermissions | null;
   google_rating?: number | null;
   google_reviews_count?: number | null;
   presence_score?: number | null;

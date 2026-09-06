@@ -195,6 +195,7 @@ ON CONFLICT (id) DO UPDATE SET role = 'super_admin';`}
       city,
       phone,
       contact_email: (t as any).contact_email || null,
+      permissions: (t as any).permissions || null,
       logo_url: logoUrl,
       google_rating: googleRating,
       google_reviews_count: googleReviews,

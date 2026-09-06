@@ -26,6 +26,10 @@ export default async function ConfiguracoesPage() {
     );
   }
 
+  if (!tenantContext.isSuperAdmin && tenantContext.tenant?.permissions?.settings === false) {
+    redirect("/admin/dashboard?error=recurso_indisponivel");
+  }
+
   const supabase = await createClient();
 
   // Busca dados de perfil do tenant

@@ -9,10 +9,11 @@ import {
   clearManagedTenantAction,
   syncTenantGoogleHoursAction,
 } from "@/services/super-admin.actions";
-import type { SuperAdminTenantItem } from "@/types";
+import type { SuperAdminTenantItem, TenantPermissions } from "@/types";
 import { NewTenantModal } from "@/components/admin/NewTenantModal";
 import { TenantAccessModal } from "@/components/admin/TenantAccessModal";
 import { TenantDeleteModal } from "@/components/admin/TenantDeleteModal";
+import { TenantPermissionsModal } from "@/components/admin/TenantPermissionsModal";
 import {
   Building2,
   Plus,
@@ -38,6 +39,7 @@ import {
   RefreshCw,
   Key,
   Trash2,
+  Shield,
 } from "lucide-react";
 import { getTenantPublicUrl, getTenantDisplayDomain } from "@/utils/tenant-url";
 
@@ -64,9 +66,10 @@ export function SuperAdminDashboard({
   const [syncingTenantId, setSyncingTenantId] = useState<string | null>(null);
   const [syncStatusMsg, setSyncStatusMsg] = useState<{ id: string; text: string; isError?: boolean } | null>(null);
 
-  // Modais de Acesso Master e Exclusão
+  // Modais de Acesso Master, Exclusão e Permissões
   const [accessModalTenant, setAccessModalTenant] = useState<SuperAdminTenantItem | null>(null);
   const [deleteModalTenant, setDeleteModalTenant] = useState<SuperAdminTenantItem | null>(null);
+  const [permissionsModalTenant, setPermissionsModalTenant] = useState<SuperAdminTenantItem | null>(null);
   const [isDeletingTenant, setIsDeletingTenant] = useState(false);
   const [feedbackNotification, setFeedbackNotification] = useState<{
     type: "success" | "error";
@@ -101,13 +104,40 @@ export function SuperAdminDashboard({
     }
   };
 
-  const handleCredentialsSuccess = (tenantId: string, updatedEmail: string) => {
+  const handleCredentialsSuccess = (
+    tenantId: string,
+    updatedEmail: string,
+    updatedPermissions?: TenantPermissions
+  ) => {
     setTenants((prev) =>
-      prev.map((t) => (t.id === tenantId ? { ...t, contact_email: updatedEmail } : t))
+      prev.map((t) =>
+        t.id === tenantId
+          ? {
+              ...t,
+              contact_email: updatedEmail,
+              permissions: updatedPermissions || t.permissions,
+            }
+          : t
+      )
     );
     setFeedbackNotification({
       type: "success",
       message: `Acesso ativado com sucesso para "${updatedEmail}"!`,
+    });
+  };
+
+  const handlePermissionsSuccess = (
+    tenantId: string,
+    updatedPermissions: TenantPermissions
+  ) => {
+    setTenants((prev) =>
+      prev.map((t) =>
+        t.id === tenantId ? { ...t, permissions: updatedPermissions } : t
+      )
+    );
+    setFeedbackNotification({
+      type: "success",
+      message: "Permissões de menus do estabelecimento atualizadas com sucesso!",
     });
   };
 
@@ -514,6 +544,17 @@ export function SuperAdminDashboard({
                               <span>🔑 Gerar Acesso</span>
                             </button>
 
+                            {/* Botão Privilégios & Permissões */}
+                            <button
+                              type="button"
+                              onClick={() => setPermissionsModalTenant(t)}
+                              title="🛡️ Gerenciar Permissões e Menus deste Estabelecimento"
+                              className="inline-flex items-center gap-1 rounded-lg border border-purple-200 bg-purple-50 px-2.5 py-1.5 text-[11px] font-bold text-purple-900 hover:bg-purple-100 hover:border-purple-300 transition shadow-2xs cursor-pointer"
+                            >
+                              <Shield className="h-3.5 w-3.5 text-purple-700" />
+                              <span>🛡️ Permissões</span>
+                            </button>
+
                             {/* Botão Ressincronizar Horários Google Places */}
                             <button
                               type="button"
@@ -630,6 +671,14 @@ export function SuperAdminDashboard({
         tenant={deleteModalTenant}
         onConfirmDelete={handleConfirmDelete}
         isDeleting={isDeletingTenant}
+      />
+
+      {/* Modal: 🛡️ Controle de Privilégios & Permissões */}
+      <TenantPermissionsModal
+        isOpen={Boolean(permissionsModalTenant)}
+        onClose={() => setPermissionsModalTenant(null)}
+        tenant={permissionsModalTenant}
+        onSuccess={handlePermissionsSuccess}
       />
 
       {/* Modal / Formulário: ➕ Setup Rápido com Busca Instantânea */}

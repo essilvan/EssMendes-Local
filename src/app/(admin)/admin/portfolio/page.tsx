@@ -27,6 +27,10 @@ export default async function AdminPortfolioPage() {
     );
   }
 
+  if (!tenantContext.isSuperAdmin && tenantContext.tenant?.permissions?.before_after === false) {
+    redirect("/admin/dashboard?error=recurso_indisponivel");
+  }
+
   const supabase = await createClient();
 
   // Busca perfil do estabelecimento para personalização do card e WhatsApp

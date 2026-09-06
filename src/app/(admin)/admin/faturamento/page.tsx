@@ -37,6 +37,10 @@ export default async function AdminFaturamentoPage() {
     );
   }
 
+  if (!tenantContext.isSuperAdmin && tenantContext.tenant?.permissions?.billing === false) {
+    redirect("/admin/dashboard?error=recurso_indisponivel");
+  }
+
   const supabase = await createClient();
   const tenantId = tenantContext.tenantId;
   const currentPlanTier = tenantContext.tenant?.plan_tier || "free";

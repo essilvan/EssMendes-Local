@@ -26,6 +26,10 @@ export default async function ServicosPage() {
     );
   }
 
+  if (!tenantContext.isSuperAdmin && tenantContext.tenant?.permissions?.services === false) {
+    redirect("/admin/dashboard?error=recurso_indisponivel");
+  }
+
   const supabase = await createClient();
 
   // Busca lista de serviços do tenant

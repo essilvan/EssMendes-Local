@@ -25,6 +25,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { getTenantPublicUrl, getTenantDisplayDomain } from "@/utils/tenant-url";
+import type { TenantPermissions } from "@/types";
+import { DEFAULT_TENANT_PERMISSIONS } from "@/types";
 
 interface AdminSidebarProps {
   companyName: string;
@@ -32,6 +34,16 @@ interface AdminSidebarProps {
   userEmail: string;
   fullName: string;
   isSuperAdmin?: boolean;
+  permissions?: TenantPermissions | null;
+}
+
+interface NavItem {
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  current: boolean;
+  superAdminOnly?: boolean;
+  permissionKey?: keyof TenantPermissions;
 }
 
 export function AdminSidebar({
@@ -40,6 +52,7 @@ export function AdminSidebar({
   userEmail,
   fullName,
   isSuperAdmin = false,
+  permissions,
 }: AdminSidebarProps) {
   const pathname = usePathname();
 
@@ -67,7 +80,7 @@ export function AdminSidebar({
     }
   };
 
-  const allNavItems = [
+  const allNavItems: NavItem[] = [
     {
       name: "Dashboard",
       href: "/admin/dashboard",
@@ -88,6 +101,7 @@ export function AdminSidebar({
       icon: Scissors,
       current: pathname.startsWith("/admin/servicos"),
       superAdminOnly: false,
+      permissionKey: "services",
     },
     {
       name: "Vitrine Produtos",
@@ -95,6 +109,7 @@ export function AdminSidebar({
       icon: ShoppingBag,
       current: pathname.startsWith("/admin/produtos"),
       superAdminOnly: false,
+      permissionKey: "showcase",
     },
     {
       name: "Antes & Depois",
@@ -102,6 +117,7 @@ export function AdminSidebar({
       icon: Sparkles,
       current: pathname.startsWith("/admin/portfolio"),
       superAdminOnly: false,
+      permissionKey: "before_after",
     },
     {
       name: "Avaliações Google",
@@ -109,6 +125,7 @@ export function AdminSidebar({
       icon: Star,
       current: pathname.startsWith("/admin/avaliacoes"),
       superAdminOnly: false,
+      permissionKey: "reviews",
     },
     {
       name: "Posts & SEO",
@@ -137,6 +154,7 @@ export function AdminSidebar({
       icon: CreditCard,
       current: pathname.startsWith("/admin/assinatura"),
       superAdminOnly: false,
+      permissionKey: "billing",
     },
     {
       name: "Faturamento & Planos",
@@ -144,6 +162,7 @@ export function AdminSidebar({
       icon: Sparkles,
       current: pathname.startsWith("/admin/faturamento"),
       superAdminOnly: false,
+      permissionKey: "billing",
     },
     {
       name: "Configurações",
@@ -151,12 +170,18 @@ export function AdminSidebar({
       icon: Settings,
       current: pathname.startsWith("/admin/configuracoes"),
       superAdminOnly: false,
+      permissionKey: "settings",
     },
   ];
 
-  // Se não for super admin, oculta configurações técnicas complexas de APIs
+  const activePermissions = permissions || DEFAULT_TENANT_PERMISSIONS;
+
+  // Se não for super admin, oculta configurações técnicas complexas de APIs e módulos sem permissão
   const navigation = allNavItems.filter((item) => {
     if (item.superAdminOnly && !isSuperAdmin) {
+      return false;
+    }
+    if (!isSuperAdmin && item.permissionKey && activePermissions[item.permissionKey] === false) {
       return false;
     }
     return true;

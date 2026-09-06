@@ -177,18 +177,31 @@ export async function POST(req: Request) {
       console.warn("[SuperAdmin Credentials] Aviso ao atualizar tabela profiles:", profErr);
     }
 
-    // 7. Atualizar a tabela tenants com o contact_email correspondente
+    // 7. Atualizar a tabela tenants com o contact_email e permissions correspondentes
     try {
+      const tenantUpdatePayload: Record<string, any> = {
+        contact_email: cleanEmail,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (body.permissions && typeof body.permissions === "object") {
+        tenantUpdatePayload.permissions = {
+          showcase: body.permissions.showcase !== false,
+          services: body.permissions.services !== false,
+          before_after: body.permissions.before_after !== false,
+          reviews: body.permissions.reviews !== false,
+          settings: body.permissions.settings !== false,
+          billing: body.permissions.billing !== false,
+        };
+      }
+
       const { error: tenantUpdateErr } = await supabaseAdmin
         .from("tenants")
-        .update({
-          contact_email: cleanEmail,
-          updated_at: new Date().toISOString(),
-        })
+        .update(tenantUpdatePayload)
         .eq("id", tenantId);
 
       if (tenantUpdateErr) {
-        console.warn("[SuperAdmin Credentials] Aviso ao atualizar contact_email no tenants:", tenantUpdateErr.message);
+        console.warn("[SuperAdmin Credentials] Aviso ao atualizar tenant:", tenantUpdateErr.message);
       }
     } catch (tenErr) {
       console.warn("[SuperAdmin Credentials] Exceção ao atualizar tabela tenants:", tenErr);

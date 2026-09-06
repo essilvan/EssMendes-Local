@@ -1,5 +1,6 @@
 import { getAuthenticatedTenant } from "@/lib/supabase/tenant";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { AdminPermissionNotice } from "@/components/admin/AdminPermissionNotice";
 import { OverdueBlockScreen } from "@/components/admin/OverdueBlockScreen";
 import { clearManagedTenantAction } from "@/services/super-admin.actions";
 import { redirect } from "next/navigation";
@@ -7,6 +8,8 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { ShieldCheck, ArrowLeft, X } from "lucide-react";
 import { getTenantPublicUrl } from "@/utils/tenant-url";
+import type { TenantPermissions } from "@/types";
+import { DEFAULT_TENANT_PERMISSIONS } from "@/types";
 
 export default async function AdminLayout({
   children,
@@ -38,6 +41,34 @@ export default async function AdminLayout({
 
   const headerList = await headers();
   const currentPath = headerList.get("x-pathname") || "";
+
+  const activePermissions = tenant?.permissions || DEFAULT_TENANT_PERMISSIONS;
+
+  // Proteção de Rotas Baseada em Permissões por Estabelecimento (para lojistas comuns)
+  if (!isSuperAdmin) {
+    // 1. Bloqueio de rotas exclusivas do Super Admin
+    if (currentPath.startsWith("/admin/integracoes")) {
+      redirect("/admin/dashboard?error=recurso_indisponivel");
+    }
+
+    // 2. Mapeamento de rotas e suas respectivas permissões
+    const permissionRouteMap: { prefix: string; key: keyof TenantPermissions }[] = [
+      { prefix: "/admin/servicos", key: "services" },
+      { prefix: "/admin/produtos", key: "showcase" },
+      { prefix: "/admin/portfolio", key: "before_after" },
+      { prefix: "/admin/antes-e-depois", key: "before_after" },
+      { prefix: "/admin/avaliacoes", key: "reviews" },
+      { prefix: "/admin/assinatura", key: "billing" },
+      { prefix: "/admin/faturamento", key: "billing" },
+      { prefix: "/admin/configuracoes", key: "settings" },
+      { prefix: "/admin/perfil", key: "settings" },
+    ];
+
+    const matched = permissionRouteMap.find((item) => currentPath.startsWith(item.prefix));
+    if (matched && activePermissions[matched.key] === false) {
+      redirect("/admin/dashboard?error=recurso_indisponivel");
+    }
+  }
 
   const isOverdue = !isSuperAdmin && tenant?.subscription_status === "overdue";
   const isAssinaturaPage = currentPath.includes("/admin/assinatura");
@@ -93,6 +124,7 @@ export default async function AdminLayout({
             userEmail={user.email || ""}
             fullName={fullName}
             isSuperAdmin={isSuperAdmin}
+            permissions={tenant?.permissions}
           />
         </div>
 
@@ -115,18 +147,22 @@ export default async function AdminLayout({
               >
                 Início
               </Link>
-              <Link
-                href="/admin/produtos"
-                className="text-slate-600 font-medium hover:text-teal-700 shrink-0"
-              >
-                Produtos
-              </Link>
-              <Link
-                href="/admin/avaliacoes"
-                className="text-slate-600 font-medium hover:text-teal-700 shrink-0"
-              >
-                Avaliações
-              </Link>
+              {(isSuperAdmin || activePermissions.showcase !== false) && (
+                <Link
+                  href="/admin/produtos"
+                  className="text-slate-600 font-medium hover:text-teal-700 shrink-0"
+                >
+                  Produtos
+                </Link>
+              )}
+              {(isSuperAdmin || activePermissions.reviews !== false) && (
+                <Link
+                  href="/admin/avaliacoes"
+                  className="text-slate-600 font-medium hover:text-teal-700 shrink-0"
+                >
+                  Avaliações
+                </Link>
+              )}
               <Link
                 href="/admin/agendamentos"
                 className="text-slate-600 font-medium hover:text-teal-700 shrink-0"
@@ -154,6 +190,8 @@ export default async function AdminLayout({
 
           {/* Conteúdo das Páginas */}
           <main className="flex-1 p-4 sm:p-8 max-w-6xl w-full mx-auto">
+            <AdminPermissionNotice />
+
             {isOverdue && !isAssinaturaPage ? (
               <OverdueBlockScreen
                 tenant={{

@@ -5,11 +5,17 @@ export const dynamic = "force-dynamic";
 export default async function AdminRootPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tenantId?: string }>;
+  searchParams: Promise<{ tenantId?: string; error?: string; [key: string]: string | undefined }>;
 }) {
   const params = await searchParams;
-  if (params.tenantId) {
-    redirect(`/admin/dashboard?tenantId=${params.tenantId}`);
-  }
-  redirect("/admin/dashboard");
+  const search = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) {
+      search.set(key, value);
+    }
+  });
+
+  const queryStr = search.toString();
+  redirect(`/admin/dashboard${queryStr ? `?${queryStr}` : ""}`);
 }

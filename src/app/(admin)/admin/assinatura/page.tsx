@@ -28,6 +28,10 @@ export default async function AdminAssinaturaPage({ searchParams }: AssinaturaPa
     redirect("/login");
   }
 
+  if (!tenantContext.isSuperAdmin && tenantContext.tenant?.permissions?.billing === false) {
+    redirect("/admin/dashboard?error=recurso_indisponivel");
+  }
+
   const resolvedParams = await searchParams;
   const statusParam = typeof resolvedParams.status === "string" ? resolvedParams.status : null;
 

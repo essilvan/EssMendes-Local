@@ -159,6 +159,7 @@ export async function getAllTenantsForSuperAdminAction(): Promise<{
         city,
         phone,
         contact_email: (t as any).contact_email || null,
+        permissions: (t as any).permissions || null,
         logo_url: logoUrl,
         google_place_id: googlePlaceId,
         google_rating: googleRating,
