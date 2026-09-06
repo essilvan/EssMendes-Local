@@ -3,6 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { checkIsSuperAdmin } from "@/lib/supabase/tenant";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: Request) {
   try {
     // 1. Verificação de permissão do chamador (Super Admin)
@@ -66,16 +68,30 @@ export async function POST(req: Request) {
     const cleanPassword = password.trim();
 
     // 3. Inicializa cliente do Supabase com Service Role Key para operações de Admin Auth
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseServiceKey =
-      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
+    if (!supabaseUrl || !serviceRoleKey) {
+      console.error("[SuperAdmin Credentials] SUPABASE_SERVICE_ROLE_KEY ou NEXT_PUBLIC_SUPABASE_URL não configurada nas variáveis de ambiente.");
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Configuração do servidor incompleta: SUPABASE_SERVICE_ROLE_KEY não configurada nas variáveis de ambiente.",
+        },
+        { status: 500 }
+      );
+    }
+
+    const supabaseAdmin = createClient(
+      supabaseUrl,
+      serviceRoleKey,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
+    );
 
     // 4. Verificar se o usuário já existe no auth.users via listUsers()
     const { data: usersData, error: listError } = await supabaseAdmin.auth.admin.listUsers({

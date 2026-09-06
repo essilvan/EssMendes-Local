@@ -3,6 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { checkIsSuperAdmin } from "@/lib/supabase/tenant";
 
+export const dynamic = "force-dynamic";
+
 async function handleDeleteTenant(req: Request) {
   try {
     // 1. Verificação de permissão do chamador (Super Admin)

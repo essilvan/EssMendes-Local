@@ -4,6 +4,8 @@ import { createClient as createServerClient } from "@/lib/supabase/server";
 import { checkIsSuperAdmin } from "@/lib/supabase/tenant";
 import type { TenantPermissions } from "@/types";
 
+export const dynamic = "force-dynamic";
+
 async function handlePermissionsUpdate(req: Request) {
   try {
     // 1. Verificação de permissão do chamador (Super Admin)
