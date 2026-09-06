@@ -11,6 +11,8 @@ import {
 } from "@/services/super-admin.actions";
 import type { SuperAdminTenantItem } from "@/types";
 import { NewTenantModal } from "@/components/admin/NewTenantModal";
+import { TenantAccessModal } from "@/components/admin/TenantAccessModal";
+import { TenantDeleteModal } from "@/components/admin/TenantDeleteModal";
 import {
   Building2,
   Plus,
@@ -34,6 +36,8 @@ import {
   Copy,
   Check,
   RefreshCw,
+  Key,
+  Trash2,
 } from "lucide-react";
 import { getTenantPublicUrl, getTenantDisplayDomain } from "@/utils/tenant-url";
 
@@ -59,6 +63,53 @@ export function SuperAdminDashboard({
   const [copiedSlugId, setCopiedSlugId] = useState<string | null>(null);
   const [syncingTenantId, setSyncingTenantId] = useState<string | null>(null);
   const [syncStatusMsg, setSyncStatusMsg] = useState<{ id: string; text: string; isError?: boolean } | null>(null);
+
+  // Modais de Acesso Master e Exclusão
+  const [accessModalTenant, setAccessModalTenant] = useState<SuperAdminTenantItem | null>(null);
+  const [deleteModalTenant, setDeleteModalTenant] = useState<SuperAdminTenantItem | null>(null);
+  const [isDeletingTenant, setIsDeletingTenant] = useState(false);
+  const [feedbackNotification, setFeedbackNotification] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  const handleConfirmDelete = async (tenantId: string) => {
+    setIsDeletingTenant(true);
+    try {
+      const res = await fetch("/api/super-admin/tenants/delete", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tenantId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const deletedName = deleteModalTenant?.name || "Estabelecimento";
+        setTenants((prev) => prev.filter((item) => item.id !== tenantId));
+        setDeleteModalTenant(null);
+        setFeedbackNotification({
+          type: "success",
+          message: `Estabelecimento "${deletedName}" foi excluído com sucesso!`,
+        });
+        router.refresh();
+      } else {
+        alert(data.error || "Erro ao excluir estabelecimento.");
+      }
+    } catch (err: any) {
+      alert(err?.message || "Erro na comunicação com o servidor ao excluir.");
+    } finally {
+      setIsDeletingTenant(false);
+    }
+  };
+
+  const handleCredentialsSuccess = (tenantId: string, updatedEmail: string) => {
+    setTenants((prev) =>
+      prev.map((t) => (t.id === tenantId ? { ...t, contact_email: updatedEmail } : t))
+    );
+    setFeedbackNotification({
+      type: "success",
+      message: `Acesso ativado com sucesso para "${updatedEmail}"!`,
+    });
+  };
 
   const handleSyncGoogleHours = async (tenantId: string, googlePlaceId?: string | null, e?: React.MouseEvent) => {
     if (e) {
@@ -274,6 +325,29 @@ export function SuperAdminDashboard({
         </div>
       )}
 
+      {/* Feedback de Notificação (Exclusão / Geração de Acesso) */}
+      {feedbackNotification && (
+        <div
+          className={`flex items-center justify-between rounded-xl p-4 text-xs shadow-xs animate-in fade-in slide-in-from-top-1 ${
+            feedbackNotification.type === "success"
+              ? "border border-emerald-300 bg-emerald-50 text-emerald-900"
+              : "border border-rose-300 bg-rose-50 text-rose-900"
+          }`}
+        >
+          <div className="flex items-center gap-2 font-medium">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+            <span>{feedbackNotification.message}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setFeedbackNotification(null)}
+            className="rounded-lg p-1 text-slate-500 hover:bg-emerald-100 hover:text-emerald-900 cursor-pointer"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       {/* Barra de Busca e Filtro */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative flex-1 max-w-md">
@@ -428,7 +502,18 @@ export function SuperAdminDashboard({
                       {/* Botão de Destaque: "🏢 Gerenciar" & Ações */}
                       <td className="px-5 py-4 text-right">
                         <div className="flex flex-col items-end gap-1.5">
-                          <div className="inline-flex items-center gap-1.5">
+                          <div className="inline-flex items-center gap-1.5 flex-wrap justify-end">
+                            {/* Botão Gerar Acesso do Lojista */}
+                            <button
+                              type="button"
+                              onClick={() => setAccessModalTenant(t)}
+                              title="🔑 Gerar ou Redefinir Credenciais de Acesso do Lojista"
+                              className="inline-flex items-center gap-1 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-[11px] font-bold text-amber-900 hover:bg-amber-100 hover:border-amber-400 transition shadow-2xs cursor-pointer"
+                            >
+                              <Key className="h-3.5 w-3.5 text-amber-700" />
+                              <span>🔑 Gerar Acesso</span>
+                            </button>
+
                             {/* Botão Ressincronizar Horários Google Places */}
                             <button
                               type="button"
@@ -495,14 +580,25 @@ export function SuperAdminDashboard({
                             >
                               <FileText className="h-3.5 w-3.5" />
                             </Link>
+
+                            {/* Botão Excluir Estabelecimento */}
+                            <button
+                              type="button"
+                              onClick={() => setDeleteModalTenant(t)}
+                              title="🗑️ Excluir permanentemente este estabelecimento"
+                              className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-[11px] font-bold text-rose-700 hover:bg-rose-900 hover:text-white hover:border-rose-900 transition shadow-2xs cursor-pointer"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              <span>🗑️ Excluir</span>
+                            </button>
                           </div>
 
                           {syncStatusMsg?.id === t.id && (
                             <span
                               className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
                                 syncStatusMsg.isError
-                                  ? "bg-rose-50 text-rose-700 border border-rose-200"
-                                  : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                   ? "bg-rose-50 text-rose-700 border border-rose-200"
+                                   : "bg-emerald-50 text-emerald-700 border border-emerald-200"
                               }`}
                             >
                               {syncStatusMsg.text}
@@ -518,6 +614,23 @@ export function SuperAdminDashboard({
           </table>
         </div>
       </div>
+
+      {/* Modal: 🔑 Gerenciar Acesso do Lojista */}
+      <TenantAccessModal
+        isOpen={Boolean(accessModalTenant)}
+        onClose={() => setAccessModalTenant(null)}
+        tenant={accessModalTenant}
+        onSuccess={handleCredentialsSuccess}
+      />
+
+      {/* Modal: 🗑️ Confirmação de Exclusão Master */}
+      <TenantDeleteModal
+        isOpen={Boolean(deleteModalTenant)}
+        onClose={() => setDeleteModalTenant(null)}
+        tenant={deleteModalTenant}
+        onConfirmDelete={handleConfirmDelete}
+        isDeleting={isDeletingTenant}
+      />
 
       {/* Modal / Formulário: ➕ Setup Rápido com Busca Instantânea */}
       <NewTenantModal

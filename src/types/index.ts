@@ -14,6 +14,7 @@ export interface SuperAdminTenantItem {
   slug: string;
   city: string;
   phone?: string | null;
+  contact_email?: string | null;
   logo_url?: string | null;
   google_place_id?: string | null;
   google_rating: number | null;
@@ -31,6 +32,7 @@ export interface Tenant {
   slug: string;
   city?: string | null;
   phone?: string | null;
+  contact_email?: string | null;
   custom_domain?: string | null;
   plan_tier: "free" | "pro" | "enterprise";
   subscription_status?: "active" | "trialing" | "pending" | "overdue" | "canceled" | null;

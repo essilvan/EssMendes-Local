@@ -194,6 +194,7 @@ ON CONFLICT (id) DO UPDATE SET role = 'super_admin';`}
       slug: t.slug,
       city,
       phone,
+      contact_email: (t as any).contact_email || null,
       logo_url: logoUrl,
       google_rating: googleRating,
       google_reviews_count: googleReviews,

@@ -93,7 +93,7 @@ export async function getAllTenantsForSuperAdminAction(): Promise<{
     // 1. Busca todos os estabelecimentos cadastrados na tabela tenants
     const { data: tenants, error: tenantsError } = await supabase
       .from("tenants")
-      .select("id, name, slug, google_rating, google_reviews_count, google_place_id, opening_hours, presence_score, created_at")
+      .select("*")
       .order("created_at", { ascending: false });
 
     if (tenantsError) {
@@ -158,6 +158,7 @@ export async function getAllTenantsForSuperAdminAction(): Promise<{
         slug: t.slug,
         city,
         phone,
+        contact_email: (t as any).contact_email || null,
         logo_url: logoUrl,
         google_place_id: googlePlaceId,
         google_rating: googleRating,
