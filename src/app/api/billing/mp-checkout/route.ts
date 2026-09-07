@@ -1,6 +1,37 @@
 import { NextResponse } from "next/server";
 import { MercadoPagoConfig, Payment, Preference } from "mercadopago";
 import { getAuthenticatedTenant } from "@/lib/supabase/tenant";
+import type { OfferType } from "@/types";
+
+export const dynamic = "force-dynamic";
+
+interface OfferConfig {
+  unitPrice: number;
+  getTitle: (name: string) => string;
+  days: number;
+  itemId: string;
+}
+
+const OFFERS_MAP: Record<OfferType, OfferConfig> = {
+  setup_monthly: {
+    unitPrice: 297.00,
+    getTitle: (name) => `Setup Profissional + 1º Mês Vitrine EssMendes - ${name}`,
+    days: 30,
+    itemId: "setup-profissional-1mes",
+  },
+  semiannual: {
+    unitPrice: 497.00,
+    getTitle: (name) => `Plano Semestral (Setup Grátis + 6 Meses) - ${name}`,
+    days: 180,
+    itemId: "plano-semestral-setup-gratis",
+  },
+  monthly_renewal: {
+    unitPrice: 97.00,
+    getTitle: (name) => `Mensalidade Vitrine EssMendes - ${name}`,
+    days: 30,
+    itemId: "mensalidade-vitrine-essmendes",
+  },
+};
 
 export async function POST(req: Request) {
   try {
@@ -29,7 +60,7 @@ export async function POST(req: Request) {
     let payerName = body.payerName || body.name || body.fullName;
     const method = body.method || "pix";
 
-    // Se estiver autenticado, garante ou complementa com os dados reais da sessão do tenant
+    // Se estiver autenticado, complementa com os dados da sessão do tenant
     const { data: authContext } = await getAuthenticatedTenant();
     if (authContext?.tenant) {
       tenantId = authContext.tenantId || tenantId;
@@ -56,25 +87,41 @@ export async function POST(req: Request) {
 
     tenantName = tenantName || "Estabelecimento";
 
-    // 1. Meio de pagamento: Cartão de Crédito via Preference (excluindo boleto e pix)
-    if (method === "card") {
-      const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://local.essmendes.com.br").replace(/\/$/, "");
-      const isLocalhost = appUrl.includes("localhost") || appUrl.includes("127.0.0.1");
+    // Resolução da oferta selecionada
+    const rawOfferType: OfferType = body.offerType;
+    const offerType: OfferType = OFFERS_MAP[rawOfferType] ? rawOfferType : "monthly_renewal";
+    const selectedOffer = OFFERS_MAP[offerType];
 
+    const itemTitle = selectedOffer.getTitle(tenantName);
+    const itemPrice = selectedOffer.unitPrice;
+    const diasVigencia = selectedOffer.days;
+
+    // Embutir na external_reference o tenantId, offerType e dias
+    const externalReference = JSON.stringify({
+      tenantId,
+      offerType,
+      days: diasVigencia,
+    });
+
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://local.essmendes.com.br").replace(/\/$/, "");
+    const isLocalhost = appUrl.includes("localhost") || appUrl.includes("127.0.0.1");
+
+    // 1. Meio de pagamento: Cartão de Crédito via Preference (com parcelamento em até 12x)
+    if (method === "card") {
       const preference = new Preference(client);
       const prefResult = await preference.create({
         body: {
           items: [
             {
-              id: "plano-pro-mensal",
-              title: `Mensalidade Vitrine EssMendes - ${tenantName}`,
+              id: selectedOffer.itemId,
+              title: itemTitle,
               quantity: 1,
-              unit_price: 97.00,
+              unit_price: itemPrice,
               currency_id: "BRL",
             },
           ],
           payment_methods: {
-            // Exclui boleto e pix nesta preferência para abrir direto o formulário de cartão
+            // Exclui boleto e pix nesta preferência para abrir diretamente o checkout de cartão
             excluded_payment_types: [
               { id: "ticket" }, // exclui boleto
               { id: "bank_transfer" }, // exclui pix
@@ -84,7 +131,7 @@ export async function POST(req: Request) {
           payer: {
             email: email || "financeiro@essmendes.com.br",
           },
-          external_reference: tenantId,
+          external_reference: externalReference,
           back_urls: {
             success: `${appUrl}/admin/assinatura?status=success`,
             pending: `${appUrl}/admin/assinatura?status=pending`,
@@ -92,7 +139,7 @@ export async function POST(req: Request) {
           },
           ...(isLocalhost ? {} : { auto_return: "approved" as const }),
           ...(appUrl.startsWith("https://")
-            ? { notification_url: `${appUrl}/api/webhooks/mercadopago` }
+            ? { notification_url: `${appUrl}/api/billing/webhook` }
             : {}),
         },
       });
@@ -101,6 +148,8 @@ export async function POST(req: Request) {
         success: true,
         method: "card",
         checkoutUrl: prefResult.init_point,
+        offerType,
+        amount: itemPrice,
       });
     }
 
@@ -109,8 +158,8 @@ export async function POST(req: Request) {
 
     const result = await payment.create({
       body: {
-        transaction_amount: 97.00,
-        description: `Mensalidade Vitrine EssMendes - ${tenantName}`,
+        transaction_amount: itemPrice,
+        description: itemTitle,
         payment_method_id: "pix",
         payer: {
           email: email || "cliente@essmendes.com.br",
@@ -121,7 +170,10 @@ export async function POST(req: Request) {
             number: payerCpf ? payerCpf.replace(/\D/g, "") : "00000000000",
           },
         },
-        external_reference: tenantId,
+        external_reference: externalReference,
+        ...(appUrl.startsWith("https://")
+          ? { notification_url: `${appUrl}/api/billing/webhook` }
+          : {}),
       },
     });
 
@@ -131,14 +183,16 @@ export async function POST(req: Request) {
       success: true,
       method: "pix",
       paymentId: result.id,
+      offerType,
+      amount: itemPrice,
       qrCode: pointOfInteraction?.qr_code, // Código copia e cola
       qrCodeBase64: pointOfInteraction?.qr_code_base64, // Imagem do QR Code em base64
       ticketUrl: pointOfInteraction?.ticket_url,
     });
   } catch (error: any) {
-    console.error("Erro ao processar pagamento MP:", error);
+    console.error("[MP-Checkout] Erro ao processar pagamento:", error);
     return NextResponse.json(
-      { error: error?.message || "Falha ao processar pagamento" },
+      { error: error?.message || "Falha ao processar pagamento no Mercado Pago." },
       { status: 500 }
     );
   }

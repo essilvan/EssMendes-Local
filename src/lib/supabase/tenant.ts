@@ -19,6 +19,9 @@ export interface AuthenticatedTenantContext {
     slug: string;
     plan_tier: string;
     subscription_status?: string | null;
+    subscription_plan?: string | null;
+    subscription_expires_at?: string | null;
+    setup_paid?: boolean;
     current_period_end?: string | null;
     mp_payment_id?: string | null;
     permissions?: TenantPermissions | null;
@@ -109,7 +112,7 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
     // 3. Obter vínculo em tenant_users
     const { data: tenantUser, error: tenantUserError } = await supabase
       .from("tenant_users")
-      .select("tenant_id, role, tenants(id, name, slug, plan_tier, subscription_status, current_period_end, mp_payment_id, permissions)")
+      .select("tenant_id, role, tenants(id, name, slug, plan_tier, subscription_status, current_period_end, mp_payment_id, permissions, setup_paid, subscription_expires_at, subscription_plan)")
       .eq("user_id", user.id)
       .maybeSingle();
 
@@ -130,7 +133,7 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
       if (targetTenantId) {
         const { data: targetTenant, error: targetError } = await supabase
           .from("tenants")
-          .select("id, name, slug, plan_tier, subscription_status, current_period_end, mp_payment_id, permissions")
+          .select("id, name, slug, plan_tier, subscription_status, current_period_end, mp_payment_id, permissions, setup_paid, subscription_expires_at, subscription_plan")
           .eq("id", targetTenantId)
           .maybeSingle();
 
@@ -164,6 +167,9 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
                 slug: targetTenant.slug,
                 plan_tier: targetTenant.plan_tier,
                 subscription_status: (targetTenant as any).subscription_status,
+                subscription_plan: (targetTenant as any).subscription_plan || null,
+                subscription_expires_at: (targetTenant as any).subscription_expires_at || (targetTenant as any).current_period_end || null,
+                setup_paid: Boolean((targetTenant as any).setup_paid),
                 current_period_end: (targetTenant as any).current_period_end,
                 mp_payment_id: (targetTenant as any).mp_payment_id,
                 permissions: (targetTenant as any).permissions || DEFAULT_TENANT_PERMISSIONS,
@@ -197,6 +203,9 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
                   slug: currentT.slug,
                   plan_tier: currentT.plan_tier,
                   subscription_status: (currentT as any).subscription_status,
+                  subscription_plan: (currentT as any).subscription_plan || null,
+                  subscription_expires_at: (currentT as any).subscription_expires_at || (currentT as any).current_period_end || null,
+                  setup_paid: Boolean((currentT as any).setup_paid),
                   current_period_end: (currentT as any).current_period_end,
                   mp_payment_id: (currentT as any).mp_payment_id,
                   permissions: (currentT as any).permissions || DEFAULT_TENANT_PERMISSIONS,
@@ -210,7 +219,7 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
       // Se super admin não tem vínculo direto em tenant_users, pega o primeiro tenant do sistema
       const { data: firstTenant } = await supabase
         .from("tenants")
-        .select("id, name, slug, plan_tier, subscription_status, current_period_end, mp_payment_id, permissions")
+        .select("id, name, slug, plan_tier, subscription_status, current_period_end, mp_payment_id, permissions, setup_paid, subscription_expires_at, subscription_plan")
         .order("created_at", { ascending: true })
         .limit(1)
         .maybeSingle();
@@ -234,6 +243,9 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
               slug: firstTenant.slug,
               plan_tier: firstTenant.plan_tier,
               subscription_status: (firstTenant as any).subscription_status,
+              subscription_plan: (firstTenant as any).subscription_plan || null,
+              subscription_expires_at: (firstTenant as any).subscription_expires_at || (firstTenant as any).current_period_end || null,
+              setup_paid: Boolean((firstTenant as any).setup_paid),
               current_period_end: (firstTenant as any).current_period_end,
               mp_payment_id: (firstTenant as any).mp_payment_id,
               permissions: (firstTenant as any).permissions || DEFAULT_TENANT_PERMISSIONS,
@@ -254,7 +266,7 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
       if (metadataTenantId) {
         const { data: recoveredTenant } = await supabase
           .from("tenants")
-          .select("id, name, slug, plan_tier, subscription_status, current_period_end, mp_payment_id, permissions")
+          .select("id, name, slug, plan_tier, subscription_status, current_period_end, mp_payment_id, permissions, setup_paid, subscription_expires_at, subscription_plan")
           .eq("id", metadataTenantId)
           .maybeSingle();
 
@@ -290,6 +302,9 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
                 slug: recoveredTenant.slug,
                 plan_tier: recoveredTenant.plan_tier,
                 subscription_status: (recoveredTenant as any).subscription_status,
+                subscription_plan: (recoveredTenant as any).subscription_plan || null,
+                subscription_expires_at: (recoveredTenant as any).subscription_expires_at || (recoveredTenant as any).current_period_end || null,
+                setup_paid: Boolean((recoveredTenant as any).setup_paid),
                 current_period_end: (recoveredTenant as any).current_period_end,
                 mp_payment_id: (recoveredTenant as any).mp_payment_id,
                 permissions: (recoveredTenant as any).permissions || DEFAULT_TENANT_PERMISSIONS,
@@ -304,7 +319,7 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
       if (user.email) {
         const { data: tenantByEmail } = await supabase
           .from("tenants")
-          .select("id, name, slug, plan_tier, subscription_status, current_period_end, mp_payment_id, permissions")
+          .select("id, name, slug, plan_tier, subscription_status, current_period_end, mp_payment_id, permissions, setup_paid, subscription_expires_at, subscription_plan")
           .ilike("contact_email", user.email.trim())
           .maybeSingle();
 
@@ -340,6 +355,9 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
                 slug: tenantByEmail.slug,
                 plan_tier: tenantByEmail.plan_tier,
                 subscription_status: (tenantByEmail as any).subscription_status,
+                subscription_plan: (tenantByEmail as any).subscription_plan || null,
+                subscription_expires_at: (tenantByEmail as any).subscription_expires_at || (tenantByEmail as any).current_period_end || null,
+                setup_paid: Boolean((tenantByEmail as any).setup_paid),
                 current_period_end: (tenantByEmail as any).current_period_end,
                 mp_payment_id: (tenantByEmail as any).mp_payment_id,
                 permissions: (tenantByEmail as any).permissions || DEFAULT_TENANT_PERMISSIONS,
@@ -379,6 +397,9 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
               slug: tenant.slug,
               plan_tier: tenant.plan_tier,
               subscription_status: (tenant as any).subscription_status,
+              subscription_plan: (tenant as any).subscription_plan || null,
+              subscription_expires_at: (tenant as any).subscription_expires_at || (tenant as any).current_period_end || null,
+              setup_paid: Boolean((tenant as any).setup_paid),
               current_period_end: (tenant as any).current_period_end,
               mp_payment_id: (tenant as any).mp_payment_id,
               permissions: (tenant as any).permissions || DEFAULT_TENANT_PERMISSIONS,

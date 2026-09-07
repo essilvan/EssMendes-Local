@@ -71,6 +71,9 @@ export interface Tenant {
   custom_domain?: string | null;
   plan_tier: "free" | "pro" | "enterprise";
   subscription_status?: "active" | "trialing" | "pending" | "overdue" | "canceled" | null;
+  subscription_plan?: "setup_monthly" | "semiannual" | "monthly_renewal" | string | null;
+  subscription_expires_at?: string | null;
+  setup_paid?: boolean;
   current_period_end?: string | null;
   mp_payment_id?: string | null;
   permissions?: TenantPermissions | null;
@@ -81,6 +84,8 @@ export interface Tenant {
   created_at: string;
   updated_at: string;
 }
+
+export type OfferType = "setup_monthly" | "semiannual" | "monthly_renewal";
 
 export interface TenantProfile {
   id: string;

@@ -14,6 +14,7 @@ import {
   QrCode,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
+import type { OfferType } from "@/types";
 
 interface MercadoPagoSubscribeButtonProps {
   tenantId: string;
@@ -21,9 +22,12 @@ interface MercadoPagoSubscribeButtonProps {
   userEmail?: string;
   payerName?: string;
   payerCpf?: string;
+  offerType?: OfferType;
   label?: string;
   className?: string;
   size?: "default" | "lg";
+  pixButtonText?: string;
+  cardButtonText?: string;
 }
 
 interface PixPaymentData {
@@ -31,7 +35,41 @@ interface PixPaymentData {
   qrCodeBase64?: string;
   ticketUrl?: string;
   paymentId?: string | number;
+  amount?: number;
 }
+
+const OFFER_DETAILS: Record<
+  OfferType,
+  {
+    amount: number;
+    formattedAmount: string;
+    pixLabel: string;
+    cardLabel: string;
+    title: string;
+  }
+> = {
+  setup_monthly: {
+    amount: 297.0,
+    formattedAmount: "R$ 297,00",
+    pixLabel: "⚡ Pagar via Pix (R$ 297,00)",
+    cardLabel: "💳 Cartão de Crédito (em até 12x)",
+    title: "Setup Profissional + 1º Mês",
+  },
+  semiannual: {
+    amount: 497.0,
+    formattedAmount: "R$ 497,00",
+    pixLabel: "⚡ Pagar via Pix (R$ 497,00)",
+    cardLabel: "💳 Cartão (em até 12x)",
+    title: "Plano Semestral (Setup Grátis + 6 Meses)",
+  },
+  monthly_renewal: {
+    amount: 97.0,
+    formattedAmount: "R$ 97,00",
+    pixLabel: "⚡ Pagar via Pix Instantâneo (R$ 97,00)",
+    cardLabel: "💳 Pagar com Cartão de Crédito (em até 12x)",
+    title: "Renovação Mensal",
+  },
+};
 
 export function MercadoPagoSubscribeButton({
   tenantId,
@@ -39,12 +77,17 @@ export function MercadoPagoSubscribeButton({
   userEmail = "",
   payerName = "",
   payerCpf = "",
+  offerType = "monthly_renewal",
+  pixButtonText,
+  cardButtonText,
   className = "",
 }: MercadoPagoSubscribeButtonProps) {
   const [loadingMethod, setLoadingMethod] = useState<"pix" | "card" | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [pixData, setPixData] = useState<PixPaymentData | null>(null);
   const [copied, setCopied] = useState(false);
+
+  const offerInfo = OFFER_DETAILS[offerType] || OFFER_DETAILS.monthly_renewal;
 
   const handleCheckout = async (method: "pix" | "card") => {
     try {
@@ -63,6 +106,7 @@ export function MercadoPagoSubscribeButton({
           payerName,
           payerCpf,
           method,
+          offerType,
         }),
       });
 
@@ -89,6 +133,7 @@ export function MercadoPagoSubscribeButton({
           qrCodeBase64: data.qrCodeBase64,
           ticketUrl: data.ticketUrl,
           paymentId: data.paymentId,
+          amount: data.amount || offerInfo.amount,
         });
         setLoadingMethod(null);
         return;
@@ -152,7 +197,7 @@ export function MercadoPagoSubscribeButton({
               <span>Gerando Pix...</span>
             </>
           ) : (
-            <span>⚡ Pagar via Pix Instantâneo (R$ 97,00)</span>
+            <span>{pixButtonText || offerInfo.pixLabel}</span>
           )}
         </button>
 
@@ -169,7 +214,7 @@ export function MercadoPagoSubscribeButton({
               <span>Conectando ao Cartão...</span>
             </>
           ) : (
-            <span>💳 Pagar com Cartão de Crédito (em até 12x)</span>
+            <span>{cardButtonText || offerInfo.cardLabel}</span>
           )}
         </button>
       </div>
@@ -212,11 +257,19 @@ export function MercadoPagoSubscribeButton({
               <h3 className="text-lg font-bold text-slate-900">
                 Pague via Pix Instantâneo
               </h3>
+              <p className="text-xs font-semibold text-teal-800">
+                {offerInfo.title}
+              </p>
               <p className="text-xs text-slate-500">
                 Escaneie o QR Code ou copie o código Pix abaixo no app do seu banco.
               </p>
               <div className="pt-2 text-2xl font-black text-slate-900">
-                R$ 97,00
+                {pixData.amount
+                  ? new Intl.NumberFormat("pt-BR", {
+                      style: "currency",
+                      currency: "BRL",
+                    }).format(pixData.amount)
+                  : offerInfo.formattedAmount}
               </div>
             </div>
 

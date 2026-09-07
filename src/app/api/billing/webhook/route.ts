@@ -2,12 +2,14 @@ import { NextResponse } from "next/server";
 import { MercadoPagoConfig, Payment } from "mercadopago";
 import { createClient } from "@supabase/supabase-js";
 
+export const dynamic = "force-dynamic";
+
 const client = new MercadoPagoConfig({
   accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN || "",
 });
 
 export async function GET() {
-  return NextResponse.json({ status: "ok", message: "Mercado Pago Webhook Endpoint Active" }, { status: 200 });
+  return NextResponse.json({ status: "ok", message: "Billing Webhook Endpoint Active" }, { status: 200 });
 }
 
 export async function POST(req: Request) {
@@ -86,10 +88,10 @@ export async function POST(req: Request) {
             .eq("id", tenantId);
 
           if (updateError) {
-            console.error("[Webhook MercadoPago] Erro ao atualizar tenant:", updateError);
+            console.error("[Webhook Billing] Erro ao atualizar tenant:", updateError);
           } else {
             console.log(
-              `[Webhook MercadoPago] Assinatura (${offerType || "mensal"}) ativada para tenant ${tenantId} até ${expirationDate.toISOString()}`
+              `[Webhook Billing] Assinatura (${offerType || "mensal"}) ativada para tenant ${tenantId} até ${expirationDate.toISOString()}`
             );
           }
         }
@@ -98,8 +100,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ status: "ok" }, { status: 200 });
   } catch (error: any) {
-    console.error("[Webhook MercadoPago] Erro no processamento:", error);
-    // Sempre retornar 200 para o Mercado Pago não reenviar em loop caso seja requisição de teste
+    console.error("[Webhook Billing] Erro no processamento:", error);
+    // Sempre retornar 200 para o Mercado Pago não reenviar em loop caso ocorra falha transitória
     return NextResponse.json({ status: "ok", error: error?.message }, { status: 200 });
   }
 }
