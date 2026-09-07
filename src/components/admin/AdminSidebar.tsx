@@ -5,20 +5,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logoutAction } from "@/services/auth.actions";
 import {
-  LayoutDashboard,
-  Scissors,
-  CalendarCheck,
   Sparkles,
-  CreditCard,
-  Settings,
   Globe,
   LogOut,
   ExternalLink,
-  Star,
-  Newspaper,
-  ShoppingBag,
-  BarChart3,
-  Building2,
   ShieldCheck,
   Copy,
   Check,
@@ -26,7 +16,11 @@ import {
 import { cn } from "@/utils/cn";
 import { getTenantPublicUrl, getTenantDisplayDomain } from "@/utils/tenant-url";
 import type { TenantPermissions } from "@/types";
-import { DEFAULT_TENANT_PERMISSIONS } from "@/types";
+import {
+  getFilteredNavItems,
+  isNavItemActive,
+  type AdminNavItem,
+} from "./admin-navigation";
 
 interface AdminSidebarProps {
   companyName: string;
@@ -35,15 +29,6 @@ interface AdminSidebarProps {
   fullName: string;
   isSuperAdmin?: boolean;
   permissions?: TenantPermissions | null;
-}
-
-interface NavItem {
-  name: string;
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-  current: boolean;
-  superAdminOnly?: boolean;
-  permissionKey?: keyof TenantPermissions;
 }
 
 export function AdminSidebar({
@@ -80,139 +65,7 @@ export function AdminSidebar({
     }
   };
 
-  const allNavItems: NavItem[] = [
-    {
-      name: "Dashboard",
-      href: "/admin/dashboard",
-      icon: LayoutDashboard,
-      current: pathname === "/admin/dashboard",
-      superAdminOnly: false,
-      permissionKey: "dashboard",
-    },
-    {
-      name: "Agendamentos",
-      href: "/admin/agendamentos",
-      icon: CalendarCheck,
-      current: pathname.startsWith("/admin/agendamentos"),
-      superAdminOnly: false,
-      permissionKey: "appointments",
-    },
-    {
-      name: "Serviços",
-      href: "/admin/servicos",
-      icon: Scissors,
-      current: pathname.startsWith("/admin/servicos"),
-      superAdminOnly: false,
-      permissionKey: "services",
-    },
-    {
-      name: "Vitrine Produtos",
-      href: "/admin/produtos",
-      icon: ShoppingBag,
-      current: pathname.startsWith("/admin/produtos"),
-      superAdminOnly: false,
-      permissionKey: "products",
-    },
-    {
-      name: "Antes & Depois",
-      href: "/admin/portfolio",
-      icon: Sparkles,
-      current: pathname.startsWith("/admin/portfolio") || pathname.startsWith("/admin/antes-e-depois"),
-      superAdminOnly: false,
-      permissionKey: "before_after",
-    },
-    {
-      name: "Avaliações Google",
-      href: "/admin/avaliacoes",
-      icon: Star,
-      current: pathname.startsWith("/admin/avaliacoes"),
-      superAdminOnly: false,
-      permissionKey: "reviews",
-    },
-    {
-      name: "Posts & SEO",
-      href: "/admin/posts",
-      icon: Newspaper,
-      current: pathname.startsWith("/admin/posts"),
-      superAdminOnly: false,
-      permissionKey: "posts_seo",
-    },
-    {
-      name: "Resultados & Relatórios",
-      href: "/admin/resultados",
-      icon: BarChart3,
-      current: pathname.startsWith("/admin/resultados"),
-      superAdminOnly: false,
-      permissionKey: "reports",
-    },
-    {
-      name: "Integrações Google",
-      href: "/admin/integracoes",
-      icon: Building2,
-      current: pathname.startsWith("/admin/integracoes"),
-      superAdminOnly: true, // Oculto para lojista comum para simplificar a interface
-    },
-    {
-      name: "Assinatura Pro",
-      href: "/admin/assinatura",
-      icon: CreditCard,
-      current: pathname.startsWith("/admin/assinatura"),
-      superAdminOnly: false,
-      permissionKey: "subscription_pro",
-    },
-    {
-      name: "Faturamento & Planos",
-      href: "/admin/faturamento",
-      icon: Sparkles,
-      current: pathname.startsWith("/admin/faturamento"),
-      superAdminOnly: false,
-      permissionKey: "billing_plans",
-    },
-    {
-      name: "Configurações",
-      href: "/admin/configuracoes",
-      icon: Settings,
-      current: pathname.startsWith("/admin/configuracoes"),
-      superAdminOnly: false,
-      permissionKey: "settings",
-    },
-  ];
-
-  // Se não for super admin, oculta configurações técnicas de APIs e módulos desativados
-  const navigation = allNavItems.filter((item) => {
-    if (item.superAdminOnly && !isSuperAdmin) {
-      return false;
-    }
-    if (!isSuperAdmin && item.permissionKey) {
-      switch (item.permissionKey) {
-        case "dashboard":
-          return permissions?.dashboard ?? true;
-        case "appointments":
-          return permissions?.appointments ?? true;
-        case "services":
-          return permissions?.services ?? true;
-        case "products":
-          return permissions?.products ?? permissions?.showcase ?? true;
-        case "before_after":
-          return permissions?.before_after ?? true;
-        case "reviews":
-          return permissions?.reviews ?? true;
-        case "posts_seo":
-          return permissions?.posts_seo ?? true;
-        case "reports":
-          return permissions?.reports ?? true;
-        case "subscription_pro":
-          return permissions?.subscription_pro ?? permissions?.billing ?? true;
-        case "billing_plans":
-          return permissions?.billing_plans ?? permissions?.billing ?? true;
-        case "settings":
-          return permissions?.settings ?? true;
-        default:
-          return true;
-      }
-    }
-    return true;
-  });
+  const navigation: AdminNavItem[] = getFilteredNavItems(permissions, isSuperAdmin);
 
   return (
     <aside className="flex h-full w-64 flex-col justify-between border-r border-slate-200 bg-white p-4">
@@ -285,16 +138,17 @@ export function AdminSidebar({
         </div>
 
         {/* Navigation Menu */}
-        <nav className="space-y-1">
+        <nav className="space-y-1" aria-label="Navegação desktop">
           {navigation.map((item) => {
             const Icon = item.icon;
+            const active = isNavItemActive(pathname, item);
             return (
               <Link
-                key={item.name}
+                key={item.key}
                 href={item.href}
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition",
-                  item.current
+                  active
                     ? "bg-teal-700 text-white shadow-sm"
                     : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 )}
@@ -302,7 +156,7 @@ export function AdminSidebar({
                 <Icon
                   className={cn(
                     "h-4 w-4 shrink-0",
-                    item.current ? "text-white" : "text-slate-400"
+                    active ? "text-white" : "text-slate-400"
                   )}
                 />
                 <span>{item.name}</span>
@@ -324,10 +178,10 @@ export function AdminSidebar({
         <form action={logoutAction} className="w-full">
           <button
             type="submit"
-            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-slate-600 hover:bg-red-50 hover:text-red-600 transition"
+            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-slate-600 hover:bg-red-50 hover:text-red-600 transition cursor-pointer"
           >
             <LogOut className="h-4 w-4" />
-            <span>Encerrar Sessão</span>
+            <span>Sair / Desconectar</span>
           </button>
         </form>
       </div>

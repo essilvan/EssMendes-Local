@@ -1,5 +1,6 @@
 import { getAuthenticatedTenant } from "@/lib/supabase/tenant";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { AdminMobileNav } from "@/components/admin/AdminMobileNav";
 import { AdminPermissionNotice } from "@/components/admin/AdminPermissionNotice";
 import { OverdueBlockScreen } from "@/components/admin/OverdueBlockScreen";
 import { clearManagedTenantAction } from "@/services/super-admin.actions";
@@ -67,19 +68,23 @@ export default async function AdminLayout({
 
     // 2. Mapeamento de rotas e suas respectivas permissões
     const permissionRouteMap: { prefix: string; key: keyof TenantPermissions }[] = [
-      { prefix: "/admin/dashboard", key: "dashboard" },
       { prefix: "/admin/agendamentos", key: "appointments" },
       { prefix: "/admin/servicos", key: "services" },
       { prefix: "/admin/produtos", key: "products" },
       { prefix: "/admin/portfolio", key: "before_after" },
       { prefix: "/admin/antes-e-depois", key: "before_after" },
+      { prefix: "/admin/antes-depois", key: "before_after" },
       { prefix: "/admin/avaliacoes", key: "reviews" },
+      { prefix: "/admin/posts-seo", key: "posts_seo" },
       { prefix: "/admin/posts", key: "posts_seo" },
+      { prefix: "/admin/relatorios", key: "reports" },
       { prefix: "/admin/resultados", key: "reports" },
       { prefix: "/admin/assinatura", key: "subscription_pro" },
       { prefix: "/admin/faturamento", key: "billing_plans" },
       { prefix: "/admin/configuracoes", key: "settings" },
       { prefix: "/admin/perfil", key: "settings" },
+      { prefix: "/admin/dashboard", key: "dashboard" },
+      { prefix: "/admin", key: "dashboard" },
     ];
 
     const matched = permissionRouteMap.find((item) => currentPath.startsWith(item.prefix));
@@ -148,63 +153,15 @@ export default async function AdminLayout({
 
         {/* Área Principal de Conteúdo */}
         <div className="flex flex-1 flex-col md:pl-64">
-          {/* Mobile Header */}
-          <header className="flex md:hidden items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded bg-teal-700 font-bold text-white text-xs">
-                EM
-              </div>
-              <span className="text-xs font-bold text-slate-900 truncate max-w-[120px]">
-                {companyName}
-              </span>
-            </div>
-            <div className="flex items-center gap-2.5 text-xs overflow-x-auto">
-              <Link
-                href="/admin/dashboard"
-                className="text-slate-600 font-medium hover:text-teal-700 shrink-0"
-              >
-                Início
-              </Link>
-              {(isSuperAdmin || permissions.products !== false) && (
-                <Link
-                  href="/admin/produtos"
-                  className="text-slate-600 font-medium hover:text-teal-700 shrink-0"
-                >
-                  Produtos
-                </Link>
-              )}
-              {(isSuperAdmin || permissions.reviews !== false) && (
-                <Link
-                  href="/admin/avaliacoes"
-                  className="text-slate-600 font-medium hover:text-teal-700 shrink-0"
-                >
-                  Avaliações
-                </Link>
-              )}
-              <Link
-                href="/admin/agendamentos"
-                className="text-slate-600 font-medium hover:text-teal-700 shrink-0"
-              >
-                Agenda
-              </Link>
-              <a
-                href={getTenantPublicUrl(companySlug)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-teal-700 font-bold hover:text-teal-800 shrink-0 inline-flex items-center gap-1"
-              >
-                <span>Vitrine</span>
-              </a>
-              {isSuperAdmin && (
-                <Link
-                  href="/super-admin"
-                  className="font-bold text-amber-700 hover:text-amber-800 shrink-0"
-                >
-                  Super Admin
-                </Link>
-              )}
-            </div>
-          </header>
+          {/* Topbar e Gaveta Lateral Mobile (Drawer) */}
+          <AdminMobileNav
+            companyName={companyName}
+            companySlug={companySlug}
+            userEmail={user.email || ""}
+            fullName={fullName}
+            isSuperAdmin={isSuperAdmin}
+            permissions={permissions}
+          />
 
           {/* Conteúdo das Páginas */}
           <main className="flex-1 p-4 sm:p-8 max-w-6xl w-full mx-auto">
