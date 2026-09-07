@@ -246,6 +246,124 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
 
     // 5. Fluxo Padrão: Lojista / Proprietário (tenant_owner)
     if (!tenantUser || !tenantUser.tenant_id) {
+      // 5.a Tenta recuperar pelo tenant_id presente em user_metadata
+      const metadataTenantId =
+        (user.user_metadata?.tenant_id as string) ||
+        (user.app_metadata?.tenant_id as string);
+
+      if (metadataTenantId) {
+        const { data: recoveredTenant } = await supabase
+          .from("tenants")
+          .select("id, name, slug, plan_tier, subscription_status, current_period_end, mp_payment_id, permissions")
+          .eq("id", metadataTenantId)
+          .maybeSingle();
+
+        if (recoveredTenant) {
+          try {
+            await supabase.from("tenant_users").upsert(
+              {
+                tenant_id: recoveredTenant.id,
+                user_id: user.id,
+                role: "owner",
+              },
+              { onConflict: "tenant_id,user_id" }
+            );
+          } catch (upsertErr) {
+            console.warn("[getAuthenticatedTenant] Aviso ao vincular auto-recuperação:", upsertErr);
+          }
+
+          return {
+            data: {
+              user: {
+                id: user.id,
+                email: user.email,
+                user_metadata: user.user_metadata,
+                app_metadata: user.app_metadata,
+              },
+              tenantId: recoveredTenant.id,
+              role: "owner",
+              isSuperAdmin: false,
+              isImpersonating: false,
+              tenant: {
+                id: recoveredTenant.id,
+                name: recoveredTenant.name,
+                slug: recoveredTenant.slug,
+                plan_tier: recoveredTenant.plan_tier,
+                subscription_status: (recoveredTenant as any).subscription_status,
+                current_period_end: (recoveredTenant as any).current_period_end,
+                mp_payment_id: (recoveredTenant as any).mp_payment_id,
+                permissions: (recoveredTenant as any).permissions || {
+                  showcase: true,
+                  services: true,
+                  before_after: true,
+                  reviews: true,
+                  settings: true,
+                  billing: true,
+                },
+              },
+            },
+            error: null,
+          };
+        }
+      }
+
+      // 5.b Tenta recuperar pelo contact_email registrado na tabela tenants
+      if (user.email) {
+        const { data: tenantByEmail } = await supabase
+          .from("tenants")
+          .select("id, name, slug, plan_tier, subscription_status, current_period_end, mp_payment_id, permissions")
+          .ilike("contact_email", user.email.trim())
+          .maybeSingle();
+
+        if (tenantByEmail) {
+          try {
+            await supabase.from("tenant_users").upsert(
+              {
+                tenant_id: tenantByEmail.id,
+                user_id: user.id,
+                role: "owner",
+              },
+              { onConflict: "tenant_id,user_id" }
+            );
+          } catch (upsertErr) {
+            console.warn("[getAuthenticatedTenant] Aviso ao vincular auto-recuperação por email:", upsertErr);
+          }
+
+          return {
+            data: {
+              user: {
+                id: user.id,
+                email: user.email,
+                user_metadata: user.user_metadata,
+                app_metadata: user.app_metadata,
+              },
+              tenantId: tenantByEmail.id,
+              role: "owner",
+              isSuperAdmin: false,
+              isImpersonating: false,
+              tenant: {
+                id: tenantByEmail.id,
+                name: tenantByEmail.name,
+                slug: tenantByEmail.slug,
+                plan_tier: tenantByEmail.plan_tier,
+                subscription_status: (tenantByEmail as any).subscription_status,
+                current_period_end: (tenantByEmail as any).current_period_end,
+                mp_payment_id: (tenantByEmail as any).mp_payment_id,
+                permissions: (tenantByEmail as any).permissions || {
+                  showcase: true,
+                  services: true,
+                  before_after: true,
+                  reviews: true,
+                  settings: true,
+                  billing: true,
+                },
+              },
+            },
+            error: null,
+          };
+        }
+      }
+
       console.error("[getAuthenticatedTenant] Usuário sem registro na tabela tenant_users:", user.id);
       return {
         data: null,

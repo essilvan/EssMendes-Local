@@ -42,7 +42,14 @@ export default async function AdminLayout({
   const headerList = await headers();
   const currentPath = headerList.get("x-pathname") || "";
 
-  const activePermissions = tenant?.permissions || DEFAULT_TENANT_PERMISSIONS;
+  const permissions = tenant?.permissions || {
+    showcase: true,
+    services: true,
+    before_after: true,
+    reviews: true,
+    settings: true,
+    billing: true,
+  };
 
   // Proteção de Rotas Baseada em Permissões por Estabelecimento (para lojistas comuns)
   if (!isSuperAdmin) {
@@ -65,7 +72,7 @@ export default async function AdminLayout({
     ];
 
     const matched = permissionRouteMap.find((item) => currentPath.startsWith(item.prefix));
-    if (matched && activePermissions[matched.key] === false) {
+    if (matched && permissions[matched.key] === false) {
       redirect("/admin/dashboard?error=recurso_indisponivel");
     }
   }
@@ -124,7 +131,7 @@ export default async function AdminLayout({
             userEmail={user.email || ""}
             fullName={fullName}
             isSuperAdmin={isSuperAdmin}
-            permissions={tenant?.permissions}
+            permissions={permissions}
           />
         </div>
 
@@ -147,7 +154,7 @@ export default async function AdminLayout({
               >
                 Início
               </Link>
-              {(isSuperAdmin || activePermissions.showcase !== false) && (
+              {(isSuperAdmin || permissions.showcase !== false) && (
                 <Link
                   href="/admin/produtos"
                   className="text-slate-600 font-medium hover:text-teal-700 shrink-0"
@@ -155,7 +162,7 @@ export default async function AdminLayout({
                   Produtos
                 </Link>
               )}
-              {(isSuperAdmin || activePermissions.reviews !== false) && (
+              {(isSuperAdmin || permissions.reviews !== false) && (
                 <Link
                   href="/admin/avaliacoes"
                   className="text-slate-600 font-medium hover:text-teal-700 shrink-0"
