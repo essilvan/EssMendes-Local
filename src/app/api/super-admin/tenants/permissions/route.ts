@@ -58,14 +58,23 @@ async function handlePermissionsUpdate(req: Request) {
       );
     }
 
-    // 3. Sanitização do objeto de permissões estrito
+    // 3. Sanitização do objeto de permissões estrito (11 menus)
     const cleanPermissions: TenantPermissions = {
-      showcase: permissions.showcase !== false,
+      dashboard: permissions.dashboard !== false,
+      appointments: permissions.appointments !== false,
       services: permissions.services !== false,
+      products: permissions.products !== false && permissions.showcase !== false,
       before_after: permissions.before_after !== false,
       reviews: permissions.reviews !== false,
+      posts_seo: permissions.posts_seo !== false,
+      reports: permissions.reports !== false,
+      subscription_pro: permissions.subscription_pro !== false && permissions.billing !== false,
+      billing_plans: permissions.billing_plans !== false && permissions.billing !== false,
       settings: permissions.settings !== false,
-      billing: permissions.billing !== false,
+      showcase: permissions.products !== false && permissions.showcase !== false,
+      billing:
+        (permissions.subscription_pro !== false || permissions.billing_plans !== false) &&
+        permissions.billing !== false,
     };
 
     // 4. Conexão administrativa com Supabase via Service Role Key

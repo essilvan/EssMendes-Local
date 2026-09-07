@@ -28,20 +28,36 @@ export interface SuperAdminTenantItem {
 }
 
 export interface TenantPermissions {
-  showcase: boolean;    // Edição da Vitrine / Banner / Bio / Produtos
-  services: boolean;    // Catálogo de Serviços e Preços
-  before_after: boolean;// Gerador de Antes e Depois (Canvas)
-  reviews: boolean;     // Gerenciamento de Avaliações Google
-  settings: boolean;    // Configurações Gerais (Horários, WhatsApp, Cores)
-  billing: boolean;     // Assinatura e Pagamentos
+  dashboard: boolean;          // Dashboard
+  appointments: boolean;       // Agendamentos
+  services: boolean;           // Serviços
+  products: boolean;           // Vitrine Produtos
+  before_after: boolean;       // Antes & Depois
+  reviews: boolean;            // Avaliações Google
+  posts_seo: boolean;          // Posts & SEO
+  reports: boolean;            // Resultados & Relatórios
+  subscription_pro: boolean;   // Assinatura Pro
+  billing_plans: boolean;      // Faturamento & Planos
+  settings: boolean;           // Configurações
+
+  // Compatibilidade Legada (opcional)
+  showcase?: boolean;
+  billing?: boolean;
 }
 
 export const DEFAULT_TENANT_PERMISSIONS: TenantPermissions = {
-  showcase: true,
+  dashboard: true,
+  appointments: true,
   services: true,
+  products: true,
   before_after: true,
   reviews: true,
+  posts_seo: true,
+  reports: true,
+  subscription_pro: true,
+  billing_plans: true,
   settings: true,
+  showcase: true,
   billing: true,
 };
 

@@ -16,6 +16,11 @@ import {
   Settings,
   CreditCard,
   ShoppingBag,
+  LayoutDashboard,
+  CalendarCheck,
+  Newspaper,
+  BarChart3,
+  Crown,
 } from "lucide-react";
 
 interface TenantPermissionsModalProps {
@@ -39,11 +44,18 @@ export function TenantPermissionsModal({
   useEffect(() => {
     if (isOpen && tenant) {
       setPermissions({
-        showcase: tenant.permissions?.showcase !== false,
+        dashboard: tenant.permissions?.dashboard !== false,
+        appointments: tenant.permissions?.appointments !== false,
         services: tenant.permissions?.services !== false,
+        products: tenant.permissions?.products !== false && tenant.permissions?.showcase !== false,
         before_after: tenant.permissions?.before_after !== false,
         reviews: tenant.permissions?.reviews !== false,
+        posts_seo: tenant.permissions?.posts_seo !== false,
+        reports: tenant.permissions?.reports !== false,
+        subscription_pro: tenant.permissions?.subscription_pro !== false && tenant.permissions?.billing !== false,
+        billing_plans: tenant.permissions?.billing_plans !== false && tenant.permissions?.billing !== false,
         settings: tenant.permissions?.settings !== false,
+        showcase: tenant.permissions?.showcase !== false,
         billing: tenant.permissions?.billing !== false,
       });
       setErrorMessage(null);
@@ -54,30 +66,52 @@ export function TenantPermissionsModal({
   if (!isOpen || !tenant) return null;
 
   const togglePermission = (key: keyof TenantPermissions) => {
-    setPermissions((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
+    setPermissions((prev) => {
+      const nextVal = !prev[key];
+      const updated: TenantPermissions = {
+        ...prev,
+        [key]: nextVal,
+      };
+      if (key === "products") updated.showcase = nextVal;
+      if (key === "subscription_pro" || key === "billing_plans") {
+        updated.billing = updated.subscription_pro || updated.billing_plans;
+      }
+      return updated;
+    });
   };
 
   const handleSelectAll = () => {
     setPermissions({
-      showcase: true,
+      dashboard: true,
+      appointments: true,
       services: true,
+      products: true,
       before_after: true,
       reviews: true,
+      posts_seo: true,
+      reports: true,
+      subscription_pro: true,
+      billing_plans: true,
       settings: true,
+      showcase: true,
       billing: true,
     });
   };
 
   const handleDeselectAll = () => {
     setPermissions({
-      showcase: false,
+      dashboard: false,
+      appointments: false,
       services: false,
+      products: false,
       before_after: false,
       reviews: false,
+      posts_seo: false,
+      reports: false,
+      subscription_pro: false,
+      billing_plans: false,
       settings: false,
+      showcase: false,
       billing: false,
     });
   };
@@ -126,46 +160,81 @@ export function TenantPermissionsModal({
     badgeColor: string;
   }> = [
     {
-      key: "showcase",
-      title: "Vitrine & Perfil (showcase)",
-      description: "Edição da vitrine pública, bio, logo, fotos e catálogo de produtos",
-      icon: ShoppingBag,
-      badgeColor: "bg-teal-50 text-teal-700 border-teal-200",
+      key: "dashboard",
+      title: "📊 Dashboard (dashboard)",
+      description: "Visão geral das métricas, acessos, clientes e desempenho local",
+      icon: LayoutDashboard,
+      badgeColor: "bg-slate-100 text-slate-700 border-slate-200",
+    },
+    {
+      key: "appointments",
+      title: "📅 Agendamentos (appointments)",
+      description: "Gestão completa da agenda, horários e agendamentos de clientes",
+      icon: CalendarCheck,
+      badgeColor: "bg-indigo-50 text-indigo-700 border-indigo-200",
     },
     {
       key: "services",
-      title: "Serviços & Catálogo (services)",
+      title: "🛠️ Serviços & Catálogo (services)",
       description: "Gerenciamento de tabela de serviços, preços e tempos de duração",
       icon: Scissors,
       badgeColor: "bg-blue-50 text-blue-700 border-blue-200",
     },
     {
+      key: "products",
+      title: "🛍️ Vitrine Produtos (products)",
+      description: "Edição da vitrine pública de produtos, fotos e itens em destaque",
+      icon: ShoppingBag,
+      badgeColor: "bg-teal-50 text-teal-700 border-teal-200",
+    },
+    {
       key: "before_after",
-      title: "Gerador Antes e Depois (before_after)",
+      title: "🔄 Antes & Depois (before_after)",
       description: "Ferramenta visual de comparativo de fotos e portfólio de resultados",
       icon: Sparkles,
       badgeColor: "bg-purple-50 text-purple-700 border-purple-200",
     },
     {
       key: "reviews",
-      title: "Avaliações Google (reviews)",
+      title: "⭐ Avaliações Google (reviews)",
       description: "Sincronização oficial do Google Places e respostas automáticas",
       icon: Star,
       badgeColor: "bg-amber-50 text-amber-700 border-amber-200",
     },
     {
+      key: "posts_seo",
+      title: "🚀 Posts & SEO (posts_seo)",
+      description: "Publicações otimizadas para ranqueamento no Google e SEO local",
+      icon: Newspaper,
+      badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    },
+    {
+      key: "reports",
+      title: "📈 Resultados & Relatórios (reports)",
+      description: "Relatórios de tráfego, cliques, conversões e presença digital",
+      icon: BarChart3,
+      badgeColor: "bg-cyan-50 text-cyan-700 border-cyan-200",
+    },
+    {
+      key: "subscription_pro",
+      title: "👑 Assinatura Pro (subscription_pro)",
+      description: "Gerenciamento do plano contratado, renovações e status Pro",
+      icon: Crown,
+      badgeColor: "bg-amber-50 text-amber-800 border-amber-300",
+    },
+    {
+      key: "billing_plans",
+      title: "💳 Faturamento & Planos (billing_plans)",
+      description: "Faturas, formas de pagamento via Mercado Pago e histórico financeiro",
+      icon: CreditCard,
+      badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    },
+    {
       key: "settings",
-      title: "Configurações & Horários (settings)",
+      title: "⚙️ Configurações (settings)",
       description: "Horários de atendimento, WhatsApp comercial, cores e dados gerais",
       icon: Settings,
       badgeColor: "bg-slate-100 text-slate-700 border-slate-200",
-    },
-    {
-      key: "billing",
-      title: "Faturamento & Plano (billing)",
-      description: "Acesso à tela de assinaturas, planos Pro e comprovantes de pagamento",
-      icon: CreditCard,
-      badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
     },
   ];
 
@@ -210,7 +279,19 @@ export function TenantPermissionsModal({
         {/* Barra de Ações Rápidas */}
         <div className="flex items-center justify-between pt-1">
           <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-            Recursos Disponíveis
+            Recursos Disponíveis ({[
+              "dashboard",
+              "appointments",
+              "services",
+              "products",
+              "before_after",
+              "reviews",
+              "posts_seo",
+              "reports",
+              "subscription_pro",
+              "billing_plans",
+              "settings",
+            ].filter((k) => (permissions as any)[k] !== false).length} de 11 liberados)
           </span>
           <div className="flex items-center gap-2 text-xs">
             <button

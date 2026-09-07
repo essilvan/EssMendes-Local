@@ -87,6 +87,7 @@ export function AdminSidebar({
       icon: LayoutDashboard,
       current: pathname === "/admin/dashboard",
       superAdminOnly: false,
+      permissionKey: "dashboard",
     },
     {
       name: "Agendamentos",
@@ -94,6 +95,7 @@ export function AdminSidebar({
       icon: CalendarCheck,
       current: pathname.startsWith("/admin/agendamentos"),
       superAdminOnly: false,
+      permissionKey: "appointments",
     },
     {
       name: "Serviços",
@@ -109,13 +111,13 @@ export function AdminSidebar({
       icon: ShoppingBag,
       current: pathname.startsWith("/admin/produtos"),
       superAdminOnly: false,
-      permissionKey: "showcase",
+      permissionKey: "products",
     },
     {
       name: "Antes & Depois",
       href: "/admin/portfolio",
       icon: Sparkles,
-      current: pathname.startsWith("/admin/portfolio"),
+      current: pathname.startsWith("/admin/portfolio") || pathname.startsWith("/admin/antes-e-depois"),
       superAdminOnly: false,
       permissionKey: "before_after",
     },
@@ -133,6 +135,7 @@ export function AdminSidebar({
       icon: Newspaper,
       current: pathname.startsWith("/admin/posts"),
       superAdminOnly: false,
+      permissionKey: "posts_seo",
     },
     {
       name: "Resultados & Relatórios",
@@ -140,6 +143,7 @@ export function AdminSidebar({
       icon: BarChart3,
       current: pathname.startsWith("/admin/resultados"),
       superAdminOnly: false,
+      permissionKey: "reports",
     },
     {
       name: "Integrações Google",
@@ -154,7 +158,7 @@ export function AdminSidebar({
       icon: CreditCard,
       current: pathname.startsWith("/admin/assinatura"),
       superAdminOnly: false,
-      permissionKey: "billing",
+      permissionKey: "subscription_pro",
     },
     {
       name: "Faturamento & Planos",
@@ -162,7 +166,7 @@ export function AdminSidebar({
       icon: Sparkles,
       current: pathname.startsWith("/admin/faturamento"),
       superAdminOnly: false,
-      permissionKey: "billing",
+      permissionKey: "billing_plans",
     },
     {
       name: "Configurações",
@@ -174,15 +178,38 @@ export function AdminSidebar({
     },
   ];
 
-  const activePermissions = permissions || DEFAULT_TENANT_PERMISSIONS;
-
-  // Se não for super admin, oculta configurações técnicas complexas de APIs e módulos sem permissão
+  // Se não for super admin, oculta configurações técnicas de APIs e módulos desativados
   const navigation = allNavItems.filter((item) => {
     if (item.superAdminOnly && !isSuperAdmin) {
       return false;
     }
-    if (!isSuperAdmin && item.permissionKey && activePermissions[item.permissionKey] === false) {
-      return false;
+    if (!isSuperAdmin && item.permissionKey) {
+      switch (item.permissionKey) {
+        case "dashboard":
+          return permissions?.dashboard ?? true;
+        case "appointments":
+          return permissions?.appointments ?? true;
+        case "services":
+          return permissions?.services ?? true;
+        case "products":
+          return permissions?.products ?? permissions?.showcase ?? true;
+        case "before_after":
+          return permissions?.before_after ?? true;
+        case "reviews":
+          return permissions?.reviews ?? true;
+        case "posts_seo":
+          return permissions?.posts_seo ?? true;
+        case "reports":
+          return permissions?.reports ?? true;
+        case "subscription_pro":
+          return permissions?.subscription_pro ?? permissions?.billing ?? true;
+        case "billing_plans":
+          return permissions?.billing_plans ?? permissions?.billing ?? true;
+        case "settings":
+          return permissions?.settings ?? true;
+        default:
+          return true;
+      }
     }
     return true;
   });

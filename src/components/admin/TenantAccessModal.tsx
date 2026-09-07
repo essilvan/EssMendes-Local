@@ -61,11 +61,18 @@ export function TenantAccessModal({
       setPassword(generateRandomPassword(8));
       setShowPassword(true);
       setPermissions({
-        showcase: tenant.permissions?.showcase !== false,
+        dashboard: tenant.permissions?.dashboard !== false,
+        appointments: tenant.permissions?.appointments !== false,
         services: tenant.permissions?.services !== false,
+        products: tenant.permissions?.products !== false && tenant.permissions?.showcase !== false,
         before_after: tenant.permissions?.before_after !== false,
         reviews: tenant.permissions?.reviews !== false,
+        posts_seo: tenant.permissions?.posts_seo !== false,
+        reports: tenant.permissions?.reports !== false,
+        subscription_pro: tenant.permissions?.subscription_pro !== false && tenant.permissions?.billing !== false,
+        billing_plans: tenant.permissions?.billing_plans !== false && tenant.permissions?.billing !== false,
         settings: tenant.permissions?.settings !== false,
+        showcase: tenant.permissions?.showcase !== false,
         billing: tenant.permissions?.billing !== false,
       });
       setErrorMessage(null);
@@ -79,6 +86,42 @@ export function TenantAccessModal({
   const handleGeneratePassword = () => {
     setPassword(generateRandomPassword(8));
     setIsCopied(false);
+  };
+
+  const handleSelectAll = () => {
+    setPermissions({
+      dashboard: true,
+      appointments: true,
+      services: true,
+      products: true,
+      before_after: true,
+      reviews: true,
+      posts_seo: true,
+      reports: true,
+      subscription_pro: true,
+      billing_plans: true,
+      settings: true,
+      showcase: true,
+      billing: true,
+    });
+  };
+
+  const handleDeselectAll = () => {
+    setPermissions({
+      dashboard: false,
+      appointments: false,
+      services: false,
+      products: false,
+      before_after: false,
+      reviews: false,
+      posts_seo: false,
+      reports: false,
+      subscription_pro: false,
+      billing_plans: false,
+      settings: false,
+      showcase: false,
+      billing: false,
+    });
   };
 
   const loginUrl = "https://app.essmendes.com.br/login";
@@ -281,7 +324,7 @@ export function TenantAccessModal({
 
           {/* Seção de Permissões de Menus */}
           <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3.5 space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <button
                 type="button"
                 onClick={() => setShowPermissionsSection(!showPermissionsSection)}
@@ -295,20 +338,57 @@ export function TenantAccessModal({
                   <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
                 )}
               </button>
-              <span className="text-[10px] text-slate-500 font-medium">
-                {Object.values(permissions).filter(Boolean).length} de 6 liberados
-              </span>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleSelectAll}
+                  className="text-[11px] font-semibold text-teal-700 hover:text-teal-900 transition cursor-pointer"
+                >
+                  Marcar Todos
+                </button>
+                <span className="text-slate-300">|</span>
+                <button
+                  type="button"
+                  onClick={handleDeselectAll}
+                  className="text-[11px] font-semibold text-slate-500 hover:text-slate-700 transition cursor-pointer"
+                >
+                  Desmarcar Todos
+                </button>
+                <span className="text-[10px] text-slate-500 font-medium ml-1">
+                  ({
+                    [
+                      "dashboard",
+                      "appointments",
+                      "services",
+                      "products",
+                      "before_after",
+                      "reviews",
+                      "posts_seo",
+                      "reports",
+                      "subscription_pro",
+                      "billing_plans",
+                      "settings",
+                    ].filter((k) => (permissions as any)[k] !== false).length
+                  } de 11 liberados)
+                </span>
+              </div>
             </div>
 
             {showPermissionsSection && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
                 {[
-                  { key: "showcase" as const, label: "Vitrine & Perfil (showcase)" },
-                  { key: "services" as const, label: "Serviços & Catálogo (services)" },
-                  { key: "before_after" as const, label: "Antes e Depois (before_after)" },
-                  { key: "reviews" as const, label: "Avaliações Google (reviews)" },
-                  { key: "settings" as const, label: "Configurações (settings)" },
-                  { key: "billing" as const, label: "Faturamento & Plano (billing)" },
+                  { key: "dashboard" as const, label: "📊 Dashboard (dashboard)" },
+                  { key: "appointments" as const, label: "📅 Agendamentos (appointments)" },
+                  { key: "services" as const, label: "🛠️ Serviços (services)" },
+                  { key: "products" as const, label: "🛍️ Vitrine Produtos (products)" },
+                  { key: "before_after" as const, label: "🔄 Antes & Depois (before_after)" },
+                  { key: "reviews" as const, label: "⭐ Avaliações Google (reviews)" },
+                  { key: "posts_seo" as const, label: "🚀 Posts & SEO (posts_seo)" },
+                  { key: "reports" as const, label: "📈 Resultados & Relatórios (reports)" },
+                  { key: "subscription_pro" as const, label: "👑 Assinatura Pro (subscription_pro)" },
+                  { key: "billing_plans" as const, label: "💳 Faturamento & Planos (billing_plans)" },
+                  { key: "settings" as const, label: "⚙️ Configurações (settings)" },
                 ].map((item) => (
                   <label
                     key={item.key}
@@ -322,10 +402,21 @@ export function TenantAccessModal({
                       type="checkbox"
                       checked={permissions[item.key]}
                       onChange={() =>
-                        setPermissions((prev) => ({
-                          ...prev,
-                          [item.key]: !prev[item.key],
-                        }))
+                        setPermissions((prev) => {
+                          const nextVal = !prev[item.key];
+                          const updated: TenantPermissions = {
+                            ...prev,
+                            [item.key]: nextVal,
+                          };
+                          // Sincroniza legados
+                          if (item.key === "products") {
+                            updated.showcase = nextVal;
+                          }
+                          if (item.key === "subscription_pro" || item.key === "billing_plans") {
+                            updated.billing = updated.subscription_pro || updated.billing_plans;
+                          }
+                          return updated;
+                        })
                       }
                       className="rounded border-slate-300 text-teal-700 focus:ring-teal-600 h-3.5 w-3.5"
                     />

@@ -42,13 +42,20 @@ export default async function AdminLayout({
   const headerList = await headers();
   const currentPath = headerList.get("x-pathname") || "";
 
-  const permissions = tenant?.permissions || {
-    showcase: true,
-    services: true,
-    before_after: true,
-    reviews: true,
-    settings: true,
-    billing: true,
+  const permissions: TenantPermissions = {
+    dashboard: tenant?.permissions?.dashboard ?? true,
+    appointments: tenant?.permissions?.appointments ?? true,
+    services: tenant?.permissions?.services ?? true,
+    products: tenant?.permissions?.products ?? tenant?.permissions?.showcase ?? true,
+    before_after: tenant?.permissions?.before_after ?? true,
+    reviews: tenant?.permissions?.reviews ?? true,
+    posts_seo: tenant?.permissions?.posts_seo ?? true,
+    reports: tenant?.permissions?.reports ?? true,
+    subscription_pro: tenant?.permissions?.subscription_pro ?? tenant?.permissions?.billing ?? true,
+    billing_plans: tenant?.permissions?.billing_plans ?? tenant?.permissions?.billing ?? true,
+    settings: tenant?.permissions?.settings ?? true,
+    showcase: tenant?.permissions?.showcase ?? true,
+    billing: tenant?.permissions?.billing ?? true,
   };
 
   // Proteção de Rotas Baseada em Permissões por Estabelecimento (para lojistas comuns)
@@ -60,13 +67,17 @@ export default async function AdminLayout({
 
     // 2. Mapeamento de rotas e suas respectivas permissões
     const permissionRouteMap: { prefix: string; key: keyof TenantPermissions }[] = [
+      { prefix: "/admin/dashboard", key: "dashboard" },
+      { prefix: "/admin/agendamentos", key: "appointments" },
       { prefix: "/admin/servicos", key: "services" },
-      { prefix: "/admin/produtos", key: "showcase" },
+      { prefix: "/admin/produtos", key: "products" },
       { prefix: "/admin/portfolio", key: "before_after" },
       { prefix: "/admin/antes-e-depois", key: "before_after" },
       { prefix: "/admin/avaliacoes", key: "reviews" },
-      { prefix: "/admin/assinatura", key: "billing" },
-      { prefix: "/admin/faturamento", key: "billing" },
+      { prefix: "/admin/posts", key: "posts_seo" },
+      { prefix: "/admin/resultados", key: "reports" },
+      { prefix: "/admin/assinatura", key: "subscription_pro" },
+      { prefix: "/admin/faturamento", key: "billing_plans" },
       { prefix: "/admin/configuracoes", key: "settings" },
       { prefix: "/admin/perfil", key: "settings" },
     ];
@@ -154,7 +165,7 @@ export default async function AdminLayout({
               >
                 Início
               </Link>
-              {(isSuperAdmin || permissions.showcase !== false) && (
+              {(isSuperAdmin || permissions.products !== false) && (
                 <Link
                   href="/admin/produtos"
                   className="text-slate-600 font-medium hover:text-teal-700 shrink-0"
