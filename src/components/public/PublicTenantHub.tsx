@@ -148,7 +148,7 @@ export function PublicTenantHub({
   return (
     <div
       style={colorStyles}
-      className={`min-h-screen w-full transition-colors duration-200 ${
+      className={`min-h-screen w-full max-w-full overflow-x-hidden transition-colors duration-200 ${
         isAuto
           ? "bg-zinc-950 text-zinc-100"
           : isFood

@@ -75,15 +75,15 @@ export function PublicHeader({
   return (
     <header className="w-full relative z-40">
       {/* 1. Top Bar Utilitária Escura/Neutra (Padrão Applewood) */}
-      <div className="bg-slate-950 text-slate-300 border-b border-slate-800/90 text-xs py-2 px-4 shadow-inner">
-        <div className="mx-auto max-w-7xl flex flex-wrap items-center justify-between gap-3">
+      <div className="bg-slate-950 text-slate-300 border-b border-slate-800/90 text-xs py-2 px-4 shadow-inner w-full overflow-hidden">
+        <div className="mx-auto max-w-7xl flex flex-wrap items-center justify-between gap-2 sm:gap-3 w-full">
           
           {/* Lado Esquerdo: Endereço Físico Formatado */}
-          <div className="flex items-center gap-1.5 min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0 max-w-full">
             <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
             <a
               href="#contato"
-              className="text-slate-300 hover:text-white transition truncate font-medium max-w-[220px] sm:max-w-xs md:max-w-md"
+              className="text-slate-300 hover:text-white transition w-full truncate text-xs font-medium"
               title={displayAddress}
             >
               {cleanNeighborhood}
@@ -91,9 +91,9 @@ export function PublicHeader({
           </div>
 
           {/* Centro: Status Dinâmico de Funcionamento */}
-          <div className="flex items-center gap-2 text-xs">
+          <div className="flex items-center gap-2 text-xs min-w-0 max-w-full">
             <span
-              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-medium ${
+              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-medium shrink-0 ${
                 status.isOpen
                   ? "bg-emerald-950/80 text-emerald-400 border border-emerald-800"
                   : "bg-rose-950/80 text-rose-400 border border-rose-800"
@@ -106,11 +106,11 @@ export function PublicHeader({
               />
               {status.badgeText}
             </span>
-            <span className="text-zinc-400">— {status.subText}</span>
+            <span className="text-zinc-400 w-full truncate text-xs">— {status.subText}</span>
           </div>
 
           {/* Lado Direito: Telefone de Contato + Rotas GPS */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 shrink-0">
             {/* Atalhos Rápidos GPS */}
             <div className="hidden lg:flex items-center gap-1.5">
               <a
@@ -139,10 +139,10 @@ export function PublicHeader({
             {phoneWhatsapp && (
               <a
                 href={`tel:+55${cleanPhone}`}
-                className="inline-flex items-center gap-1.5 text-slate-200 hover:text-white font-bold transition lg:border-l lg:border-slate-800 lg:pl-3"
+                className="inline-flex items-center gap-1.5 text-slate-200 hover:text-white font-bold transition text-xs shrink-0 lg:border-l lg:border-slate-800 lg:pl-3"
               >
-                <Phone className="h-3 w-3 text-slate-400" />
-                <span>{phoneWhatsapp}</span>
+                <Phone className="h-3 w-3 text-slate-400 shrink-0" />
+                <span className="w-full truncate text-xs">{phoneWhatsapp}</span>
               </a>
             )}
           </div>
@@ -151,48 +151,43 @@ export function PublicHeader({
       </div>
 
       {/* 2. Navbar Suspensa com Logo, Âncoras e Botão de Agendamento */}
-      <nav className="sticky top-0 z-30 border-b border-slate-200/90 bg-white/95 backdrop-blur-md shadow-xs">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 py-3.5 flex items-center justify-between gap-4">
+      <nav className="sticky top-0 z-30 border-b border-slate-200/90 bg-white/95 backdrop-blur-md shadow-xs w-full">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 py-3.5 flex items-center justify-between gap-3 sm:gap-4">
           
           {/* Logo & Nome da Empresa */}
           <Link
             href={`/${tenantSlug}`}
-            className="flex items-center gap-3 group shrink-0"
+            className="flex items-center gap-2 min-w-0 flex-1 group"
           >
-            <div
-              className="relative flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl text-white font-black text-sm shadow-sm overflow-hidden"
-              style={{ backgroundColor: "var(--primary-color, #0d9488)" }}
-            >
+            <div className="flex items-center gap-2 min-w-0 flex-1">
               {logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={logoUrl}
                   alt={`Logotipo de ${tenantName}`}
-                  className="h-full w-full object-cover"
+                  className="h-9 w-9 rounded-full object-cover shrink-0"
                 />
               ) : (
-                <span>{tenantName.substring(0, 2).toUpperCase()}</span>
+                <div
+                  className="relative flex h-9 w-9 items-center justify-center rounded-full text-white font-black text-xs shadow-sm shrink-0 overflow-hidden"
+                  style={{ backgroundColor: "var(--primary-color, #0d9488)" }}
+                >
+                  <span>{tenantName.substring(0, 2).toUpperCase()}</span>
+                </div>
               )}
-            </div>
 
-            <div className="overflow-hidden">
-              <div className="flex items-center gap-1.5">
-                <span className="font-extrabold text-sm sm:text-base text-slate-900 group-hover:text-slate-700 transition truncate max-w-[180px] sm:max-w-[260px]">
-                  {tenantName}
-                </span>
-                <ShieldCheck
-                  className="h-4 w-4 shrink-0"
-                  style={{ color: "var(--primary-color, #0d9488)" }}
-                />
-              </div>
-              <p className="text-[11px] text-slate-500 truncate hidden sm:block">
-                Presença Oficial & Agendamento
-              </p>
+              <span className="font-semibold text-sm truncate text-slate-900 group-hover:text-slate-700 transition">
+                {tenantName}
+              </span>
+              <ShieldCheck
+                className="h-4 w-4 shrink-0"
+                style={{ color: "var(--primary-color, #0d9488)" }}
+              />
             </div>
           </Link>
 
           {/* Links de Ancoragem Desktop */}
-          <div className="hidden md:flex items-center gap-6 text-xs font-bold text-slate-600">
+          <div className="hidden md:flex items-center gap-6 text-xs font-bold text-slate-600 shrink-0">
             <a
               href="#servicos"
               className="hover:text-slate-900 transition py-1 hover:border-b-2 hover:border-slate-900"
@@ -226,11 +221,11 @@ export function PublicHeader({
           </div>
 
           {/* Botão de Ação Primária + Menu Hamburguer no Mobile */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 shrink-0 ml-auto justify-end">
             <button
               type="button"
               onClick={onOpenBooking}
-              className="inline-flex items-center gap-2 rounded-xl px-4 sm:px-5 py-2.5 text-xs font-black text-white shadow-sm transition hover:opacity-95 active:scale-95 cursor-pointer"
+              className="hidden md:inline-flex items-center gap-2 rounded-xl px-4 sm:px-5 py-2.5 text-xs font-black text-white shadow-sm transition hover:opacity-95 active:scale-95 cursor-pointer"
               style={{
                 backgroundColor: "var(--primary-color, #0d9488)",
               }}
@@ -243,7 +238,7 @@ export function PublicHeader({
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 transition"
+              className="md:hidden flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 transition shrink-0 ml-auto"
               aria-label="Abrir menu"
             >
               {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}

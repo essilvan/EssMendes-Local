@@ -457,7 +457,7 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
   const allStructuredData = [localBusinessJsonLd, ...articleJsonLdList, ...productJsonLdList];
 
   return (
-    <>
+    <div className="w-full max-w-full overflow-x-hidden">
       {/* Injeção JSON-LD para SEO Local, Artigos e Produtos */}
       <script
         type="application/ld+json"
@@ -477,6 +477,6 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
         statusBadgeText={businessStatus.badgeText}
         statusDetailText={businessStatus.detailText}
       />
-    </>
+    </div>
   );
 }
