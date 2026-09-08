@@ -73,6 +73,13 @@ export default async function ConfiguracoesPage() {
     .eq("tenant_id", tenantContext.tenantId)
     .order("created_at", { ascending: false });
 
+  // Busca dados adicionais do tenant (incluindo atributos e comodidades)
+  const { data: tenantData } = await supabase
+    .from("tenants")
+    .select("business_attributes, theme_niche")
+    .eq("id", tenantContext.tenantId)
+    .maybeSingle();
+
   const initialData = {
     companyName: tenantContext.tenant?.name || (tenantContext.user.user_metadata?.company_name as string) || "",
     description: profile?.description || "",
@@ -87,6 +94,7 @@ export default async function ConfiguracoesPage() {
     rating: profile?.rating || 4.9,
     reviewCount: profile?.review_count || 128,
     slug: tenantContext.tenant?.slug || "",
+    businessAttributes: (tenantData?.business_attributes as any) || (profile as any)?.business_attributes || null,
     services: (rawServices || []).map((s: any) => ({
       id: s.id,
       name: s.name,

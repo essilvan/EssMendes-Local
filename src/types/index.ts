@@ -61,6 +61,14 @@ export const DEFAULT_TENANT_PERMISSIONS: TenantPermissions = {
   billing: true,
 };
 
+export interface BusinessAttributes {
+  menu_options?: string[];
+  dining_options?: string[];
+  amenities?: string[];
+  atmosphere?: string[];
+  [key: string]: string[] | undefined;
+}
+
 export interface Tenant {
   id: string;
   name: string;
@@ -80,6 +88,7 @@ export interface Tenant {
   google_rating?: number | null;
   google_reviews_count?: number | null;
   presence_score?: number | null;
+  business_attributes?: BusinessAttributes | null;
   last_synced_at?: string | null;
   created_at: string;
   updated_at: string;
@@ -111,6 +120,7 @@ export interface TenantProfile {
   longitude?: number | null;
   hero_image_url?: string | null;
   place_photos?: string[] | null;
+  business_attributes?: BusinessAttributes | null;
   created_at: string;
   updated_at: string;
 }

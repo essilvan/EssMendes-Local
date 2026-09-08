@@ -43,6 +43,7 @@ export const updateProfileSchema = z.object({
     .enum(["auto", "health_beauty", "food", "retail_default"])
     .optional()
     .or(z.literal("")),
+  businessAttributes: z.string().optional().or(z.literal("")),
 });
 
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;

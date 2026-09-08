@@ -21,10 +21,12 @@ import { PlacePhotoGallery } from "./PlacePhotoGallery";
 import { GoogleReviewsCard } from "./GoogleReviewsCard";
 import { PublicPostsSection } from "./PublicPostsSection";
 import { MapLocationCard } from "./MapLocationCard";
+import { BusinessAttributes } from "./BusinessAttributes";
 import { PublicFooter } from "./PublicFooter";
 import { MobileStickyBar } from "./MobileStickyBar";
 import { PublicBookingFlow } from "./PublicBookingFlow";
 import { PublicPageTracker } from "./PublicPageTracker";
+import type { BusinessAttributes as BusinessAttributesType } from "@/types";
 
 interface PublicTenantHubProps {
   tenant: {
@@ -37,6 +39,7 @@ interface PublicTenantHubProps {
     google_rating?: number | null;
     google_reviews_count?: number | null;
     opening_hours?: string[] | null;
+    business_attributes?: BusinessAttributesType | null;
   };
   profile: TenantProfile | null;
   services: Service[];
@@ -244,6 +247,12 @@ export function PublicTenantHub({
           photos={profile?.place_photos || []}
           tenantName={tenant.name}
           address={profile?.address}
+          theme={currentTheme}
+        />
+
+        {/* 6.1 Comodidades & Atributos do Google Maps (Sobre o Espaço) */}
+        <BusinessAttributes
+          attributes={tenant.business_attributes}
           theme={currentTheme}
         />
 

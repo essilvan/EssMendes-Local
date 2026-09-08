@@ -28,6 +28,7 @@ export async function updateTenantProfileAction(
     reviewCount: formData.get("reviewCount") ? Number(formData.get("reviewCount")) : 128,
     placePhotos: formData.get("placePhotos")?.toString().trim() || "",
     themeNiche: formData.get("themeNiche")?.toString().trim() || "",
+    businessAttributes: formData.get("businessAttributes")?.toString().trim() || "",
   };
 
   // 1. Validação com Zod
@@ -51,6 +52,7 @@ export async function updateTenantProfileAction(
     reviewCount,
     placePhotos: rawPlacePhotos,
     themeNiche,
+    businessAttributes,
   } = validation.data;
 
   // 2. Obter tenant_id e usuário autenticado com tratamento de erros
@@ -78,16 +80,35 @@ export async function updateTenantProfileAction(
     }
   }
 
+  // Tratamento seguro do objeto JSON de atributos e comodidades
+  let parsedBusinessAttributes: Record<string, any> | undefined;
+  if (businessAttributes) {
+    try {
+      const parsed = JSON.parse(businessAttributes);
+      if (parsed && typeof parsed === "object") {
+        parsedBusinessAttributes = parsed;
+      }
+    } catch {
+      console.warn("[updateTenantProfileAction] Falha ao parsear businessAttributes");
+    }
+  }
+
   try {
-    // 3. Atualizar nome e theme_niche na tabela `tenants`
-    console.log("[updateTenantProfileAction] Salvando nicho no Supabase:", themeNiche);
+    // 3. Atualizar nome, theme_niche e business_attributes na tabela `tenants`
+    console.log("[updateTenantProfileAction] Salvando nicho e atributos no Supabase:", themeNiche);
+    const tenantUpdateData: Record<string, any> = {
+      name: companyName,
+      theme_niche: themeNiche || "retail_default",
+      updated_at: new Date().toISOString(),
+    };
+
+    if (parsedBusinessAttributes !== undefined) {
+      tenantUpdateData.business_attributes = parsedBusinessAttributes;
+    }
+
     const { error: tenantError } = await supabase
       .from("tenants")
-      .update({
-        name: companyName,
-        theme_niche: themeNiche || "retail_default",
-        updated_at: new Date().toISOString(),
-      })
+      .update(tenantUpdateData)
       .eq("id", tenantId);
 
     if (tenantError) {
@@ -114,6 +135,10 @@ export async function updateTenantProfileAction(
 
     if (parsedPhotos !== undefined) {
       profilePayload.place_photos = parsedPhotos;
+    }
+
+    if (parsedBusinessAttributes !== undefined) {
+      profilePayload.business_attributes = parsedBusinessAttributes;
     }
 
     let { error: profileError } = await supabase
