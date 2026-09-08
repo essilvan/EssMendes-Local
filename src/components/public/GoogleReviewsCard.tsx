@@ -28,10 +28,12 @@ export function GoogleReviewsCard({
   const mapsUrl =
     googleMapsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(tenantName)}`;
 
-  const cleanReviews = Array.isArray(reviews) ? reviews.filter((r) => Boolean(r.text || r.review_text)) : [];
-  const hasReviews = cleanReviews.length > 0;
+  console.log('Reviews carregadas no componente GoogleReviewsCard:', reviews?.length);
+
+  const hasReviews = Boolean(reviews && reviews.length > 0);
+  const reviewsToDisplay = Array.isArray(reviews) ? reviews : [];
   const displayRating = typeof rating === "number" && rating > 0 ? rating.toFixed(1) : "5.0";
-  const displayCount = typeof reviewCount === "number" && reviewCount > 0 ? reviewCount : cleanReviews.length;
+  const displayCount = typeof reviewCount === "number" && reviewCount > 0 ? reviewCount : reviewsToDisplay.length;
 
   const currentTheme = theme || NICHE_THEMES.retail_default;
 
@@ -99,10 +101,10 @@ export function GoogleReviewsCard({
       {/* Seção de Comentários ou Estado Limpo sem Fake Data */}
       {hasReviews ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {cleanReviews.slice(0, 6).map((review, idx) => {
+          {reviewsToDisplay.slice(0, 6).map((review, idx) => {
             const authorName = review.author_name || "Cliente Google";
             const avatarBg = AVATAR_COLORS[idx % AVATAR_COLORS.length];
-            const authorPhoto = review.profile_photo_url || review.author_photo_url;
+            const authorPhoto = review.author_photo_url || review.profile_photo_url;
             const reviewRating = review.rating || 5;
             const reviewText = review.review_text || review.text || "";
             const reviewTime = review.relative_time_description || review.relative_time || "recentemente";
@@ -122,16 +124,24 @@ export function GoogleReviewsCard({
                       <img
                         src={authorPhoto}
                         alt={authorName}
+                        referrerPolicy="no-referrer"
                         className="h-9 w-9 shrink-0 rounded-full object-cover shadow-2xs"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                          const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
+                          if (fallback) fallback.style.display = "flex";
+                        }}
                       />
-                    ) : (
-                      <div
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white font-bold text-xs shadow-2xs"
-                        style={{ backgroundColor: avatarBg }}
-                      >
-                        {authorName.charAt(0).toUpperCase()}
-                      </div>
-                    )}
+                    ) : null}
+                    <div
+                      className="h-9 w-9 shrink-0 items-center justify-center rounded-full text-white font-bold text-xs shadow-2xs"
+                      style={{
+                        backgroundColor: avatarBg,
+                        display: authorPhoto ? "none" : "flex",
+                      }}
+                    >
+                      {authorName.charAt(0).toUpperCase()}
+                    </div>
                     <div>
                       <div className="flex items-center gap-1">
                         <p className={`font-bold text-xs ${currentTheme.textPrimary}`}>{authorName}</p>

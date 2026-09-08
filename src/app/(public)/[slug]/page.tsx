@@ -244,12 +244,15 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
   const portfolioItems = (portfolioRes.data || []) as PortfolioItem[];
 
   // 2.5 Tratamento e Mapeamento Seguro de Avaliações Oficiais do Google Maps
-  const reviews: TenantReview[] = (reviewsRes.data || []).map((r: any) => ({
+  const { data: rawReviews, error: reviewsError } = reviewsRes;
+  console.log('Reviews carregadas na vitrine:', rawReviews?.length, reviewsError);
+
+  const reviews: TenantReview[] = (rawReviews || []).map((r: any) => ({
     id: r.id,
     tenant_id: r.tenant_id,
     author_name: r.author_name || r.author || "Cliente Google",
-    author_photo_url: r.profile_photo_url || r.author_photo_url || r.photo_url || null,
-    profile_photo_url: r.profile_photo_url || r.author_photo_url || null,
+    author_photo_url: r.author_photo_url || r.profile_photo_url || r.photo_url || null,
+    profile_photo_url: r.author_photo_url || r.profile_photo_url || null,
     author_url: r.author_url || null,
     rating: Number(r.rating) || 5,
     text: r.review_text || r.text || "",
