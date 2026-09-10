@@ -460,7 +460,7 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
   const allStructuredData = [localBusinessJsonLd, ...articleJsonLdList, ...productJsonLdList];
 
   const templateId = tenant.theme_settings?.template_id || typedProfile?.template_id || "premium";
-  const primaryColor = tenant.theme_settings?.primary_color || typedProfile?.primary_color || "#0d9488";
+  const primaryColor = tenant.theme_settings?.primary_color || typedProfile?.primary_color || "#e11d48";
 
   const templateClasses: Record<string, string> = {
     premium: "template-premium font-serif-headings",

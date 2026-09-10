@@ -9,23 +9,17 @@ import type {
   TenantPost,
   TenantProduct,
 } from "@/types";
-import { getThemeColorStyles } from "@/utils/color";
+import { getThemeColorStyles, getContrastTextColor } from "@/utils/color";
 import { getTenantTheme, NICHE_THEMES } from "@/config/tenant-themes";
 import { PublicHeader } from "./PublicHeader";
-import { PublicHeroSplit } from "./PublicHeroSplit";
-import { TrustMetricsBar } from "./TrustMetricsBar";
-import { ConversionDashboard } from "./ConversionDashboard";
-import { PublicProductsSection } from "./PublicProductsSection";
-import { AboutBusinessSection } from "./AboutBusinessSection";
-import { PlacePhotoGallery } from "./PlacePhotoGallery";
-import { GoogleReviewsCard } from "./GoogleReviewsCard";
-import { PublicPostsSection } from "./PublicPostsSection";
-import { MapLocationCard } from "./MapLocationCard";
-import { BusinessAttributes } from "./BusinessAttributes";
 import { PublicFooter } from "./PublicFooter";
 import { MobileStickyBar } from "./MobileStickyBar";
 import { PublicBookingFlow } from "./PublicBookingFlow";
 import { PublicPageTracker } from "./PublicPageTracker";
+import { ConversionTemplateView } from "./templates/ConversionTemplateView";
+import { MinimalTemplateView } from "./templates/MinimalTemplateView";
+import { ModernTemplateView } from "./templates/ModernTemplateView";
+import { PremiumTemplateView } from "./templates/PremiumTemplateView";
 import type { BusinessAttributes as BusinessAttributesType } from "@/types";
 
 interface PublicTenantHubProps {
@@ -136,10 +130,19 @@ export function PublicTenantHub({
     null
   );
 
-  const primaryColor = tenant.theme_settings?.primary_color || profile?.primary_color || "#0d9488";
-  const colorStyles = getThemeColorStyles(primaryColor);
-  const effectiveNiche = tenant.theme_settings?.niche || tenant.theme_niche || profile?.template_id;
-  const templateId = tenant.theme_settings?.template_id || profile?.template_id || "premium";
+  const activeTemplate =
+    (tenant.theme_settings?.template_id as
+      | "conversion"
+      | "minimal"
+      | "modern"
+      | "premium") ||
+    (profile?.template_id as any) ||
+    "premium";
+  const brandColor =
+    tenant.theme_settings?.primary_color || profile?.primary_color || "#e11d48";
+  const colorStyles = getThemeColorStyles(brandColor);
+  const effectiveNiche =
+    tenant.theme_settings?.niche || tenant.theme_niche || profile?.template_id;
 
   const templateClasses: Record<string, string> = {
     premium: "template-premium font-serif-headings",
@@ -147,7 +150,8 @@ export function PublicTenantHub({
     minimal: "template-minimal font-mono-accents",
     conversion: "template-conversion cta-high-contrast",
   };
-  const selectedTemplateClass = templateClasses[templateId] || templateClasses.premium;
+  const selectedTemplateClass =
+    templateClasses[activeTemplate] || templateClasses.premium;
 
   const realRating = profile?.google_rating ?? profile?.rating ?? tenant.google_rating ?? 5.0;
   const realReviewCount =
@@ -177,9 +181,11 @@ export function PublicTenantHub({
 
   return (
     <div
-      style={{ ...colorStyles, "--brand-primary": primaryColor } as React.CSSProperties}
+      style={{ ...colorStyles, "--brand-primary": brandColor } as React.CSSProperties}
       className={`min-h-screen w-full max-w-full overflow-x-hidden transition-colors duration-200 ${selectedTemplateClass} ${
-        isAuto
+        activeTemplate === "minimal"
+          ? "bg-white text-neutral-900"
+          : isAuto
           ? "bg-zinc-950 text-zinc-100"
           : isFood
           ? "bg-stone-950 text-stone-100"
@@ -191,149 +197,146 @@ export function PublicTenantHub({
       {/* Tracker de Analytics (Zero PII) */}
       <PublicPageTracker tenantId={tenant.id} />
 
-      {/* 1. Top Bar Utilitária Escura + Navbar Suspensa */}
-      <PublicHeader
-        tenantName={tenant.name}
-        tenantSlug={tenant.slug}
-        logoUrl={profile?.logo_url}
-        phoneWhatsapp={profile?.phone_whatsapp || profile?.phone}
-        address={profile?.address}
-        latitude={profile?.latitude}
-        longitude={profile?.longitude}
-        openingHours={tenant.opening_hours || profile?.opening_hours_json}
-        isOpenNow={isOpenNow}
-        statusBadgeText={statusBadgeText}
-        statusDetailText={statusDetailText}
-        theme={currentTheme}
-        onOpenBooking={() => handleOpenBooking()}
-      />
-
-      {/* Container Centralizado com Conteúdo Real */}
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8 space-y-8">
-        
-        {/* 2. Hero Section Universal Split Screen (Padrão Applewood) */}
-        <PublicHeroSplit
+      {/* 1. Header Dinâmico (Minimalista no 'minimal' ou Completo nos demais) */}
+      {activeTemplate !== "minimal" ? (
+        <PublicHeader
           tenantName={tenant.name}
-          description={profile?.description}
-          address={profile?.address}
+          tenantSlug={tenant.slug}
+          logoUrl={profile?.logo_url}
           phoneWhatsapp={profile?.phone_whatsapp || profile?.phone}
-          heroImageUrl={profile?.hero_image_url || profile?.logo_url}
-          placePhotos={profile?.place_photos}
-          latitude={profile?.latitude}
-          longitude={profile?.longitude}
-          businessCategory={profile?.business_category}
-          rating={realRating}
-          reviewCount={realReviewCount}
-          reviews={reviews}
-          googleMapsUrl={profile?.google_maps_url}
-          theme={currentTheme}
-          onOpenBooking={() => handleOpenBooking()}
-        />
-
-        {/* 3. Faixa de Pilares de Confiança Universal (4 Blocos) */}
-        <TrustMetricsBar
-          rating={realRating}
-          reviewCount={realReviewCount}
-          businessCategory={profile?.business_category}
-          theme={currentTheme}
-        />
-
-        {/* 4. Dashboard de Conversão (Catálogo de Serviços + Antes & Depois / Promo + Widget de Agendamento) */}
-        <ConversionDashboard
-          tenant={tenant}
-          profile={profile}
-          services={services}
-          portfolioItems={portfolioItems}
-          posts={posts}
-          theme={currentTheme}
-          onOpenBookingModal={handleOpenBooking}
-        />
-
-        {/* 4.1 Vitrine de Produtos Físicos & Peças para Pedido via WhatsApp */}
-        <PublicProductsSection
-          products={products}
-          tenantName={tenant.name}
-          phoneWhatsapp={profile?.phone_whatsapp || profile?.phone}
-          theme={currentTheme}
-        />
-
-        {/* 5. Sobre o Estabelecimento / Institucional */}
-        <AboutBusinessSection
-          tenantName={tenant.name}
-          description={profile?.description}
-          editorialSummary={profile?.editorial_summary}
-          address={profile?.address}
-          phoneWhatsapp={profile?.phone_whatsapp || profile?.phone}
-          businessCategory={profile?.business_category}
-          theme={currentTheme}
-          onOpenBooking={() => handleOpenBooking()}
-        />
-
-        {/* 6. Galeria de Fotos Reais do Google Maps (Lightbox) */}
-        <PlacePhotoGallery
-          photos={profile?.place_photos || []}
-          tenantName={tenant.name}
-          address={profile?.address}
-          theme={currentTheme}
-        />
-
-        {/* 6.1 Comodidades & Atributos do Google Maps (Sobre o Espaço) */}
-        <BusinessAttributes
-          attributes={tenant.business_attributes}
-          theme={currentTheme}
-        />
-
-        {/* 7. Prova Social Oficial (Google Reviews) */}
-        <GoogleReviewsCard
-          tenantName={tenant.name}
-          rating={realRating}
-          reviewCount={realReviewCount}
-          reviews={reviews}
-          googleMapsUrl={profile?.google_maps_url}
-          theme={currentTheme}
-        />
-
-        {/* 8. Posts, Novidades & Artigos de SEO (se houver) */}
-        <PublicPostsSection
-          posts={posts}
-          tenantName={tenant.name}
-          phoneWhatsapp={profile?.phone_whatsapp || profile?.phone}
-          theme={currentTheme}
-          onOpenBooking={() => handleOpenBooking()}
-        />
-
-        {/* 9. Horários da Semana, Endereço & Rotas GPS */}
-        <MapLocationCard
-          tenantName={tenant.name}
           address={profile?.address}
           latitude={profile?.latitude}
           longitude={profile?.longitude}
           openingHours={tenant.opening_hours || profile?.opening_hours_json}
-          googleMapsUrl={profile?.google_maps_url}
           isOpenNow={isOpenNow}
-          statusDetailText={statusDetailText}
           statusBadgeText={statusBadgeText}
+          statusDetailText={statusDetailText}
           theme={currentTheme}
+          onOpenBooking={() => handleOpenBooking()}
         />
+      ) : (
+        <nav className="w-full border-b border-neutral-200 bg-white/95 backdrop-blur-sm sticky top-0 z-40 px-4 py-3.5">
+          <div className="max-w-4xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              {profile?.logo_url && (
+                <img
+                  src={profile.logo_url}
+                  alt={tenant.name}
+                  className="h-7 w-7 rounded object-contain"
+                />
+              )}
+              <span className="font-bold text-sm tracking-tight text-neutral-900 font-mono uppercase">
+                {tenant.name}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleOpenBooking()}
+              className="text-xs font-semibold px-3.5 py-1.5 rounded border border-neutral-900 bg-neutral-900 text-white hover:bg-neutral-800 transition cursor-pointer shadow-xs"
+              style={{ backgroundColor: brandColor, color: getContrastTextColor(brandColor) }}
+            >
+              Agendar Horário
+            </button>
+          </div>
+        </nav>
+      )}
 
+      {/* Container Centralizado com Conteúdo Real Dinâmico por Template */}
+      <main className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8">
+        {activeTemplate === "conversion" && (
+          <ConversionTemplateView
+            tenant={tenant}
+            profile={profile}
+            services={services}
+            portfolioItems={portfolioItems}
+            reviews={reviews}
+            posts={posts}
+            products={products}
+            isOpenNow={isOpenNow}
+            statusBadgeText={statusBadgeText}
+            statusDetailText={statusDetailText}
+            brandColor={brandColor}
+            theme={currentTheme}
+            onOpenBooking={handleOpenBooking}
+          />
+        )}
+
+        {activeTemplate === "minimal" && (
+          <MinimalTemplateView
+            tenant={tenant}
+            profile={profile}
+            services={services}
+            portfolioItems={portfolioItems}
+            reviews={reviews}
+            posts={posts}
+            products={products}
+            isOpenNow={isOpenNow}
+            statusBadgeText={statusBadgeText}
+            statusDetailText={statusDetailText}
+            brandColor={brandColor}
+            theme={currentTheme}
+            onOpenBooking={handleOpenBooking}
+          />
+        )}
+
+        {activeTemplate === "modern" && (
+          <ModernTemplateView
+            tenant={tenant}
+            profile={profile}
+            services={services}
+            portfolioItems={portfolioItems}
+            reviews={reviews}
+            posts={posts}
+            products={products}
+            isOpenNow={isOpenNow}
+            statusBadgeText={statusBadgeText}
+            statusDetailText={statusDetailText}
+            brandColor={brandColor}
+            theme={currentTheme}
+            onOpenBooking={handleOpenBooking}
+          />
+        )}
+
+        {(activeTemplate === "premium" ||
+          (activeTemplate !== "conversion" &&
+            activeTemplate !== "minimal" &&
+            activeTemplate !== "modern")) && (
+          <PremiumTemplateView
+            tenant={tenant}
+            profile={profile}
+            services={services}
+            portfolioItems={portfolioItems}
+            reviews={reviews}
+            posts={posts}
+            products={products}
+            isOpenNow={isOpenNow}
+            statusBadgeText={statusBadgeText}
+            statusDetailText={statusDetailText}
+            brandColor={brandColor}
+            theme={currentTheme}
+            onOpenBooking={handleOpenBooking}
+          />
+        )}
       </main>
 
-      {/* 10. Footer com Resumo e Ações Rápidas */}
-      <PublicFooter
-        tenantName={tenant.name}
-        phoneWhatsapp={profile?.phone_whatsapp || profile?.phone}
-        address={profile?.address}
-        latitude={profile?.latitude}
-        longitude={profile?.longitude}
-        openingHours={tenant.opening_hours || profile?.opening_hours_json}
-        isOpenNow={isOpenNow}
-        statusBadgeText={statusBadgeText}
-        statusDetailText={statusDetailText}
-        googleMapsUrl={profile?.google_maps_url}
-        onOpenBooking={() => handleOpenBooking()}
-      />
+      {/* Footer padrão para templates ricos (minimal possui seu footer dedicado) */}
+      {activeTemplate !== "minimal" && (
+        <PublicFooter
+          tenantName={tenant.name}
+          phoneWhatsapp={profile?.phone_whatsapp || profile?.phone}
+          address={profile?.address}
+          latitude={profile?.latitude}
+          longitude={profile?.longitude}
+          openingHours={tenant.opening_hours || profile?.opening_hours_json}
+          isOpenNow={isOpenNow}
+          statusBadgeText={statusBadgeText}
+          statusDetailText={statusDetailText}
+          googleMapsUrl={profile?.google_maps_url}
+          onOpenBooking={() => handleOpenBooking()}
+        />
+      )}
 
-      {/* 11. Barra Fixa Mobile */}
+      {/* 11. Barra Fixa Mobile com inteligência por template */}
       <MobileStickyBar
         tenantId={tenant.id}
         tenantName={tenant.name}
@@ -347,6 +350,8 @@ export function PublicTenantHub({
         statusDetailText={statusDetailText}
         openingHours={tenant.opening_hours || profile?.opening_hours_json}
         theme={currentTheme}
+        activeTemplate={activeTemplate}
+        brandColor={brandColor}
         onOpenBooking={() => handleOpenBooking()}
       />
 

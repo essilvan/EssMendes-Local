@@ -20,6 +20,8 @@ interface MobileStickyBarProps {
   statusBadgeText?: string;
   statusDetailText?: string;
   theme?: NicheThemeConfig;
+  activeTemplate?: string;
+  brandColor?: string;
   onOpenBooking: () => void;
 }
 
@@ -36,6 +38,8 @@ export function MobileStickyBar({
   statusBadgeText,
   statusDetailText,
   theme,
+  activeTemplate,
+  brandColor,
   onOpenBooking,
 }: MobileStickyBarProps) {
   const cleanPhone = phoneWhatsapp ? sanitizePhoneNumber(phoneWhatsapp) : "";
@@ -97,61 +101,93 @@ export function MobileStickyBar({
         <span className="text-slate-600 truncate text-[10px] font-medium">{status.subText || status.subLabel}</span>
       </div>
 
-      <div className="flex items-center gap-1.5 max-w-lg mx-auto">
-        {/* Botão Ligar */}
-        {cleanPhone && (
-          <a
-            href={`tel:+55${cleanPhone}`}
-            onClick={handlePhoneClick}
-            className="flex flex-col items-center justify-center gap-0.5 rounded-xl border border-slate-200 bg-slate-50 py-1.5 px-2.5 text-[10px] font-bold text-slate-700 active:bg-slate-100 transition shrink-0"
-            title="Ligar para o estabelecimento"
-          >
-            <Phone className="h-4 w-4 text-slate-600" />
-            <span>Ligar</span>
-          </a>
-        )}
-
-        {/* Botão WhatsApp */}
-        {phoneWhatsapp && (
+      {activeTemplate === "conversion" ? (
+        <div className="flex items-center gap-2 max-w-lg mx-auto">
+          {cleanPhone && (
+            <a
+              href={`tel:+55${cleanPhone}`}
+              onClick={handlePhoneClick}
+              className="flex flex-col items-center justify-center gap-0.5 rounded-2xl border border-slate-200 bg-slate-100 py-3 px-3 text-xs font-bold text-slate-800 active:bg-slate-200 transition shrink-0 shadow-xs"
+              title="Ligar para o estabelecimento"
+            >
+              <Phone className="h-5 w-5 text-slate-700" />
+              <span className="text-[9px]">Ligar</span>
+            </a>
+          )}
           <a
             href={whatsappUrl}
             target="_blank"
             rel="noopener noreferrer"
             onClick={handleWhatsAppClick}
-            className="flex flex-col items-center justify-center gap-0.5 rounded-xl bg-emerald-600 py-1.5 px-3 text-[10px] font-bold text-white shadow-xs active:bg-emerald-700 transition shrink-0"
-            title="Conversar no WhatsApp"
+            className="flex-1 flex items-center justify-center gap-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 py-3 px-4 text-sm font-black text-white shadow-lg shadow-emerald-600/30 transition active:scale-[0.98] animate-pulse"
           >
-            <MessageCircle className="h-4 w-4" />
-            <span>WhatsApp</span>
+            <MessageCircle className="h-5 w-5 fill-white text-emerald-600 shrink-0" />
+            <span>Falar no WhatsApp Agora</span>
           </a>
-        )}
+        </div>
+      ) : (
+        <div className="flex items-center gap-1.5 max-w-lg mx-auto">
+          {/* Botão Ligar */}
+          {cleanPhone && (
+            <a
+              href={`tel:+55${cleanPhone}`}
+              onClick={handlePhoneClick}
+              className="flex flex-col items-center justify-center gap-0.5 rounded-xl border border-slate-200 bg-slate-50 py-1.5 px-2.5 text-[10px] font-bold text-slate-700 active:bg-slate-100 transition shrink-0"
+              title="Ligar para o estabelecimento"
+            >
+              <Phone className="h-4 w-4 text-slate-600" />
+              <span>Ligar</span>
+            </a>
+          )}
 
-        {/* Botão Localização */}
-        <a
-          href={locationUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={handleLocationClick}
-          className="flex flex-col items-center justify-center gap-0.5 rounded-xl border border-slate-200 bg-slate-50 py-1.5 px-2.5 text-[10px] font-bold text-slate-700 active:bg-slate-100 transition shrink-0"
-          title="Ver no mapa / como chegar"
-        >
-          <MapPin className="h-4 w-4 text-slate-600" />
-          <span>Mapa</span>
-        </a>
+          {/* Botão WhatsApp */}
+          {phoneWhatsapp && (
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={handleWhatsAppClick}
+              className="flex flex-col items-center justify-center gap-0.5 rounded-xl bg-emerald-600 py-1.5 px-3 text-[10px] font-bold text-white shadow-xs active:bg-emerald-700 transition shrink-0"
+              title="Conversar no WhatsApp"
+            >
+              <MessageCircle className="h-4 w-4" />
+              <span>WhatsApp</span>
+            </a>
+          )}
 
-        {/* Botão Principal: Agendar Horário */}
-        <button
-          type="button"
-          onClick={handleBookingClick}
-          className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2.5 px-3 text-xs font-black text-white shadow-md active:scale-95 transition ${
-            theme?.ctaButtonClass || "hover:opacity-95"
-          }`}
-          style={!theme?.ctaButtonClass ? { backgroundColor: "var(--primary-color, #0d9488)" } : undefined}
-        >
-          <Calendar className="h-4 w-4" />
-          <span>Agendar</span>
-        </button>
-      </div>
+          {/* Botão Localização */}
+          <a
+            href={locationUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={handleLocationClick}
+            className="flex flex-col items-center justify-center gap-0.5 rounded-xl border border-slate-200 bg-slate-50 py-1.5 px-2.5 text-[10px] font-bold text-slate-700 active:bg-slate-100 transition shrink-0"
+            title="Ver no mapa / como chegar"
+          >
+            <MapPin className="h-4 w-4 text-slate-600" />
+            <span>Mapa</span>
+          </a>
+
+          {/* Botão Principal: Agendar Horário */}
+          <button
+            type="button"
+            onClick={handleBookingClick}
+            className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2.5 px-3 text-xs font-black text-white shadow-md active:scale-95 transition ${
+              theme?.ctaButtonClass || "hover:opacity-95"
+            }`}
+            style={
+              brandColor
+                ? { backgroundColor: brandColor }
+                : !theme?.ctaButtonClass
+                ? { backgroundColor: "var(--primary-color, #0d9488)" }
+                : undefined
+            }
+          >
+            <Calendar className="h-4 w-4" />
+            <span>Agendar</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
