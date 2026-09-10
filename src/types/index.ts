@@ -89,6 +89,14 @@ export interface Tenant {
   google_reviews_count?: number | null;
   presence_score?: number | null;
   business_attributes?: BusinessAttributes | null;
+  theme_niche?: string | null;
+  theme_settings?: {
+    template_id?: string;
+    template?: string;
+    niche?: string;
+    primary_color?: string;
+    [key: string]: any;
+  } | null;
   last_synced_at?: string | null;
   created_at: string;
   updated_at: string;

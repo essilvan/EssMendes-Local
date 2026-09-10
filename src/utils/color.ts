@@ -54,6 +54,7 @@ export function getThemeColorStyles(primaryColor?: string | null): React.CSSProp
   const contrastText = getContrastTextColor(color);
 
   return {
+    "--brand-primary": color,
     "--primary-color": color,
     "--primary-rgb": `${rgb.r}, ${rgb.g}, ${rgb.b}`,
     "--primary-contrast": contrastText,

@@ -459,8 +459,22 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
 
   const allStructuredData = [localBusinessJsonLd, ...articleJsonLdList, ...productJsonLdList];
 
+  const templateId = tenant.theme_settings?.template_id || typedProfile?.template_id || "premium";
+  const primaryColor = tenant.theme_settings?.primary_color || typedProfile?.primary_color || "#0d9488";
+
+  const templateClasses: Record<string, string> = {
+    premium: "template-premium font-serif-headings",
+    modern: "template-modern bento-layout",
+    minimal: "template-minimal font-mono-accents",
+    conversion: "template-conversion cta-high-contrast",
+  };
+  const selectedTemplateClass = templateClasses[templateId] || templateClasses.premium;
+
   return (
-    <div className="w-full max-w-full overflow-x-hidden">
+    <div
+      className={`w-full max-w-full overflow-x-hidden ${selectedTemplateClass}`}
+      style={{ "--brand-primary": primaryColor } as React.CSSProperties}
+    >
       {/* Injeção JSON-LD para SEO Local, Artigos e Produtos */}
       <script
         type="application/ld+json"

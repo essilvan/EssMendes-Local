@@ -1,4 +1,13 @@
-export type ThemeNiche = 'auto' | 'health_beauty' | 'food' | 'retail_default';
+export type ThemeNiche =
+  | 'auto'
+  | 'health_beauty'
+  | 'food'
+  | 'retail_default'
+  | 'gastronomia'
+  | 'automotivo'
+  | 'barbearia'
+  | 'estetica_saude'
+  | 'servicos';
 
 export interface NicheThemeConfig {
   id: ThemeNiche;
@@ -137,6 +146,141 @@ export const NICHE_THEMES: Record<ThemeNiche, NicheThemeConfig> = {
       contact: '📍',
     },
   },
+  barbearia: {
+    id: 'barbearia',
+    name: 'Barbearia & Grooming',
+    icon: '✂️',
+    description: 'Estilo escuro clássico com detalhes em âmbar/dourado e visual vintage refinado',
+    isDark: true,
+    bgPage: 'bg-stone-950 text-stone-100',
+    bgCard: 'bg-stone-900/95 border border-stone-800 shadow-xl shadow-black/40',
+    textPrimary: 'text-stone-100',
+    textMuted: 'text-stone-400',
+    accentColor: '#d97706',
+    accentBg: 'bg-amber-600 hover:bg-amber-700',
+    accentText: 'text-amber-400',
+    badgeBg: 'bg-amber-500/10 border border-amber-500/30',
+    badgeText: 'text-amber-400',
+    borderClass: 'border-stone-800',
+    roundedClass: 'rounded-xl',
+    ctaButtonClass: 'bg-gradient-to-r from-amber-600 to-amber-700 text-white font-bold shadow-lg shadow-amber-600/20 hover:scale-[1.02] transition-all',
+    heroTagline: 'Corte Tradicional, Estilo & Atendimento de Primeira',
+    icons: {
+      hero: '💈',
+      services: '✂️',
+      products: '🧴',
+      reviews: '⭐',
+      contact: '📍',
+    },
+  },
+  gastronomia: {
+    id: 'gastronomia',
+    name: 'Gastronomia & Delivery',
+    icon: '🍽️',
+    description: 'Estilo escuro dinâmico com realce estimulante para gastronomia e pedidos',
+    isDark: true,
+    bgPage: 'bg-stone-950 text-stone-100',
+    bgCard: 'bg-stone-900 border border-stone-800 shadow-xl shadow-stone-950/50',
+    textPrimary: 'text-stone-100',
+    textMuted: 'text-stone-400',
+    accentColor: '#dc2626',
+    accentBg: 'bg-red-600 hover:bg-red-700',
+    accentText: 'text-red-500',
+    badgeBg: 'bg-red-950/60 border border-red-800/40',
+    badgeText: 'text-red-400',
+    borderClass: 'border-stone-800',
+    roundedClass: 'rounded-2xl',
+    ctaButtonClass: 'bg-gradient-to-r from-red-600 to-rose-600 text-white font-bold shadow-lg shadow-red-600/25 hover:scale-[1.02] transition-all',
+    heroTagline: 'Sabor Incomparável & Pedido Rápido',
+    icons: {
+      hero: '🔥',
+      services: '🍽️',
+      products: '🍕',
+      reviews: '⭐',
+      contact: '🛵',
+    },
+  },
+  automotivo: {
+    id: 'automotivo',
+    name: 'Automotivo & Mecânica',
+    icon: '🚗',
+    description: 'Estilo de alta performance com detalhes âmbar e visual industrial',
+    isDark: true,
+    bgPage: 'bg-zinc-950 text-zinc-100',
+    bgCard: 'bg-zinc-900/90 border border-zinc-800 shadow-xl shadow-black/40',
+    textPrimary: 'text-zinc-100',
+    textMuted: 'text-zinc-400',
+    accentColor: '#f97316',
+    accentBg: 'bg-amber-500 hover:bg-amber-600',
+    accentText: 'text-amber-400',
+    badgeBg: 'bg-amber-500/10 border border-amber-500/30',
+    badgeText: 'text-amber-400',
+    borderClass: 'border-zinc-800',
+    roundedClass: 'rounded-xl',
+    ctaButtonClass: 'bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold shadow-lg shadow-orange-500/20 hover:scale-[1.02] transition-all',
+    heroTagline: 'Serviço de Confiança e Agilidade Mecânica',
+    icons: {
+      hero: '⚡',
+      services: '🛠️',
+      products: '⚙️',
+      reviews: '⭐',
+      contact: '📍',
+    },
+  },
+  estetica_saude: {
+    id: 'estetica_saude',
+    name: 'Saúde & Estética',
+    icon: '🌿',
+    description: 'Estilo clean sofisticado com tons suaves, bem-estar e efeito vidro',
+    isDark: false,
+    bgPage: 'bg-slate-50 text-slate-800',
+    bgCard: 'bg-white/95 border border-slate-200/80 shadow-md shadow-slate-200/50 backdrop-blur-sm',
+    textPrimary: 'text-slate-900',
+    textMuted: 'text-slate-500',
+    accentColor: '#0d9488',
+    accentBg: 'bg-teal-600 hover:bg-teal-700',
+    accentText: 'text-teal-700',
+    badgeBg: 'bg-teal-50 border border-teal-200',
+    badgeText: 'text-teal-800',
+    borderClass: 'border-slate-200',
+    roundedClass: 'rounded-2xl',
+    ctaButtonClass: 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white font-semibold shadow-md shadow-teal-600/20 hover:scale-[1.02] transition-all',
+    heroTagline: 'Cuidado Especializado & Bem-Estar',
+    icons: {
+      hero: '✨',
+      services: '🩺',
+      products: '🧴',
+      reviews: '🌟',
+      contact: '📍',
+    },
+  },
+  servicos: {
+    id: 'servicos',
+    name: 'Serviços Gerais & Negócios',
+    icon: '💼',
+    description: 'Estilo moderno corporativo focado em confiança, clareza e conversão',
+    isDark: false,
+    bgPage: 'bg-gray-50 text-gray-900',
+    bgCard: 'bg-white border border-gray-200 shadow-sm',
+    textPrimary: 'text-gray-900',
+    textMuted: 'text-gray-500',
+    accentColor: '#2563eb',
+    accentBg: 'bg-blue-600 hover:bg-blue-700',
+    accentText: 'text-blue-600',
+    badgeBg: 'bg-blue-50 border border-blue-200',
+    badgeText: 'text-blue-700',
+    borderClass: 'border-gray-200',
+    roundedClass: 'rounded-xl',
+    ctaButtonClass: 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-md hover:scale-[1.02] transition-all',
+    heroTagline: 'Qualidade, Variedade e Atendimento Direto',
+    icons: {
+      hero: '🚀',
+      services: '💼',
+      products: '🛍️',
+      reviews: '⭐',
+      contact: '📍',
+    },
+  },
 };
 
 export function getTenantTheme(themeKey?: string | null, category?: string | null, googleTypes?: string[]): NicheThemeConfig {
@@ -144,16 +288,19 @@ export function getTenantTheme(themeKey?: string | null, category?: string | nul
     return NICHE_THEMES[themeKey as ThemeNiche];
   }
   const text = `${category || ''} ${(googleTypes || []).join(' ')}`.toLowerCase();
+  if (text.includes('barber') || text.includes('barbearia') || text.includes('corte masculino')) {
+    return NICHE_THEMES.barbearia;
+  }
   if (text.includes('car') || text.includes('auto') || text.includes('mecanic') || text.includes('oficina') || text.includes('pneu') || text.includes('guincho') || text.includes('veiculo') || text.includes('lavajato') || text.includes('funilaria')) {
-    return NICHE_THEMES.auto;
+    return NICHE_THEMES.automotivo;
   }
   if (text.includes('dent') || text.includes('saude') || text.includes('medic') || text.includes('clinica') || text.includes('estetica') || text.includes('beleza') || text.includes('salao') || text.includes('terapia') || text.includes('farmacia') || text.includes('fisio')) {
-    return NICHE_THEMES.health_beauty;
+    return NICHE_THEMES.estetica_saude;
   }
   if (text.includes('restaurante') || text.includes('food') || text.includes('bar') || text.includes('pizz') || text.includes('hamburg') || text.includes('cafe') || text.includes('lanche') || text.includes('padaria') || text.includes('confeitaria') || text.includes('delivery')) {
-    return NICHE_THEMES.food;
+    return NICHE_THEMES.gastronomia;
   }
-  return NICHE_THEMES.retail_default;
+  return NICHE_THEMES.servicos;
 }
 
 export function detectNicheTheme(category?: string | null, googleTypes?: string[]): ThemeNiche {

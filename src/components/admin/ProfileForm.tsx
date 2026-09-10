@@ -7,6 +7,7 @@ import {
   type ProfileActionState,
 } from "@/services/profile.actions";
 import { syncGooglePlacesAction } from "@/lib/actions/google-places.actions";
+import { createClient } from "@/lib/supabase/client";
 import {
   Building2,
   Phone,
@@ -128,8 +129,85 @@ const ATTRIBUTE_CATEGORIES = [
   },
 ];
 
+export const TEMPLATE_OPTIONS = [
+  {
+    id: "premium",
+    title: "PREMIUM",
+    icon: "🌟",
+    tagline: "Elegante & Espaçoso",
+    description: "Sofisticado, espaçoso e elegante. Perfeito para clínicas, estética e gastronomia refinada.",
+    badges: ["Espaçamento Nobre", "Tipografia Refinada", "Contrastes Elegantes"],
+  },
+  {
+    id: "modern",
+    title: "MODERN",
+    icon: "⚡",
+    tagline: "Bento Grid",
+    description: "Bento grid, cantos arredondados e estética tech contemporânea.",
+    badges: ["Bento Layout", "Cantos Arredondados", "Visual Tech"],
+  },
+  {
+    id: "minimal",
+    title: "MINIMAL",
+    icon: "📄",
+    tagline: "Ultrarrápido",
+    description: "Ultrarrápido, tipografia limpa e foco direto na informação.",
+    badges: ["Carregamento Instantâneo", "Tipografia Limpa", "Design Essencial"],
+  },
+  {
+    id: "conversion",
+    title: "CONVERSION",
+    icon: "🎯",
+    tagline: "Foco em Vendas",
+    description: "Foco total em chamadas para WhatsApp, botões evidentes e agendamento rápido.",
+    badges: ["Botões Evidentes", "WhatsApp Direto", "Agendamento Rápido"],
+  },
+];
+
+export const NICHE_OPTIONS = [
+  {
+    id: "gastronomia",
+    name: "Gastronomia",
+    icon: "🍽️",
+    desc: "Restaurantes, bares, cafeterias e delivery",
+  },
+  {
+    id: "automotivo",
+    name: "Automotivo",
+    icon: "🚗",
+    desc: "Oficinas, centros automotivos e estética veicular",
+  },
+  {
+    id: "barbearia",
+    name: "Barbearia",
+    icon: "✂️",
+    desc: "Barbearias tradicionais e studios masculinos",
+  },
+  {
+    id: "estetica_saude",
+    name: "Saúde / Estética",
+    icon: "🌿",
+    desc: "Clínicas, consultórios, salões e estética",
+  },
+  {
+    id: "servicos",
+    name: "Serviços Gerais",
+    icon: "💼",
+    desc: "Comércio, consultoria e serviços especializados",
+  },
+];
+
+export const BRAND_COLOR_PRESETS = [
+  { name: "Vinho", hex: "#881337" },
+  { name: "Grafite", hex: "#1e293b" },
+  { name: "Dourado", hex: "#d97706" },
+  { name: "Esmeralda", hex: "#059669" },
+  { name: "Azul Real", hex: "#2563eb" },
+];
+
 interface ProfileFormProps {
   initialData: {
+    tenantId?: string;
     companyName: string;
     description: string;
     editorialSummary?: string;
@@ -139,6 +217,13 @@ interface ProfileFormProps {
     placePhotos?: string[];
     primaryColor?: string;
     themeNiche?: string;
+    themeSettings?: {
+      template_id?: string;
+      template?: string;
+      niche?: string;
+      primary_color?: string;
+      [key: string]: any;
+    } | null;
     googleMapsUrl?: string;
     rating?: number;
     reviewCount?: number;
@@ -159,8 +244,11 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
   // Controlled form states
   const [companyName, setCompanyName] = useState(initialData.companyName || "");
   const [phoneWhatsapp, setPhoneWhatsapp] = useState(initialData.phoneWhatsapp || "");
-  const [selectedNiche, setSelectedNiche] = useState<ThemeNiche>(
-    (initialData.themeNiche as ThemeNiche) || "retail_default"
+  const [selectedTemplate, setSelectedTemplate] = useState<string>(
+    initialData.themeSettings?.template_id || "premium"
+  );
+  const [selectedNiche, setSelectedNiche] = useState<string>(
+    initialData.themeSettings?.niche || initialData.themeNiche || "servicos"
   );
   const [address, setAddress] = useState(initialData.address || "");
   const [description, setDescription] = useState(initialData.description || "");
@@ -178,7 +266,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
   const [showAddPhotoInput, setShowAddPhotoInput] = useState(false);
 
   const [primaryColor, setPrimaryColor] = useState<string>(
-    initialData.primaryColor || "#0d9488"
+    initialData.themeSettings?.primary_color || initialData.primaryColor || "#0d9488"
   );
   const [rating, setRating] = useState<number>(initialData.rating || 4.9);
   const [reviewCount, setReviewCount] = useState<number>(initialData.reviewCount || 128);
@@ -475,12 +563,35 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
       {/* Formulário Principal de Edição */}
       <form
         action={formAction}
-        onSubmit={() => {
-          console.log("Salvando nicho no Supabase:", selectedNiche);
+        onSubmit={async () => {
+          console.log("Salvando configurações de tema no Supabase:", {
+            template_id: selectedTemplate,
+            niche: selectedNiche,
+            primary_color: primaryColor,
+          });
+
+          if (initialData.tenantId) {
+            try {
+              const supabase = createClient();
+              await supabase.from("tenants").update({
+                theme_settings: {
+                  template_id: selectedTemplate,
+                  niche: selectedNiche,
+                  primary_color: primaryColor,
+                },
+              }).eq("id", initialData.tenantId);
+            } catch (err) {
+              console.error("[ProfileForm] Erro ao sincronizar theme_settings no cliente:", err);
+            }
+          }
         }}
         className="space-y-6"
       >
-        
+        {/* Campos ocultos do motor de temas */}
+        <input type="hidden" name="templateId" value={selectedTemplate} />
+        <input type="hidden" name="themeNiche" value={selectedNiche} />
+        <input type="hidden" name="primaryColor" value={primaryColor} />
+
         {/* Campo oculto com array de fotos atualizado */}
         <input
           type="hidden"
@@ -990,73 +1101,73 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
           </div>
         </div>
 
-        {/* Bloco 4: Nicho de Atuação & Identidade Visual */}
+        {/* Bloco 4: Motor de Templates & Identidade Visual */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-8">
           <div className="border-b border-slate-100 pb-5">
             <div className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-semibold text-teal-800 ring-1 ring-teal-600/20">
               <Layers className="h-3 w-3" />
-              <span>Nicho & Estilo Visual</span>
+              <span>Motor de Templates & Identidade Visual</span>
             </div>
             <h3 className="mt-1.5 text-base font-bold text-slate-900">
-              Seletor de Nicho & Ícones Contextuais
+              Configuração Visual da Vitrine Pública
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Escolha o segmento do seu negócio para adaptar automaticamente o tema (Dark/Light), fontes, estilo dos cards e os ícones contextuais de toda a vitrine.
+              Personalize a experiência do seu cliente definindo a estrutura arquitetônica do site, o nicho de mercado e a cor principal de destaque da sua marca.
             </p>
           </div>
 
-          {/* Hidden input para submissão do formulário */}
-          <input type="hidden" name="themeNiche" value={selectedNiche} />
+          {/* ETAPA A - SELEÇÃO DE TEMPLATE (ESTILO VISUAL DO SITE) */}
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+              <div>
+                <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-700">
+                  <span>Etapa A</span>
+                </div>
+                <h4 className="text-sm font-bold text-slate-900 mt-1">
+                  Seleção de Template (Estilo Visual do Site)
+                </h4>
+                <p className="text-xs text-slate-500">
+                  Escolha um dos 4 designs base para estruturar a vitrine pública do seu negócio.
+                </p>
+              </div>
+              <span className="text-xs font-bold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-200/60 self-start sm:self-auto">
+                Template Ativo: {selectedTemplate.toUpperCase()}
+              </span>
+            </div>
 
-          {/* Grid dos 4 Nichos */}
-          <div className="space-y-3">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
-              Selecione o Nicho do Seu Negócio
-            </label>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {(Object.keys(NICHE_THEMES) as ThemeNiche[]).map((nicheKey) => {
-                const niche = NICHE_THEMES[nicheKey];
-                const isSelected = selectedNiche === nicheKey;
-
+              {TEMPLATE_OPTIONS.map((tmpl) => {
+                const isSelected = selectedTemplate === tmpl.id;
                 return (
                   <div
-                    key={nicheKey}
-                    onClick={() => setSelectedNiche(nicheKey)}
-                    className={`relative flex flex-col justify-between rounded-2xl border-2 p-5 cursor-pointer transition text-left ${
+                    key={tmpl.id}
+                    onClick={() => setSelectedTemplate(tmpl.id)}
+                    className={`relative flex flex-col justify-between rounded-2xl border-2 p-5 cursor-pointer transition-all text-left ${
                       isSelected
-                        ? "border-teal-600 bg-teal-50/40 ring-2 ring-teal-600/20 shadow-md"
-                        : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/60"
+                        ? "border-teal-600 bg-teal-50/40 ring-2 ring-teal-600/20 shadow-md scale-[1.01]"
+                        : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/70 shadow-xs"
                     }`}
                   >
-                    <div>
+                    <div className="space-y-3">
                       {/* Top Header do Card */}
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3">
-                          <span className="text-3xl p-2 rounded-xl bg-slate-100/80 shadow-xs">
-                            {niche.icon}
+                          <span className="text-2xl p-2 rounded-xl bg-slate-100/90 shadow-2xs">
+                            {tmpl.icon}
                           </span>
                           <div>
                             <div className="flex items-center gap-2">
-                              <h4 className="text-sm font-bold text-slate-900">
-                                {niche.name}
-                              </h4>
-                              {niche.isDark ? (
-                                <span className="rounded-md bg-zinc-900 px-1.5 py-0.5 text-[10px] font-bold text-zinc-100">
-                                  Dark Mode
-                                </span>
-                              ) : (
-                                <span className="rounded-md bg-slate-100 border border-slate-200 px-1.5 py-0.5 text-[10px] font-bold text-slate-700">
-                                  Light Mode
-                                </span>
-                              )}
+                              <h5 className="text-sm font-extrabold tracking-tight text-slate-900">
+                                {tmpl.title}
+                              </h5>
+                              <span className="rounded-md bg-slate-100 border border-slate-200 px-1.5 py-0.5 text-[10px] font-bold text-slate-600">
+                                {tmpl.tagline}
+                              </span>
                             </div>
-                            <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                              {niche.description}
-                            </p>
                           </div>
                         </div>
 
-                        {/* Radio / Check Indicator */}
+                        {/* Botão de rádio / check visível */}
                         <div
                           className={`h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition ${
                             isSelected
@@ -1064,172 +1175,214 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                               : "border-slate-300 bg-white"
                           }`}
                         >
-                          {isSelected && <CheckCircle2 className="h-4 w-4 fill-white text-teal-600" />}
+                          {isSelected && <Check className="h-3.5 w-3.5 stroke-[3] text-white" />}
                         </div>
                       </div>
 
-                      {/* Tagline do Nicho */}
-                      <div className="mt-3.5 rounded-lg bg-slate-100/70 px-3 py-1.5 text-xs text-slate-600 italic">
-                        "{niche.heroTagline}"
+                      {/* Descrição Exata Requisitada */}
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        {tmpl.description}
+                      </p>
+
+                      {/* Badges de Atributos */}
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {tmpl.badges.map((b) => (
+                          <span
+                            key={b}
+                            className="text-[10px] font-medium text-slate-500 bg-slate-100/80 rounded-md px-2 py-0.5"
+                          >
+                            {b}
+                          </span>
+                        ))}
                       </div>
                     </div>
 
-                    {/* Ícones Contextuais do Nicho */}
-                    <div className="mt-4 pt-3 border-t border-slate-100">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-2">
-                        Ícones Contextuais Adaptativos:
-                      </span>
-                      <div className="grid grid-cols-5 gap-1.5 text-center">
-                        <div className="rounded-lg bg-white border border-slate-200/80 p-1.5">
-                          <div className="text-base">{niche.icons.hero}</div>
-                          <span className="text-[9px] text-slate-500 font-medium block mt-0.5">Hero</span>
-                        </div>
-                        <div className="rounded-lg bg-white border border-slate-200/80 p-1.5">
-                          <div className="text-base">{niche.icons.services}</div>
-                          <span className="text-[9px] text-slate-500 font-medium block mt-0.5">Serviços</span>
-                        </div>
-                        <div className="rounded-lg bg-white border border-slate-200/80 p-1.5">
-                          <div className="text-base">{niche.icons.products}</div>
-                          <span className="text-[9px] text-slate-500 font-medium block mt-0.5">Produtos</span>
-                        </div>
-                        <div className="rounded-lg bg-white border border-slate-200/80 p-1.5">
-                          <div className="text-base">{niche.icons.reviews}</div>
-                          <span className="text-[9px] text-slate-500 font-medium block mt-0.5">Avaliações</span>
-                        </div>
-                        <div className="rounded-lg bg-white border border-slate-200/80 p-1.5">
-                          <div className="text-base">{niche.icons.contact}</div>
-                          <span className="text-[9px] text-slate-500 font-medium block mt-0.5">Contato</span>
-                        </div>
+                    {isSelected && (
+                      <div className="mt-4 pt-2.5 border-t border-teal-200/60 flex items-center gap-1.5 text-[11px] font-bold text-teal-700">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        <span>Selecionado para a Vitrine</span>
                       </div>
-                    </div>
+                    )}
                   </div>
                 );
               })}
             </div>
           </div>
 
-          {/* Divisor para Personalização de Cor */}
-          <div className="border-t border-slate-100 pt-6 space-y-6">
+          {/* ETAPA B - NICHO & PALETA DE CORES */}
+          <div className="border-t border-slate-100 pt-7 space-y-7">
             <div className="border-b border-slate-100 pb-4">
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-semibold text-teal-800 ring-1 ring-teal-600/20">
-                <Palette className="h-3 w-3" />
-                <span>Personalização Visual</span>
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-700">
+                <span>Etapa B</span>
               </div>
-              <h3 className="mt-1.5 text-base font-bold text-slate-900">
-                Cor Primária do Tema (`primary_color`)
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Escolha a cor de destaque da sua marca para personalizar botões, badges, estrelas e detalhes da sua vitrine pública.
+              <h4 className="text-sm font-bold text-slate-900 mt-1">
+                Nicho & Paleta de Cores
+              </h4>
+              <p className="text-xs text-slate-500">
+                Ajuste o nicho operacional do negócio e selecione a cor primária de destaque.
               </p>
             </div>
 
-          {/* Presets Rápidos */}
-          <div className="space-y-3">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
-              Paleta de Cores Recomendadas
-            </label>
-            <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-9 gap-2.5">
-              {COLOR_PRESETS.map((preset) => {
-                const isSelected =
-                  primaryColor.toLowerCase() === preset.hex.toLowerCase();
-                return (
-                  <button
-                    key={preset.hex}
-                    type="button"
-                    onClick={() => handleColorChange(preset.hex)}
-                    className={`group relative flex flex-col items-center justify-center p-2.5 rounded-xl border transition text-center ${
-                      isSelected
-                        ? "border-slate-900 bg-slate-50 ring-2 ring-slate-900/20 shadow-xs"
-                        : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
-                    }`}
-                  >
-                    <div
-                      className="h-7 w-7 rounded-full shadow-inner ring-1 ring-black/10 flex items-center justify-center text-white"
-                      style={{ backgroundColor: preset.hex }}
-                    >
-                      {isSelected && <CheckCircle2 className="h-4 w-4 drop-shadow-sm" />}
-                    </div>
-                    <span className="mt-1.5 text-[10px] font-medium text-slate-600 group-hover:text-slate-900 truncate w-full">
-                      {preset.name.split(" ")[0]}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Input Manual HEX e Color Picker Nativo */}
-          <div className="grid gap-6 sm:grid-cols-2 pt-2 border-t border-slate-100">
-            <div>
-              <label
-                htmlFor="primaryColor"
-                className="block text-xs font-semibold uppercase tracking-wider text-slate-700"
-              >
-                Código HEX Customizado
+            {/* B.1: Nicho do Negócio */}
+            <div className="space-y-3">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
+                Nicho de Atuação (5 Opções)
               </label>
-              <div className="mt-1.5 flex items-center gap-3">
-                <div className="relative flex h-10 w-12 shrink-0 items-center justify-center rounded-lg border border-slate-300 overflow-hidden shadow-xs">
-                  <input
-                    type="color"
-                    value={primaryColor}
-                    onChange={(e) => handleColorChange(e.target.value)}
-                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                    title="Clique para abrir o seletor de cores"
-                  />
-                  <div
-                    className="h-full w-full"
-                    style={{ backgroundColor: primaryColor }}
-                  />
-                </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                {NICHE_OPTIONS.map((niche) => {
+                  const isSelected = selectedNiche === niche.id;
+                  return (
+                    <button
+                      key={niche.id}
+                      type="button"
+                      onClick={() => setSelectedNiche(niche.id)}
+                      className={`group relative flex flex-col items-center justify-between p-4 rounded-2xl border-2 text-center transition cursor-pointer ${
+                        isSelected
+                          ? "border-teal-600 bg-teal-50/40 ring-2 ring-teal-600/20 shadow-sm"
+                          : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
+                      }`}
+                    >
+                      <div className="flex flex-col items-center gap-2">
+                        <span className="text-3xl p-2 rounded-xl bg-slate-100 group-hover:scale-105 transition-transform">
+                          {niche.icon}
+                        </span>
+                        <span className="text-xs font-bold text-slate-900">
+                          {niche.name}
+                        </span>
+                        <span className="text-[10px] text-slate-500 line-clamp-2 leading-tight">
+                          {niche.desc}
+                        </span>
+                      </div>
 
-                <input
-                  id="primaryColor"
-                  name="primaryColor"
-                  type="text"
-                  value={primaryColor}
-                  onChange={(e) => handleColorChange(e.target.value)}
-                  maxLength={7}
-                  placeholder="#0d9488"
-                  className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-mono text-sm uppercase text-slate-900 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
-                />
+                      <div
+                        className={`mt-3 h-4 w-4 rounded-full border-2 flex items-center justify-center transition ${
+                          isSelected
+                            ? "border-teal-600 bg-teal-600 text-white"
+                            : "border-slate-300 bg-white"
+                        }`}
+                      >
+                        {isSelected && <Check className="h-2.5 w-2.5 stroke-[3] text-white" />}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Pré-visualização dos Elementos com a cor */}
-            <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
-                Pré-visualização do Tema
-              </span>
+            {/* B.2: Seletor de Cor Principal */}
+            <div className="space-y-4 pt-4 border-t border-slate-100">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
+                  Seletor de Cor Principal
+                </label>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Botões circulares com paletas pré-definidas ou escolha qualquer tom no seletor nativo.
+                </p>
+              </div>
 
-              <div className="flex flex-wrap items-center gap-2.5">
-                <span
-                  className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold text-white shadow-2xs"
-                  style={{ backgroundColor: primaryColor }}
-                >
-                  <Sparkles className="h-3 w-3" />
-                  Destaque
-                </span>
+              {/* Botões Circulares de Presets */}
+              <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+                {BRAND_COLOR_PRESETS.map((preset) => {
+                  const isSelected =
+                    primaryColor.toLowerCase() === preset.hex.toLowerCase();
+                  return (
+                    <button
+                      key={preset.name}
+                      type="button"
+                      onClick={() => handleColorChange(preset.hex)}
+                      className={`group flex items-center gap-2.5 px-3 py-2 rounded-xl border transition cursor-pointer ${
+                        isSelected
+                          ? "border-slate-900 bg-slate-900/5 ring-2 ring-slate-900/20 shadow-xs"
+                          : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                      }`}
+                    >
+                      <div
+                        className="h-7 w-7 rounded-full shadow-inner ring-1 ring-black/10 flex items-center justify-center text-white shrink-0"
+                        style={{ backgroundColor: preset.hex }}
+                      >
+                        {isSelected && <Check className="h-4 w-4 stroke-[3] drop-shadow-xs" />}
+                      </div>
+                      <span className="text-xs font-bold text-slate-800">
+                        {preset.name}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
 
-                <div
-                  className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold text-white shadow-sm"
-                  style={{ backgroundColor: primaryColor }}
-                >
-                  <Calendar className="h-3.5 w-3.5" />
-                  Agendar Horário
+              {/* Input Nativo de Cor + Código HEX */}
+              <div className="grid gap-6 sm:grid-cols-2 pt-2">
+                <div>
+                  <label
+                    htmlFor="primaryColor"
+                    className="block text-xs font-semibold uppercase tracking-wider text-slate-700"
+                  >
+                    Seletor de Cor Nativo & Código HEX
+                  </label>
+                  <div className="mt-1.5 flex items-center gap-3">
+                    <div className="relative flex h-11 w-14 shrink-0 items-center justify-center rounded-xl border border-slate-300 overflow-hidden shadow-xs cursor-pointer">
+                      <input
+                        type="color"
+                        value={primaryColor}
+                        onChange={(e) => handleColorChange(e.target.value)}
+                        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                        title="Clique para abrir o seletor nativo de cores"
+                      />
+                      <div
+                        className="h-full w-full"
+                        style={{ backgroundColor: primaryColor }}
+                      />
+                    </div>
+
+                    <input
+                      id="primaryColor"
+                      name="primaryColor"
+                      type="text"
+                      value={primaryColor}
+                      onChange={(e) => handleColorChange(e.target.value)}
+                      maxLength={7}
+                      placeholder="#0d9488"
+                      className="block w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 font-mono text-sm uppercase text-slate-900 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600 shadow-2xs"
+                    />
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-0.5" style={{ color: primaryColor }}>
-                  <Star className="h-4 w-4 fill-current" />
-                  <Star className="h-4 w-4 fill-current" />
-                  <Star className="h-4 w-4 fill-current" />
-                  <Star className="h-4 w-4 fill-current" />
-                  <Star className="h-4 w-4 fill-current" />
+                {/* Pré-visualização dos Elementos com a cor */}
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+                    Pré-visualização da Cor Ativa
+                  </span>
+
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold text-white shadow-2xs"
+                      style={{ backgroundColor: primaryColor }}
+                    >
+                      <Sparkles className="h-3 w-3" />
+                      Destaque
+                    </span>
+
+                    <div
+                      className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold text-white shadow-sm"
+                      style={{ backgroundColor: primaryColor }}
+                    >
+                      <Calendar className="h-3.5 w-3.5" />
+                      Agendar Horário
+                    </div>
+
+                    <div className="flex items-center gap-0.5" style={{ color: primaryColor }}>
+                      <Star className="h-4 w-4 fill-current" />
+                      <Star className="h-4 w-4 fill-current" />
+                      <Star className="h-4 w-4 fill-current" />
+                      <Star className="h-4 w-4 fill-current" />
+                      <Star className="h-4 w-4 fill-current" />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
         {/* Bloco 5: Comodidades & Atributos do Google Maps */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-8">

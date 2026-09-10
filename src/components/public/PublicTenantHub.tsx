@@ -36,6 +36,13 @@ interface PublicTenantHubProps {
     category?: string | null;
     google_types?: string[] | null;
     theme_niche?: string | null;
+    theme_settings?: {
+      template_id?: string;
+      template?: string;
+      niche?: string;
+      primary_color?: string;
+      [key: string]: any;
+    } | null;
     google_rating?: number | null;
     google_reviews_count?: number | null;
     opening_hours?: string[] | null;
@@ -54,6 +61,7 @@ interface PublicTenantHubProps {
 
 export function getThemeClasses(themeNiche: string | null | undefined) {
   switch (themeNiche) {
+    case "automotivo":
     case "auto":
       return {
         root: "bg-zinc-950 text-zinc-100 dark",
@@ -64,6 +72,7 @@ export function getThemeClasses(themeNiche: string | null | undefined) {
         button: "bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold",
         heroTagline: "Serviço de Confiança e Agilidade Mecânica",
       };
+    case "estetica_saude":
     case "health_beauty":
       return {
         root: "bg-slate-50 text-slate-800",
@@ -74,6 +83,7 @@ export function getThemeClasses(themeNiche: string | null | undefined) {
         button: "bg-gradient-to-r from-teal-600 to-emerald-600 text-white font-semibold",
         heroTagline: "Cuidado Especializado & Bem-Estar",
       };
+    case "gastronomia":
     case "food":
       return {
         root: "bg-stone-950 text-stone-100 dark",
@@ -84,6 +94,17 @@ export function getThemeClasses(themeNiche: string | null | undefined) {
         button: "bg-gradient-to-r from-red-600 to-rose-600 text-white font-bold",
         heroTagline: "Sabor Incomparável & Pedido Rápido",
       };
+    case "barbearia":
+      return {
+        root: "bg-stone-950 text-stone-100 dark",
+        card: "bg-stone-900 border-stone-800 text-stone-100 shadow-xl",
+        textMuted: "text-stone-400",
+        accentText: "text-amber-400",
+        badge: "bg-amber-500/10 text-amber-400 border-amber-500/30",
+        button: "bg-gradient-to-r from-amber-600 to-amber-700 text-white font-bold",
+        heroTagline: "Corte Tradicional, Estilo & Atendimento de Primeira",
+      };
+    case "servicos":
     case "retail_default":
     default:
       return {
@@ -115,8 +136,18 @@ export function PublicTenantHub({
     null
   );
 
-  const primaryColor = profile?.primary_color || "#0d9488";
+  const primaryColor = tenant.theme_settings?.primary_color || profile?.primary_color || "#0d9488";
   const colorStyles = getThemeColorStyles(primaryColor);
+  const effectiveNiche = tenant.theme_settings?.niche || tenant.theme_niche || profile?.template_id;
+  const templateId = tenant.theme_settings?.template_id || profile?.template_id || "premium";
+
+  const templateClasses: Record<string, string> = {
+    premium: "template-premium font-serif-headings",
+    modern: "template-modern bento-layout",
+    minimal: "template-minimal font-mono-accents",
+    conversion: "template-conversion cta-high-contrast",
+  };
+  const selectedTemplateClass = templateClasses[templateId] || templateClasses.premium;
 
   const realRating = profile?.google_rating ?? profile?.rating ?? tenant.google_rating ?? 5.0;
   const realReviewCount =
@@ -134,24 +165,20 @@ export function PublicTenantHub({
     setSelectedServiceId(null);
   };
 
-  const isAuto = tenant.theme_niche === "auto";
-  const isFood = tenant.theme_niche === "food";
-  const isHealth = tenant.theme_niche === "health_beauty";
-
-  const themeStyles = getThemeClasses(
-    tenant.theme_niche || (profile?.template_id && profile.template_id !== "default" ? profile.template_id : null)
-  );
+  const isAuto = effectiveNiche === "auto" || effectiveNiche === "automotivo" || effectiveNiche === "barbearia";
+  const isFood = effectiveNiche === "food" || effectiveNiche === "gastronomia";
+  const isHealth = effectiveNiche === "health_beauty" || effectiveNiche === "estetica_saude";
 
   const currentTheme = getTenantTheme(
-    tenant.theme_niche || (profile?.template_id && profile.template_id !== "default" ? profile.template_id : null),
+    effectiveNiche,
     tenant.category || profile?.business_category,
     tenant.google_types || []
   );
 
   return (
     <div
-      style={colorStyles}
-      className={`min-h-screen w-full max-w-full overflow-x-hidden transition-colors duration-200 ${
+      style={{ ...colorStyles, "--brand-primary": primaryColor } as React.CSSProperties}
+      className={`min-h-screen w-full max-w-full overflow-x-hidden transition-colors duration-200 ${selectedTemplateClass} ${
         isAuto
           ? "bg-zinc-950 text-zinc-100"
           : isFood

@@ -27,6 +27,7 @@ export async function updateTenantProfileAction(
     rating: formData.get("rating") ? Number(formData.get("rating")) : 4.9,
     reviewCount: formData.get("reviewCount") ? Number(formData.get("reviewCount")) : 128,
     placePhotos: formData.get("placePhotos")?.toString().trim() || "",
+    templateId: formData.get("templateId")?.toString().trim() || "premium",
     themeNiche: formData.get("themeNiche")?.toString().trim() || "",
     businessAttributes: formData.get("businessAttributes")?.toString().trim() || "",
   };
@@ -51,6 +52,7 @@ export async function updateTenantProfileAction(
     rating,
     reviewCount,
     placePhotos: rawPlacePhotos,
+    templateId,
     themeNiche,
     businessAttributes,
   } = validation.data;
@@ -74,9 +76,7 @@ export async function updateTenantProfileAction(
         parsedPhotos = parsed.filter((p) => typeof p === "string" && p.trim().length > 0);
       }
     } catch {
-      if (rawPlacePhotos.startsWith("http")) {
-        parsedPhotos = [rawPlacePhotos];
-      }
+      console.warn("[updateTenantProfileAction] Falha ao parsear placePhotos");
     }
   }
 
@@ -94,11 +94,20 @@ export async function updateTenantProfileAction(
   }
 
   try {
-    // 3. Atualizar nome, theme_niche e business_attributes na tabela `tenants`
-    console.log("[updateTenantProfileAction] Salvando nicho e atributos no Supabase:", themeNiche);
+    // 3. Atualizar nome, theme_niche, theme_settings e business_attributes na tabela `tenants`
+    console.log("[updateTenantProfileAction] Salvando template, nicho e atributos no Supabase:", {
+      templateId,
+      themeNiche,
+      primaryColor,
+    });
     const tenantUpdateData: Record<string, any> = {
       name: companyName,
-      theme_niche: themeNiche || "retail_default",
+      theme_niche: themeNiche || "servicos",
+      theme_settings: {
+        template_id: templateId || "premium",
+        niche: themeNiche || "servicos",
+        primary_color: primaryColor || "#0d9488",
+      },
       updated_at: new Date().toISOString(),
     };
 
@@ -126,7 +135,7 @@ export async function updateTenantProfileAction(
       address: address || null,
       logo_url: logoUrl || null,
       primary_color: primaryColor || "#0d9488",
-      template_id: themeNiche || "retail_default",
+      template_id: templateId || themeNiche || "premium",
       google_maps_url: googleMapsUrl || null,
       rating: rating ?? 4.9,
       review_count: reviewCount ?? 128,

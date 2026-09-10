@@ -73,14 +73,15 @@ export default async function ConfiguracoesPage() {
     .eq("tenant_id", tenantContext.tenantId)
     .order("created_at", { ascending: false });
 
-  // Busca dados adicionais do tenant (incluindo atributos e comodidades)
+  // Busca dados adicionais do tenant (incluindo atributos e comodidades e theme_settings)
   const { data: tenantData } = await supabase
     .from("tenants")
-    .select("business_attributes, theme_niche")
+    .select("id, business_attributes, theme_niche, theme_settings")
     .eq("id", tenantContext.tenantId)
     .maybeSingle();
 
   const initialData = {
+    tenantId: tenantContext.tenantId,
     companyName: tenantContext.tenant?.name || (tenantContext.user.user_metadata?.company_name as string) || "",
     description: profile?.description || "",
     editorialSummary: profile?.editorial_summary || profile?.description || "",
@@ -88,8 +89,9 @@ export default async function ConfiguracoesPage() {
     address: profile?.address || "",
     logoUrl: profile?.logo_url || (cleanPlacePhotos.length > 0 ? cleanPlacePhotos[0] : ""),
     placePhotos: cleanPlacePhotos,
-    primaryColor: profile?.primary_color || "#0d9488",
-    themeNiche: profile?.template_id || (tenantContext.tenant as any)?.theme_niche || "retail_default",
+    primaryColor: tenantData?.theme_settings?.primary_color || profile?.primary_color || "#0d9488",
+    themeNiche: tenantData?.theme_settings?.niche || profile?.template_id || (tenantContext.tenant as any)?.theme_niche || "servicos",
+    themeSettings: tenantData?.theme_settings || null,
     googleMapsUrl: profile?.google_maps_url || "",
     rating: profile?.rating || 4.9,
     reviewCount: profile?.review_count || 128,
