@@ -14,6 +14,7 @@ import { NewTenantModal } from "@/components/admin/NewTenantModal";
 import { TenantAccessModal } from "@/components/admin/TenantAccessModal";
 import { TenantDeleteModal } from "@/components/admin/TenantDeleteModal";
 import { TenantPermissionsModal } from "@/components/admin/TenantPermissionsModal";
+import { SuperAdminUsersModal } from "@/components/admin/SuperAdminUsersModal";
 import {
   Building2,
   Plus,
@@ -46,18 +47,21 @@ import { getTenantPublicUrl, getTenantDisplayDomain } from "@/utils/tenant-url";
 interface SuperAdminDashboardProps {
   initialTenants: SuperAdminTenantItem[];
   currentUserEmail?: string;
+  currentUserId?: string;
   activeTenantId?: string;
 }
 
 export function SuperAdminDashboard({
   initialTenants,
   currentUserEmail,
+  currentUserId,
   activeTenantId,
 }: SuperAdminDashboardProps) {
   const router = useRouter();
   const [tenants, setTenants] = useState<SuperAdminTenantItem[]>(initialTenants);
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAdminUsersModalOpen, setIsAdminUsersModalOpen] = useState(false);
 
   // Transitions
   const [isSelecting, startSelectTransition] = useTransition();
@@ -283,6 +287,15 @@ export function SuperAdminDashboard({
               className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-rose-300 bg-rose-950/60 hover:bg-rose-900/80 border border-rose-800/60 rounded-xl transition-all cursor-pointer shadow-sm"
             >
               🚪 Sair da Conta (Logoff)
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsAdminUsersModalOpen(true)}
+              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 px-4 py-3 text-xs font-bold text-white shadow-md transition hover:scale-102 cursor-pointer"
+            >
+              <Shield className="h-4 w-4" />
+              <span>🛡️ Gerenciar Administradores</span>
             </button>
 
             <button
@@ -686,6 +699,14 @@ export function SuperAdminDashboard({
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSuccess={() => router.refresh()}
+      />
+
+      {/* Modal: 🛡️ Gestão de Super Administradores */}
+      <SuperAdminUsersModal
+        isOpen={isAdminUsersModalOpen}
+        onClose={() => setIsAdminUsersModalOpen(false)}
+        currentUserEmail={currentUserEmail}
+        currentUserId={currentUserId}
       />
     </div>
   );

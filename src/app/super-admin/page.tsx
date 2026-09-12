@@ -229,6 +229,7 @@ ON CONFLICT (id) DO UPDATE SET role = 'super_admin';`}
         <SuperAdminDashboard
           initialTenants={initialTenants}
           currentUserEmail={user.email}
+          currentUserId={user.id}
           activeTenantId={activeTenantId}
         />
       </div>
