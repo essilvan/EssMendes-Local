@@ -168,6 +168,14 @@ export async function getAllTenantsForSuperAdminAction(): Promise<{
         total_products: totalProducts,
         presence_score: score,
         status,
+        setup_fee_paid: Boolean((t as any).setup_fee_paid ?? (t as any).setup_paid),
+        setup_fee_amount:
+          (t as any).setup_fee_amount !== null && (t as any).setup_fee_amount !== undefined
+            ? Number((t as any).setup_fee_amount)
+            : 197,
+        setup_paid_at: (t as any).setup_paid_at || null,
+        subscription_status: (t as any).subscription_status || "trialing",
+        subscription_expires_at: (t as any).subscription_expires_at || (t as any).current_period_end || null,
         created_at: t.created_at,
       };
     });

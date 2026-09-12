@@ -24,6 +24,11 @@ export interface SuperAdminTenantItem {
   presence_score: number;
   status: string;
   permissions?: TenantPermissions | null;
+  setup_fee_paid?: boolean | null;
+  setup_fee_amount?: number | null;
+  setup_paid_at?: string | null;
+  subscription_status?: string | null;
+  subscription_expires_at?: string | null;
   created_at: string;
 }
 
@@ -82,6 +87,10 @@ export interface Tenant {
   subscription_plan?: "setup_monthly" | "semiannual" | "monthly_renewal" | string | null;
   subscription_expires_at?: string | null;
   setup_paid?: boolean;
+  setup_fee_paid?: boolean | null;
+  setup_fee_amount?: number | null;
+  setup_paid_at?: string | null;
+  subscription_starts_at?: string | null;
   current_period_end?: string | null;
   mp_payment_id?: string | null;
   permissions?: TenantPermissions | null;

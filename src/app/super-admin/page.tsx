@@ -188,6 +188,12 @@ ON CONFLICT (id) DO UPDATE SET role = 'super_admin';`}
     else if (score < 40) status = "critica";
     else if (score < 65) status = "moderada";
 
+    const isSetupFeePaid = Boolean((t as any).setup_fee_paid ?? (t as any).setup_paid);
+    const setupFeeAmount =
+      (t as any).setup_fee_amount !== null && (t as any).setup_fee_amount !== undefined
+        ? Number((t as any).setup_fee_amount)
+        : 197;
+
     return {
       id: t.id,
       name: t.name,
@@ -202,6 +208,11 @@ ON CONFLICT (id) DO UPDATE SET role = 'super_admin';`}
       total_products: totalProducts,
       presence_score: score,
       status,
+      setup_fee_paid: isSetupFeePaid,
+      setup_fee_amount: setupFeeAmount,
+      setup_paid_at: (t as any).setup_paid_at || null,
+      subscription_status: (t as any).subscription_status || "trialing",
+      subscription_expires_at: (t as any).subscription_expires_at || (t as any).current_period_end || null,
       created_at: t.created_at,
     };
   });

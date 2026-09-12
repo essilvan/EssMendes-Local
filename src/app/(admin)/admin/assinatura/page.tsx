@@ -1,6 +1,7 @@
 import { getAuthenticatedTenant } from "@/lib/supabase/tenant";
 import { redirect } from "next/navigation";
 import { MercadoPagoSubscribeButton } from "@/components/admin/MercadoPagoSubscribeButton";
+import { CopyPixButton } from "@/components/admin/CopyPixButton";
 import {
   ShieldCheck,
   Calendar,
@@ -14,6 +15,9 @@ import {
   AlertCircle,
   Zap,
   Check,
+  Wrench,
+  MessageCircle,
+  Store,
   BadgePercent,
   Star,
 } from "lucide-react";
@@ -42,7 +46,14 @@ export default async function AdminAssinaturaPage({ searchParams }: AssinaturaPa
   const tenant = tenantContext.tenant;
   const user = tenantContext.user;
 
-  const isSetupPaid = Boolean(tenant?.setup_paid);
+  // Status de Setup Manual
+  const isSetupPaid = Boolean(tenant?.setup_fee_paid ?? tenant?.setup_paid);
+  const setupFeeAmount =
+    tenant?.setup_fee_amount !== null && tenant?.setup_fee_amount !== undefined
+      ? Number(tenant.setup_fee_amount)
+      : 197;
+  const setupPaidAt = tenant?.setup_paid_at;
+
   const subscriptionStatus = tenant?.subscription_status || "trialing";
   const subscriptionPlan = tenant?.subscription_plan;
   const expirationDateRaw = tenant?.subscription_expires_at || tenant?.current_period_end;
@@ -51,7 +62,22 @@ export default async function AdminAssinaturaPage({ searchParams }: AssinaturaPa
   const isOverdue = subscriptionStatus === "overdue";
   const isTrialOrPending = !isActive && !isOverdue;
 
-  // Formatação amigável da data de expiração/validade
+  // Formatação da data de quitação do setup
+  let formattedSetupPaidAt: string | null = null;
+  if (setupPaidAt) {
+    try {
+      const d = new Date(setupPaidAt);
+      if (!isNaN(d.getTime())) {
+        formattedSetupPaidAt = d.toLocaleDateString("pt-BR", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        });
+      }
+    } catch {}
+  }
+
+  // Formatação amigável da data de expiração/validade da mensalidade
   let formattedPeriodEnd: string | null = null;
   let daysRemaining: number | null = null;
   if (expirationDateRaw) {
@@ -71,15 +97,16 @@ export default async function AdminAssinaturaPage({ searchParams }: AssinaturaPa
     }
   }
 
-  // Nome amigável do plano ativo
-  let planDisplayName = "Plano Pro";
-  if (subscriptionPlan === "semiannual") {
-    planDisplayName = "Plano Semestral (6 Meses)";
-  } else if (subscriptionPlan === "setup_monthly") {
-    planDisplayName = "Plano Pro Mensal (Setup Inicial)";
-  } else if (subscriptionPlan === "monthly_renewal") {
-    planDisplayName = "Plano Pro Mensal";
-  }
+  // Chave Pix e WhatsApp da Agência
+  const agencyPixKey = process.env.NEXT_PUBLIC_AGENCY_PIX_KEY || "essilvanmendes@gmail.com";
+  const agencyPhone =
+    process.env.NEXT_PUBLIC_SUPPORT_PHONE ||
+    process.env.NEXT_PUBLIC_AGENCY_WHATSAPP ||
+    "5511999999999";
+  const cleanPhone = agencyPhone.replace(/\D/g, "");
+  const whatsappSetupProofUrl = `https://wa.me/${cleanPhone.startsWith("55") ? cleanPhone : "55" + cleanPhone}?text=${encodeURIComponent(
+    `Olá! Segue o comprovante de pagamento da taxa de setup da vitrine ${tenant?.name || ""} (R$ ${setupFeeAmount.toFixed(2).replace(".", ",")}). Aguardo a liberação.`
+  )}`;
 
   return (
     <div className="space-y-8 max-w-5xl mx-auto pb-12">
@@ -93,7 +120,7 @@ export default async function AdminAssinaturaPage({ searchParams }: AssinaturaPa
                 Pagamento aprovado com sucesso!
               </h3>
               <p className="text-xs sm:text-sm text-emerald-800 leading-relaxed">
-                Seu pagamento foi confirmado pelo Mercado Pago e a vigência da sua vitrine foi atualizada.
+                Seu pagamento foi confirmado pelo Mercado Pago e a vigência da sua mensalidade foi atualizada.
                 Caso o status ainda não tenha atualizado nesta tela, aguarde alguns instantes e recarregue a página.
               </p>
             </div>
@@ -110,7 +137,7 @@ export default async function AdminAssinaturaPage({ searchParams }: AssinaturaPa
                 Pagamento em processamento
               </h3>
               <p className="text-xs sm:text-sm text-amber-800 leading-relaxed">
-                Identificamos seu pedido de pagamento via Pix ou Cartão. Assim que o Mercado Pago validar a liquidação, sua vitrine será ativada automaticamente.
+                Identificamos seu pedido de pagamento via Pix ou Cartão. Assim que o Mercado Pago validar a liquidação, sua mensalidade será renovada automaticamente.
               </p>
             </div>
           </div>
@@ -144,7 +171,7 @@ export default async function AdminAssinaturaPage({ searchParams }: AssinaturaPa
             Assinatura & Faturamento
           </h1>
           <p className="mt-1 text-sm text-slate-600">
-            Gerencie o plano da sua vitrine, acompanhe a validade e realize pagamentos instantâneos via Pix ou Cartão em até 12x.
+            Acompanhe o status do setup, a validade da sua hospedagem e realize o pagamento da mensalidade via Pix ou Cartão.
           </p>
         </div>
 
@@ -155,380 +182,222 @@ export default async function AdminAssinaturaPage({ searchParams }: AssinaturaPa
         </div>
       </div>
 
-      {/* Card de Status da Assinatura Atual */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
-          <div className="space-y-1.5">
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Situação da Vitrine
-            </p>
-            <div className="flex flex-wrap items-center gap-2.5">
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900">
-                {planDisplayName}
-              </h2>
-
-              {/* Badges de Status */}
-              {isActive && (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">
-                  <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                  Plano Ativo
-                </span>
-              )}
-
-              {isOverdue && (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-800">
-                  <AlertTriangle className="h-4 w-4 text-red-600" />
-                  Assinatura Vencida
-                </span>
-              )}
-
-              {isTrialOrPending && (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">
-                  <Clock className="h-4 w-4 text-amber-600" />
-                  Aguardando Ativação / Pagamento
-                </span>
-              )}
-
-              {/* Tag de Setup */}
-              {isSetupPaid ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-semibold text-teal-800 border border-teal-200">
-                  <Check className="h-3.5 w-3.5 text-teal-600" />
-                  Setup Quitado
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700 border border-slate-200">
-                  Setup Pendente
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-slate-500">
-              Domínio da vitrine: <strong className="text-teal-700">{tenant?.slug}.essmendes.com.br</strong>
-            </p>
-          </div>
-
-          <div className="flex flex-col sm:items-end">
-            <span className="text-xs text-slate-500">Validade da Assinatura</span>
-            {formattedPeriodEnd ? (
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-black text-slate-900">
-                  {formattedPeriodEnd}
-                </span>
-                {daysRemaining !== null && (
-                  <span
-                    className={`text-xs font-bold px-2 py-0.5 rounded-md ${
-                      daysRemaining > 5
-                        ? "bg-emerald-100 text-emerald-800"
-                        : daysRemaining >= 0
-                        ? "bg-amber-100 text-amber-800"
-                        : "bg-red-100 text-red-800"
-                    }`}
-                  >
-                    {daysRemaining > 0
-                      ? `${daysRemaining} dias restantes`
-                      : daysRemaining === 0
-                      ? "Vence hoje"
-                      : "Expirado"}
-                  </span>
-                )}
-              </div>
-            ) : (
-              <span className="text-sm font-bold text-amber-700">
-                Pendente de ativação
-              </span>
-            )}
-          </div>
+      {/* 1. CARD DE IMPLANTAÇÃO & SETUP */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+          <Wrench className="h-4 w-4 text-teal-600" />
+          <span>Etapa 1: Implantação Técnica & Otimização Local</span>
         </div>
 
-        {/* Informações Complementares */}
-        <div className="grid gap-4 sm:grid-cols-2 text-xs">
-          <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-4 space-y-1.5">
-            <div className="flex items-center gap-2 font-semibold text-slate-700">
-              <Calendar className="h-4 w-4 text-teal-700" />
-              <span>Ciclo e Renovação:</span>
-            </div>
-            <p className="text-slate-600">
-              {isSetupPaid
-                ? "Sua assinatura segue a renovação mensal padrão no valor de R$ 97,00/mês."
-                : "Seu estabelecimento ainda não possui o Setup Profissional ativo. Escolha uma das ofertas de entrada abaixo para colocar sua vitrine no ar."}
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-4 space-y-1.5">
-            <div className="flex items-center gap-2 font-semibold text-slate-700">
-              <ShieldCheck className="h-4 w-4 text-teal-700" />
-              <span>Segurança e Meios de Pagamento:</span>
-            </div>
-            <p className="text-slate-600">
-              Pix Instantâneo ou Cartão de Crédito em até 12x processados em ambiente seguro criptografado pelo Mercado Pago.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* SEÇÃO 1: LOJISTA SEM SETUP PAGO -> EXIBE AS 2 OPÇÕES DE ENTRADA */}
-      {!isSetupPaid && (
-        <div className="space-y-6">
-          <div className="space-y-1 text-center sm:text-left">
-            <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-teal-700">
-              <Sparkles className="h-4 w-4 text-teal-600" />
-              <span>Ativação da Vitrine EssMendes</span>
-            </div>
-            <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-              Escolha como deseja iniciar sua vitrine
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-600 max-w-2xl">
-              Para novos estabelecimentos, selecione entre o Setup Completo com 1º mês incluso ou aproveite a condição mais econômica com Setup 100% Grátis no Plano Semestral.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
-            {/* CARD 1: SETUP COMPLETO + 1º MÊS */}
-            <div className="flex flex-col justify-between rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm transition hover:shadow-md space-y-6">
-              <div className="space-y-5">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
-                    Opção Mensal
-                  </span>
-                  <span className="text-xs font-medium text-slate-500">
-                    30 dias de vigência
-                  </span>
+        {isSetupPaid ? (
+          /* Setup Quitado */
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-6 shadow-xs space-y-2 animate-in fade-in">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100 border border-emerald-200 text-emerald-700 shrink-0">
+                  <CheckCircle2 className="h-6 w-6" />
                 </div>
-
                 <div>
-                  <h3 className="text-xl font-black text-slate-900">
-                    Setup Completo + 1º Mês
+                  <h3 className="text-base sm:text-lg font-black text-emerald-950">
+                    ✅ Setup & Otimização Google Maps Concluídos
                   </h3>
-                  <p className="mt-1 text-xs text-slate-600 leading-relaxed">
-                    Ideal para quem deseja flexibilidade inicial com suporte completo de configuração técnica e o primeiro mês de vitrine já quitado.
+                  <p className="text-xs text-emerald-800 mt-0.5">
+                    {formattedSetupPaidAt
+                      ? `Quitado em ${formattedSetupPaidAt}`
+                      : "Taxa de implantação e otimização quitada"} • Valor de R$ {setupFeeAmount.toFixed(2).replace(".", ",")}
                   </p>
-                </div>
-
-                <div className="rounded-2xl bg-slate-50 p-4 border border-slate-100">
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-3xl sm:text-4xl font-black text-slate-900">
-                      R$ 297,00
-                    </span>
-                    <span className="text-xs text-slate-500 font-medium">
-                      à vista (taxa única + 1º mês)
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-500 mt-1">
-                    Renovação seguinte por apenas R$ 97,00/mês a partir do 2º mês.
-                  </p>
-                </div>
-
-                <div className="space-y-3 pt-2">
-                  <p className="text-xs font-bold uppercase tracking-wider text-slate-900">
-                    O que está incluso:
-                  </p>
-                  <ul className="space-y-2.5 text-xs text-slate-700">
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0 mt-0.5" />
-                      <span><strong>Setup e configuração técnica</strong> completa da sua vitrine.</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0 mt-0.5" />
-                      <span><strong>1º Mês de mensalidade incluso</strong> (economia de R$ 97 no 1º mês).</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0 mt-0.5" />
-                      <span>Sincronização com Google Places (fotos, avaliações e horários).</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0 mt-0.5" />
-                      <span>Catálogo de serviços e vitrine de produtos ilimitados.</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0 mt-0.5" />
-                      <span>Sistema de agendamentos online com anti double-booking.</span>
-                    </li>
-                  </ul>
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-slate-100">
-                <MercadoPagoSubscribeButton
-                  tenantId={tenantContext.tenantId}
-                  tenantName={tenant?.name || "Estabelecimento"}
-                  userEmail={user.email || ""}
-                  payerName={(user.user_metadata?.full_name as string) || (user.user_metadata?.name as string) || tenant?.name || ""}
-                  payerCpf={(user.user_metadata?.cpf as string) || (user.user_metadata?.cnpj as string) || ""}
-                  offerType="setup_monthly"
-                  pixButtonText="⚡ Pagar R$ 297 via Pix Instantâneo"
-                  cardButtonText="💳 Pagar R$ 297 no Cartão (até 12x)"
-                />
-              </div>
-            </div>
-
-            {/* CARD 2 (DESTAQUE / MAIS ECONÔMICO): PLANO SEMESTRAL */}
-            <div className="relative flex flex-col justify-between rounded-3xl border-2 border-teal-600 bg-white p-6 sm:p-8 shadow-xl ring-4 ring-teal-600/10 space-y-6">
-              {/* Badge Flutuante de Destaque */}
-              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                <span className="inline-flex items-center gap-1 rounded-full bg-teal-800 px-4 py-1 text-xs font-black text-white shadow-md">
-                  <Star className="h-3.5 w-3.5 fill-amber-300 text-amber-300" />
-                  MAIS ECONÔMICO • SETUP 100% GRÁTIS
-                </span>
-              </div>
-
-              <div className="space-y-5 pt-2">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-teal-100 px-3 py-1 text-xs font-extrabold text-teal-900">
-                    Plano Semestral (6 Meses)
-                  </span>
-                  <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                    <BadgePercent className="h-3.5 w-3.5" />
-                    Economia de R$ 285+
-                  </span>
-                </div>
-
-                <div>
-                  <h3 className="text-xl font-black text-slate-900">
-                    Plano Semestral (Setup Grátis + 6 Meses)
-                  </h3>
-                  <p className="mt-1 text-xs text-slate-600 leading-relaxed">
-                    A melhor escolha financeira para o seu negócio: você não paga a taxa de setup e garante 180 dias de vitrine ativa com custo mensal reduzido.
-                  </p>
-                </div>
-
-                <div className="rounded-2xl bg-teal-50/70 p-4 border border-teal-100">
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-3xl sm:text-4xl font-black text-teal-950">
-                      R$ 497,00
-                    </span>
-                    <span className="text-xs text-teal-800 font-bold">
-                      à vista ou em até 12x no cartão
-                    </span>
-                  </div>
-                  <p className="text-xs font-semibold text-teal-800 mt-1">
-                    Equivalente a apenas <strong>R$ 82,83/mês</strong> (mais barato que o plano mensal avulso).
-                  </p>
-                </div>
-
-                <div className="space-y-3 pt-2">
-                  <p className="text-xs font-bold uppercase tracking-wider text-slate-900">
-                    Vantagens exclusivas do Semestral:
-                  </p>
-                  <ul className="space-y-2.5 text-xs text-slate-700">
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                      <span><strong>Setup Profissional 100% Grátis</strong> (economia imediata de R$ 200).</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                      <span><strong>180 dias ininterruptos</strong> com sua vitrine no ar sem se preocupar com boleto mensal.</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                      <span>Sincronização contínua com Google Places e avaliações 5 estrelas.</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                      <span>Posts & Artigos de SEO Local com dados estruturados Schema.org.</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                      <span>Suporte técnico prioritário e parcelamento em até 12x no cartão.</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-teal-100">
-                <MercadoPagoSubscribeButton
-                  tenantId={tenantContext.tenantId}
-                  tenantName={tenant?.name || "Estabelecimento"}
-                  userEmail={user.email || ""}
-                  payerName={(user.user_metadata?.full_name as string) || (user.user_metadata?.name as string) || tenant?.name || ""}
-                  payerCpf={(user.user_metadata?.cpf as string) || (user.user_metadata?.cnpj as string) || ""}
-                  offerType="semiannual"
-                  pixButtonText="⚡ Pagar R$ 497 via Pix Instantâneo"
-                  cardButtonText="💳 Cartão em até 12x de R$ 49,90"
-                />
-              </div>
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-900 border border-emerald-200 shrink-0">
+                <Check className="h-3.5 w-3.5 text-emerald-600" />
+                Setup Concluído
+              </span>
             </div>
           </div>
-        </div>
-      )}
+        ) : (
+          /* Setup Pendente com Chave Pix e WhatsApp */
+          <div className="rounded-3xl border-2 border-amber-300 bg-amber-50/60 p-6 sm:p-8 shadow-sm space-y-5 animate-in fade-in">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-amber-200/80 pb-4">
+              <div className="flex items-start gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 border border-amber-200 text-amber-800 shrink-0">
+                  <Clock className="h-6 w-6" />
+                </div>
+                <div>
+                  <span className="inline-flex items-center gap-1 rounded-md bg-amber-200/80 px-2 py-0.5 text-[11px] font-bold text-amber-900">
+                    Aguardando Pagamento
+                  </span>
+                  <h3 className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
+                    Taxa de Implantação e Setup Pendente: R$ {setupFeeAmount.toFixed(2).replace(".", ",")}
+                  </h3>
+                  <p className="text-xs text-slate-600 mt-0.5">
+                    Configure a vitrine oficial do seu negócio e ative o ranqueamento no Google Maps efetuando o pagamento único de setup.
+                  </p>
+                </div>
+              </div>
+            </div>
 
-      {/* SEÇÃO 2: LOJISTA JÁ PAGOU O SETUP -> EXIBE RENOVAÇÃO REGULAR DE R$ 97/MÊS */}
-      {isSetupPaid && (
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
-            <div className="space-y-1">
-              <span className="inline-flex items-center gap-1 rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-800 border border-teal-200">
-                <Zap className="h-3.5 w-3.5 text-teal-600" />
-                Renovação Regular
-              </span>
-              <h3 className="text-xl sm:text-2xl font-black text-slate-900 mt-2">
-                Renovação Mensal da Vitrine EssMendes
-              </h3>
-              <p className="text-xs text-slate-500">
-                Seu setup profissional já foi quitado. Mantenha sua vitrine ativa e ranqueando no topo do Google com a renovação mensal.
+            {/* Box com Chave Pix e Copiar */}
+            <div className="rounded-2xl border border-amber-200 bg-white p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-800">
+                  Chave Pix Comercial da Agência (E-mail):
+                </span>
+                <CopyPixButton pixKey={agencyPixKey} />
+              </div>
+
+              <div className="rounded-xl bg-slate-50 border border-slate-200 p-3 font-mono text-sm font-bold text-slate-800 select-all">
+                {agencyPixKey}
+              </div>
+
+              <p className="text-[11px] text-slate-500">
+                Transfira o valor de <strong>R$ {setupFeeAmount.toFixed(2).replace(".", ",")}</strong> e clique no botão abaixo para enviar o comprovante diretamente para nossa equipe de suporte no WhatsApp.
               </p>
             </div>
 
-            <div className="flex flex-col sm:items-end">
-              <span className="text-xs text-slate-500">Mensalidade</span>
-              <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-black text-slate-900">R$ 97,00</span>
-                <span className="text-xs text-slate-500">/ mês</span>
+            {/* Botão Enviar Comprovante WhatsApp */}
+            <div>
+              <a
+                href={whatsappSetupProofUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-5 py-3.5 text-sm font-bold text-white shadow-md transition hover:scale-101"
+              >
+                <MessageCircle className="h-5 w-5" />
+                <span>Enviar Comprovante no WhatsApp</span>
+              </a>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 2. CARD DE MENSALIDADE & HOSPEDAGEM */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+          <Zap className="h-4 w-4 text-teal-600" />
+          <span>Etapa 2: Mensalidade, Hospedagem & Manutenção Contínua</span>
+        </div>
+
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+            <div className="space-y-1.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-xl sm:text-2xl font-black text-slate-900">
+                  Mensalidade Regular da Vitrine EssMendes
+                </h2>
+
+                {isActive && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">
+                    <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                    Plano Ativo
+                  </span>
+                )}
+
+                {isOverdue && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-800">
+                    <AlertTriangle className="h-4 w-4 text-red-600" />
+                    Mensalidade em Atraso
+                  </span>
+                )}
+
+                {isTrialOrPending && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">
+                    <Clock className="h-4 w-4 text-amber-600" />
+                    Aguardando Vencimento / Pagamento
+                  </span>
+                )}
               </div>
-              <span className="text-[11px] text-emerald-700 font-semibold mt-0.5">
-                +30 dias de vigência garantida
+
+              <p className="text-xs text-slate-500">
+                Hospedagem de alta velocidade, sincronização do Google Places, catálogo de produtos e posts de SEO Local contínuos.
+              </p>
+            </div>
+
+            {/* Próxima Fatura Mensal */}
+            <div className="flex flex-col sm:items-end bg-slate-50 sm:bg-transparent p-3 sm:p-0 rounded-xl border sm:border-0 border-slate-200">
+              <span className="text-xs text-slate-500 font-semibold">Data da Próxima Fatura Mensal</span>
+              {formattedPeriodEnd ? (
+                <div className="flex items-baseline gap-2 mt-0.5">
+                  <span className="text-2xl font-black text-slate-900">
+                    {formattedPeriodEnd}
+                  </span>
+                  {daysRemaining !== null && (
+                    <span
+                      className={`text-xs font-bold px-2 py-0.5 rounded-md ${
+                        daysRemaining > 5
+                          ? "bg-emerald-100 text-emerald-800"
+                          : daysRemaining >= 0
+                          ? "bg-amber-100 text-amber-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {daysRemaining > 0
+                        ? `${daysRemaining} dias restantes`
+                        : daysRemaining === 0
+                        ? "Vence hoje"
+                        : "Expirado"}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <span className="text-sm font-bold text-amber-700 mt-0.5">
+                  Agendada para 30 dias após confirmação do setup
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Destaque do Valor da Mensalidade */}
+          <div className="rounded-2xl bg-slate-50 p-4 border border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                Valor Recorrente
               </span>
+              <div className="flex items-baseline gap-1.5 mt-0.5">
+                <span className="text-3xl font-black text-slate-900">R$ 97,00</span>
+                <span className="text-xs text-slate-500 font-medium">/ mês</span>
+              </div>
+            </div>
+
+            <div className="text-xs text-slate-600 max-w-sm">
+              Cobrança mensal exclusiva de hospedagem e manutenção sem cobrança de taxas ocultas.
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-3 text-xs text-slate-700">
-            <div className="flex items-start gap-2 rounded-xl bg-slate-50 p-3.5 border border-slate-100">
-              <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0 mt-0.5" />
-              <div>
-                <strong className="block text-slate-900">Google Places Sync</strong>
-                <span>Avaliações, fotos e notas mantidas 100% atualizadas.</span>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-2 rounded-xl bg-slate-50 p-3.5 border border-slate-100">
-              <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0 mt-0.5" />
-              <div>
-                <strong className="block text-slate-900">Agendamentos Ilimitados</strong>
-                <span>Agenda online 24/7 sem conflitos de horários.</span>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-2 rounded-xl bg-slate-50 p-3.5 border border-slate-100">
-              <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0 mt-0.5" />
-              <div>
-                <strong className="block text-slate-900">SEO Local Ativo</strong>
-                <span>Dados estruturados Schema.org para o Google Search.</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-2 border-t border-slate-100">
+          {/* Botão Mercado Pago Exclusivo para Mensalidade Recorrente */}
+          <div className="space-y-2 pt-1 border-t border-slate-100">
             <MercadoPagoSubscribeButton
               tenantId={tenantContext.tenantId}
               tenantName={tenant?.name || "Estabelecimento"}
               userEmail={user.email || ""}
-              payerName={(user.user_metadata?.full_name as string) || (user.user_metadata?.name as string) || tenant?.name || ""}
-              payerCpf={(user.user_metadata?.cpf as string) || (user.user_metadata?.cnpj as string) || ""}
+              payerName={
+                (user.user_metadata?.full_name as string) ||
+                (user.user_metadata?.name as string) ||
+                tenant?.name ||
+                ""
+              }
+              payerCpf={
+                (user.user_metadata?.cpf as string) ||
+                (user.user_metadata?.cnpj as string) ||
+                ""
+              }
               offerType="monthly_renewal"
-              pixButtonText="⚡ Renovar via Pix Instantâneo (R$ 97,00)"
-              cardButtonText="💳 Renovar com Cartão de Crédito (em até 12x)"
+              pixButtonText="⚡ Pagar Mensalidade via Pix Instantâneo (R$ 97,00)"
+              cardButtonText="💳 Pagar Mensalidade no Cartão de Crédito (R$ 97,00)"
             />
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Card Informativo com Recursos do Plano Pro */}
+      {/* Card Informativo de Recursos Inclusos */}
       <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-6">
         <div className="space-y-1">
           <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-amber-500" />
-            <span>Recursos Inclusos na Plataforma EssMendes Local</span>
+            <span>Recursos Inclusos na Vitrine EssMendes Local</span>
           </h3>
           <p className="text-xs text-slate-500">
-            Tudo o que sua empresa precisa para dominar as buscas locais no Google e receber mais clientes.
+            Tudo o que sua empresa precisa para manter alta autoridade e receber clientes pelo Google Maps.
           </p>
         </div>
 
@@ -537,7 +406,7 @@ export default async function AdminAssinaturaPage({ searchParams }: AssinaturaPa
             <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0 mt-0.5" />
             <div>
               <strong className="block text-slate-900">Serviços Ilimitados</strong>
-              <span>Cadastre todos os seus serviços sem nenhuma trava de limite de catálogo.</span>
+              <span>Cadastre todos os seus serviços sem limite de catálogo.</span>
             </div>
           </div>
 
@@ -545,39 +414,23 @@ export default async function AdminAssinaturaPage({ searchParams }: AssinaturaPa
             <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0 mt-0.5" />
             <div>
               <strong className="block text-slate-900">Vitrine de Produtos</strong>
-              <span>Exiba fotos, preços e promoções diretamente na sua página pública.</span>
+              <span>Exiba fotos, preços e promoções na vitrine pública.</span>
             </div>
           </div>
 
           <div className="flex items-start gap-2.5 rounded-xl border border-slate-100 bg-slate-50/50 p-3.5">
             <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0 mt-0.5" />
             <div>
-              <strong className="block text-slate-900">Sincronização com Google Places</strong>
-              <span>Avaliações reais, fotos e horários sincronizados automaticamente via API oficial.</span>
+              <strong className="block text-slate-900">Google Places Sync</strong>
+              <span>Avaliações reais, fotos e horários sincronizados via API oficial.</span>
             </div>
           </div>
 
           <div className="flex items-start gap-2.5 rounded-xl border border-slate-100 bg-slate-50/50 p-3.5">
             <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0 mt-0.5" />
             <div>
-              <strong className="block text-slate-900">Posts & SEO Local Automatizado</strong>
-              <span>Criação de artigos com dados estruturados Schema.org para ranqueamento no Maps.</span>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-2.5 rounded-xl border border-slate-100 bg-slate-50/50 p-3.5">
-            <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0 mt-0.5" />
-            <div>
-              <strong className="block text-slate-900">Agendamentos Sem Conflitos</strong>
-              <span>Motor matemático de agenda com bloqueio de double-booking e lembretes via WhatsApp.</span>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-2.5 rounded-xl border border-slate-100 bg-slate-50/50 p-3.5">
-            <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0 mt-0.5" />
-            <div>
-              <strong className="block text-slate-900">Subdomínio Próprio & SEO Rápido</strong>
-              <span>Sua vitrine pública com alta pontuação de velocidade no Google PageSpeed.</span>
+              <strong className="block text-slate-900">Posts de SEO Local Automatizados</strong>
+              <span>Artigos otimizados com dados estruturados Schema.org.</span>
             </div>
           </div>
         </div>

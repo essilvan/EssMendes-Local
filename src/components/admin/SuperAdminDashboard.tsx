@@ -15,6 +15,7 @@ import { TenantAccessModal } from "@/components/admin/TenantAccessModal";
 import { TenantDeleteModal } from "@/components/admin/TenantDeleteModal";
 import { TenantPermissionsModal } from "@/components/admin/TenantPermissionsModal";
 import { SuperAdminUsersModal } from "@/components/admin/SuperAdminUsersModal";
+import { TenantSetupModal } from "@/components/admin/TenantSetupModal";
 import {
   Building2,
   Plus,
@@ -41,6 +42,8 @@ import {
   Key,
   Trash2,
   Shield,
+  Wrench,
+  Clock,
 } from "lucide-react";
 import { getTenantPublicUrl, getTenantDisplayDomain } from "@/utils/tenant-url";
 
@@ -72,6 +75,7 @@ export function SuperAdminDashboard({
 
   // Modais de Acesso Master, Exclusão e Permissões
   const [accessModalTenant, setAccessModalTenant] = useState<SuperAdminTenantItem | null>(null);
+  const [setupModalTenant, setSetupModalTenant] = useState<SuperAdminTenantItem | null>(null);
   const [deleteModalTenant, setDeleteModalTenant] = useState<SuperAdminTenantItem | null>(null);
   const [permissionsModalTenant, setPermissionsModalTenant] = useState<SuperAdminTenantItem | null>(null);
   const [isDeletingTenant, setIsDeletingTenant] = useState(false);
@@ -143,6 +147,34 @@ export function SuperAdminDashboard({
       type: "success",
       message: "Permissões de menus do estabelecimento atualizadas com sucesso!",
     });
+  };
+
+  const handleSetupSuccess = (
+    tenantId: string,
+    updatedAmount: number,
+    isPaid: boolean,
+    expiresAt?: string
+  ) => {
+    setTenants((prev) =>
+      prev.map((t) =>
+        t.id === tenantId
+          ? {
+              ...t,
+              setup_fee_amount: updatedAmount,
+              setup_fee_paid: isPaid,
+              subscription_status: isPaid ? "active" : t.subscription_status,
+              subscription_expires_at: expiresAt || t.subscription_expires_at,
+            }
+          : t
+      )
+    );
+    setFeedbackNotification({
+      type: "success",
+      message: isPaid
+        ? `Setup quitado e vigência ativada com sucesso!`
+        : `Valor de setup atualizado para R$ ${updatedAmount.toFixed(2).replace(".", ",")}.`,
+    });
+    router.refresh();
   };
 
   const handleSyncGoogleHours = async (tenantId: string, googlePlaceId?: string | null, e?: React.MouseEvent) => {
@@ -460,11 +492,22 @@ export function SuperAdminDashboard({
                             </div>
                           )}
                           <div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-bold text-slate-900 text-sm">{t.name}</span>
                               {isCurrent && (
-                                <span className="rounded bg-teal-100 px-1.5 py-0.2 text-[10px] font-bold text-teal-800">
+                                <span className="rounded bg-teal-100 px-1.5 py-0.5 text-[10px] font-bold text-teal-800">
                                   Gerenciando
+                                </span>
+                              )}
+                              {t.setup_fee_paid ? (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                                  <Check className="h-3 w-3 text-emerald-600" />
+                                  Setup Pago (R$ {Number(t.setup_fee_amount || 197).toFixed(2).replace(".", ",")})
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-200 px-2 py-0.5 text-[10px] font-bold text-amber-900">
+                                  <Clock className="h-3 w-3 text-amber-700" />
+                                  Setup Pendente (R$ {Number(t.setup_fee_amount || 197).toFixed(2).replace(".", ",")})
                                 </span>
                               )}
                             </div>
@@ -546,6 +589,21 @@ export function SuperAdminDashboard({
                       <td className="px-5 py-4 text-right">
                         <div className="flex flex-col items-end gap-1.5">
                           <div className="inline-flex items-center gap-1.5 flex-wrap justify-end">
+                            {/* Botão Gerenciar Setup Customizado / Confirmar Pagamento Pix */}
+                            <button
+                              type="button"
+                              onClick={() => setSetupModalTenant(t)}
+                              title="⚙️ Gerenciar Valor do Setup e Confirmar Recebimento (Pix)"
+                              className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition shadow-2xs cursor-pointer ${
+                                t.setup_fee_paid
+                                  ? "border border-emerald-300 bg-emerald-50 text-emerald-900 hover:bg-emerald-100"
+                                  : "border border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100"
+                              }`}
+                            >
+                              <Wrench className="h-3.5 w-3.5 text-teal-700" />
+                              <span>⚙️ Setup (R$ {Number(t.setup_fee_amount || 197).toFixed(0)})</span>
+                            </button>
+
                             {/* Botão Gerar Acesso do Lojista */}
                             <button
                               type="button"
@@ -707,6 +765,14 @@ export function SuperAdminDashboard({
         onClose={() => setIsAdminUsersModalOpen(false)}
         currentUserEmail={currentUserEmail}
         currentUserId={currentUserId}
+      />
+
+      {/* Modal: ⚙️ Gerenciar Setup & Confirmação Pix */}
+      <TenantSetupModal
+        isOpen={Boolean(setupModalTenant)}
+        onClose={() => setSetupModalTenant(null)}
+        tenant={setupModalTenant}
+        onSuccess={handleSetupSuccess}
       />
     </div>
   );

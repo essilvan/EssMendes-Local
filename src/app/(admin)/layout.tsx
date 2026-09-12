@@ -93,7 +93,9 @@ export default async function AdminLayout({
     }
   }
 
-  const isOverdue = !isSuperAdmin && tenant?.subscription_status === "overdue";
+  const isOverdue =
+    !isSuperAdmin &&
+    (tenant?.subscription_status === "overdue" || tenant?.setup_fee_paid === false);
   const isAssinaturaPage = currentPath.includes("/admin/assinatura");
 
   return (
@@ -173,6 +175,8 @@ export default async function AdminLayout({
                   id: tenantContext.tenantId,
                   name: companyName,
                   slug: companySlug,
+                  setup_fee_paid: tenant?.setup_fee_paid,
+                  setup_fee_amount: tenant?.setup_fee_amount,
                 }}
                 userEmail={user.email || ""}
               />
