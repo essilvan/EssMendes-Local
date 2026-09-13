@@ -2,6 +2,7 @@ import { getAuthenticatedTenant } from "@/lib/supabase/tenant";
 import { redirect } from "next/navigation";
 import { MercadoPagoSubscribeButton } from "@/components/admin/MercadoPagoSubscribeButton";
 import { CopyPixButton } from "@/components/admin/CopyPixButton";
+import { getPlatformPixSettingsAction } from "@/services/platform-settings.actions";
 import {
   ShieldCheck,
   Calendar,
@@ -46,12 +47,27 @@ export default async function AdminAssinaturaPage({ searchParams }: AssinaturaPa
   const tenant = tenantContext.tenant;
   const user = tenantContext.user;
 
-  // Status de Setup Manual
+  // Busca configurações globais de cobrança da agência (Chave Pix e Titular)
+  const { data: pixSettings } = await getPlatformPixSettingsAction();
+  const agencyPixKey =
+    pixSettings?.pix_agency_key ||
+    process.env.NEXT_PUBLIC_AGENCY_PIX_KEY ||
+    "essilvanmendes@gmail.com";
+  const agencyPixHolder =
+    pixSettings?.pix_agency_holder ||
+    process.env.NEXT_PUBLIC_AGENCY_HOLDER ||
+    "EssMendes Tecnologia";
+
+  // Status de Setup Manual e Mensalidade Customizada
   const isSetupPaid = Boolean(tenant?.setup_fee_paid ?? tenant?.setup_paid);
   const setupFeeAmount =
     tenant?.setup_fee_amount !== null && tenant?.setup_fee_amount !== undefined
       ? Number(tenant.setup_fee_amount)
       : 197;
+  const monthlyFeeAmount =
+    tenant?.monthly_fee_amount !== null && tenant?.monthly_fee_amount !== undefined
+      ? Number(tenant.monthly_fee_amount)
+      : 97;
   const setupPaidAt = tenant?.setup_paid_at;
 
   const subscriptionStatus = tenant?.subscription_status || "trialing";
@@ -97,8 +113,6 @@ export default async function AdminAssinaturaPage({ searchParams }: AssinaturaPa
     }
   }
 
-  // Chave Pix e WhatsApp da Agência
-  const agencyPixKey = process.env.NEXT_PUBLIC_AGENCY_PIX_KEY || "essilvanmendes@gmail.com";
   const agencyPhone =
     process.env.NEXT_PUBLIC_SUPPORT_PHONE ||
     process.env.NEXT_PUBLIC_AGENCY_WHATSAPP ||
@@ -237,17 +251,22 @@ export default async function AdminAssinaturaPage({ searchParams }: AssinaturaPa
               </div>
             </div>
 
-            {/* Box com Chave Pix e Copiar */}
+            {/* Box com Chave Pix, Titular e Copiar */}
             <div className="rounded-2xl border border-amber-200 bg-white p-5 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-800">
-                  Chave Pix Comercial da Agência (E-mail):
+                  Chave Pix Comercial da Agência:
                 </span>
                 <CopyPixButton pixKey={agencyPixKey} />
               </div>
 
               <div className="rounded-xl bg-slate-50 border border-slate-200 p-3 font-mono text-sm font-bold text-slate-800 select-all">
                 {agencyPixKey}
+              </div>
+
+              <div className="flex items-center gap-1.5 text-xs text-slate-600">
+                <span className="font-semibold text-slate-500">Titular da Conta:</span>
+                <strong className="text-slate-800">{agencyPixHolder}</strong>
               </div>
 
               <p className="text-[11px] text-slate-500">
@@ -351,16 +370,18 @@ export default async function AdminAssinaturaPage({ searchParams }: AssinaturaPa
           <div className="rounded-2xl bg-slate-50 p-4 border border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                Valor Recorrente
+                Valor Recorrente Acordado
               </span>
               <div className="flex items-baseline gap-1.5 mt-0.5">
-                <span className="text-3xl font-black text-slate-900">R$ 97,00</span>
+                <span className="text-3xl font-black text-slate-900">
+                  R$ {monthlyFeeAmount.toFixed(2).replace(".", ",")}
+                </span>
                 <span className="text-xs text-slate-500 font-medium">/ mês</span>
               </div>
             </div>
 
             <div className="text-xs text-slate-600 max-w-sm">
-              Cobrança mensal exclusiva de hospedagem e manutenção sem cobrança de taxas ocultas.
+              Cobrança mensal exclusiva de hospedagem, domínio, suporte e manutenção contínua da vitrine oficial.
             </div>
           </div>
 
@@ -382,8 +403,9 @@ export default async function AdminAssinaturaPage({ searchParams }: AssinaturaPa
                 ""
               }
               offerType="monthly_renewal"
-              pixButtonText="⚡ Pagar Mensalidade via Pix Instantâneo (R$ 97,00)"
-              cardButtonText="💳 Pagar Mensalidade no Cartão de Crédito (R$ 97,00)"
+              customAmount={monthlyFeeAmount}
+              pixButtonText={`⚡ Pagar Mensalidade via Pix Instantâneo (R$ ${monthlyFeeAmount.toFixed(2).replace(".", ",")})`}
+              cardButtonText={`💳 Pagar Mensalidade no Cartão de Crédito (R$ ${monthlyFeeAmount.toFixed(2).replace(".", ",")})`}
             />
           </div>
         </div>

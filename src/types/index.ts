@@ -27,9 +27,16 @@ export interface SuperAdminTenantItem {
   setup_fee_paid?: boolean | null;
   setup_fee_amount?: number | null;
   setup_paid_at?: string | null;
+  monthly_fee_amount?: number | null;
   subscription_status?: string | null;
   subscription_expires_at?: string | null;
   created_at: string;
+}
+
+export interface PlatformPixSettings {
+  pix_agency_key: string;
+  pix_agency_holder: string;
+  updated_at?: string;
 }
 
 export interface TenantPermissions {
@@ -91,6 +98,7 @@ export interface Tenant {
   setup_fee_amount?: number | null;
   setup_paid_at?: string | null;
   subscription_starts_at?: string | null;
+  monthly_fee_amount?: number | null;
   current_period_end?: string | null;
   mp_payment_id?: string | null;
   permissions?: TenantPermissions | null;

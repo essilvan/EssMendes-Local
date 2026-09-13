@@ -3,22 +3,23 @@
 import React, { useState, useEffect } from "react";
 import type { SuperAdminTenantItem } from "@/types";
 import {
-  confirmManualSetupPaymentAction,
-  updateTenantSetupAmountAction,
-} from "@/services/tenant-setup.actions";
+  updateTenantPricingAction,
+  confirmTenantSetupPaymentAction,
+} from "@/services/platform-settings.actions";
 import {
   Wrench,
   X,
   Loader2,
   CheckCircle2,
   AlertCircle,
-  Calendar,
   DollarSign,
   Check,
   Clock,
   Store,
   CreditCard,
   Sparkles,
+  Calendar,
+  Save,
 } from "lucide-react";
 
 interface TenantSetupModalProps {
@@ -27,7 +28,8 @@ interface TenantSetupModalProps {
   tenant: SuperAdminTenantItem | null;
   onSuccess?: (
     tenantId: string,
-    updatedAmount: number,
+    updatedSetupFee: number,
+    updatedMonthlyFee: number,
     isPaid: boolean,
     expiresAt?: string
   ) => void;
@@ -39,20 +41,26 @@ export function TenantSetupModal({
   tenant,
   onSuccess,
 }: TenantSetupModalProps) {
-  const [amount, setAmount] = useState<number>(197);
+  const [setupFee, setSetupFee] = useState<number>(197);
+  const [monthlyFee, setMonthlyFee] = useState<number>(97);
   const [firstBillingDays, setFirstBillingDays] = useState<number>(30);
 
   const [isLoadingConfirm, setIsLoadingConfirm] = useState(false);
-  const [isLoadingUpdateOnly, setIsLoadingUpdateOnly] = useState(false);
+  const [isLoadingPricing, setIsLoadingPricing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen && tenant) {
-      setAmount(
+      setSetupFee(
         tenant.setup_fee_amount !== null && tenant.setup_fee_amount !== undefined
           ? Number(tenant.setup_fee_amount)
           : 197
+      );
+      setMonthlyFee(
+        tenant.monthly_fee_amount !== null && tenant.monthly_fee_amount !== undefined
+          ? Number(tenant.monthly_fee_amount)
+          : 97
       );
       setFirstBillingDays(30);
       setErrorMessage(null);
@@ -64,31 +72,45 @@ export function TenantSetupModal({
 
   const isAlreadyPaid = Boolean(tenant.setup_fee_paid);
 
-  // Ação 1: Confirmar Recebimento (Pix Manual)
+  // Ação 1: Confirmar Pagamento de Setup (Pix Manual)
   const handleConfirmPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
     setSuccessMessage(null);
 
-    const numericAmount = Number(amount);
-    if (isNaN(numericAmount) || numericAmount < 0) {
-      setErrorMessage("Por favor, insira um valor válido para o setup.");
+    const numSetup = Number(setupFee);
+    const numMonthly = Number(monthlyFee);
+
+    if (isNaN(numSetup) || numSetup < 0) {
+      setErrorMessage("Por favor, insira um valor válido para a Taxa de Setup.");
+      return;
+    }
+
+    if (isNaN(numMonthly) || numMonthly < 0) {
+      setErrorMessage("Por favor, insira um valor válido para a Mensalidade Recorrente.");
       return;
     }
 
     setIsLoadingConfirm(true);
     try {
-      const res = await confirmManualSetupPaymentAction({
+      const res = await confirmTenantSetupPaymentAction({
         tenantId: tenant.id,
-        amount: numericAmount,
+        setupFeeAmount: numSetup,
+        monthlyFeeAmount: numMonthly,
         firstBillingDays,
       });
 
       if (res.success && res.data) {
         setSuccessMessage(
-          `Pagamento de R$ ${numericAmount.toFixed(2).replace(".", ",")} confirmado com sucesso! Primeira mensalidade agendada para ${firstBillingDays} dias.`
+          `Pagamento de Setup (R$ ${numSetup.toFixed(2).replace(".", ",")}) confirmado com sucesso! Mensalidade de R$ ${numMonthly.toFixed(2).replace(".", ",")}/mês agendada para ${firstBillingDays} dias.`
         );
-        onSuccess?.(tenant.id, numericAmount, true, res.data.subscriptionExpiresAt);
+        onSuccess?.(
+          tenant.id,
+          numSetup,
+          numMonthly,
+          true,
+          res.data.subscriptionExpiresAt
+        );
         setTimeout(() => {
           onClose();
         }, 1800);
@@ -102,39 +124,47 @@ export function TenantSetupModal({
     }
   };
 
-  // Ação 2: Salvar Apenas Novo Valor Negociado (sem marcar como pago)
-  const handleUpdateAmountOnly = async () => {
+  // Ação 2: Salvar Apenas Valores Customizados (Taxa de Setup e Mensalidade)
+  const handleSavePricingOnly = async () => {
     setErrorMessage(null);
     setSuccessMessage(null);
 
-    const numericAmount = Number(amount);
-    if (isNaN(numericAmount) || numericAmount < 0) {
-      setErrorMessage("Por favor, insira um valor válido para o setup.");
+    const numSetup = Number(setupFee);
+    const numMonthly = Number(monthlyFee);
+
+    if (isNaN(numSetup) || numSetup < 0) {
+      setErrorMessage("Por favor, insira um valor válido para a Taxa de Setup.");
       return;
     }
 
-    setIsLoadingUpdateOnly(true);
+    if (isNaN(numMonthly) || numMonthly < 0) {
+      setErrorMessage("Por favor, insira um valor válido para a Mensalidade Recorrente.");
+      return;
+    }
+
+    setIsLoadingPricing(true);
     try {
-      const res = await updateTenantSetupAmountAction({
+      const res = await updateTenantPricingAction({
         tenantId: tenant.id,
-        amount: numericAmount,
+        setupFeeAmount: numSetup,
+        monthlyFeeAmount: numMonthly,
       });
 
       if (res.success) {
         setSuccessMessage(
-          `Valor negociado atualizado para R$ ${numericAmount.toFixed(2).replace(".", ",")} com sucesso!`
+          `Valores atualizados: Setup R$ ${numSetup.toFixed(2).replace(".", ",")} e Mensalidade R$ ${numMonthly.toFixed(2).replace(".", ",")}/mês!`
         );
-        onSuccess?.(tenant.id, numericAmount, isAlreadyPaid);
+        onSuccess?.(tenant.id, numSetup, numMonthly, isAlreadyPaid);
         setTimeout(() => {
           onClose();
         }, 1500);
       } else {
-        setErrorMessage(res.error || "Erro ao atualizar valor negociado.");
+        setErrorMessage(res.error || "Erro ao salvar valores de precificação.");
       }
     } catch (err: any) {
-      setErrorMessage(err?.message || "Falha na requisição.");
+      setErrorMessage(err?.message || "Falha na requisição ao servidor.");
     } finally {
-      setIsLoadingUpdateOnly(false);
+      setIsLoadingPricing(false);
     }
   };
 
@@ -149,10 +179,10 @@ export function TenantSetupModal({
             </div>
             <div>
               <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
-                Gerenciar Setup & Implantação
+                Precificação & Setup do Cliente
               </h3>
               <p className="text-xs text-slate-500">
-                Ajuste o valor customizado e confirme o pagamento Pix manual
+                Configure valores customizados e confirme pagamentos Pix manuais
               </p>
             </div>
           </div>
@@ -176,7 +206,7 @@ export function TenantSetupModal({
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="font-semibold text-slate-500">Status Atual do Setup:</span>
+            <span className="font-semibold text-slate-500">Status do Setup:</span>
             {isAlreadyPaid ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 border border-emerald-200 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800">
                 <Check className="h-3 w-3 text-emerald-600" />
@@ -190,9 +220,16 @@ export function TenantSetupModal({
             )}
           </div>
 
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-slate-500">Mensalidade Atual:</span>
+            <span className="font-bold text-slate-800">
+              R$ {Number(tenant.monthly_fee_amount || 97).toFixed(2).replace(".", ",")}/mês
+            </span>
+          </div>
+
           {tenant.setup_paid_at && (
-            <div className="flex items-center justify-between text-[11px] text-slate-500">
-              <span>Data do Pagamento:</span>
+            <div className="flex items-center justify-between text-[11px] text-slate-500 border-t border-slate-200/60 pt-1.5 mt-1">
+              <span>Data de Quitação do Setup:</span>
               <span className="font-medium text-slate-700">
                 {new Date(tenant.setup_paid_at).toLocaleDateString("pt-BR")} às{" "}
                 {new Date(tenant.setup_paid_at).toLocaleTimeString("pt-BR", {
@@ -202,45 +239,82 @@ export function TenantSetupModal({
               </span>
             </div>
           )}
+
+          {tenant.subscription_expires_at && (
+            <div className="flex items-center justify-between text-[11px] text-slate-500">
+              <span>Vencimento da Mensalidade:</span>
+              <span className="font-bold text-teal-700">
+                {new Date(tenant.subscription_expires_at).toLocaleDateString("pt-BR")}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Formulário de Configuração */}
         <form onSubmit={handleConfirmPayment} className="space-y-4">
-          {/* Valor do Setup */}
-          <div className="space-y-1.5">
-            <label className="block text-xs font-bold text-slate-700">
-              Valor do Setup (R$) *
-            </label>
-            <div className="relative">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                <span className="text-xs font-bold">R$</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            {/* 1. Taxa de Setup (R$) */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700">
+                Taxa de Setup (R$) *
+              </label>
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                  <span className="text-xs font-bold">R$</span>
+                </div>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={setupFee}
+                  onChange={(e) => setSetupFee(Number(e.target.value))}
+                  disabled={isLoadingConfirm || isLoadingPricing}
+                  required
+                  className="w-full rounded-xl border border-slate-300 bg-white pl-9 pr-3 py-2 text-xs sm:text-sm font-bold text-slate-900 placeholder-slate-400 shadow-2xs focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
+                />
               </div>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={amount}
-                onChange={(e) => setAmount(Number(e.target.value))}
-                disabled={isLoadingConfirm || isLoadingUpdateOnly}
-                required
-                className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-3.5 py-2.5 text-sm font-bold text-slate-900 placeholder-slate-400 shadow-2xs focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
-              />
+              <p className="text-[11px] text-slate-400">
+                Ex: 197,00 (padrão) ou negociado
+              </p>
             </div>
-            <p className="text-[11px] text-slate-400">
-              Defina o valor negociado com o cliente (ex: R$ 197, R$ 297 ou customizado).
-            </p>
+
+            {/* 2. Mensalidade Recorrente (R$) */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700">
+                Mensalidade Recorrente (R$) *
+              </label>
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                  <span className="text-xs font-bold">R$</span>
+                </div>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={monthlyFee}
+                  onChange={(e) => setMonthlyFee(Number(e.target.value))}
+                  disabled={isLoadingConfirm || isLoadingPricing}
+                  required
+                  className="w-full rounded-xl border border-slate-300 bg-white pl-9 pr-3 py-2 text-xs sm:text-sm font-bold text-slate-900 placeholder-slate-400 shadow-2xs focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
+                />
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Ex: 97,00 (padrão) ou customizado
+              </p>
+            </div>
           </div>
 
-          {/* Seletor do Prazo para Primeira Mensalidade */}
+          {/* Prazo para Primeira Mensalidade (caso confirme setup) */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-bold text-slate-700">
-              Primeira Mensalidade em:
+            <label className="block text-xs font-bold text-slate-700 flex items-center gap-1.5">
+              <Calendar className="h-3.5 w-3.5 text-teal-600" />
+              <span>Vencimento da 1ª Mensalidade (após confirmação):</span>
             </label>
             <div className="relative">
               <select
                 value={firstBillingDays}
                 onChange={(e) => setFirstBillingDays(Number(e.target.value))}
-                disabled={isLoadingConfirm || isLoadingUpdateOnly}
+                disabled={isLoadingConfirm || isLoadingPricing}
                 className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-900 shadow-2xs focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600 cursor-pointer"
               >
                 <option value={30}>30 dias [Padrão - Vigência de 1 mês]</option>
@@ -249,11 +323,11 @@ export function TenantSetupModal({
               </select>
             </div>
             <p className="text-[11px] text-slate-400">
-              Data de vencimento da mensalidade regular recorrente (R$ 97/mês) calculada automaticamente.
+              Ao confirmar o setup, a vitrine é desbloqueada e a data de vencimento da mensalidade recorrente é agendada para 30 dias à frente.
             </p>
           </div>
 
-          {/* Alertas */}
+          {/* Feedback */}
           {errorMessage && (
             <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 animate-in fade-in">
               <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
@@ -269,58 +343,56 @@ export function TenantSetupModal({
           )}
 
           {/* Botões de Ação */}
-          <div className="space-y-2 pt-2">
-            {/* Botão Principal: Confirmar Recebimento (Pix Manual) */}
+          <div className="space-y-2 pt-2 border-t border-slate-100">
+            {/* Botão 1: Confirmar Pagamento de Setup (Pix Manual) */}
             <button
               type="submit"
-              disabled={isLoadingConfirm || isLoadingUpdateOnly}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-4 py-3 text-xs font-bold text-white shadow-md transition disabled:opacity-50 cursor-pointer"
+              disabled={isLoadingConfirm || isLoadingPricing}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-4 py-3 text-xs font-bold text-white shadow-md transition disabled:opacity-50 cursor-pointer hover:scale-101"
             >
               {isLoadingConfirm ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Confirmando Recebimento e Ativando...</span>
+                  <Loader2 className="h-4 w-4 animate-spin text-emerald-100" />
+                  <span>Confirmando Pagamento e Liberando Vitrine...</span>
                 </>
               ) : (
                 <>
                   <Check className="h-4 w-4" />
-                  <span>Confirmar Recebimento (Pix Manual)</span>
+                  <span>Confirmar Pagamento de Setup (Pix Manual)</span>
                 </>
               )}
             </button>
 
-            {/* Botão Secundário: Atualizar Apenas o Valor Negociado */}
-            {!isAlreadyPaid && (
-              <button
-                type="button"
-                onClick={handleUpdateAmountOnly}
-                disabled={isLoadingConfirm || isLoadingUpdateOnly}
-                className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 px-4 py-2.5 text-xs font-semibold text-slate-700 transition disabled:opacity-50 cursor-pointer"
-              >
-                {isLoadingUpdateOnly ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-500" />
-                    <span>Salvando valor...</span>
-                  </>
-                ) : (
-                  <>
-                    <DollarSign className="h-3.5 w-3.5 text-slate-500" />
-                    <span>Salvar Apenas Novo Valor Negociado (R$ {Number(amount || 0).toFixed(2).replace(".", ",")})</span>
-                  </>
-                )}
-              </button>
-            )}
+            {/* Botão 2: Salvar Apenas Valores Customizados de Setup e Mensalidade */}
+            <button
+              type="button"
+              onClick={handleSavePricingOnly}
+              disabled={isLoadingConfirm || isLoadingPricing}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 px-4 py-2.5 text-xs font-semibold text-slate-700 transition disabled:opacity-50 cursor-pointer"
+            >
+              {isLoadingPricing ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-500" />
+                  <span>Salvando Precificação...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="h-3.5 w-3.5 text-slate-500" />
+                  <span>Salvar Valores de Precificação (Sem marcar como pago)</span>
+                </>
+              )}
+            </button>
           </div>
         </form>
 
         <div className="border-t border-slate-100 pt-3 flex items-center justify-between text-[11px] text-slate-400">
-          <span>Controle de Setup EssMendes</span>
+          <span>Controle de Setup & Mensalidade EssMendes</span>
           <button
             type="button"
             onClick={onClose}
             className="text-slate-500 hover:text-slate-800 font-semibold cursor-pointer"
           >
-            Cancelar
+            Fechar
           </button>
         </div>
       </div>

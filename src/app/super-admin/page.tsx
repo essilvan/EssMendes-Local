@@ -8,6 +8,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ShieldAlert, LogOut, ArrowRight, Database } from "lucide-react";
 import type { SuperAdminTenantItem } from "@/types";
+import { getPlatformPixSettingsAction } from "@/services/platform-settings.actions";
 
 export const dynamic = "force-dynamic";
 
@@ -193,6 +194,10 @@ ON CONFLICT (id) DO UPDATE SET role = 'super_admin';`}
       (t as any).setup_fee_amount !== null && (t as any).setup_fee_amount !== undefined
         ? Number((t as any).setup_fee_amount)
         : 197;
+    const monthlyFeeAmount =
+      (t as any).monthly_fee_amount !== null && (t as any).monthly_fee_amount !== undefined
+        ? Number((t as any).monthly_fee_amount)
+        : 97;
 
     return {
       id: t.id,
@@ -211,11 +216,15 @@ ON CONFLICT (id) DO UPDATE SET role = 'super_admin';`}
       setup_fee_paid: isSetupFeePaid,
       setup_fee_amount: setupFeeAmount,
       setup_paid_at: (t as any).setup_paid_at || null,
+      monthly_fee_amount: monthlyFeeAmount,
       subscription_status: (t as any).subscription_status || "trialing",
       subscription_expires_at: (t as any).subscription_expires_at || (t as any).current_period_end || null,
       created_at: t.created_at,
     };
   });
+
+  // Busca configurações Pix globais da agência
+  const { data: pixSettings } = await getPlatformPixSettingsAction();
 
   const cookieStore = await cookies();
   const activeTenantId = cookieStore.get("em_active_tenant_id")?.value;
@@ -242,6 +251,7 @@ ON CONFLICT (id) DO UPDATE SET role = 'super_admin';`}
           currentUserEmail={user.email}
           currentUserId={user.id}
           activeTenantId={activeTenantId}
+          initialPixSettings={pixSettings}
         />
       </div>
     </div>

@@ -9,7 +9,8 @@ import {
   clearManagedTenantAction,
   syncTenantGoogleHoursAction,
 } from "@/services/super-admin.actions";
-import type { SuperAdminTenantItem, TenantPermissions } from "@/types";
+import type { SuperAdminTenantItem, TenantPermissions, PlatformPixSettings } from "@/types";
+import { PlatformPixSettingsCard } from "@/components/admin/PlatformPixSettingsCard";
 import { NewTenantModal } from "@/components/admin/NewTenantModal";
 import { TenantAccessModal } from "@/components/admin/TenantAccessModal";
 import { TenantDeleteModal } from "@/components/admin/TenantDeleteModal";
@@ -52,6 +53,7 @@ interface SuperAdminDashboardProps {
   currentUserEmail?: string;
   currentUserId?: string;
   activeTenantId?: string;
+  initialPixSettings?: PlatformPixSettings;
 }
 
 export function SuperAdminDashboard({
@@ -59,6 +61,7 @@ export function SuperAdminDashboard({
   currentUserEmail,
   currentUserId,
   activeTenantId,
+  initialPixSettings,
 }: SuperAdminDashboardProps) {
   const router = useRouter();
   const [tenants, setTenants] = useState<SuperAdminTenantItem[]>(initialTenants);
@@ -151,7 +154,8 @@ export function SuperAdminDashboard({
 
   const handleSetupSuccess = (
     tenantId: string,
-    updatedAmount: number,
+    updatedSetupFee: number,
+    updatedMonthlyFee: number,
     isPaid: boolean,
     expiresAt?: string
   ) => {
@@ -160,7 +164,8 @@ export function SuperAdminDashboard({
         t.id === tenantId
           ? {
               ...t,
-              setup_fee_amount: updatedAmount,
+              setup_fee_amount: updatedSetupFee,
+              monthly_fee_amount: updatedMonthlyFee,
               setup_fee_paid: isPaid,
               subscription_status: isPaid ? "active" : t.subscription_status,
               subscription_expires_at: expiresAt || t.subscription_expires_at,
@@ -171,8 +176,8 @@ export function SuperAdminDashboard({
     setFeedbackNotification({
       type: "success",
       message: isPaid
-        ? `Setup quitado e vigência ativada com sucesso!`
-        : `Valor de setup atualizado para R$ ${updatedAmount.toFixed(2).replace(".", ",")}.`,
+        ? `Setup quitado e vigência de 30 dias ativada com sucesso!`
+        : `Precificação atualizada para Setup R$ ${updatedSetupFee.toFixed(2).replace(".", ",")} e Mensalidade R$ ${updatedMonthlyFee.toFixed(2).replace(".", ",")}/mês.`,
     });
     router.refresh();
   };
@@ -380,6 +385,9 @@ export function SuperAdminDashboard({
         </div>
       </div>
 
+      {/* Bloco Global: ⚙️ Dados de Cobrança da Agência (Chave Pix Manual) */}
+      <PlatformPixSettingsCard initialSettings={initialPixSettings} />
+
       {/* Alerta se houver tenant ativo sendo gerenciado */}
       {activeTenantId && (
         <div className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900 shadow-xs">
@@ -502,12 +510,12 @@ export function SuperAdminDashboard({
                               {t.setup_fee_paid ? (
                                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
                                   <Check className="h-3 w-3 text-emerald-600" />
-                                  Setup Pago (R$ {Number(t.setup_fee_amount || 197).toFixed(2).replace(".", ",")})
+                                  Setup Quitado (R$ {Number(t.setup_fee_amount || 197).toFixed(0)}) • R$ {Number(t.monthly_fee_amount || 97).toFixed(0)}/mês
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-200 px-2 py-0.5 text-[10px] font-bold text-amber-900">
                                   <Clock className="h-3 w-3 text-amber-700" />
-                                  Setup Pendente (R$ {Number(t.setup_fee_amount || 197).toFixed(2).replace(".", ",")})
+                                  Setup Pendente (R$ {Number(t.setup_fee_amount || 197).toFixed(0)}) • R$ {Number(t.monthly_fee_amount || 97).toFixed(0)}/mês
                                 </span>
                               )}
                             </div>
@@ -589,11 +597,11 @@ export function SuperAdminDashboard({
                       <td className="px-5 py-4 text-right">
                         <div className="flex flex-col items-end gap-1.5">
                           <div className="inline-flex items-center gap-1.5 flex-wrap justify-end">
-                            {/* Botão Gerenciar Setup Customizado / Confirmar Pagamento Pix */}
+                            {/* Botão Gerenciar Setup Customizado / Mensalidade e Confirmar Pagamento Pix */}
                             <button
                               type="button"
                               onClick={() => setSetupModalTenant(t)}
-                              title="⚙️ Gerenciar Valor do Setup e Confirmar Recebimento (Pix)"
+                              title="⚙️ Configurar Taxa de Setup, Mensalidade Recorrente e Confirmar Recebimento (Pix Manual)"
                               className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition shadow-2xs cursor-pointer ${
                                 t.setup_fee_paid
                                   ? "border border-emerald-300 bg-emerald-50 text-emerald-900 hover:bg-emerald-100"
@@ -601,7 +609,7 @@ export function SuperAdminDashboard({
                               }`}
                             >
                               <Wrench className="h-3.5 w-3.5 text-teal-700" />
-                              <span>⚙️ Setup (R$ {Number(t.setup_fee_amount || 197).toFixed(0)})</span>
+                              <span>⚙️ Setup & Mensalidade (R$ {Number(t.setup_fee_amount || 197).toFixed(0)} / R$ {Number(t.monthly_fee_amount || 97).toFixed(0)})</span>
                             </button>
 
                             {/* Botão Gerar Acesso do Lojista */}

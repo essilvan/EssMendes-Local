@@ -26,6 +26,7 @@ export interface AuthenticatedTenantContext {
     setup_fee_amount?: number | null;
     setup_paid_at?: string | null;
     subscription_starts_at?: string | null;
+    monthly_fee_amount?: number | null;
     current_period_end?: string | null;
     mp_payment_id?: string | null;
     permissions?: TenantPermissions | null;
@@ -116,7 +117,7 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
     // 3. Obter vínculo em tenant_users
     const { data: tenantUser, error: tenantUserError } = await supabase
       .from("tenant_users")
-      .select("tenant_id, role, tenants(id, name, slug, plan_tier, subscription_status, current_period_end, mp_payment_id, permissions, setup_paid, setup_fee_paid, setup_fee_amount, setup_paid_at, subscription_starts_at, subscription_expires_at, subscription_plan)")
+      .select("tenant_id, role, tenants(id, name, slug, plan_tier, subscription_status, current_period_end, mp_payment_id, permissions, setup_paid, setup_fee_paid, setup_fee_amount, setup_paid_at, subscription_starts_at, subscription_expires_at, subscription_plan, monthly_fee_amount)")
       .eq("user_id", user.id)
       .maybeSingle();
 
@@ -137,7 +138,7 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
       if (targetTenantId) {
         const { data: targetTenant, error: targetError } = await supabase
           .from("tenants")
-          .select("id, name, slug, plan_tier, subscription_status, current_period_end, mp_payment_id, permissions, setup_paid, setup_fee_paid, setup_fee_amount, setup_paid_at, subscription_starts_at, subscription_expires_at, subscription_plan")
+          .select("id, name, slug, plan_tier, subscription_status, current_period_end, mp_payment_id, permissions, setup_paid, setup_fee_paid, setup_fee_amount, setup_paid_at, subscription_starts_at, subscription_expires_at, subscription_plan, monthly_fee_amount")
           .eq("id", targetTenantId)
           .maybeSingle();
 
@@ -178,6 +179,7 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
                 setup_fee_amount: (targetTenant as any).setup_fee_amount !== null && (targetTenant as any).setup_fee_amount !== undefined ? Number((targetTenant as any).setup_fee_amount) : 197,
                 setup_paid_at: (targetTenant as any).setup_paid_at || null,
                 subscription_starts_at: (targetTenant as any).subscription_starts_at || null,
+                monthly_fee_amount: (targetTenant as any).monthly_fee_amount !== null && (targetTenant as any).monthly_fee_amount !== undefined ? Number((targetTenant as any).monthly_fee_amount) : 97,
                 current_period_end: (targetTenant as any).current_period_end,
                 mp_payment_id: (targetTenant as any).mp_payment_id,
                 permissions: (targetTenant as any).permissions || DEFAULT_TENANT_PERMISSIONS,
@@ -218,6 +220,7 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
                   setup_fee_amount: (currentT as any).setup_fee_amount !== null && (currentT as any).setup_fee_amount !== undefined ? Number((currentT as any).setup_fee_amount) : 197,
                   setup_paid_at: (currentT as any).setup_paid_at || null,
                   subscription_starts_at: (currentT as any).subscription_starts_at || null,
+                  monthly_fee_amount: (currentT as any).monthly_fee_amount !== null && (currentT as any).monthly_fee_amount !== undefined ? Number((currentT as any).monthly_fee_amount) : 97,
                   current_period_end: (currentT as any).current_period_end,
                   mp_payment_id: (currentT as any).mp_payment_id,
                   permissions: (currentT as any).permissions || DEFAULT_TENANT_PERMISSIONS,
@@ -231,7 +234,7 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
       // Se super admin não tem vínculo direto em tenant_users, pega o primeiro tenant do sistema
       const { data: firstTenant } = await supabase
         .from("tenants")
-        .select("id, name, slug, plan_tier, subscription_status, current_period_end, mp_payment_id, permissions, setup_paid, setup_fee_paid, setup_fee_amount, setup_paid_at, subscription_starts_at, subscription_expires_at, subscription_plan")
+        .select("id, name, slug, plan_tier, subscription_status, current_period_end, mp_payment_id, permissions, setup_paid, setup_fee_paid, setup_fee_amount, setup_paid_at, subscription_starts_at, subscription_expires_at, subscription_plan, monthly_fee_amount")
         .order("created_at", { ascending: true })
         .limit(1)
         .maybeSingle();
@@ -262,6 +265,7 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
               setup_fee_amount: (firstTenant as any).setup_fee_amount !== null && (firstTenant as any).setup_fee_amount !== undefined ? Number((firstTenant as any).setup_fee_amount) : 197,
               setup_paid_at: (firstTenant as any).setup_paid_at || null,
               subscription_starts_at: (firstTenant as any).subscription_starts_at || null,
+              monthly_fee_amount: (firstTenant as any).monthly_fee_amount !== null && (firstTenant as any).monthly_fee_amount !== undefined ? Number((firstTenant as any).monthly_fee_amount) : 97,
               current_period_end: (firstTenant as any).current_period_end,
               mp_payment_id: (firstTenant as any).mp_payment_id,
               permissions: (firstTenant as any).permissions || DEFAULT_TENANT_PERMISSIONS,
@@ -282,7 +286,7 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
       if (metadataTenantId) {
         const { data: recoveredTenant } = await supabase
           .from("tenants")
-          .select("id, name, slug, plan_tier, subscription_status, current_period_end, mp_payment_id, permissions, setup_paid, setup_fee_paid, setup_fee_amount, setup_paid_at, subscription_starts_at, subscription_expires_at, subscription_plan")
+          .select("id, name, slug, plan_tier, subscription_status, current_period_end, mp_payment_id, permissions, setup_paid, setup_fee_paid, setup_fee_amount, setup_paid_at, subscription_starts_at, subscription_expires_at, subscription_plan, monthly_fee_amount")
           .eq("id", metadataTenantId)
           .maybeSingle();
 
@@ -325,6 +329,7 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
                 setup_fee_amount: (recoveredTenant as any).setup_fee_amount !== null && (recoveredTenant as any).setup_fee_amount !== undefined ? Number((recoveredTenant as any).setup_fee_amount) : 197,
                 setup_paid_at: (recoveredTenant as any).setup_paid_at || null,
                 subscription_starts_at: (recoveredTenant as any).subscription_starts_at || null,
+                monthly_fee_amount: (recoveredTenant as any).monthly_fee_amount !== null && (recoveredTenant as any).monthly_fee_amount !== undefined ? Number((recoveredTenant as any).monthly_fee_amount) : 97,
                 current_period_end: (recoveredTenant as any).current_period_end,
                 mp_payment_id: (recoveredTenant as any).mp_payment_id,
                 permissions: (recoveredTenant as any).permissions || DEFAULT_TENANT_PERMISSIONS,
@@ -339,7 +344,7 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
       if (user.email) {
         const { data: tenantByEmail } = await supabase
           .from("tenants")
-          .select("id, name, slug, plan_tier, subscription_status, current_period_end, mp_payment_id, permissions, setup_paid, setup_fee_paid, setup_fee_amount, setup_paid_at, subscription_starts_at, subscription_expires_at, subscription_plan")
+          .select("id, name, slug, plan_tier, subscription_status, current_period_end, mp_payment_id, permissions, setup_paid, setup_fee_paid, setup_fee_amount, setup_paid_at, subscription_starts_at, subscription_expires_at, subscription_plan, monthly_fee_amount")
           .ilike("contact_email", user.email.trim())
           .maybeSingle();
 
@@ -382,6 +387,7 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
                 setup_fee_amount: (tenantByEmail as any).setup_fee_amount !== null && (tenantByEmail as any).setup_fee_amount !== undefined ? Number((tenantByEmail as any).setup_fee_amount) : 197,
                 setup_paid_at: (tenantByEmail as any).setup_paid_at || null,
                 subscription_starts_at: (tenantByEmail as any).subscription_starts_at || null,
+                monthly_fee_amount: (tenantByEmail as any).monthly_fee_amount !== null && (tenantByEmail as any).monthly_fee_amount !== undefined ? Number((tenantByEmail as any).monthly_fee_amount) : 97,
                 current_period_end: (tenantByEmail as any).current_period_end,
                 mp_payment_id: (tenantByEmail as any).mp_payment_id,
                 permissions: (tenantByEmail as any).permissions || DEFAULT_TENANT_PERMISSIONS,
@@ -428,6 +434,7 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
               setup_fee_amount: (tenant as any).setup_fee_amount !== null && (tenant as any).setup_fee_amount !== undefined ? Number((tenant as any).setup_fee_amount) : 197,
               setup_paid_at: (tenant as any).setup_paid_at || null,
               subscription_starts_at: (tenant as any).subscription_starts_at || null,
+              monthly_fee_amount: (tenant as any).monthly_fee_amount !== null && (tenant as any).monthly_fee_amount !== undefined ? Number((tenant as any).monthly_fee_amount) : 97,
               current_period_end: (tenant as any).current_period_end,
               mp_payment_id: (tenant as any).mp_payment_id,
               permissions: (tenant as any).permissions || DEFAULT_TENANT_PERMISSIONS,

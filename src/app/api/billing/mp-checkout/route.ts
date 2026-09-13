@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { MercadoPagoConfig, Payment, Preference } from "mercadopago";
 import { getAuthenticatedTenant } from "@/lib/supabase/tenant";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
 import type { OfferType } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -92,15 +93,55 @@ export async function POST(req: Request) {
     const offerType: OfferType = OFFERS_MAP[rawOfferType] ? rawOfferType : "monthly_renewal";
     const selectedOffer = OFFERS_MAP[offerType];
 
-    const itemTitle = selectedOffer.getTitle(tenantName);
-    const itemPrice = selectedOffer.unitPrice;
+    let itemPrice = selectedOffer.unitPrice;
+    let itemTitle = selectedOffer.getTitle(tenantName);
     const diasVigencia = selectedOffer.days;
+
+    // Integração Dinâmica: Ao gerar a cobrança (Pix/Cartão) para renovação da mensalidade do tenant,
+    // buscar o valor dinâmico do banco (const amount = Number(tenant.monthly_fee_amount) || 97.00)
+    // e não utilizar valores estáticos fixos no código.
+    if (offerType === "monthly_renewal") {
+      let tenantMonthlyFee = (authContext?.tenant as any)?.monthly_fee_amount;
+
+      if (tenantMonthlyFee === undefined || tenantMonthlyFee === null) {
+        try {
+          const supabaseKey =
+            process.env.SUPABASE_SERVICE_ROLE_KEY ||
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+          const supabaseAdmin = createAdminClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            supabaseKey
+          );
+
+          const { data: tenantRow } = await supabaseAdmin
+            .from("tenants")
+            .select("monthly_fee_amount, name")
+            .eq("id", tenantId)
+            .maybeSingle();
+
+          if (tenantRow) {
+            tenantMonthlyFee = tenantRow.monthly_fee_amount;
+            if (tenantRow.name) {
+              tenantName = tenantRow.name;
+            }
+          }
+        } catch (err) {
+          console.warn("[MP-Checkout] Erro ao consultar monthly_fee_amount no banco:", err);
+        }
+      }
+
+      const tenantObj = { monthly_fee_amount: tenantMonthlyFee };
+      const amount = Number(tenantObj.monthly_fee_amount) || Number(body.customAmount) || Number(body.amount) || 97.00;
+      itemPrice = amount;
+      itemTitle = `Mensalidade Vitrine EssMendes (R$ ${amount.toFixed(2).replace(".", ",")}) - ${tenantName}`;
+    }
 
     // Embutir na external_reference o tenantId, offerType e dias
     const externalReference = JSON.stringify({
       tenantId,
       offerType,
       days: diasVigencia,
+      amount: itemPrice,
     });
 
     const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://local.essmendes.com.br").replace(/\/$/, "");

@@ -28,6 +28,7 @@ interface MercadoPagoSubscribeButtonProps {
   size?: "default" | "lg";
   pixButtonText?: string;
   cardButtonText?: string;
+  customAmount?: number;
 }
 
 interface PixPaymentData {
@@ -80,6 +81,7 @@ export function MercadoPagoSubscribeButton({
   offerType = "monthly_renewal",
   pixButtonText,
   cardButtonText,
+  customAmount,
   className = "",
 }: MercadoPagoSubscribeButtonProps) {
   const [loadingMethod, setLoadingMethod] = useState<"pix" | "card" | null>(null);
@@ -107,6 +109,7 @@ export function MercadoPagoSubscribeButton({
           payerCpf,
           method,
           offerType,
+          customAmount,
         }),
       });
 
@@ -133,7 +136,7 @@ export function MercadoPagoSubscribeButton({
           qrCodeBase64: data.qrCodeBase64,
           ticketUrl: data.ticketUrl,
           paymentId: data.paymentId,
-          amount: data.amount || offerInfo.amount,
+          amount: data.amount || customAmount || offerInfo.amount,
         });
         setLoadingMethod(null);
         return;
