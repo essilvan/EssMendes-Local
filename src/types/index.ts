@@ -114,6 +114,9 @@ export interface Tenant {
     primary_color?: string;
     [key: string]: any;
   } | null;
+  cover_image_url?: string | null;
+  photos?: string[] | null;
+  google_photo_url?: string | null;
   last_synced_at?: string | null;
   created_at: string;
   updated_at: string;
@@ -146,6 +149,9 @@ export interface TenantProfile {
   hero_image_url?: string | null;
   place_photos?: string[] | null;
   business_attributes?: BusinessAttributes | null;
+  cover_image_url?: string | null;
+  photos?: string[] | null;
+  google_photo_url?: string | null;
   created_at: string;
   updated_at: string;
 }

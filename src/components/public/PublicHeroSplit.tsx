@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import {
   Calendar,
   MessageCircle,
@@ -15,6 +16,7 @@ import {
 import type { TenantReview } from "@/types";
 import { generateWhatsAppUrl } from "@/utils/phone";
 import { sanitizeDescription } from "@/utils/address";
+import { getNicheFallbackImage } from "@/utils/establishment-photos";
 import type { NicheThemeConfig } from "@/config/tenant-themes";
 import { NICHE_THEMES } from "@/config/tenant-themes";
 
@@ -58,10 +60,11 @@ export function PublicHeroSplit({
   const cleanDescription = sanitizeDescription(description, address);
   const whatsappUrl = generateWhatsAppUrl(phoneWhatsapp || "", tenantName);
 
+  const fallbackImage = getNicheFallbackImage(currentTheme?.id, businessCategory);
   const mainImage =
     (placePhotos && placePhotos.length > 0 ? placePhotos[0] : null) ||
     heroImageUrl ||
-    null;
+    fallbackImage;
 
   const hasCoords = typeof latitude === "number" && typeof longitude === "number";
   const wazeUrl = hasCoords
@@ -229,20 +232,15 @@ export function PublicHeroSplit({
         <div className="lg:col-span-5">
           <div className="relative rounded-3xl overflow-hidden border border-neutral-200/80 dark:border-white/10 bg-neutral-900 shadow-xl aspect-4/3 sm:aspect-16/11 flex flex-col justify-end group">
             {/* Foto Principal de Alta Resolução */}
-            {mainImage ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={mainImage}
-                alt={`Instalações de ${tenantName}`}
-                className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105"
-              />
-            ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-white space-y-2 bg-gradient-to-br from-slate-800 to-slate-950">
-                <Sparkles className="h-10 w-10 text-white/60" />
-                <p className="font-black text-base">{tenantName}</p>
-                <p className="text-xs text-white/70">{businessCategory || "Atendimento Local"}</p>
-              </div>
-            )}
+            <Image
+              src={mainImage}
+              alt={`Instalações de ${tenantName}`}
+              fill
+              priority
+              unoptimized
+              referrerPolicy="no-referrer"
+              className="object-cover transition duration-500 group-hover:scale-105"
+            />
 
             {/* Gradiente de Contraste */}
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent" />

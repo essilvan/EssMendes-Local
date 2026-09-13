@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import {
   MessageCircle,
   Phone,
@@ -13,6 +14,7 @@ import {
   ExternalLink,
   ArrowRight,
   Zap,
+  Camera,
 } from "lucide-react";
 import type {
   Service,
@@ -26,11 +28,13 @@ import type {
 import type { NicheThemeConfig } from "@/config/tenant-themes";
 import { generateWhatsAppUrl, sanitizePhoneNumber, formatBrazilianPhone } from "@/utils/phone";
 import { getContrastTextColor } from "@/utils/color";
+import { getUnifiedEstablishmentPhotos } from "@/utils/establishment-photos";
 import { PublicProductsSection } from "../PublicProductsSection";
 import { GoogleReviewsCard } from "../GoogleReviewsCard";
 import { MapLocationCard } from "../MapLocationCard";
 import { BusinessAttributes } from "../BusinessAttributes";
 import { AboutBusinessSection } from "../AboutBusinessSection";
+import { PlacePhotoGallery } from "../PlacePhotoGallery";
 
 export interface TemplateViewProps {
   tenant: {
@@ -51,6 +55,10 @@ export interface TemplateViewProps {
     google_reviews_count?: number | null;
     opening_hours?: string[] | null;
     business_attributes?: BusinessAttributesType | null;
+    cover_image_url?: string | null;
+    photos?: string[] | null;
+    google_photo_url?: string | null;
+    [key: string]: any;
   };
   profile: TenantProfile | null;
   services: Service[];
@@ -64,6 +72,8 @@ export interface TemplateViewProps {
   brandColor: string;
   theme: NicheThemeConfig;
   onOpenBooking: (serviceId?: string) => void;
+  heroImage?: string;
+  galleryPhotos?: string[];
 }
 
 export function ConversionTemplateView({
@@ -79,6 +89,8 @@ export function ConversionTemplateView({
   statusDetailText,
   brandColor,
   theme,
+  heroImage: customHeroImage,
+  galleryPhotos: customGalleryPhotos,
   onOpenBooking,
 }: TemplateViewProps) {
   const contrastText = getContrastTextColor(brandColor);
@@ -91,6 +103,11 @@ export function ConversionTemplateView({
     `Olá! Gostaria de um atendimento imediato com ${tenant.name}.`
   );
 
+  const photosData = getUnifiedEstablishmentPhotos(tenant, profile);
+  const effectiveHeroImage = customHeroImage || photosData.heroImage;
+  const effectiveGalleryPhotos = (customGalleryPhotos && customGalleryPhotos.length > 0) ? customGalleryPhotos : photosData.galleryPhotos;
+  const allEstablishmentPhotos = photosData.allPhotos;
+
   const realRating = profile?.google_rating ?? profile?.rating ?? tenant.google_rating ?? 5.0;
   const realReviewCount =
     profile?.google_reviews_count ?? profile?.review_count ?? tenant.google_reviews_count ?? reviews.length;
@@ -99,12 +116,28 @@ export function ConversionTemplateView({
 
   return (
     <div className="space-y-16 md:space-y-24 pb-20">
-      {/* 1. HERO DE ALTO IMPACTO (CONVERSION HERO - APPLE & LINEAR STYLE) */}
-      <section className="relative overflow-hidden rounded-3xl bg-neutral-950 text-white p-7 sm:p-12 lg:p-16 border border-white/10 shadow-2xl shadow-black/40">
+      {/* 1. HERO DE ALTO IMPACTO (CONVERSION HERO - COM FOTO REAL DE FUNDO & ALTO CONTRASTE) */}
+      <section className="relative overflow-hidden rounded-3xl bg-neutral-950 text-white p-7 sm:p-12 lg:p-16 border border-white/10 shadow-2xl shadow-black/40 min-h-[460px] flex items-center justify-center">
+        {/* Foto de Destaque Obrigatória no Hero (object-cover) */}
+        <div className="absolute inset-0 z-0">
+          <Image
+            src={effectiveHeroImage}
+            alt={tenant.name}
+            fill
+            priority
+            unoptimized
+            referrerPolicy="no-referrer"
+            className="object-cover object-center transform scale-105 filter brightness-90"
+          />
+          {/* Overlay escuro (bg-black/75 ou bg-neutral-950/80) para contraste máximo dos textos e botões */}
+          <div className="absolute inset-0 bg-neutral-950/80 backdrop-blur-[1px]" />
+          <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/65 to-black/75" />
+        </div>
+
         {/* Efeitos de iluminação ambiente suaves */}
-        <div className="pointer-events-none absolute -top-32 -left-32 h-96 w-96 rounded-full bg-emerald-500/15 blur-3xl" />
+        <div className="pointer-events-none absolute -top-32 -left-32 h-96 w-96 rounded-full bg-emerald-500/10 blur-3xl z-1" />
         <div
-          className="pointer-events-none absolute -bottom-32 -right-32 h-96 w-96 rounded-full blur-3xl opacity-15"
+          className="pointer-events-none absolute -bottom-32 -right-32 h-96 w-96 rounded-full blur-3xl opacity-15 z-1"
           style={{ backgroundColor: brandColor }}
         />
 
@@ -123,12 +156,12 @@ export function ConversionTemplateView({
           </div>
 
           {/* Título com tracking refinado e contraste impecável */}
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.1] sm:leading-[1.08]">
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.1] sm:leading-[1.08] drop-shadow-md">
             {tenant.name}
           </h1>
 
           {/* Descrição legível com entrelinha relaxada */}
-          <p className="text-base sm:text-lg text-neutral-300 font-normal max-w-2xl mx-auto leading-relaxed">
+          <p className="text-base sm:text-lg text-neutral-200 font-normal max-w-2xl mx-auto leading-relaxed drop-shadow-sm">
             {profile?.editorial_summary ||
               profile?.description ||
               "Atendimento prioritário com resposta rápida pelo WhatsApp. Solicite orçamentos, tire dúvidas ou agende seu horário com total agilidade."}
@@ -311,6 +344,45 @@ export function ConversionTemplateView({
         </section>
       )}
 
+      {/* 3.1 GALERIA RÁPIDA DE CONFIANÇA (GRID DE 3 A 4 FOTOS REAIS DO LOCAL LOGO ABAIXO DOS SERVIÇOS) */}
+      {effectiveGalleryPhotos.length > 0 && (
+        <section className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 border-b border-neutral-200/80 dark:border-white/10 pb-4">
+            <div className="space-y-1">
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                <Camera className="h-3.5 w-3.5" />
+                <span>Ambiente & Estrutura</span>
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white tracking-tight">
+                Conheça Nosso Espaço
+              </h2>
+            </div>
+            <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400">
+              Fotos reais do estabelecimento e infraestrutura
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+            {effectiveGalleryPhotos.slice(0, 4).map((photoUrl: string, idx: number) => (
+              <div
+                key={idx}
+                className="group relative overflow-hidden rounded-2xl bg-neutral-100 dark:bg-neutral-900 aspect-4/3 border border-neutral-200/80 dark:border-white/10 shadow-sm transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5"
+              >
+                <Image
+                  src={photoUrl}
+                  alt={`Ambiente ${tenant.name} - Foto ${idx + 1}`}
+                  fill
+                  unoptimized
+                  referrerPolicy="no-referrer"
+                  className="object-cover transition duration-300 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-neutral-950/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* 4. PRODUTOS FÍSICOS (SE HOUVER) */}
       {products.length > 0 && (
         <PublicProductsSection
@@ -337,6 +409,17 @@ export function ConversionTemplateView({
         <BusinessAttributes
           attributes={tenant.business_attributes}
           theme={theme}
+        />
+      )}
+
+      {/* 5.1 SEÇÃO GLOBAL DE FOTOS DO ESTABELECIMENTO (AMBIENTE & ESTRUTURA COM LIGHTBOX) */}
+      {effectiveGalleryPhotos.length > 0 && (
+        <PlacePhotoGallery
+          photos={allEstablishmentPhotos}
+          tenantName={tenant.name}
+          address={profile?.address}
+          theme={theme}
+          title="Fotos do Estabelecimento • Nosso Ambiente"
         />
       )}
 

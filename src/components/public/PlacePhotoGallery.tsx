@@ -10,6 +10,8 @@ import {
   ZoomIn,
 } from "lucide-react";
 
+import Image from "next/image";
+
 import type { NicheThemeConfig } from "@/config/tenant-themes";
 import { NICHE_THEMES } from "@/config/tenant-themes";
 
@@ -18,6 +20,8 @@ interface PlacePhotoGalleryProps {
   tenantName: string;
   address?: string | null;
   theme?: NicheThemeConfig;
+  title?: string;
+  subtitle?: string;
 }
 
 export function PlacePhotoGallery({
@@ -25,6 +29,8 @@ export function PlacePhotoGallery({
   tenantName,
   address,
   theme,
+  title,
+  subtitle,
 }: PlacePhotoGalleryProps) {
   const currentTheme = theme || NICHE_THEMES.retail_default;
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(
@@ -90,10 +96,10 @@ export function PlacePhotoGallery({
             <span>Ambiente & Estrutura</span>
           </div>
           <h2 className={`text-xl sm:text-2xl font-extrabold ${currentTheme.textPrimary} tracking-tight`}>
-            Conheça as Instalações de {tenantName}
+            {title || `Fotos do Estabelecimento • Nosso Ambiente`}
           </h2>
           <p className={`text-xs sm:text-sm ${currentTheme.textMuted}`}>
-            Fotos oficiais e registros reais do espaço sincronizados do Google Maps.
+            {subtitle || "Fotos oficiais e registros reais do espaço sincronizados do Google Maps."}
           </p>
         </div>
 
@@ -123,12 +129,13 @@ export function PlacePhotoGallery({
               }`}
               aria-label={`Ampliar foto ${idx + 1} de ${tenantName}`}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={photoUrl}
                 alt={`Instalações ${tenantName} - Foto ${idx + 1}`}
-                className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                loading="lazy"
+                fill
+                unoptimized
+                referrerPolicy="no-referrer"
+                className="object-cover transition duration-500 group-hover:scale-105"
               />
 
               {/* Overlay Hover com Botão Visual "Ampliar Foto" */}
@@ -211,6 +218,7 @@ export function PlacePhotoGallery({
                 alt={`Instalações ${tenantName} - Foto ampliada ${
                   selectedPhotoIndex + 1
                 }`}
+                referrerPolicy="no-referrer"
                 className="max-h-[76vh] w-auto object-contain rounded-2xl shadow-inner"
               />
             </div>

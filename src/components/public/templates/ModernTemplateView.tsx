@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import {
   MessageCircle,
   Phone,
@@ -14,10 +15,12 @@ import {
   Sparkles,
   ArrowRight,
   CheckCircle2,
+  Camera,
 } from "lucide-react";
 import type { TemplateViewProps } from "./ConversionTemplateView";
 import { generateWhatsAppUrl, sanitizePhoneNumber, formatBrazilianPhone } from "@/utils/phone";
 import { getContrastTextColor } from "@/utils/color";
+import { getUnifiedEstablishmentPhotos } from "@/utils/establishment-photos";
 import { PublicProductsSection } from "../PublicProductsSection";
 import { PlacePhotoGallery } from "../PlacePhotoGallery";
 import { MapLocationCard } from "../MapLocationCard";
@@ -36,6 +39,8 @@ export function ModernTemplateView({
   statusDetailText,
   brandColor,
   theme,
+  heroImage: customHeroImage,
+  galleryPhotos: customGalleryPhotos,
   onOpenBooking,
 }: TemplateViewProps) {
   const contrastText = getContrastTextColor(brandColor);
@@ -43,6 +48,11 @@ export function ModernTemplateView({
   const cleanPhone = sanitizePhoneNumber(rawPhone);
   const formattedPhone = formatBrazilianPhone(rawPhone);
   const whatsappUrl = generateWhatsAppUrl(rawPhone, tenant.name);
+
+  const photosData = getUnifiedEstablishmentPhotos(tenant, profile);
+  const effectiveHeroImage = customHeroImage || photosData.heroImage;
+  const effectiveGalleryPhotos = (customGalleryPhotos && customGalleryPhotos.length > 0) ? customGalleryPhotos : photosData.galleryPhotos;
+  const allEstablishmentPhotos = photosData.allPhotos;
 
   const realRating = profile?.google_rating ?? profile?.rating ?? tenant.google_rating ?? 5.0;
   const realReviewCount =
@@ -54,7 +64,7 @@ export function ModernTemplateView({
       tenant.name + " " + (profile?.address || "")
     )}`;
 
-  const heroImage = profile?.hero_image_url || profile?.logo_url || (profile?.place_photos && profile.place_photos[0]) || "";
+  const heroImage = effectiveHeroImage;
   const hoursList = tenant.opening_hours || profile?.opening_hours_json || [];
   const latestReview = reviews.length > 0 ? reviews[0] : null;
 
@@ -97,16 +107,55 @@ export function ModernTemplateView({
               {profile?.editorial_summary || profile?.description || "Qualidade superior, atendimento de excelência e estrutura moderna pensada no seu conforto."}
             </p>
 
-            {/* Imagem de Destaque com visual Bento se houver */}
-            {heroImage && (
-              <div className="relative h-48 sm:h-64 w-full rounded-2xl overflow-hidden border border-neutral-100 dark:border-white/10 shadow-inner group">
-                <img
-                  src={heroImage}
-                  alt={tenant.name}
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  loading="lazy"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-neutral-950/50 via-transparent to-transparent" />
+            {/* Bloco Maior da Grid: Card nobre com a heroImage em alta resolução, cantos arredondados (rounded-3xl), sombra suave e badge sobreposto ("Conheça Nosso Espaço") */}
+            <div className="relative h-64 sm:h-80 lg:h-96 w-full rounded-3xl overflow-hidden border border-neutral-200/80 dark:border-white/10 shadow-lg group">
+              <Image
+                src={effectiveHeroImage}
+                alt={`Conheça Nosso Espaço - ${tenant.name}`}
+                fill
+                priority
+                unoptimized
+                referrerPolicy="no-referrer"
+                className="object-cover transition-transform duration-700 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-neutral-950/70 via-neutral-950/15 to-transparent" />
+
+              {/* Badge sobreposto obrigatório: "Conheça Nosso Espaço" */}
+              <div className="absolute top-4 left-4 z-10 inline-flex items-center gap-2 rounded-full bg-neutral-950/85 backdrop-blur-md px-3.5 py-1.5 text-xs font-bold text-white border border-white/15 shadow-md">
+                <Camera className="h-3.5 w-3.5 text-amber-400" />
+                <span>Conheça Nosso Espaço</span>
+              </div>
+            </div>
+
+            {/* Mini-cards fotográficos nos blocos menores exibindo detalhes do ambiente */}
+            {effectiveGalleryPhotos.length > 0 && (
+              <div className="space-y-2.5 pt-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider block">
+                    Detalhes do Ambiente
+                  </span>
+                  <span className="text-[11px] text-neutral-400 font-mono">
+                    {effectiveGalleryPhotos.length} fotos adicionais
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  {effectiveGalleryPhotos.slice(0, 3).map((photoUrl, idx) => (
+                    <div
+                      key={idx}
+                      className="group relative h-20 sm:h-24 overflow-hidden rounded-2xl border border-neutral-200/80 dark:border-white/10 shadow-xs bg-neutral-100 dark:bg-neutral-850"
+                    >
+                      <Image
+                        src={photoUrl}
+                        alt={`Detalhes do ambiente ${tenant.name} ${idx + 1}`}
+                        fill
+                        unoptimized
+                        referrerPolicy="no-referrer"
+                        className="object-cover transition duration-300 group-hover:scale-110"
+                      />
+                      <div className="absolute inset-0 bg-neutral-950/15 group-hover:opacity-0 transition-opacity" />
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -372,13 +421,14 @@ export function ModernTemplateView({
         />
       )}
 
-      {/* 4. GALERIA DE FOTOS (SE HOUVER) */}
-      {profile?.place_photos && profile.place_photos.length > 0 && (
+      {/* 4. SEÇÃO GLOBAL DE FOTOS DO ESTABELECIMENTO (AMBIENTE & ESTRUTURA COM LIGHTBOX) */}
+      {allEstablishmentPhotos.length > 0 && (
         <PlacePhotoGallery
-          photos={profile.place_photos}
+          photos={allEstablishmentPhotos}
           tenantName={tenant.name}
-          address={profile.address}
+          address={profile?.address}
           theme={theme}
+          title="Fotos do Estabelecimento • Nosso Ambiente"
         />
       )}
 

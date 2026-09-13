@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import {
   MessageCircle,
   Phone,
@@ -10,10 +11,13 @@ import {
   ExternalLink,
   Star,
   Check,
+  Camera,
 } from "lucide-react";
 import type { TemplateViewProps } from "./ConversionTemplateView";
 import { generateWhatsAppUrl, sanitizePhoneNumber, formatBrazilianPhone } from "@/utils/phone";
 import { getContrastTextColor } from "@/utils/color";
+import { getUnifiedEstablishmentPhotos } from "@/utils/establishment-photos";
+import { PlacePhotoGallery } from "../PlacePhotoGallery";
 
 export function MinimalTemplateView({
   tenant,
@@ -28,6 +32,8 @@ export function MinimalTemplateView({
   statusDetailText,
   brandColor,
   theme,
+  heroImage: customHeroImage,
+  galleryPhotos: customGalleryPhotos,
   onOpenBooking,
 }: TemplateViewProps) {
   const contrastText = getContrastTextColor(brandColor);
@@ -35,6 +41,11 @@ export function MinimalTemplateView({
   const cleanPhone = sanitizePhoneNumber(rawPhone);
   const formattedPhone = formatBrazilianPhone(rawPhone);
   const whatsappUrl = generateWhatsAppUrl(rawPhone, tenant.name);
+
+  const photosData = getUnifiedEstablishmentPhotos(tenant, profile);
+  const effectiveHeroImage = customHeroImage || photosData.heroImage;
+  const effectiveGalleryPhotos = (customGalleryPhotos && customGalleryPhotos.length > 0) ? customGalleryPhotos : photosData.galleryPhotos;
+  const allEstablishmentPhotos = photosData.allPhotos;
 
   const realRating = profile?.google_rating ?? profile?.rating ?? tenant.google_rating ?? 5.0;
   const realReviewCount =
@@ -109,6 +120,19 @@ export function MinimalTemplateView({
           </div>
         )}
       </header>
+
+      {/* Banner Fotográfico Panorâmico (Proporção 21:9 ou 16:9) */}
+      <div className="relative w-full aspect-16/9 sm:aspect-21/9 overflow-hidden rounded-xl border border-neutral-200/80 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900 shadow-sm group">
+        <Image
+          src={effectiveHeroImage}
+          alt={`Ambiente de ${tenant.name}`}
+          fill
+          priority
+          unoptimized
+          referrerPolicy="no-referrer"
+          className="object-cover transition-transform duration-700 ease-out group-hover:scale-102"
+        />
+      </div>
 
       {/* 2. SERVIÇOS & CARDÁPIO COM PREÇOS CLAROS */}
       {services.length > 0 && (
@@ -230,6 +254,17 @@ export function MinimalTemplateView({
             ))}
           </div>
         </section>
+      )}
+
+      {/* 3.1 SEÇÃO GLOBAL DE FOTOS DO ESTABELECIMENTO (AMBIENTE & ESTRUTURA COM LIGHTBOX) */}
+      {effectiveGalleryPhotos.length > 0 && (
+        <PlacePhotoGallery
+          photos={allEstablishmentPhotos}
+          tenantName={tenant.name}
+          address={profile?.address}
+          theme={theme}
+          title="Fotos do Estabelecimento • Nosso Ambiente"
+        />
       )}
 
       {/* 4. HORÁRIO E ENDEREÇO */}

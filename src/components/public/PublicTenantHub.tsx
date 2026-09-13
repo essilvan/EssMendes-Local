@@ -20,6 +20,7 @@ import { ConversionTemplateView } from "./templates/ConversionTemplateView";
 import { MinimalTemplateView } from "./templates/MinimalTemplateView";
 import { ModernTemplateView } from "./templates/ModernTemplateView";
 import { PremiumTemplateView } from "./templates/PremiumTemplateView";
+import { getUnifiedEstablishmentPhotos } from "@/utils/establishment-photos";
 import type { BusinessAttributes as BusinessAttributesType } from "@/types";
 
 interface PublicTenantHubProps {
@@ -41,6 +42,10 @@ interface PublicTenantHubProps {
     google_reviews_count?: number | null;
     opening_hours?: string[] | null;
     business_attributes?: BusinessAttributesType | null;
+    cover_image_url?: string | null;
+    photos?: string[] | null;
+    google_photo_url?: string | null;
+    [key: string]: any;
   };
   profile: TenantProfile | null;
   services: Service[];
@@ -179,6 +184,11 @@ export function PublicTenantHub({
     tenant.google_types || []
   );
 
+  const { heroImage, galleryPhotos, allPhotos } = getUnifiedEstablishmentPhotos(
+    tenant,
+    profile
+  );
+
   return (
     <div
       style={{ ...colorStyles, "--brand-primary": brandColor } as React.CSSProperties}
@@ -257,6 +267,8 @@ export function PublicTenantHub({
             statusDetailText={statusDetailText}
             brandColor={brandColor}
             theme={currentTheme}
+            heroImage={heroImage}
+            galleryPhotos={galleryPhotos}
             onOpenBooking={handleOpenBooking}
           />
         )}
@@ -275,6 +287,8 @@ export function PublicTenantHub({
             statusDetailText={statusDetailText}
             brandColor={brandColor}
             theme={currentTheme}
+            heroImage={heroImage}
+            galleryPhotos={galleryPhotos}
             onOpenBooking={handleOpenBooking}
           />
         )}
@@ -293,6 +307,8 @@ export function PublicTenantHub({
             statusDetailText={statusDetailText}
             brandColor={brandColor}
             theme={currentTheme}
+            heroImage={heroImage}
+            galleryPhotos={galleryPhotos}
             onOpenBooking={handleOpenBooking}
           />
         )}
@@ -314,6 +330,8 @@ export function PublicTenantHub({
             statusDetailText={statusDetailText}
             brandColor={brandColor}
             theme={currentTheme}
+            heroImage={heroImage}
+            galleryPhotos={galleryPhotos}
             onOpenBooking={handleOpenBooking}
           />
         )}

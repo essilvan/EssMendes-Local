@@ -2,6 +2,7 @@
 
 import React from "react";
 import type { TemplateViewProps } from "./ConversionTemplateView";
+import { getUnifiedEstablishmentPhotos } from "@/utils/establishment-photos";
 import { PublicHeroSplit } from "../PublicHeroSplit";
 import { TrustMetricsBar } from "../TrustMetricsBar";
 import { ConversionDashboard } from "../ConversionDashboard";
@@ -26,12 +27,19 @@ export function PremiumTemplateView({
   statusDetailText,
   brandColor,
   theme,
+  heroImage: customHeroImage,
+  galleryPhotos: customGalleryPhotos,
   onOpenBooking,
 }: TemplateViewProps) {
   const realRating = profile?.google_rating ?? profile?.rating ?? tenant.google_rating ?? 5.0;
   const realReviewCount =
     profile?.google_reviews_count ?? profile?.review_count ?? tenant.google_reviews_count ?? reviews.length;
   const rawPhone = profile?.phone_whatsapp || profile?.phone || "";
+
+  const photosData = getUnifiedEstablishmentPhotos(tenant, profile);
+  const effectiveHeroImage = customHeroImage || photosData.heroImage;
+  const effectiveGalleryPhotos = (customGalleryPhotos && customGalleryPhotos.length > 0) ? customGalleryPhotos : photosData.galleryPhotos;
+  const allEstablishmentPhotos = photosData.allPhotos;
 
   return (
     <div className="space-y-16 md:space-y-24 py-6 sm:py-10">
@@ -41,8 +49,8 @@ export function PremiumTemplateView({
         description={profile?.description}
         address={profile?.address}
         phoneWhatsapp={rawPhone}
-        heroImageUrl={profile?.hero_image_url || profile?.logo_url}
-        placePhotos={profile?.place_photos}
+        heroImageUrl={effectiveHeroImage}
+        placePhotos={allEstablishmentPhotos}
         latitude={profile?.latitude}
         longitude={profile?.longitude}
         businessCategory={profile?.business_category}
@@ -95,13 +103,14 @@ export function PremiumTemplateView({
         onOpenBooking={() => onOpenBooking()}
       />
 
-      {/* 6. Galeria de Fotos Reais do Google Maps em Alta Resolução */}
-      {profile?.place_photos && profile.place_photos.length > 0 && (
+      {/* 6. Galeria de Fotos Reais do Estabelecimento em Alta Resolução */}
+      {allEstablishmentPhotos.length > 0 && (
         <PlacePhotoGallery
-          photos={profile.place_photos}
+          photos={allEstablishmentPhotos}
           tenantName={tenant.name}
           address={profile?.address}
           theme={theme}
+          title="Fotos do Estabelecimento • Nosso Ambiente"
         />
       )}
 

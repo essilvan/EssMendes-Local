@@ -350,6 +350,9 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
         longitude: typeof profile.longitude === "number" ? profile.longitude : null,
         hero_image_url: profile.hero_image_url || (cleanPlacePhotos.length > 0 ? cleanPlacePhotos[0] : null),
         place_photos: cleanPlacePhotos,
+        cover_image_url: profile.cover_image_url || profile.hero_image_url || (cleanPlacePhotos.length > 0 ? cleanPlacePhotos[0] : null),
+        photos: cleanPlacePhotos,
+        google_photo_url: profile.google_photo_url || (cleanPlacePhotos.length > 0 ? cleanPlacePhotos[0] : null),
         created_at: profile.created_at,
         updated_at: profile.updated_at,
       }
@@ -483,7 +486,21 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
 
       {/* Renderização do Local Business Hub */}
       <PublicTenantHub
-        tenant={tenant}
+        tenant={{
+          ...tenant,
+          cover_image_url:
+            tenant.cover_image_url ||
+            typedProfile?.cover_image_url ||
+            typedProfile?.hero_image_url ||
+            (cleanPlacePhotos.length > 0 ? cleanPlacePhotos[0] : null),
+          photos:
+            Array.isArray(tenant.photos) && tenant.photos.length > 0
+              ? tenant.photos
+              : cleanPlacePhotos,
+          google_photo_url:
+            tenant.google_photo_url ||
+            (cleanPlacePhotos.length > 0 ? cleanPlacePhotos[0] : null),
+        }}
         profile={typedProfile}
         services={activeServices}
         portfolioItems={portfolioItems}
