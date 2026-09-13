@@ -68,7 +68,7 @@ export function PublicProductsSection({
       </div>
 
       {/* Grid de Produtos */}
-      <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid gap-5 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {activeProducts.map((p) => {
           const hasPromo = p.promotional_price && p.promotional_price > 0 && p.promotional_price < p.price;
           const currentPrice = hasPromo ? p.promotional_price! : p.price;
@@ -77,52 +77,52 @@ export function PublicProductsSection({
           return (
             <div
               key={p.id}
-              className={`group flex flex-col justify-between overflow-hidden ${currentTheme.roundedClass} ${currentTheme.bgCard} transition-all hover:scale-[1.01]`}
+              className={`group flex flex-col justify-between overflow-hidden rounded-3xl border border-neutral-200/80 dark:border-white/10 ${currentTheme.bgCard} shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300`}
             >
               <div>
                 {/* Imagem do Produto */}
-                <div className={`relative aspect-square w-full overflow-hidden ${currentTheme.isDark ? 'bg-zinc-800' : 'bg-slate-100'} flex items-center justify-center`}>
+                <div className={`relative aspect-square w-full overflow-hidden ${currentTheme.isDark ? 'bg-neutral-900' : 'bg-neutral-100'} flex items-center justify-center`}>
                   {p.image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={p.image_url}
                       alt={p.name}
-                      className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                      className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                       loading="lazy"
                     />
                   ) : (
-                    <div className="flex flex-col items-center gap-2 text-slate-400">
+                    <div className="flex flex-col items-center gap-2 text-neutral-400">
                       <ShoppingBag className="h-12 w-12" />
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
                         {p.category || "Produto"}
                       </span>
                     </div>
                   )}
 
                   {p.is_featured && (
-                    <div className="absolute top-2.5 left-2.5 rounded-full bg-amber-500/95 px-2.5 py-0.5 text-[10px] font-black text-white shadow-sm flex items-center gap-1">
+                    <div className="absolute top-3 left-3 rounded-full bg-amber-500/95 px-3 py-1 text-[10px] font-extrabold text-white shadow-sm flex items-center gap-1">
                       <Star className="h-3 w-3 fill-current" />
-                      Destaque
+                      <span>Destaque</span>
                     </div>
                   )}
 
                   {hasPromo && (
-                    <div className="absolute top-2.5 right-2.5 rounded-full bg-emerald-600 px-2.5 py-0.5 text-[10px] font-black text-white shadow-sm">
-                      Promoção
+                    <div className="absolute top-3 right-3 rounded-full bg-emerald-600 px-3 py-1 text-[10px] font-extrabold text-white shadow-sm">
+                      <span>Promoção</span>
                     </div>
                   )}
                 </div>
 
                 {/* Conteúdo */}
-                <div className="p-4 space-y-2">
+                <div className="p-5 space-y-2.5">
                   {p.category && (
-                    <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider ${currentTheme.badgeText} ${currentTheme.badgeBg} px-2 py-0.5 rounded`}>
+                    <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider ${currentTheme.badgeText} ${currentTheme.badgeBg} px-2.5 py-0.5 rounded-md`}>
                       <Tag className="h-2.5 w-2.5" />
                       {p.category}
                     </span>
                   )}
 
-                  <h3 className={`font-bold text-sm ${currentTheme.textPrimary} line-clamp-2 leading-snug`}>
+                  <h3 className={`font-bold text-sm sm:text-base ${currentTheme.textPrimary} line-clamp-2 leading-snug group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors`}>
                     {p.name}
                   </h3>
 
@@ -134,11 +134,11 @@ export function PublicProductsSection({
 
                   {/* Preços */}
                   <div className="pt-2 flex items-baseline gap-2">
-                    <span className={`text-xl font-black ${currentTheme.textPrimary}`}>
+                    <span className={`text-xl font-extrabold ${currentTheme.textPrimary}`}>
                       {formatCurrency(currentPrice)}
                     </span>
                     {hasPromo && (
-                      <span className="text-xs font-semibold text-slate-400 line-through">
+                      <span className="text-xs font-semibold text-neutral-400 line-through">
                         {formatCurrency(p.price)}
                       </span>
                     )}
@@ -147,15 +147,15 @@ export function PublicProductsSection({
               </div>
 
               {/* Botão de WhatsApp usando theme.ctaButtonClass */}
-              <div className="p-4 pt-0">
+              <div className="p-5 pt-0">
                 <a
                   href={orderUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`flex items-center justify-center gap-2 w-full ${currentTheme.roundedClass} ${currentTheme.ctaButtonClass} active:scale-98 px-3.5 py-2.5 text-xs font-bold transition`}
+                  className={`flex items-center justify-center gap-2 w-full rounded-2xl ${currentTheme.ctaButtonClass} px-4 py-3 text-xs font-bold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-sm`}
                 >
                   <MessageCircle className="h-4 w-4" />
-                  <span>Pedir / Retirar no WhatsApp</span>
+                  <span>Pedir no WhatsApp</span>
                 </a>
               </div>
             </div>

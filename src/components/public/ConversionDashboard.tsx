@@ -103,36 +103,36 @@ export function ConversionDashboard({
         id="servicos"
         className={`${
           hasMiddleColumn ? "lg:col-span-4" : "lg:col-span-7"
-        } ${currentTheme.roundedClass} ${currentTheme.bgCard} p-6 sm:p-7 space-y-4`}
+        } rounded-3xl ${currentTheme.bgCard} border border-neutral-200/80 dark:border-white/10 p-6 sm:p-8 space-y-6 shadow-xl shadow-black/5`}
       >
-        <div className={`flex items-center justify-between border-b ${currentTheme.borderClass} pb-3.5`}>
+        <div className={`flex items-center justify-between border-b border-neutral-200/80 dark:border-white/10 pb-4`}>
           <div>
             <div
-              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold ${currentTheme.badgeBg} ${currentTheme.badgeText}`}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${currentTheme.badgeBg} ${currentTheme.badgeText}`}
             >
               <span>{currentTheme.icons?.services || "🛠️"}</span>
               <span>Nossos Serviços</span>
             </div>
-            <h3 className={`mt-1 text-base sm:text-lg font-black ${currentTheme.textPrimary}`}>
+            <h3 className={`mt-1.5 text-lg sm:text-xl font-extrabold ${currentTheme.textPrimary} tracking-tight`}>
               Catálogo & Preços
             </h3>
           </div>
 
-          <span className={`text-xs font-bold ${currentTheme.badgeText} ${currentTheme.badgeBg} px-2.5 py-1 rounded-full`}>
+          <span className={`text-xs font-semibold ${currentTheme.badgeText} ${currentTheme.badgeBg} px-3 py-1 rounded-full`}>
             {services.length} {services.length === 1 ? "opção" : "opções"}
           </span>
         </div>
 
         {/* Lista de Cards de Serviços Reais */}
         {services.length === 0 ? (
-          <div className="text-center py-8 text-slate-500 text-xs space-y-2">
+          <div className="text-center py-8 text-neutral-500 text-xs space-y-2">
             <p className={`font-semibold ${currentTheme.textPrimary}`}>Nenhum serviço cadastrado no momento.</p>
             <p className={currentTheme.textMuted}>
               Faça seu agendamento ou tire dúvidas diretamente pelo WhatsApp.
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {services.map((service) => {
               const hasPrice = service.price !== null && Number(service.price) > 0;
               const phone = profile?.phone_whatsapp || profile?.phone;
@@ -141,17 +141,17 @@ export function ConversionDashboard({
               return (
                 <div
                   key={service.id}
-                  className={`group ${currentTheme.roundedClass} border ${currentTheme.borderClass} ${
-                    currentTheme.isDark ? 'bg-zinc-800/60 hover:bg-zinc-800' : 'bg-slate-50/60 hover:bg-slate-50'
-                  } p-4 space-y-3 transition shadow-2xs`}
+                  className={`group rounded-2xl border border-neutral-200/80 dark:border-white/10 ${
+                    currentTheme.isDark ? 'bg-neutral-900/80 hover:bg-neutral-900' : 'bg-white/95 hover:bg-white'
+                  } p-5 space-y-4 transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5`}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="space-y-0.5">
-                      <h4 className={`text-xs sm:text-sm font-black ${currentTheme.textPrimary} transition`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <h4 className={`text-sm sm:text-base font-bold ${currentTheme.textPrimary} tracking-tight group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors`}>
                         {service.name}
                       </h4>
                       {service.description && (
-                        <p className={`text-[11px] sm:text-xs ${currentTheme.textMuted} line-clamp-2 leading-relaxed`}>
+                        <p className={`text-xs ${currentTheme.textMuted} line-clamp-2 leading-relaxed`}>
                           {service.description}
                         </p>
                       )}
@@ -159,22 +159,22 @@ export function ConversionDashboard({
 
                     {hasPrice ? (
                       <span
-                        className="text-sm sm:text-base font-black shrink-0"
-                        style={{ color: "var(--primary-color, #0d9488)" }}
+                        className="text-sm sm:text-base font-extrabold shrink-0"
+                        style={{ color: "var(--brand-primary, #0d9488)" }}
                       >
                         {formatCurrency(Number(service.price))}
                       </span>
                     ) : (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-amber-500/10 text-amber-500 border border-amber-500/30 shrink-0">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-500 border border-amber-500/30 shrink-0">
                         Sob Consulta
                       </span>
                     )}
                   </div>
 
-                  <div className={`flex flex-wrap items-center justify-between gap-2 pt-2 border-t ${currentTheme.borderClass}`}>
-                    <span className={`text-[11px] font-bold ${currentTheme.textMuted} flex items-center gap-1`}>
-                      <Clock className="h-3 w-3" />
-                      {service.duration_minutes} min
+                  <div className={`flex flex-wrap items-center justify-between gap-2.5 pt-3 border-t border-neutral-100 dark:border-white/10`}>
+                    <span className={`text-xs font-medium ${currentTheme.textMuted} flex items-center gap-1`}>
+                      <Clock className="h-3.5 w-3.5" />
+                      <span>{service.duration_minutes} min</span>
                     </span>
 
                     <div className="flex flex-wrap items-center gap-2">
@@ -184,18 +184,18 @@ export function ConversionDashboard({
                           href={generateWhatsAppUrl(phone, whatsappOrderText)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className={`inline-flex items-center gap-1.5 ${currentTheme.roundedClass} px-3 py-1.5 text-xs font-bold transition shadow-2xs ${
+                          className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-xs ${
                             !hasPrice
-                              ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                              ? "bg-emerald-600 hover:bg-emerald-500 text-white"
                               : currentTheme.isDark
-                                ? "border border-zinc-700 bg-zinc-800 text-zinc-300 hover:text-emerald-400 hover:border-emerald-600"
-                                : "border border-slate-200 bg-white text-slate-700 hover:text-emerald-700 hover:border-emerald-200"
+                                ? "border border-white/10 bg-white/5 text-neutral-300 hover:text-emerald-400 hover:border-emerald-600/30"
+                                : "border border-neutral-200 bg-neutral-50 text-neutral-700 hover:text-emerald-700 hover:border-emerald-200"
                           }`}
                           title="Solicitar orçamento diretamente no WhatsApp"
                         >
                           <MessageCircle className="h-3.5 w-3.5" />
                           <span>
-                            {!hasPrice ? "💬 Solicitar Orçamento via WhatsApp" : "WhatsApp"}
+                            {!hasPrice ? "Orçamento via WhatsApp" : "WhatsApp"}
                           </span>
                         </a>
                       )}
@@ -204,16 +204,16 @@ export function ConversionDashboard({
                       <button
                         type="button"
                         onClick={() => onOpenBookingModal(service.id)}
-                        className={`inline-flex items-center gap-1.5 ${currentTheme.roundedClass} ${
+                        className={`inline-flex items-center gap-1.5 rounded-xl ${
                           hasPrice
                             ? currentTheme.ctaButtonClass
                             : currentTheme.isDark
-                              ? "border border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
-                              : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-                        } px-3.5 py-1.5 text-xs font-black transition cursor-pointer shadow-2xs`}
+                              ? "border border-white/15 bg-white/5 text-neutral-200 hover:bg-white/10"
+                              : "border border-neutral-300 bg-white text-neutral-800 hover:bg-neutral-50"
+                        } px-4 py-2 text-xs font-bold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-xs`}
                       >
                         <Calendar className="h-3.5 w-3.5" />
-                        <span>📅 Agendar Horário</span>
+                        <span>Agendar Horário</span>
                       </button>
                     </div>
                   </div>

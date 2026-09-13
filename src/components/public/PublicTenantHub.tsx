@@ -184,15 +184,15 @@ export function PublicTenantHub({
       style={{ ...colorStyles, "--brand-primary": brandColor } as React.CSSProperties}
       className={`min-h-screen w-full max-w-full overflow-x-hidden transition-colors duration-200 ${selectedTemplateClass} ${
         activeTemplate === "minimal"
-          ? "bg-white text-neutral-900"
+          ? "bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100"
           : isAuto
           ? "bg-zinc-950 text-zinc-100"
           : isFood
           ? "bg-stone-950 text-stone-100"
           : isHealth
-          ? "bg-slate-50 text-slate-800"
-          : "bg-white text-gray-900"
-      } selection:bg-slate-900 selection:text-white`}
+          ? "bg-slate-50 text-slate-900"
+          : "bg-neutral-50/50 text-neutral-900"
+      } selection:bg-neutral-900 selection:text-white`}
     >
       {/* Tracker de Analytics (Zero PII) */}
       <PublicPageTracker tenantId={tenant.id} />
@@ -215,24 +215,24 @@ export function PublicTenantHub({
           onOpenBooking={() => handleOpenBooking()}
         />
       ) : (
-        <nav className="w-full border-b border-neutral-200 bg-white/95 backdrop-blur-sm sticky top-0 z-40 px-4 py-3.5">
+        <nav className="w-full border-b border-neutral-200/80 dark:border-white/10 bg-white/90 dark:bg-neutral-950/90 backdrop-blur-md sticky top-0 z-40 px-4 sm:px-6 py-4">
           <div className="max-w-4xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-3">
               {profile?.logo_url && (
                 <img
                   src={profile.logo_url}
                   alt={tenant.name}
-                  className="h-7 w-7 rounded object-contain"
+                  className="h-8 w-8 rounded-xl object-contain border border-neutral-200/60 dark:border-white/10"
                 />
               )}
-              <span className="font-bold text-sm tracking-tight text-neutral-900 font-mono uppercase">
+              <span className="font-extrabold text-sm sm:text-base tracking-tight text-neutral-900 dark:text-white font-mono uppercase">
                 {tenant.name}
               </span>
             </div>
             <button
               type="button"
               onClick={() => handleOpenBooking()}
-              className="text-xs font-semibold px-3.5 py-1.5 rounded border border-neutral-900 bg-neutral-900 text-white hover:bg-neutral-800 transition cursor-pointer shadow-xs"
+              className="text-xs font-bold px-4 py-2 rounded-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-sm"
               style={{ backgroundColor: brandColor, color: getContrastTextColor(brandColor) }}
             >
               Agendar Horário
@@ -242,7 +242,7 @@ export function PublicTenantHub({
       )}
 
       {/* Container Centralizado com Conteúdo Real Dinâmico por Template */}
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8">
+      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-14 md:py-16">
         {activeTemplate === "conversion" && (
           <ConversionTemplateView
             tenant={tenant}

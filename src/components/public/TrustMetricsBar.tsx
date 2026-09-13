@@ -39,28 +39,28 @@ export function TrustMetricsBar({ theme }: TrustMetricsBarProps) {
   ];
 
   return (
-    <section className={`${currentTheme.roundedClass} ${currentTheme.bgCard} p-6 sm:p-8 space-y-4`}>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+    <section className={`rounded-3xl ${currentTheme.bgCard} border border-neutral-200/80 dark:border-white/10 p-6 sm:p-8 space-y-4 shadow-xl shadow-black/5`}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
         {pillars.map((item) => {
           const Icon = item.icon;
           return (
             <div
               key={item.title}
-              className={`flex items-start gap-3.5 p-3 ${currentTheme.roundedClass} ${
-                currentTheme.isDark ? 'bg-zinc-800/60 border border-zinc-700/60' : 'bg-slate-50/70 border border-slate-100'
-              } transition hover:scale-[1.01]`}
+              className={`flex items-start gap-3.5 p-4 rounded-2xl border border-neutral-200/80 dark:border-white/10 ${
+                currentTheme.isDark ? 'bg-neutral-900/80' : 'bg-white/95'
+              } backdrop-blur-md shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5`}
             >
               <div
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white shadow-2xs mt-0.5"
-                style={{ backgroundColor: "var(--primary-color, #0d9488)" }}
+                style={{ backgroundColor: "var(--brand-primary, #0d9488)" }}
               >
                 <Icon className="h-5 w-5" />
               </div>
-              <div className="space-y-0.5">
-                <h3 className={`text-xs sm:text-sm font-black ${currentTheme.textPrimary} leading-snug`}>
+              <div className="space-y-1">
+                <h3 className={`text-xs sm:text-sm font-bold ${currentTheme.textPrimary} leading-snug`}>
                   {item.title}
                 </h3>
-                <p className={`text-[11px] sm:text-xs ${currentTheme.textMuted} leading-relaxed font-normal`}>
+                <p className={`text-xs ${currentTheme.textMuted} leading-relaxed font-normal`}>
                   {item.description}
                 </p>
               </div>

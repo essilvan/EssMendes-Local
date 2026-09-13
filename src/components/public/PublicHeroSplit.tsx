@@ -78,28 +78,28 @@ export function PublicHeroSplit({
   const displayRating = hasRating ? rating.toFixed(1) : "5.0";
 
   return (
-    <section className={`relative overflow-hidden ${currentTheme.roundedClass} ${currentTheme.bgCard} p-6 sm:p-8 lg:p-10 shadow-sm`}>
+    <section className={`relative overflow-hidden rounded-3xl ${currentTheme.bgCard} border border-neutral-200/80 dark:border-white/10 p-7 sm:p-10 lg:p-12 shadow-xl shadow-black/5`}>
       {/* Luz ambiente de fundo */}
       <div
-        className="pointer-events-none absolute -left-24 -top-24 h-96 w-96 rounded-full blur-3xl opacity-15"
-        style={{ backgroundColor: "var(--primary-color, #0d9488)" }}
+        className="pointer-events-none absolute -left-24 -top-24 h-96 w-96 rounded-full blur-3xl opacity-10"
+        style={{ backgroundColor: "var(--brand-primary, #0d9488)" }}
       />
       <div
         className="pointer-events-none absolute -right-24 -bottom-24 h-96 w-96 rounded-full blur-3xl opacity-10"
-        style={{ backgroundColor: "var(--primary-color, #0d9488)" }}
+        style={{ backgroundColor: "var(--brand-primary, #0d9488)" }}
       />
 
       {/* Grid Split do Hero (Lado Esquerdo: Conteúdo & CTAs | Lado Direito: Foto & GPS) */}
-      <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
+      <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
         
         {/* =========================================================================
             LADO ESQUERDO: Badge, Nome, Headline, 2 Botões e Mini-card Google (7 Colunas)
            ========================================================================= */}
-        <div className="lg:col-span-7 space-y-6">
+        <div className="lg:col-span-7 space-y-7">
           
           {/* Badge com a Tagline do Tema Dinâmico */}
           <div
-            className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1 text-xs shadow-2xs ${currentTheme.badgeBg}`}
+            className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold shadow-2xs border ${currentTheme.badgeBg}`}
           >
             <span>{currentTheme.icons?.hero || "✨"}</span>
             <span
@@ -109,42 +109,42 @@ export function PublicHeroSplit({
                   : currentTheme.id === "food"
                   ? "text-rose-500"
                   : currentTheme.id === "health_beauty"
-                  ? "text-teal-700"
-                  : "text-blue-600"
+                  ? "text-teal-700 dark:text-teal-400"
+                  : "text-blue-600 dark:text-blue-400"
               }`}
             >
               {currentTheme.id === "auto"
-                ? "Serviço de Confiança e Agilidade Mecânica"
+                ? "Serviço de Confiança & Performance"
                 : currentTheme.id === "food"
                 ? "Sabor Incomparável & Pedido Rápido"
                 : currentTheme.id === "health_beauty"
                 ? "Cuidado Especializado & Bem-Estar"
-                : "Qualidade, Variedade e Atendimento Direto"}
+                : "Qualidade, Variedade & Atendimento Premium"}
             </span>
           </div>
 
           {/* Nome da Empresa e Headline Dinâmica */}
-          <div className="space-y-3">
-            <h1 className={`text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight ${currentTheme.textPrimary} leading-[1.12]`}>
+          <div className="space-y-4">
+            <h1 className={`text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight ${currentTheme.textPrimary} leading-[1.12]`}>
               Excelência & Confiança no{" "}
               <span className={currentTheme.accentText}>
                 {tenantName}
               </span>
             </h1>
 
-            <p className={`text-sm sm:text-base ${currentTheme.textMuted} leading-relaxed font-normal`}>
+            <p className={`text-sm sm:text-base ${currentTheme.textMuted} leading-relaxed font-normal max-w-2xl`}>
               {cleanDescription ||
                 `Conheça nossos serviços e faça seu agendamento de horário no ${tenantName}. Atendimento de excelência, pontualidade e satisfação garantida.`}
             </p>
           </div>
 
           {/* 2 Botões de Ação Imediata */}
-          <div className="flex flex-wrap items-center gap-3 pt-1">
+          <div className="flex flex-wrap items-center gap-3.5 pt-1">
             {/* Botão Primário: Agendar Horário Online com CTA do tema */}
             <button
               type="button"
               onClick={onOpenBooking}
-              className={`inline-flex items-center justify-center gap-2 ${currentTheme.roundedClass} ${currentTheme.ctaButtonClass} px-5 sm:px-6 py-3.5 text-xs sm:text-sm font-black transition cursor-pointer`}
+              className={`inline-flex items-center justify-center gap-2.5 rounded-2xl ${currentTheme.ctaButtonClass} px-6 sm:px-7 py-4 text-xs sm:text-sm font-bold shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer`}
             >
               <Calendar className="h-4 w-4" />
               <span>Agendar Horário Online</span>
@@ -157,7 +157,7 @@ export function PublicHeroSplit({
                 href={whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`inline-flex items-center justify-center gap-2 ${currentTheme.roundedClass} border border-emerald-600/30 bg-emerald-500/10 hover:bg-emerald-500/20 px-5 sm:px-6 py-3.5 text-xs sm:text-sm font-extrabold text-emerald-400 transition shadow-2xs`}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-600/30 bg-emerald-500/10 hover:bg-emerald-500/20 px-6 sm:px-7 py-4 text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-xs"
               >
                 <MessageCircle className="h-4 w-4 text-emerald-500 fill-current" />
                 <span>Conversar no WhatsApp</span>
@@ -166,12 +166,12 @@ export function PublicHeroSplit({
           </div>
 
           {/* Mini-card de Autoridade Google (Applewood Style) */}
-          <div className={`${currentTheme.roundedClass} border ${currentTheme.borderClass} ${
-            currentTheme.isDark ? 'bg-zinc-800/80' : 'bg-white/95'
-          } p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3`}>
-            <div className="flex items-center gap-3">
+          <div className={`rounded-2xl border border-neutral-200/80 dark:border-white/10 ${
+            currentTheme.isDark ? 'bg-neutral-900/90' : 'bg-white/95'
+          } backdrop-blur-md p-4 sm:p-5 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3`}>
+            <div className="flex items-center gap-3.5">
               {/* Google G Icon */}
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 border border-slate-200 shadow-2xs">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-neutral-100 dark:bg-white/10 border border-neutral-200/60 dark:border-white/10 shadow-2xs">
                 <svg className="h-5 w-5" viewBox="0 0 24 24">
                   <path
                     fill="#4285F4"
@@ -193,8 +193,8 @@ export function PublicHeroSplit({
               </div>
 
               <div>
-                <div className="flex items-center gap-1.5">
-                  <span className={`font-black text-sm ${currentTheme.textPrimary}`}>
+                <div className="flex items-center gap-2">
+                  <span className={`font-extrabold text-base ${currentTheme.textPrimary}`}>
                     {displayRating}
                   </span>
                   <div className="flex items-center gap-0.5 text-amber-500">
@@ -202,11 +202,11 @@ export function PublicHeroSplit({
                       <Star key={i} className="h-3.5 w-3.5 fill-current" />
                     ))}
                   </div>
-                  <span className={`text-xs font-bold ${currentTheme.textMuted}`}>
+                  <span className={`text-xs font-semibold ${currentTheme.textMuted}`}>
                     ({hasReviewCount ? `${reviewCount} avaliações` : "Google Business"})
                   </span>
                 </div>
-                <p className={`text-[11px] ${currentTheme.textMuted} font-medium`}>
+                <p className={`text-xs ${currentTheme.textMuted} font-medium mt-0.5`}>
                   Avaliações oficiais e presença verificada no Google Maps.
                 </p>
               </div>
@@ -214,9 +214,10 @@ export function PublicHeroSplit({
 
             <a
               href="#avaliacoes"
-              className={`text-xs font-bold hover:underline self-start sm:self-auto ${currentTheme.accentText}`}
+              className={`text-xs font-bold hover:underline self-start sm:self-auto flex items-center gap-1 ${currentTheme.accentText}`}
             >
-              Ver depoimentos →
+              <span>Ver avaliações</span>
+              <ArrowRight className="h-3 w-3" />
             </a>
           </div>
 
@@ -226,7 +227,7 @@ export function PublicHeroSplit({
             LADO DIREITO: Card Fotográfico com Card Suspenso "Estamos Aqui!" (5 Colunas)
            ========================================================================= */}
         <div className="lg:col-span-5">
-          <div className="relative rounded-3xl overflow-hidden border border-slate-200/90 bg-slate-900 shadow-xl aspect-4/3 sm:aspect-16/11 flex flex-col justify-end group">
+          <div className="relative rounded-3xl overflow-hidden border border-neutral-200/80 dark:border-white/10 bg-neutral-900 shadow-xl aspect-4/3 sm:aspect-16/11 flex flex-col justify-end group">
             {/* Foto Principal de Alta Resolução */}
             {mainImage ? (
               // eslint-disable-next-line @next/next/no-img-element

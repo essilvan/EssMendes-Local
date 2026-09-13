@@ -50,20 +50,20 @@ export function MinimalTemplateView({
   const hoursList = tenant.opening_hours || profile?.opening_hours_json || [];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-16 py-8 sm:py-14 px-4 sm:px-6 bg-white text-neutral-900">
+    <div className="max-w-4xl mx-auto space-y-20 py-12 sm:py-16 px-4 sm:px-6 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100">
       
       {/* 1. HEADER MINIMALISTA & NOME DO NEGÓCIO */}
-      <header className="space-y-4 border-b border-neutral-200 pb-8">
+      <header className="space-y-5 border-b border-neutral-200 dark:border-neutral-800 pb-10">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <span className="text-xs font-mono uppercase tracking-widest text-neutral-500">
+          <span className="text-xs font-mono uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
             {profile?.business_category || tenant.category || "Estabelecimento Local"}
           </span>
 
           <span
-            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-xs font-mono uppercase ${
+            className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono uppercase tracking-wider ${
               isOpenNow
-                ? "bg-neutral-900 text-white"
-                : "bg-neutral-100 text-neutral-600 border border-neutral-200"
+                ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-950"
+                : "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700"
             }`}
           >
             <span
@@ -75,35 +75,36 @@ export function MinimalTemplateView({
           </span>
         </div>
 
-        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-neutral-950 font-sans">
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-neutral-950 dark:text-white leading-[1.08]">
           {tenant.name}
         </h1>
 
         {profile?.address && (
-          <p className="text-sm text-neutral-600 font-normal">
+          <p className="text-sm text-neutral-600 dark:text-neutral-400 font-normal">
             {profile.address}
           </p>
         )}
 
         {(profile?.editorial_summary || profile?.description) && (
-          <p className="text-base text-neutral-700 leading-relaxed max-w-2xl pt-2">
+          <p className="text-base sm:text-lg text-neutral-700 dark:text-neutral-300 leading-relaxed max-w-2xl pt-2 font-normal">
             {profile.editorial_summary || profile.description}
           </p>
         )}
 
         {/* Avaliação Discreta */}
         {realReviewCount > 0 && (
-          <div className="flex items-center gap-2 pt-1 text-xs text-neutral-500">
-            <span className="font-semibold text-neutral-900">{Number(realRating).toFixed(1)} ★</span>
+          <div className="flex items-center gap-2 pt-2 text-xs text-neutral-500 dark:text-neutral-400">
+            <span className="font-bold text-neutral-950 dark:text-white">{Number(realRating).toFixed(1)} ★</span>
             <span>•</span>
-            <span>{realReviewCount} avaliações no Google</span>
+            <span>{realReviewCount} avaliações no Google Maps</span>
+            <span>•</span>
             <a
               href={googleMapsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-neutral-900 underline underline-offset-2 hover:text-neutral-600 transition"
+              className="text-neutral-950 dark:text-white underline underline-offset-4 hover:text-neutral-600 dark:hover:text-neutral-300 transition"
             >
-              Ver no Maps ↗
+              Ver perfil oficial ↗
             </a>
           </div>
         )}
@@ -111,17 +112,17 @@ export function MinimalTemplateView({
 
       {/* 2. SERVIÇOS & CARDÁPIO COM PREÇOS CLAROS */}
       {services.length > 0 && (
-        <section className="space-y-6">
-          <div className="flex items-baseline justify-between border-b border-neutral-900 pb-2">
-            <h2 className="text-xl font-bold tracking-tight text-neutral-950 uppercase font-mono">
-              Serviços & Preços
+        <section className="space-y-8">
+          <div className="flex items-baseline justify-between border-b border-neutral-900 dark:border-white pb-3">
+            <h2 className="text-lg sm:text-xl font-bold tracking-tight text-neutral-950 dark:text-white uppercase font-mono">
+              Serviços & Especialidades
             </h2>
-            <span className="text-xs font-mono text-neutral-500">
+            <span className="text-xs font-mono text-neutral-500 dark:text-neutral-400">
               {services.length} itens disponíveis
             </span>
           </div>
 
-          <div className="divide-y divide-neutral-200">
+          <div className="divide-y divide-neutral-200 dark:divide-neutral-800">
             {services.map((service) => {
               const serviceWhatsappUrl = generateWhatsAppUrl(
                 rawPhone,
@@ -132,11 +133,11 @@ export function MinimalTemplateView({
               return (
                 <div
                   key={service.id}
-                  className="py-5 flex flex-col sm:flex-row sm:items-baseline justify-between gap-4 group"
+                  className="py-6 flex flex-col sm:flex-row sm:items-baseline justify-between gap-4 group transition-colors"
                 >
-                  <div className="space-y-1 max-w-xl">
+                  <div className="space-y-1.5 max-w-xl">
                     <div className="flex items-baseline gap-3">
-                      <h3 className="text-base font-semibold text-neutral-900 group-hover:text-neutral-600 transition">
+                      <h3 className="text-base sm:text-lg font-semibold text-neutral-900 dark:text-white group-hover:text-neutral-600 dark:group-hover:text-neutral-300 transition-colors">
                         {service.name}
                       </h3>
                       {service.duration_minutes > 0 && (
@@ -146,20 +147,20 @@ export function MinimalTemplateView({
                       )}
                     </div>
                     {service.description && (
-                      <p className="text-xs text-neutral-500 leading-relaxed">
+                      <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">
                         {service.description}
                       </p>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-4 shrink-0 sm:self-center">
+                  <div className="flex items-center gap-5 shrink-0 sm:self-center">
                     <div className="text-right">
                       {service.price && Number(service.price) > 0 ? (
-                        <span className="text-base font-mono font-bold text-neutral-950">
+                        <span className="text-base font-mono font-bold text-neutral-950 dark:text-white">
                           R$ {Number(service.price).toFixed(2)}
                         </span>
                       ) : (
-                        <span className="text-xs font-mono text-neutral-500">
+                        <span className="text-xs font-mono text-neutral-500 dark:text-neutral-400">
                           Sob consulta
                         </span>
                       )}
@@ -168,7 +169,7 @@ export function MinimalTemplateView({
                     <button
                       type="button"
                       onClick={() => onOpenBooking(service.id)}
-                      className="text-xs font-medium px-3.5 py-1.5 rounded border border-neutral-300 hover:border-neutral-900 text-neutral-800 hover:bg-neutral-950 hover:text-white transition cursor-pointer"
+                      className="text-xs font-medium px-4 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 hover:border-neutral-900 dark:hover:border-white text-neutral-900 dark:text-white hover:bg-neutral-950 hover:text-white dark:hover:bg-white dark:hover:text-neutral-950 transition-colors duration-200 cursor-pointer"
                     >
                       Agendar
                     </button>
@@ -182,34 +183,34 @@ export function MinimalTemplateView({
 
       {/* 3. PRODUTOS (SE HOUVER) */}
       {products.length > 0 && (
-        <section className="space-y-6">
-          <div className="flex items-baseline justify-between border-b border-neutral-900 pb-2">
-            <h2 className="text-xl font-bold tracking-tight text-neutral-950 uppercase font-mono">
+        <section className="space-y-8">
+          <div className="flex items-baseline justify-between border-b border-neutral-900 dark:border-white pb-3">
+            <h2 className="text-lg sm:text-xl font-bold tracking-tight text-neutral-950 dark:text-white uppercase font-mono">
               Produtos & Itens
             </h2>
-            <span className="text-xs font-mono text-neutral-500">
+            <span className="text-xs font-mono text-neutral-500 dark:text-neutral-400">
               {products.length} produtos
             </span>
           </div>
 
-          <div className="divide-y divide-neutral-200">
+          <div className="divide-y divide-neutral-200 dark:divide-neutral-800">
             {products.map((prod) => (
               <div
                 key={prod.id}
-                className="py-4 flex items-center justify-between gap-4"
+                className="py-5 flex items-center justify-between gap-4"
               >
                 <div>
-                  <h3 className="text-sm font-medium text-neutral-900">
+                  <h3 className="text-sm sm:text-base font-medium text-neutral-900 dark:text-white">
                     {prod.name}
                   </h3>
                   {prod.description && (
-                    <p className="text-xs text-neutral-500 line-clamp-1">
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-1">
                       {prod.description}
                     </p>
                   )}
                 </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <span className="text-sm font-mono font-bold text-neutral-950">
+                <div className="flex items-center gap-4 shrink-0">
+                  <span className="text-sm sm:text-base font-mono font-bold text-neutral-950 dark:text-white">
                     R$ {Number(prod.price).toFixed(2)}
                   </span>
                   <a
@@ -220,7 +221,7 @@ export function MinimalTemplateView({
                     )}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs font-medium px-3 py-1 rounded border border-neutral-300 hover:border-neutral-900 text-neutral-800 hover:bg-neutral-950 hover:text-white transition"
+                    className="text-xs font-medium px-4 py-1.5 rounded-xl border border-neutral-300 dark:border-neutral-700 hover:border-neutral-900 dark:hover:border-white text-neutral-900 dark:text-white hover:bg-neutral-950 hover:text-white dark:hover:bg-white dark:hover:text-neutral-950 transition-colors duration-200"
                   >
                     Pedir
                   </a>
@@ -232,18 +233,18 @@ export function MinimalTemplateView({
       )}
 
       {/* 4. HORÁRIO E ENDEREÇO */}
-      <section className="border-t border-neutral-200 pt-10 grid grid-cols-1 md:grid-cols-2 gap-8">
+      <section className="border-t border-neutral-200 dark:border-neutral-800 pt-12 grid grid-cols-1 md:grid-cols-2 gap-10">
         {/* Coluna 1: Horários */}
-        <div className="space-y-3">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-neutral-900 font-mono flex items-center gap-2">
+        <div className="space-y-4">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-neutral-900 dark:text-white font-mono flex items-center gap-2">
             <Clock className="h-4 w-4 text-neutral-500" />
             <span>Horário de Funcionamento</span>
           </h2>
 
           {hoursList.length > 0 ? (
-            <div className="space-y-1.5 text-xs font-mono text-neutral-600 divide-y divide-neutral-100">
+            <div className="space-y-2 text-xs font-mono text-neutral-600 dark:text-neutral-400 divide-y divide-neutral-100 dark:divide-neutral-800">
               {hoursList.map((h: string, idx: number) => (
-                <div key={idx} className="pt-1.5 first:pt-0 flex justify-between">
+                <div key={idx} className="pt-2 first:pt-0 flex justify-between">
                   <span>{h}</span>
                 </div>
               ))}
@@ -256,14 +257,14 @@ export function MinimalTemplateView({
         </div>
 
         {/* Coluna 2: Endereço & Localização */}
-        <div className="space-y-3">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-neutral-900 font-mono flex items-center gap-2">
+        <div className="space-y-4">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-neutral-900 dark:text-white font-mono flex items-center gap-2">
             <MapPin className="h-4 w-4 text-neutral-500" />
             <span>Localização</span>
           </h2>
 
-          <p className="text-xs text-neutral-700 leading-relaxed font-mono">
-            {profile?.address || "Atendimento local"}
+          <p className="text-xs sm:text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed font-mono">
+            {profile?.address || "Atendimento presencial"}
           </p>
 
           <div className="pt-2">
@@ -271,7 +272,7 @@ export function MinimalTemplateView({
               href={googleMapsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-900 hover:text-neutral-600 underline underline-offset-4 transition"
+              className="inline-flex items-center gap-2 text-xs font-medium text-neutral-950 dark:text-white hover:text-neutral-600 dark:hover:text-neutral-300 underline underline-offset-4 transition"
             >
               <span>Abrir no Google Maps</span>
               <ExternalLink className="h-3 w-3" />
@@ -281,16 +282,16 @@ export function MinimalTemplateView({
       </section>
 
       {/* 5. BOTÕES DE CONTATO OUTLINED DISCRETOS */}
-      <footer className="border-t border-neutral-200 pt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <div className="text-xs text-neutral-500 font-mono">
+      <footer className="border-t border-neutral-200 dark:border-neutral-800 pt-10 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-5">
+        <div className="text-xs text-neutral-500 dark:text-neutral-400 font-mono">
           © {new Date().getFullYear()} {tenant.name}. Todos os direitos reservados.
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-3">
           {cleanPhone && (
             <a
               href={`tel:+55${cleanPhone}`}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-neutral-300 text-neutral-800 hover:border-neutral-900 text-xs font-medium transition"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 hover:border-neutral-900 dark:hover:border-white text-xs font-medium transition"
             >
               <Phone className="h-3.5 w-3.5" />
               <span>{formattedPhone || "Ligar"}</span>
@@ -301,7 +302,7 @@ export function MinimalTemplateView({
             href={whatsappUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-neutral-900 bg-white hover:bg-neutral-900 hover:text-white text-neutral-900 text-xs font-medium transition"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-900 dark:border-white bg-transparent hover:bg-neutral-950 hover:text-white dark:hover:bg-white dark:hover:text-neutral-950 text-neutral-900 dark:text-white text-xs font-medium transition"
           >
             <MessageCircle className="h-3.5 w-3.5" />
             <span>Falar no WhatsApp</span>
@@ -310,7 +311,7 @@ export function MinimalTemplateView({
           <button
             type="button"
             onClick={() => onOpenBooking()}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold transition cursor-pointer shadow-xs"
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer shadow-xs"
             style={{ backgroundColor: brandColor, color: contrastText }}
           >
             <Calendar className="h-3.5 w-3.5" />

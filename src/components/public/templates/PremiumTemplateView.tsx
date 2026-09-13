@@ -34,7 +34,7 @@ export function PremiumTemplateView({
   const rawPhone = profile?.phone_whatsapp || profile?.phone || "";
 
   return (
-    <div className="space-y-12 sm:space-y-16 py-4 sm:py-8">
+    <div className="space-y-16 md:space-y-24 py-6 sm:py-10">
       {/* 1. Hero Section Universal Split Screen Nobre */}
       <PublicHeroSplit
         tenantName={tenant.name}

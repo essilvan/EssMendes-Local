@@ -91,20 +91,20 @@ export function BusinessAttributes({
   return (
     <section
       id="comodidades"
-      className={`${currentTheme.roundedClass} ${currentTheme.bgCard} p-6 sm:p-8 shadow-sm space-y-6`}
+      className={`rounded-3xl ${currentTheme.bgCard} border border-neutral-200/80 dark:border-white/10 p-7 sm:p-10 shadow-xl shadow-black/5 space-y-8`}
     >
       {/* Cabeçalho da Seção */}
-      <div className={`border-b ${currentTheme.borderClass} pb-4`}>
+      <div className={`border-b border-neutral-200/80 dark:border-white/10 pb-6`}>
         <div
-          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold ${currentTheme.badgeBg} ${currentTheme.badgeText}`}
+          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${currentTheme.badgeBg} ${currentTheme.badgeText}`}
         >
           <Sparkles className="h-3.5 w-3.5" />
           <span>Sobre o Espaço & Diferenciais</span>
         </div>
-        <h2 className={`mt-1.5 text-lg sm:text-xl font-black ${currentTheme.textPrimary}`}>
+        <h2 className={`mt-2 text-xl sm:text-2xl font-extrabold ${currentTheme.textPrimary} tracking-tight`}>
           Comodidades & Diferenciais
         </h2>
-        <p className={`text-xs ${currentTheme.textMuted} mt-0.5`}>
+        <p className={`text-xs sm:text-sm ${currentTheme.textMuted} mt-1`}>
           Características, ambiente e facilidades disponíveis para sua maior comodidade e conveniência.
         </p>
       </div>
@@ -116,19 +116,19 @@ export function BusinessAttributes({
           return (
             <div
               key={category.key}
-              className={`flex flex-col space-y-3 p-4 sm:p-5 ${currentTheme.roundedClass} border ${currentTheme.borderClass} ${
-                currentTheme.isDark ? "bg-zinc-800/60" : "bg-slate-50/70"
-              } transition hover:shadow-2xs`}
+              className={`flex flex-col space-y-4 p-5 sm:p-6 rounded-2xl border border-neutral-200/80 dark:border-white/10 ${
+                currentTheme.isDark ? "bg-neutral-900/80" : "bg-white/95"
+              } backdrop-blur-md transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5`}
             >
               {/* Título da Categoria */}
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-3">
                 <div
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white shadow-2xs"
-                  style={{ backgroundColor: "var(--primary-color, #0d9488)" }}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-2xs"
+                  style={{ backgroundColor: "var(--brand-primary, #0d9488)" }}
                 >
                   <IconComponent className="h-4 w-4" />
                 </div>
-                <h3 className={`text-xs sm:text-sm font-bold ${currentTheme.textPrimary} tracking-tight`}>
+                <h3 className={`text-sm sm:text-base font-bold ${currentTheme.textPrimary} tracking-tight`}>
                   {category.title}
                 </h3>
               </div>
@@ -138,9 +138,9 @@ export function BusinessAttributes({
                 {category.items.map((item, idx) => (
                   <span
                     key={idx}
-                    className="rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1 text-xs sm:text-sm font-medium flex items-center gap-1.5 shadow-2xs transition hover:bg-emerald-100/90"
+                    className="rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 px-3 py-1 text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-colors"
                   >
-                    <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                    <Check className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
                     <span>{item}</span>
                   </span>
                 ))}

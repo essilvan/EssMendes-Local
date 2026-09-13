@@ -63,39 +63,34 @@ export function PublicFooter({
 
   return (
     <>
-      <section
-        className="text-white pt-12 pb-12 mt-12 shadow-lg transition-colors"
-        style={{
-          backgroundColor: "var(--primary-color, #0d9488)",
-        }}
-      >
+      <section className="bg-neutral-900 text-neutral-200 border-t border-neutral-800 py-12 sm:py-16 mt-16 shadow-xl">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 space-y-8">
           
           {/* Topo com Botões de Ação Rápida */}
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 items-center">
+          <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-4 items-center">
           
           {/* Ação 1: Ligar Agora */}
           {phoneWhatsapp ? (
             <a
               href={`tel:+55${cleanPhone}`}
-              className="flex items-center gap-3 rounded-2xl bg-white/15 p-4 backdrop-blur-xs hover:bg-white/25 transition shadow-2xs"
+              className="flex items-center gap-3.5 rounded-2xl bg-white/5 border border-white/10 p-5 hover:bg-white/10 transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5"
             >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-slate-900 shadow-xs">
-                <Phone className="h-5 w-5" />
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white shadow-xs">
+                <Phone className="h-5 w-5 text-neutral-300" />
               </div>
-              <div>
-                <p className="text-[10px] uppercase font-black tracking-wider text-white/80">
+              <div className="overflow-hidden">
+                <p className="text-[11px] uppercase font-bold tracking-wider text-neutral-400">
                   Ligar Agora
                 </p>
-                <p className="text-xs sm:text-sm font-black text-white truncate">
+                <p className="text-xs sm:text-sm font-bold text-white truncate mt-0.5">
                   {phoneWhatsapp}
                 </p>
               </div>
             </a>
           ) : (
-            <div className="flex items-center gap-3 rounded-2xl bg-white/15 p-4 backdrop-blur-xs">
-              <Phone className="h-5 w-5 text-white" />
-              <span className="text-xs font-bold">Atendimento Presencial</span>
+            <div className="flex items-center gap-3.5 rounded-2xl bg-white/5 border border-white/10 p-5">
+              <Phone className="h-5 w-5 text-neutral-400" />
+              <span className="text-xs font-semibold text-neutral-300">Atendimento Presencial</span>
             </div>
           )}
 
@@ -105,16 +100,16 @@ export function PublicFooter({
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-3 rounded-2xl bg-white/15 p-4 backdrop-blur-xs hover:bg-white/25 transition shadow-2xs"
+              className="flex items-center gap-3.5 rounded-2xl bg-white/5 border border-white/10 p-5 hover:bg-white/10 transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5"
             >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-xs">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-xs">
                 <MessageCircle className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-[10px] uppercase font-black tracking-wider text-white/80">
+                <p className="text-[11px] uppercase font-bold tracking-wider text-neutral-400">
                   Chamar no WhatsApp
                 </p>
-                <p className="text-xs sm:text-sm font-black text-white">
+                <p className="text-xs sm:text-sm font-bold text-emerald-400 mt-0.5">
                   Conversar Agora
                 </p>
               </div>
@@ -122,24 +117,24 @@ export function PublicFooter({
           )}
 
           {/* Ação 3: Horário de Atendimento */}
-          <div className="flex items-center gap-3 rounded-2xl bg-white/15 p-4 backdrop-blur-xs">
+          <div className="flex items-center gap-3.5 rounded-2xl bg-white/5 border border-white/10 p-5">
             <div
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-950 shadow-xs ${
-                status.isOpen ? "bg-emerald-400" : "bg-amber-400"
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white shadow-xs ${
+                status.isOpen ? "bg-emerald-500/20 text-emerald-400" : "bg-amber-500/20 text-amber-400"
               }`}
             >
               <Clock className="h-5 w-5" />
             </div>
             <div className="overflow-hidden">
-              <p className="text-[10px] uppercase font-black tracking-wider text-white/80 flex items-center gap-1.5">
+              <p className="text-[11px] uppercase font-bold tracking-wider text-neutral-400 flex items-center gap-1.5">
                 <span
-                  className={`h-1.5 w-1.5 rounded-full ${
-                    status.isOpen ? "bg-emerald-300 animate-pulse" : "bg-amber-300"
+                  className={`h-2 w-2 rounded-full ${
+                    status.isOpen ? "bg-emerald-400 animate-pulse" : "bg-amber-400"
                   }`}
                 />
                 <span>{status.label}</span>
               </p>
-              <p className="text-xs sm:text-sm font-black text-white truncate">
+              <p className="text-xs sm:text-sm font-bold text-white truncate mt-0.5">
                 {status.subLabel}
               </p>
             </div>
@@ -150,16 +145,16 @@ export function PublicFooter({
             href={googleMapsUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-3 rounded-2xl bg-white/15 p-4 backdrop-blur-xs hover:bg-white/25 transition shadow-2xs"
+            className="flex items-center gap-3.5 rounded-2xl bg-white/5 border border-white/10 p-5 hover:bg-white/10 transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5"
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-slate-900 shadow-xs">
-              <Navigation className="h-5 w-5" />
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white shadow-xs">
+              <Navigation className="h-5 w-5 text-neutral-300" />
             </div>
             <div className="overflow-hidden">
-              <p className="text-[10px] uppercase font-black tracking-wider text-white/80">
+              <p className="text-[11px] uppercase font-bold tracking-wider text-neutral-400">
                 Como Chegar
               </p>
-              <p className="text-xs font-black text-white truncate">
+              <p className="text-xs sm:text-sm font-bold text-white truncate mt-0.5">
                 {displayAddress}
               </p>
             </div>
@@ -170,9 +165,9 @@ export function PublicFooter({
       </section>
 
       {/* Rodapé das Vitrines Públicas - Selo EssMendes Tecnologia */}
-      <footer className="w-full py-8 border-t border-zinc-800/60 bg-[#07080a] text-center pb-24 sm:pb-8">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-zinc-500">
+      <footer className="w-full py-8 border-t border-neutral-800/80 bg-neutral-950 text-center pb-24 sm:pb-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-xs text-neutral-500">
             © {new Date().getFullYear()} {tenantName}. Todos os direitos reservados.
           </p>
 
@@ -181,9 +176,9 @@ export function PublicFooter({
             href="https://essmendes.com.br"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-zinc-900/80 border border-zinc-700/60 hover:border-blue-500/50 hover:bg-zinc-800 transition-all group"
+            className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-neutral-900 border border-neutral-800 hover:border-blue-500/50 hover:bg-neutral-850 transition-all group"
           >
-            <span className="text-[11px] text-zinc-400 group-hover:text-zinc-200">
+            <span className="text-[11px] text-neutral-400 group-hover:text-neutral-200">
               Plataforma & Presença Digital por
             </span>
             <Image
@@ -193,7 +188,7 @@ export function PublicFooter({
               height={50}
               className="h-10 sm:h-11 w-auto object-contain group-hover:scale-105 transition-transform"
             />
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-mono">
+            <span className="text-[10px] px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-mono">
               Crie a Sua ↗
             </span>
           </a>

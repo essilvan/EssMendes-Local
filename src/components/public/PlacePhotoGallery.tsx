@@ -78,38 +78,37 @@ export function PlacePhotoGallery({
   return (
     <section
       id="fotos"
-      className={`${currentTheme.roundedClass} border ${currentTheme.borderClass} ${currentTheme.bgCard} p-6 sm:p-8 shadow-sm space-y-6`}
+      className={`rounded-3xl border border-neutral-200/80 dark:border-white/10 ${currentTheme.bgCard} p-7 sm:p-10 shadow-xl shadow-black/5 space-y-8`}
     >
       {/* Header */}
-      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b ${currentTheme.borderClass} pb-4`}>
-        <div>
+      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200/80 dark:border-white/10 pb-6`}>
+        <div className="space-y-1.5">
           <div
-            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold ${currentTheme.badgeBg} ${currentTheme.badgeText}`}
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${currentTheme.badgeBg} ${currentTheme.badgeText}`}
           >
             <Camera className="h-3.5 w-3.5" />
             <span>Ambiente & Estrutura</span>
           </div>
-          <h2 className={`mt-1 text-lg sm:text-xl font-black ${currentTheme.textPrimary}`}>
+          <h2 className={`text-xl sm:text-2xl font-extrabold ${currentTheme.textPrimary} tracking-tight`}>
             Conheça as Instalações de {tenantName}
           </h2>
-          <p className={`text-xs ${currentTheme.textMuted} mt-0.5`}>
-            Fotos oficiais e registros reais do espaço sincronizados do Google
-            Maps.
+          <p className={`text-xs sm:text-sm ${currentTheme.textMuted}`}>
+            Fotos oficiais e registros reais do espaço sincronizados do Google Maps.
           </p>
         </div>
 
         {address && (
-          <div className={`flex items-center gap-1.5 text-xs ${currentTheme.textMuted} font-semibold ${
-            currentTheme.isDark ? 'bg-zinc-800 border-zinc-700' : 'bg-slate-50 border-slate-100'
-          } border px-3 py-1.5 ${currentTheme.roundedClass} self-start sm:self-auto`}>
-            <MapPin className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+          <div className={`flex items-center gap-2 text-xs ${currentTheme.textMuted} font-medium ${
+            currentTheme.isDark ? 'bg-neutral-900/90' : 'bg-neutral-50'
+          } border border-neutral-200/80 dark:border-white/10 px-3.5 py-2 rounded-xl self-start sm:self-auto`}>
+            <MapPin className="h-3.5 w-3.5 text-neutral-400 shrink-0" />
             <span className="truncate max-w-xs">{address}</span>
           </div>
         )}
       </div>
 
       {/* Grid de Fotos em Alta Resolução */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
         {cleanPhotos.map((photoUrl, idx) => {
           const isFeatured = idx === 0;
           return (
@@ -117,7 +116,7 @@ export function PlacePhotoGallery({
               type="button"
               key={idx}
               onClick={() => setSelectedPhotoIndex(idx)}
-              className={`group relative overflow-hidden rounded-2xl bg-slate-100 cursor-pointer shadow-2xs border border-slate-200/80 transition hover:shadow-md text-left focus:outline-none focus:ring-2 focus:ring-slate-900 ${
+              className={`group relative overflow-hidden rounded-2xl bg-neutral-100 dark:bg-neutral-900 cursor-pointer shadow-sm border border-neutral-200/80 dark:border-white/10 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 text-left focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white ${
                 isFeatured
                   ? "col-span-2 row-span-2 aspect-square sm:aspect-auto"
                   : "aspect-4/3"
@@ -128,20 +127,20 @@ export function PlacePhotoGallery({
               <img
                 src={photoUrl}
                 alt={`Instalações ${tenantName} - Foto ${idx + 1}`}
-                className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                 loading="lazy"
               />
 
               {/* Overlay Hover com Botão Visual "Ampliar Foto" */}
-              <div className="absolute inset-0 bg-slate-950/35 opacity-0 group-hover:opacity-100 transition flex items-center justify-center backdrop-blur-2xs">
-                <div className="flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1.5 text-xs font-bold text-slate-900 shadow-md">
+              <div className="absolute inset-0 bg-neutral-950/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center backdrop-blur-2xs">
+                <div className="flex items-center gap-2 rounded-full bg-white/95 dark:bg-neutral-900/95 px-4 py-2 text-xs font-bold text-neutral-950 dark:text-white shadow-md">
                   <ZoomIn className="h-3.5 w-3.5" />
                   <span>Ampliar Foto</span>
                 </div>
               </div>
 
               {isFeatured && (
-                <div className="absolute top-3 left-3 rounded-lg bg-slate-900/85 backdrop-blur-md px-2.5 py-1 text-[10px] font-black text-white uppercase tracking-wider shadow-xs">
+                <div className="absolute top-3 left-3 rounded-lg bg-neutral-950/85 backdrop-blur-md px-3 py-1 text-[10px] font-extrabold text-white uppercase tracking-wider shadow-xs border border-white/10">
                   Destaque Principal
                 </div>
               )}

@@ -98,113 +98,125 @@ export function ConversionTemplateView({
   const googleMapsUrl = profile?.google_maps_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(tenant.name + " " + (profile?.address || ""))}`;
 
   return (
-    <div className="space-y-10 pb-16">
-      {/* 1. HERO DE ALTO IMPACTO (CONVERSION HERO) */}
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 text-white p-6 sm:p-12 border border-slate-800 shadow-2xl">
-        <div className="relative z-10 max-w-4xl mx-auto text-center space-y-6">
-          {/* Badge superior em destaque */}
-          <div
-            className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs sm:text-sm font-extrabold shadow-lg tracking-wide uppercase"
-            style={{ backgroundColor: brandColor, color: contrastText }}
-          >
-            <Zap className="h-4 w-4 fill-current shrink-0" />
-            <span>⚡ Atendimento Imediato & Pedido Rápido</span>
+    <div className="space-y-16 md:space-y-24 pb-20">
+      {/* 1. HERO DE ALTO IMPACTO (CONVERSION HERO - APPLE & LINEAR STYLE) */}
+      <section className="relative overflow-hidden rounded-3xl bg-neutral-950 text-white p-7 sm:p-12 lg:p-16 border border-white/10 shadow-2xl shadow-black/40">
+        {/* Efeitos de iluminação ambiente suaves */}
+        <div className="pointer-events-none absolute -top-32 -left-32 h-96 w-96 rounded-full bg-emerald-500/15 blur-3xl" />
+        <div
+          className="pointer-events-none absolute -bottom-32 -right-32 h-96 w-96 rounded-full blur-3xl opacity-15"
+          style={{ backgroundColor: brandColor }}
+        />
+
+        <div className="relative z-10 max-w-3xl mx-auto text-center space-y-7">
+          {/* Badge cápsula refinada com micro-interação */}
+          <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold tracking-wide border border-white/15 bg-white/5 backdrop-blur-md text-emerald-400 shadow-inner">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+            </span>
+            <span className="text-white/90">⚡ Atendimento Rápido</span>
+            <span className="text-white/30">•</span>
+            <span className="text-emerald-400 font-bold">
+              {isOpenNow ? "Aberto Agora" : "Atendimento Online"}
+            </span>
           </div>
 
-          {/* Título forte com foco em solução imediata */}
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white leading-tight">
+          {/* Título com tracking refinado e contraste impecável */}
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.1] sm:leading-[1.08]">
             {tenant.name}
           </h1>
 
-          <p className="text-base sm:text-xl text-slate-300 font-medium max-w-2xl mx-auto leading-relaxed">
-            {profile?.editorial_summary || profile?.description || "Atendimento prioritário com resposta rápida pelo WhatsApp. Solicite informações, orçamentos ou confirme seu pedido agora."}
+          {/* Descrição legível com entrelinha relaxada */}
+          <p className="text-base sm:text-lg text-neutral-300 font-normal max-w-2xl mx-auto leading-relaxed">
+            {profile?.editorial_summary ||
+              profile?.description ||
+              "Atendimento prioritário com resposta rápida pelo WhatsApp. Solicite orçamentos, tire dúvidas ou agende seu horário com total agilidade."}
           </p>
 
-          {/* Dois botões de ação prioritária */}
+          {/* Ações Primárias com acabamento nobre */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 pt-2 max-w-lg mx-auto">
-            {/* 1. Botão verde grande com ícone de WhatsApp */}
+            {/* 1. Botão WhatsApp com verde esmeralda refinado */}
             <a
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base sm:text-lg px-7 py-4 shadow-xl shadow-emerald-600/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-base sm:text-lg px-8 py-4 shadow-xl shadow-emerald-600/25 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
             >
-              <MessageCircle className="h-6 w-6 fill-white text-emerald-600 shrink-0" />
+              <MessageCircle className="h-5 w-5 fill-white text-emerald-600 shrink-0" />
               <span>Falar no WhatsApp Agora</span>
             </a>
 
-            {/* 2. Botão secundário de ligação */}
+            {/* 2. Botão secundário de ligação com visual translúcido */}
             {cleanPhone && (
               <a
                 href={`tel:+55${cleanPhone}`}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 rounded-2xl bg-slate-800/90 hover:bg-slate-700 text-white font-bold text-base px-6 py-4 border border-slate-700 shadow-md transition hover:scale-[1.02] active:scale-[0.98]"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-semibold text-base px-6 py-4 border border-white/15 backdrop-blur-md shadow-md transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
               >
-                <Phone className="h-5 w-5 text-emerald-400 shrink-0" />
+                <Phone className="h-4 w-4 text-emerald-400 shrink-0" />
                 <span>Ligar Agora</span>
               </a>
             )}
           </div>
 
-          {/* Chamada alternativa para agendamento online */}
+          {/* Chamada sutil para agendamento online */}
           <div className="pt-2">
             <button
               type="button"
               onClick={() => onOpenBooking()}
-              className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white underline underline-offset-4 transition cursor-pointer"
+              className="inline-flex items-center gap-2 text-xs sm:text-sm text-neutral-400 hover:text-white transition cursor-pointer group"
             >
-              <Calendar className="h-3.5 w-3.5" />
-              <span>Ou prefere escolher data e horário online? Clique aqui</span>
+              <Calendar className="h-4 w-4 text-neutral-400 group-hover:text-emerald-400 transition" />
+              <span className="underline underline-offset-4 decoration-white/20 group-hover:decoration-white">
+                Prefere escolher data e horário online? Clique aqui
+              </span>
+              <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
             </button>
           </div>
         </div>
-
-        {/* Fundo decorativo sutil */}
-        <div className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
-        <div
-          className="absolute -bottom-24 -left-24 h-96 w-96 rounded-full blur-3xl pointer-events-none"
-          style={{ backgroundColor: `${brandColor}15` }}
-        />
       </section>
 
       {/* 2. BLOCO DE CONFIANÇA IMEDIATO (LOGO ABAIXO DO HERO) */}
-      <section className="max-w-4xl mx-auto">
+      <section className="max-w-4xl mx-auto -mt-6 sm:-mt-10 relative z-20 px-2 sm:px-4">
         <a
           href={googleMapsUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="group block rounded-2xl border-2 border-amber-200/80 bg-gradient-to-r from-amber-50/90 via-white to-amber-50/70 p-4 sm:p-5 shadow-sm hover:shadow-md transition hover:border-amber-300"
+          className="group block rounded-2xl border border-neutral-200/80 dark:border-white/10 bg-white/95 dark:bg-neutral-900/90 backdrop-blur-md p-5 sm:p-6 shadow-xl shadow-black/5 hover:shadow-2xl transition-all duration-300 hover:border-neutral-300 dark:hover:border-white/20"
         >
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500 text-white font-black text-xl shadow-xs shrink-0">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500 font-extrabold text-2xl shrink-0 shadow-inner">
                 {Number(realRating).toFixed(1)}
               </div>
               <div>
-                <div className="flex items-center gap-1">
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      className="h-4 w-4 fill-amber-400 text-amber-400"
-                    />
-                  ))}
-                  <span className="ml-1.5 text-xs font-extrabold text-slate-900">
-                    {Number(realRating).toFixed(1)} no Google Maps
+                <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-0.5">
+                    {[...Array(5)].map((_, i) => (
+                      <Star
+                        key={i}
+                        className="h-4 w-4 fill-amber-400 text-amber-400"
+                      />
+                    ))}
+                  </div>
+                  <span className="text-xs font-bold text-neutral-900 dark:text-white">
+                    {Number(realRating).toFixed(1)} de 5.0
                   </span>
                 </div>
-                <p className="text-xs text-slate-600 mt-0.5">
-                  Baseado em <strong className="text-slate-900">{realReviewCount} avaliações reais</strong> de clientes no Google
+                <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">
+                  Baseado em <strong className="text-neutral-900 dark:text-white">{realReviewCount} avaliações reais</strong> verificadas no Google Maps
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 sm:self-center">
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-900 px-3 py-1 text-xs font-bold ring-1 ring-emerald-600/20">
-                <ShieldCheck className="h-3.5 w-3.5 text-emerald-700" />
-                <span>Perfil Verificado no Google</span>
+            <div className="flex items-center gap-2.5 sm:self-center">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-3 py-1 text-xs font-semibold">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                <span>Perfil Verificado</span>
               </span>
-              <span className="text-xs font-bold text-slate-700 group-hover:text-slate-900 flex items-center gap-0.5">
+              <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-white flex items-center gap-1 transition">
                 <span>Ver comentários</span>
-                <ExternalLink className="h-3.5 w-3.5" />
+                <ExternalLink className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
               </span>
             </div>
           </div>
@@ -213,25 +225,23 @@ export function ConversionTemplateView({
 
       {/* 3. CATÁLOGO DE AÇÃO DIRETA (SERVIÇOS DE ALTA CONVERSÃO) */}
       {services.length > 0 && (
-        <section className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 border-b border-slate-200 pb-3">
-            <div>
-              <span
-                className="inline-block text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full mb-1"
-                style={{ backgroundColor: brandColor, color: contrastText }}
-              >
-                Serviços em Destaque
+        <section className="space-y-8">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-neutral-200/80 dark:border-white/10 pb-4">
+            <div className="space-y-1">
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                <Zap className="h-3.5 w-3.5" />
+                <span>Serviços & Atendimentos</span>
               </span>
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white tracking-tight">
                 Escolha o que Precisa e Peça Agora
               </h2>
             </div>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400">
               Resposta rápida e confirmação imediata
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
             {services.map((service) => {
               const serviceWhatsappUrl = generateWhatsAppUrl(
                 rawPhone,
@@ -242,44 +252,44 @@ export function ConversionTemplateView({
               return (
                 <div
                   key={service.id}
-                  className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs hover:shadow-md transition flex flex-col justify-between space-y-4"
+                  className="rounded-2xl border border-neutral-200/80 dark:border-white/10 bg-white/95 dark:bg-neutral-900/80 backdrop-blur-md p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between space-y-5 group"
                 >
-                  <div className="space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="text-base font-extrabold text-slate-900">
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white tracking-tight leading-snug group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
                         {service.name}
                       </h3>
                       {service.price && Number(service.price) > 0 ? (
-                        <span className="shrink-0 text-sm font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+                        <span className="shrink-0 text-sm font-extrabold text-neutral-900 dark:text-white bg-neutral-100 dark:bg-white/10 px-2.5 py-1 rounded-lg">
                           R$ {Number(service.price).toFixed(2)}
                         </span>
                       ) : (
-                        <span className="shrink-0 text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
-                          Consulte
+                        <span className="shrink-0 text-xs font-semibold text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-white/5 px-2.5 py-1 rounded-lg">
+                          Sob Consulta
                         </span>
                       )}
                     </div>
 
                     {service.description && (
-                      <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed">
+                      <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 line-clamp-3 leading-relaxed">
                         {service.description}
                       </p>
                     )}
 
                     {service.duration_minutes > 0 && (
-                      <div className="flex items-center gap-1 text-[11px] text-slate-500 font-medium">
+                      <div className="flex items-center gap-1.5 text-xs text-neutral-400 dark:text-neutral-500 font-medium">
                         <Clock className="h-3.5 w-3.5" />
                         <span>Duração estimada: {service.duration_minutes} min</span>
                       </div>
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
+                  <div className="grid grid-cols-2 gap-2.5 pt-4 border-t border-neutral-100 dark:border-white/10">
                     <a
                       href={serviceWhatsappUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 px-3 shadow-xs transition"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs py-3 px-3 shadow-md shadow-emerald-600/15 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
                     >
                       <MessageCircle className="h-4 w-4 fill-white text-emerald-600 shrink-0" />
                       <span>WhatsApp</span>
@@ -288,8 +298,7 @@ export function ConversionTemplateView({
                     <button
                       type="button"
                       onClick={() => onOpenBooking(service.id)}
-                      className="inline-flex items-center justify-center gap-1 rounded-xl text-xs font-bold py-2.5 px-3 shadow-xs transition cursor-pointer"
-                      style={{ backgroundColor: brandColor, color: contrastText }}
+                      className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-neutral-200 dark:border-white/15 bg-neutral-50 hover:bg-neutral-100 dark:bg-white/5 dark:hover:bg-white/10 text-neutral-800 dark:text-neutral-200 text-xs font-semibold py-3 px-3 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                     >
                       <Calendar className="h-3.5 w-3.5" />
                       <span>Agendar</span>

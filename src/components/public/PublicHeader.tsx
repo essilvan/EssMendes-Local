@@ -75,15 +75,15 @@ export function PublicHeader({
   return (
     <header className="w-full relative z-40">
       {/* 1. Top Bar Utilitária Escura/Neutra (Padrão Applewood) */}
-      <div className="bg-slate-950 text-slate-300 border-b border-slate-800/90 text-xs py-2 px-4 shadow-inner w-full overflow-hidden">
+      <div className="bg-neutral-950 text-neutral-300 border-b border-white/10 text-xs py-2 px-4 shadow-inner w-full overflow-hidden">
         <div className="mx-auto max-w-7xl flex flex-wrap items-center justify-between gap-2 sm:gap-3 w-full">
           
           {/* Lado Esquerdo: Endereço Físico Formatado */}
           <div className="flex items-center gap-1.5 min-w-0 max-w-full">
-            <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+            <MapPin className="h-3.5 w-3.5 text-neutral-400 shrink-0" />
             <a
               href="#contato"
-              className="text-slate-300 hover:text-white transition w-full truncate text-xs font-medium"
+              className="text-neutral-300 hover:text-white transition w-full truncate text-xs font-medium"
               title={displayAddress}
             >
               {cleanNeighborhood}
@@ -93,10 +93,10 @@ export function PublicHeader({
           {/* Centro: Status Dinâmico de Funcionamento */}
           <div className="flex items-center gap-2 text-xs min-w-0 max-w-full">
             <span
-              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-medium shrink-0 ${
+              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-semibold shrink-0 ${
                 status.isOpen
-                  ? "bg-emerald-950/80 text-emerald-400 border border-emerald-800"
-                  : "bg-rose-950/80 text-rose-400 border border-rose-800"
+                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                  : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
               }`}
             >
               <span
@@ -104,9 +104,9 @@ export function PublicHeader({
                   status.isOpen ? "bg-emerald-400 animate-pulse" : "bg-rose-400"
                 }`}
               />
-              {status.badgeText}
+              <span>{status.badgeText}</span>
             </span>
-            <span className="text-zinc-400 w-full truncate text-xs">— {status.subText}</span>
+            <span className="text-neutral-400 w-full truncate text-xs">— {status.subText}</span>
           </div>
 
           {/* Lado Direito: Telefone de Contato + Rotas GPS */}
@@ -117,20 +117,20 @@ export function PublicHeader({
                 href={wazeUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 rounded-md bg-slate-800 hover:bg-slate-700 px-2 py-0.5 text-[11px] font-bold text-slate-200 transition"
+                className="inline-flex items-center gap-1 rounded-lg bg-white/10 hover:bg-white/15 px-2.5 py-1 text-[11px] font-bold text-neutral-200 transition border border-white/10"
                 title="Abrir rota no Waze"
               >
-                <span className="text-[9px] font-black text-cyan-400">W</span>
+                <span className="text-[10px] font-black text-cyan-400">W</span>
                 <span>Waze</span>
               </a>
               <a
                 href={googleMapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 rounded-md bg-slate-800 hover:bg-slate-700 px-2 py-0.5 text-[11px] font-bold text-slate-200 transition"
+                className="inline-flex items-center gap-1 rounded-lg bg-white/10 hover:bg-white/15 px-2.5 py-1 text-[11px] font-bold text-neutral-200 transition border border-white/10"
                 title="Abrir rota no Google Maps"
               >
-                <span className="text-[9px] font-black text-red-400">G</span>
+                <span className="text-[10px] font-black text-rose-400">G</span>
                 <span>Maps</span>
               </a>
             </div>
@@ -139,9 +139,9 @@ export function PublicHeader({
             {phoneWhatsapp && (
               <a
                 href={`tel:+55${cleanPhone}`}
-                className="inline-flex items-center gap-1.5 text-slate-200 hover:text-white font-bold transition text-xs shrink-0 lg:border-l lg:border-slate-800 lg:pl-3"
+                className="inline-flex items-center gap-1.5 text-neutral-200 hover:text-white font-semibold transition text-xs shrink-0 lg:border-l lg:border-neutral-800 lg:pl-3"
               >
-                <Phone className="h-3 w-3 text-slate-400 shrink-0" />
+                <Phone className="h-3 w-3 text-neutral-400 shrink-0" />
                 <span className="w-full truncate text-xs">{phoneWhatsapp}</span>
               </a>
             )}
@@ -151,70 +151,69 @@ export function PublicHeader({
       </div>
 
       {/* 2. Navbar Suspensa com Logo, Âncoras e Botão de Agendamento */}
-      <nav className="sticky top-0 z-30 border-b border-slate-200/90 bg-white/95 backdrop-blur-md shadow-xs w-full">
+      <nav className="sticky top-0 z-30 border-b border-neutral-200/80 dark:border-white/10 bg-white/90 dark:bg-neutral-950/90 backdrop-blur-md shadow-xs w-full">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 py-3.5 flex items-center justify-between gap-3 sm:gap-4">
           
           {/* Logo & Nome da Empresa */}
           <Link
             href={`/${tenantSlug}`}
-            className="flex items-center gap-2 min-w-0 flex-1 group"
+            className="flex items-center gap-2.5 min-w-0 flex-1 group"
           >
-            <div className="flex items-center gap-2 min-w-0 flex-1">
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
               {logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={logoUrl}
                   alt={`Logotipo de ${tenantName}`}
-                  className="h-9 w-9 rounded-full object-cover shrink-0"
+                  className="h-9 w-9 rounded-xl object-cover shrink-0 border border-neutral-200/60 dark:border-white/10"
                 />
               ) : (
                 <div
-                  className="relative flex h-9 w-9 items-center justify-center rounded-full text-white font-black text-xs shadow-sm shrink-0 overflow-hidden"
-                  style={{ backgroundColor: "var(--primary-color, #0d9488)" }}
+                  className="relative flex h-9 w-9 items-center justify-center rounded-xl text-white font-extrabold text-xs shadow-sm shrink-0 overflow-hidden"
+                  style={{ backgroundColor: "var(--brand-primary, #0d9488)" }}
                 >
                   <span>{tenantName.substring(0, 2).toUpperCase()}</span>
                 </div>
               )}
 
-              <span className="font-semibold text-sm truncate text-slate-900 group-hover:text-slate-700 transition">
+              <span className="font-bold text-sm sm:text-base tracking-tight truncate text-neutral-900 dark:text-white group-hover:text-neutral-600 dark:group-hover:text-neutral-300 transition">
                 {tenantName}
               </span>
               <ShieldCheck
-                className="h-4 w-4 shrink-0"
-                style={{ color: "var(--primary-color, #0d9488)" }}
+                className="h-4 w-4 shrink-0 text-emerald-500"
               />
             </div>
           </Link>
 
           {/* Links de Ancoragem Desktop */}
-          <div className="hidden md:flex items-center gap-6 text-xs font-bold text-slate-600 shrink-0">
+          <div className="hidden md:flex items-center gap-7 text-xs font-semibold text-neutral-600 dark:text-neutral-400 shrink-0">
             <a
               href="#servicos"
-              className="hover:text-slate-900 transition py-1 hover:border-b-2 hover:border-slate-900"
+              className="hover:text-neutral-950 dark:hover:text-white transition py-1"
             >
               Serviços
             </a>
             <a
               href="#sobre"
-              className="hover:text-slate-900 transition py-1 hover:border-b-2 hover:border-slate-900"
+              className="hover:text-neutral-950 dark:hover:text-white transition py-1"
             >
               Sobre
             </a>
             <a
               href="#fotos"
-              className="hover:text-slate-900 transition py-1 hover:border-b-2 hover:border-slate-900"
+              className="hover:text-neutral-950 dark:hover:text-white transition py-1"
             >
               Ambiente
             </a>
             <a
               href="#avaliacoes"
-              className="hover:text-slate-900 transition py-1 hover:border-b-2 hover:border-slate-900"
+              className="hover:text-neutral-950 dark:hover:text-white transition py-1"
             >
               Avaliações
             </a>
             <a
               href="#contato"
-              className="hover:text-slate-900 transition py-1 hover:border-b-2 hover:border-slate-900"
+              className="hover:text-neutral-950 dark:hover:text-white transition py-1"
             >
               Horários & Contato
             </a>
@@ -225,9 +224,9 @@ export function PublicHeader({
             <button
               type="button"
               onClick={onOpenBooking}
-              className="hidden md:inline-flex items-center gap-2 rounded-xl px-4 sm:px-5 py-2.5 text-xs font-black text-white shadow-sm transition hover:opacity-95 active:scale-95 cursor-pointer"
+              className="hidden md:inline-flex items-center gap-2 rounded-2xl px-5 py-2.5 text-xs font-bold text-white shadow-sm transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
               style={{
-                backgroundColor: "var(--primary-color, #0d9488)",
+                backgroundColor: "var(--brand-primary, #0d9488)",
               }}
             >
               <Calendar className="h-3.5 w-3.5" />
@@ -238,7 +237,7 @@ export function PublicHeader({
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 transition shrink-0 ml-auto"
+              className="md:hidden flex h-9 w-9 items-center justify-center rounded-xl border border-neutral-200/80 dark:border-white/10 text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-white/5 transition shrink-0 ml-auto"
               aria-label="Abrir menu"
             >
               {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
@@ -249,39 +248,39 @@ export function PublicHeader({
 
         {/* Menu Retrátil Mobile */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-slate-100 bg-white px-4 py-3 space-y-2 text-xs font-bold text-slate-700 animate-in slide-in-from-top-2 duration-150">
+          <div className="md:hidden border-t border-neutral-200/80 dark:border-white/10 bg-white dark:bg-neutral-950 px-4 py-3 space-y-1 text-xs font-semibold text-neutral-700 dark:text-neutral-300 animate-in slide-in-from-top-2 duration-150">
             <a
               href="#servicos"
               onClick={() => setMobileMenuOpen(false)}
-              className="block py-2 px-3 rounded-lg hover:bg-slate-50"
+              className="block py-2 px-3 rounded-xl hover:bg-neutral-100 dark:hover:bg-white/5"
             >
               Serviços
             </a>
             <a
               href="#sobre"
               onClick={() => setMobileMenuOpen(false)}
-              className="block py-2 px-3 rounded-lg hover:bg-slate-50"
+              className="block py-2 px-3 rounded-xl hover:bg-neutral-100 dark:hover:bg-white/5"
             >
               Sobre a Empresa
             </a>
             <a
               href="#fotos"
               onClick={() => setMobileMenuOpen(false)}
-              className="block py-2 px-3 rounded-lg hover:bg-slate-50"
+              className="block py-2 px-3 rounded-xl hover:bg-neutral-100 dark:hover:bg-white/5"
             >
               Fotos & Instalações
             </a>
             <a
               href="#avaliacoes"
               onClick={() => setMobileMenuOpen(false)}
-              className="block py-2 px-3 rounded-lg hover:bg-slate-50"
+              className="block py-2 px-3 rounded-xl hover:bg-neutral-100 dark:hover:bg-white/5"
             >
               Avaliações Google
             </a>
             <a
               href="#contato"
               onClick={() => setMobileMenuOpen(false)}
-              className="block py-2 px-3 rounded-lg hover:bg-slate-50"
+              className="block py-2 px-3 rounded-xl hover:bg-neutral-100 dark:hover:bg-white/5"
             >
               Horários & Localização
             </a>
