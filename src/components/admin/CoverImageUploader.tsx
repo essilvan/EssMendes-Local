@@ -370,3 +370,5 @@ export function CoverImageUploader({
     </div>
   );
 }
+
+export { CoverImageUploader as CoverPhotoManager };
