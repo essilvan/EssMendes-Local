@@ -128,24 +128,31 @@ export function ConversionTemplateView({
     profile?.google_place_id ||
     null;
 
+  const heroBg =
+    customHeroImage ||
+    tenant.cover_image_url ||
+    (tenant as any).tenant_profiles?.cover_image_url ||
+    (tenant as any).tenant_profiles?.hero_image_url ||
+    profile?.cover_image_url ||
+    profile?.hero_image_url ||
+    (Array.isArray(tenant.photos) && tenant.photos.length > 0 ? tenant.photos[0] : null) ||
+    tenant.google_photo_url ||
+    photosData.heroImage ||
+    "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1600&q=80";
+
   return (
     <div className="space-y-16 md:space-y-24 pb-20">
       {/* 1. HERO DE ALTO IMPACTO (CONVERSION HERO - COM FOTO REAL DE FUNDO & ALTO CONTRASTE) */}
       <section className="relative overflow-hidden rounded-3xl bg-neutral-950 text-white p-7 sm:p-12 lg:p-16 border border-white/10 shadow-2xl shadow-black/40 min-h-[480px] flex items-center justify-center">
-        {/* Foto de Destaque Obrigatória no Hero (object-cover) */}
-        <div className="absolute inset-0 z-0">
-          <Image
-            src={effectiveHeroImage}
-            alt={tenant.name}
-            fill
-            priority
-            unoptimized
+        {/* Imagem de Fundo com Dimensões Explícitas e Overlay */}
+        <div className="absolute inset-0 w-full h-full overflow-hidden z-0 pointer-events-none">
+          <img
+            src={heroBg}
+            alt={tenant.name || "Estabelecimento"}
+            className="w-full h-full object-cover object-center"
             referrerPolicy="no-referrer"
-            className="object-cover object-center transform scale-105 filter brightness-90"
           />
-          {/* Overlay escuro (bg-black/75 ou bg-neutral-950/80) para contraste máximo dos textos e botões */}
-          <div className="absolute inset-0 bg-neutral-950/80 backdrop-blur-[1px]" />
-          <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/70 to-black/75" />
+          <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/80 to-neutral-950/50" />
         </div>
 
         {/* Efeitos de iluminação ambiente suaves */}

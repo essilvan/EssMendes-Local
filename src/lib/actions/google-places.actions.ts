@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getAuthenticatedTenant } from "@/lib/supabase/tenant";
 import { revalidatePath } from "next/cache";
 
@@ -583,7 +583,7 @@ export async function syncGooglePlaceData(
     const finalHeadline = smartTexts.headline;
     const finalEditorialSummary = smartTexts.editorialSummary;
 
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     // 4. Atualiza o nome da empresa na tabela tenants
     if (companyName && companyName !== tenantContext.tenant?.name) {

@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getAuthenticatedTenant } from "@/lib/supabase/tenant";
 import { updateProfileSchema } from "@/lib/validations/profile.schema";
 import { revalidatePath } from "next/cache";
@@ -65,7 +65,7 @@ export async function updateTenantProfileAction(
   }
 
   const tenantId = tenantContext.tenantId;
-  const supabase = await createClient();
+  const adminSupabase = createAdminClient();
 
   // Tratamento seguro do array de fotos
   let parsedPhotos: string[] | undefined;
@@ -115,7 +115,7 @@ export async function updateTenantProfileAction(
       tenantUpdateData.business_attributes = parsedBusinessAttributes;
     }
 
-    const { error: tenantError } = await supabase
+    const { error: tenantError } = await adminSupabase
       .from("tenants")
       .update(tenantUpdateData)
       .eq("id", tenantId);
@@ -150,7 +150,7 @@ export async function updateTenantProfileAction(
       profilePayload.business_attributes = parsedBusinessAttributes;
     }
 
-    let { error: profileError } = await supabase
+    let { error: profileError } = await adminSupabase
       .from("tenant_profiles")
       .upsert(profilePayload, { onConflict: "tenant_id" });
 
@@ -171,7 +171,7 @@ export async function updateTenantProfileAction(
       if (parsedPhotos !== undefined) {
         fallbackPayload.place_photos = parsedPhotos;
       }
-      const fallbackRes = await supabase
+      const fallbackRes = await adminSupabase
         .from("tenant_profiles")
         .upsert(fallbackPayload, { onConflict: "tenant_id" });
       profileError = fallbackRes.error;

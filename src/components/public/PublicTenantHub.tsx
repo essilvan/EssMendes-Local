@@ -187,10 +187,21 @@ export function PublicTenantHub({
     tenant.google_types || []
   );
 
+  const heroBg =
+    tenant.cover_image_url ||
+    (tenant as any).tenant_profiles?.cover_image_url ||
+    (tenant as any).tenant_profiles?.hero_image_url ||
+    profile?.cover_image_url ||
+    profile?.hero_image_url ||
+    (Array.isArray(tenant.photos) && tenant.photos.length > 0 ? tenant.photos[0] : null) ||
+    tenant.google_photo_url ||
+    "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1600&q=80";
+
   const { heroImage, galleryPhotos, allPhotos } = getUnifiedEstablishmentPhotos(
     tenant,
     profile
   );
+  const effectiveHero = heroBg || heroImage;
 
   return (
     <div
@@ -270,7 +281,7 @@ export function PublicTenantHub({
             statusDetailText={statusDetailText}
             brandColor={brandColor}
             theme={currentTheme}
-            heroImage={heroImage}
+            heroImage={effectiveHero}
             galleryPhotos={galleryPhotos}
             onOpenBooking={handleOpenBooking}
           />
@@ -290,7 +301,7 @@ export function PublicTenantHub({
             statusDetailText={statusDetailText}
             brandColor={brandColor}
             theme={currentTheme}
-            heroImage={heroImage}
+            heroImage={effectiveHero}
             galleryPhotos={galleryPhotos}
             onOpenBooking={handleOpenBooking}
           />
@@ -310,7 +321,7 @@ export function PublicTenantHub({
             statusDetailText={statusDetailText}
             brandColor={brandColor}
             theme={currentTheme}
-            heroImage={heroImage}
+            heroImage={effectiveHero}
             galleryPhotos={galleryPhotos}
             onOpenBooking={handleOpenBooking}
           />
@@ -333,7 +344,7 @@ export function PublicTenantHub({
             statusDetailText={statusDetailText}
             brandColor={brandColor}
             theme={currentTheme}
-            heroImage={heroImage}
+            heroImage={effectiveHero}
             galleryPhotos={galleryPhotos}
             onOpenBooking={handleOpenBooking}
           />
