@@ -18,7 +18,7 @@ export async function getTenantLocalScore(tenantId: string): Promise<LocalScoreR
     .from("tenants")
     .select("id, name, slug, google_rating, google_reviews_count")
     .eq("id", tenantId)
-    .single();
+    .maybeSingle();
 
   if (!tenant) {
     throw new Error("Tenant não encontrado.");

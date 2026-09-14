@@ -202,7 +202,7 @@ export async function createAppointmentAction(
         notes: input.notes || null,
       })
       .select('*')
-      .single();
+      .maybeSingle();
 
     if (insertError || !appointment) {
       console.error('[createAppointmentAction] Erro ao inserir agendamento:', insertError);

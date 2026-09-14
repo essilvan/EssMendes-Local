@@ -69,7 +69,7 @@ export async function registerAction(
           .from("tenants")
           .insert({ name: companyName, slug: generatedSlug })
           .select("id")
-          .single();
+          .maybeSingle();
 
         if (insertTenantError) {
           console.error("[registerAction] Fallback de criação de tenant falhou:", insertTenantError);

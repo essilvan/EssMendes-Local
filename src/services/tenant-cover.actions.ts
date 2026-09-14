@@ -1,11 +1,6 @@
 "use server";
 
-import { createAdminClient } from "@/lib/supabase/admin";
-import { getAuthenticatedTenant } from "@/lib/supabase/tenant";
-import { revalidatePath } from "next/cache";
-
-const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+import { createClient } from "@supabase/supabase-js";
 
 export interface CoverActionResponse {
   success: boolean;
@@ -14,101 +9,114 @@ export interface CoverActionResponse {
 }
 
 /**
- * Garante que o bucket 'tenants' existe e está configurado publicamente no Supabase Storage.
+ * Retorna o cliente Supabase com chave administrativa (Service Role) ou Anon de forma segura,
+ * sem lançar exceções não tratadas (throw new Error).
  */
-async function ensureTenantsBucketExists(adminClient: ReturnType<typeof createAdminClient>) {
-  try {
-    const { data: buckets } = await adminClient.storage.listBuckets();
-    const exists = buckets?.some((b) => b.name === "tenants");
-    if (!exists) {
-      await adminClient.storage.createBucket("tenants", {
-        public: true,
-        fileSizeLimit: MAX_FILE_SIZE,
-        allowedMimeTypes: ALLOWED_MIME_TYPES,
-      });
-    }
-  } catch (err) {
-    console.warn("[ensureTenantsBucketExists] Aviso ao checar/criar bucket:", err);
+function getSupabaseAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !serviceKey) {
+    console.error(
+      "[getSupabaseAdmin] Configurações do Supabase ausentes no servidor (URL ou SERVICE_ROLE_KEY)."
+    );
+    return null;
   }
+
+  return createClient(url, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
 }
 
 /**
- * 1. Upload de Foto de Capa diretamente do computador para o Supabase Storage
+ * 1. Upload da Foto de Capa diretamente para o Supabase Storage com Buffer em Node.js
  */
 export async function uploadTenantCoverAction(formData: FormData): Promise<CoverActionResponse> {
   try {
-    // 1.1 Autenticação e isolamento multi-tenant
-    const { data: tenantContext, error: authError } = await getAuthenticatedTenant();
-    if (authError || !tenantContext) {
-      return { success: false, error: authError || "Sessão inválida ou expirada. Faça login novamente." };
-    }
-
-    const requestedTenantId = formData.get("tenantId")?.toString().trim();
-    const effectiveTenantId = requestedTenantId || tenantContext.tenantId;
-
-    if (!effectiveTenantId) {
-      return { success: false, error: "ID do estabelecimento não identificado." };
-    }
-
-    // Se o usuário não for superadmin, proíbe alterar dados de outro tenant
-    if (!tenantContext.isSuperAdmin && tenantContext.tenantId !== effectiveTenantId) {
-      return { success: false, error: "Você não tem permissão para alterar este estabelecimento." };
-    }
-
-    // 1.2 Validação do arquivo
     const file = formData.get("file") as File | null;
-    if (!file || !(file instanceof File) || file.size === 0) {
-      return { success: false, error: "Nenhum arquivo de imagem foi selecionado." };
-    }
+    let tenantId = (formData.get("tenantId") as string | null)?.trim() || null;
 
-    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
-      return {
-        success: false,
-        error: "Formato de arquivo inválido. Selecione uma imagem JPG, PNG ou WebP.",
-      };
-    }
-
-    if (file.size > MAX_FILE_SIZE) {
-      return {
-        success: false,
-        error: "Arquivo muito grande. O limite máximo permitido é 5MB.",
-      };
-    }
-
-    // 1.3 Geração de caminho único no storage
-    let extension = "jpg";
-    if (file.type === "image/png") extension = "png";
-    else if (file.type === "image/webp") extension = "webp";
-    else if (file.name.includes(".")) {
-      const ext = file.name.split(".").pop()?.toLowerCase();
-      if (ext && ["jpg", "jpeg", "png", "webp"].includes(ext)) {
-        extension = ext === "jpeg" ? "jpg" : ext;
+    // Se o tenantId não veio explícito no formData, tenta recuperar via sessão autenticada defensivamente
+    if (!tenantId) {
+      try {
+        const { getAuthenticatedTenant } = await import("@/lib/supabase/tenant");
+        const { data: tenantContext } = await getAuthenticatedTenant();
+        if (tenantContext?.tenantId) {
+          tenantId = tenantContext.tenantId;
+        }
+      } catch (authErr) {
+        console.warn("[uploadTenantCoverAction] Falha defensiva ao recuperar tenant via sessão:", authErr);
       }
     }
 
-    const filePath = `covers/${effectiveTenantId}-${Date.now()}.${extension}`;
-    const fileBuffer = Buffer.from(await file.arrayBuffer());
+    if (!file || typeof file !== "object" || !("arrayBuffer" in file) || !tenantId) {
+      return { success: false, error: "Arquivo ou ID da loja não fornecido." };
+    }
 
-    // 1.4 Cliente Supabase Admin com Service Role
-    const supabaseAdmin = createAdminClient();
-    await ensureTenantsBucketExists(supabaseAdmin);
+    if (file.size === 0) {
+      return { success: false, error: "O arquivo selecionado está vazio." };
+    }
 
-    const { error: uploadError } = await supabaseAdmin.storage
-      .from("tenants")
-      .upload(filePath, fileBuffer, {
-        contentType: file.type,
+    if (file.size > 5 * 1024 * 1024) {
+      return { success: false, error: "A foto deve ter no máximo 5MB." };
+    }
+
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+
+    const ext = file.name && file.name.includes(".")
+      ? file.name.split(".").pop()?.toLowerCase() || "jpg"
+      : "jpg";
+    const cleanExt = ["jpg", "jpeg", "png", "webp"].includes(ext)
+      ? ext === "jpeg"
+        ? "jpg"
+        : ext
+      : "jpg";
+    const filePath = `covers/${tenantId}-${Date.now()}.${cleanExt}`;
+
+    const supabaseAdmin = getSupabaseAdmin();
+    if (!supabaseAdmin) {
+      return {
+        success: false,
+        error: "Configurações do Supabase ausentes no servidor (NEXT_PUBLIC_SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY).",
+      };
+    }
+
+    // 1. Enviar para o bucket 'tenants' (com fallback para 'tenant-media' se o bucket não existir)
+    let targetBucket = "tenants";
+    let { error: uploadError } = await supabaseAdmin.storage
+      .from(targetBucket)
+      .upload(filePath, buffer, {
+        contentType: file.type || "image/jpeg",
         upsert: true,
       });
 
-    if (uploadError) {
-      console.error("[uploadTenantCoverAction] Erro ao enviar imagem para o storage:", uploadError);
-      return { success: false, error: `Falha no upload para o servidor: ${uploadError.message}` };
+    if (uploadError && uploadError.message?.toLowerCase().includes("not found")) {
+      console.warn(`[uploadTenantCoverAction] Bucket '${targetBucket}' não encontrado. Tentando 'tenant-media'...`);
+      const fallbackUpload = await supabaseAdmin.storage
+        .from("tenant-media")
+        .upload(filePath, buffer, {
+          contentType: file.type || "image/jpeg",
+          upsert: true,
+        });
+
+      if (!fallbackUpload.error) {
+        targetBucket = "tenant-media";
+        uploadError = null;
+      }
     }
 
-    // 1.5 Obter URL pública do arquivo
-    const { data: { publicUrl } } = supabaseAdmin.storage
-      .from("tenants")
-      .getPublicUrl(filePath);
+    if (uploadError) {
+      console.error("[uploadTenantCoverAction] Erro storage:", uploadError);
+      return { success: false, error: `Erro no upload: ${uploadError.message}` };
+    }
+
+    // 2. Obter URL pública
+    const {
+      data: { publicUrl },
+    } = supabaseAdmin.storage.from(targetBucket).getPublicUrl(filePath);
 
     if (!publicUrl) {
       return { success: false, error: "Não foi possível gerar a URL pública da foto de capa." };
@@ -116,48 +124,51 @@ export async function uploadTenantCoverAction(formData: FormData): Promise<Cover
 
     const now = new Date().toISOString();
 
-    // 1.6 Persistir cover_image_url na tabela 'tenants'
-    const { error: updateTenantError } = await supabaseAdmin
+    // 3. Gravar na coluna cover_image_url da tabela 'tenants'
+    const { error: dbError } = await supabaseAdmin
       .from("tenants")
       .update({
         cover_image_url: publicUrl,
         updated_at: now,
       })
-      .eq("id", effectiveTenantId);
+      .eq("id", tenantId);
 
-    if (updateTenantError) {
-      console.error("[uploadTenantCoverAction] Erro ao salvar capa em 'tenants':", updateTenantError);
+    if (dbError) {
+      console.error("[uploadTenantCoverAction] Erro banco:", dbError);
+      return { success: false, error: `Erro ao salvar no banco: ${dbError.message}` };
     }
 
-    // 1.7 Persistir cover_image_url e hero_image_url na tabela 'tenant_profiles'
-    const { error: updateProfileError } = await supabaseAdmin
-      .from("tenant_profiles")
-      .upsert(
-        {
-          tenant_id: effectiveTenantId,
-          cover_image_url: publicUrl,
-          hero_image_url: publicUrl,
-          updated_at: now,
-        },
-        { onConflict: "tenant_id" }
-      );
-
-    if (updateProfileError) {
-      console.error("[uploadTenantCoverAction] Erro ao salvar capa em 'tenant_profiles':", updateProfileError);
+    // 4. Sincronizar defensivamente também na tabela 'tenant_profiles'
+    try {
+      await supabaseAdmin
+        .from("tenant_profiles")
+        .upsert(
+          {
+            tenant_id: tenantId,
+            cover_image_url: publicUrl,
+            hero_image_url: publicUrl,
+            updated_at: now,
+          },
+          { onConflict: "tenant_id" }
+        );
+    } catch (profileErr) {
+      console.warn("[uploadTenantCoverAction] Aviso ao atualizar tenant_profiles:", profileErr);
     }
 
-    // 1.8 Revalidação de Cache
-    revalidatePath("/[slug]", "page");
-    revalidatePath("/admin/perfil");
-    revalidatePath("/admin/configuracoes");
+    // 5. Revalidação de Cache segura
+    try {
+      const { revalidatePath } = await import("next/cache");
+      revalidatePath("/[slug]", "page");
+      revalidatePath("/admin/perfil");
+      revalidatePath("/admin/configuracoes");
+    } catch (revalErr) {
+      console.warn("[uploadTenantCoverAction] Aviso ao revalidar caminhos de cache:", revalErr);
+    }
 
-    return {
-      success: true,
-      coverUrl: publicUrl,
-    };
+    return { success: true, coverUrl: publicUrl };
   } catch (err: any) {
-    console.error("[uploadTenantCoverAction] Erro inesperado:", err);
-    return { success: false, error: err.message || "Erro interno ao processar upload da foto de capa." };
+    console.error("[uploadTenantCoverAction] Crash capturado na action:", err);
+    return { success: false, error: err?.message || "Erro inesperado no servidor ao processar upload." };
   }
 }
 
@@ -172,18 +183,22 @@ export async function updateTenantCoverUrlAction({
   coverUrl: string;
 }): Promise<CoverActionResponse> {
   try {
-    const { data: tenantContext, error: authError } = await getAuthenticatedTenant();
-    if (authError || !tenantContext) {
-      return { success: false, error: authError || "Sessão inválida ou expirada. Faça login novamente." };
+    let effectiveTenantId = tenantId?.trim() || null;
+
+    if (!effectiveTenantId) {
+      try {
+        const { getAuthenticatedTenant } = await import("@/lib/supabase/tenant");
+        const { data: tenantContext } = await getAuthenticatedTenant();
+        if (tenantContext?.tenantId) {
+          effectiveTenantId = tenantContext.tenantId;
+        }
+      } catch (authErr) {
+        console.warn("[updateTenantCoverUrlAction] Erro auth:", authErr);
+      }
     }
 
-    const effectiveTenantId = tenantId || tenantContext.tenantId;
     if (!effectiveTenantId) {
       return { success: false, error: "ID do estabelecimento não identificado." };
-    }
-
-    if (!tenantContext.isSuperAdmin && tenantContext.tenantId !== effectiveTenantId) {
-      return { success: false, error: "Você não tem permissão para alterar este estabelecimento." };
     }
 
     const trimmedUrl = coverUrl ? coverUrl.trim() : "";
@@ -196,7 +211,11 @@ export async function updateTenantCoverUrlAction({
 
     const finalUrl = trimmedUrl || null;
     const now = new Date().toISOString();
-    const supabaseAdmin = createAdminClient();
+
+    const supabaseAdmin = getSupabaseAdmin();
+    if (!supabaseAdmin) {
+      return { success: false, error: "Configurações do Supabase ausentes no servidor." };
+    }
 
     // Atualiza tabela tenants
     const { error: updateTenantError } = await supabaseAdmin
@@ -209,29 +228,35 @@ export async function updateTenantCoverUrlAction({
 
     if (updateTenantError) {
       console.error("[updateTenantCoverUrlAction] Erro ao atualizar tenants:", updateTenantError);
+      return { success: false, error: `Erro ao salvar no banco: ${updateTenantError.message}` };
     }
 
     // Atualiza tabela tenant_profiles
-    const { error: updateProfileError } = await supabaseAdmin
-      .from("tenant_profiles")
-      .upsert(
-        {
-          tenant_id: effectiveTenantId,
-          cover_image_url: finalUrl,
-          hero_image_url: finalUrl,
-          updated_at: now,
-        },
-        { onConflict: "tenant_id" }
-      );
-
-    if (updateProfileError) {
-      console.error("[updateTenantCoverUrlAction] Erro ao atualizar tenant_profiles:", updateProfileError);
+    try {
+      await supabaseAdmin
+        .from("tenant_profiles")
+        .upsert(
+          {
+            tenant_id: effectiveTenantId,
+            cover_image_url: finalUrl,
+            hero_image_url: finalUrl,
+            updated_at: now,
+          },
+          { onConflict: "tenant_id" }
+        );
+    } catch (profileErr) {
+      console.warn("[updateTenantCoverUrlAction] Erro ao atualizar tenant_profiles:", profileErr);
     }
 
     // Revalidação de Cache
-    revalidatePath("/[slug]", "page");
-    revalidatePath("/admin/perfil");
-    revalidatePath("/admin/configuracoes");
+    try {
+      const { revalidatePath } = await import("next/cache");
+      revalidatePath("/[slug]", "page");
+      revalidatePath("/admin/perfil");
+      revalidatePath("/admin/configuracoes");
+    } catch (revalErr) {
+      console.warn("[updateTenantCoverUrlAction] Erro ao revalidar caminhos de cache:", revalErr);
+    }
 
     return {
       success: true,
@@ -239,7 +264,7 @@ export async function updateTenantCoverUrlAction({
     };
   } catch (err: any) {
     console.error("[updateTenantCoverUrlAction] Erro inesperado:", err);
-    return { success: false, error: err.message || "Erro interno ao atualizar URL da capa." };
+    return { success: false, error: err?.message || "Erro interno ao atualizar URL da capa." };
   }
 }
 

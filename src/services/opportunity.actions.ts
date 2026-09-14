@@ -37,7 +37,7 @@ export async function getTenantOpportunitiesAction(): Promise<{
       .from("tenants")
       .select("id, name, slug, google_rating, google_reviews_count")
       .eq("id", tenantId)
-      .single();
+      .maybeSingle();
 
     const { data: profile } = await supabase
       .from("tenant_profiles")

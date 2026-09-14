@@ -72,25 +72,31 @@ export function CoverImageUploader({
     }
 
     startUploadTransition(async () => {
-      const res = await uploadTenantCoverAction(formData);
-      if (res.success && res.coverUrl) {
-        setCurrentCoverUrl(res.coverUrl);
-        setUrlInput("");
-        if (onCoverChange) onCoverChange(res.coverUrl);
-        setFeedback({
-          type: "success",
-          message: "Foto de capa enviada com sucesso para o Supabase Storage e aplicada à vitrine!",
-        });
-      } else {
+      try {
+        const res = await uploadTenantCoverAction(formData);
+        if (res?.success && res?.coverUrl) {
+          setCurrentCoverUrl(res.coverUrl);
+          setUrlInput("");
+          if (onCoverChange) onCoverChange(res.coverUrl);
+          setFeedback({
+            type: "success",
+            message: "Foto de capa enviada com sucesso para o Supabase Storage e aplicada à vitrine!",
+          });
+        } else {
+          setFeedback({
+            type: "error",
+            message: res?.error || "Erro ao realizar upload da foto de capa.",
+          });
+        }
+      } catch (clientErr: any) {
         setFeedback({
           type: "error",
-          message: res.error || "Erro ao realizar upload da foto de capa.",
+          message: clientErr?.message || "Erro de conexão ou falha ao enviar imagem para o servidor.",
         });
-      }
-
-      // Limpa o input de arquivo
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
+      } finally {
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
       }
     });
   };
@@ -117,23 +123,30 @@ export function CoverImageUploader({
     setFeedback(null);
 
     startApplyTransition(async () => {
-      const res = await updateTenantCoverUrlAction({
-        tenantId,
-        coverUrl: trimmed,
-      });
-
-      if (res.success && res.coverUrl) {
-        setCurrentCoverUrl(res.coverUrl);
-        setUrlInput("");
-        if (onCoverChange) onCoverChange(res.coverUrl);
-        setFeedback({
-          type: "success",
-          message: "URL da foto de capa atualizada e salva com sucesso!",
+      try {
+        const res = await updateTenantCoverUrlAction({
+          tenantId,
+          coverUrl: trimmed,
         });
-      } else {
+
+        if (res?.success && res?.coverUrl) {
+          setCurrentCoverUrl(res.coverUrl);
+          setUrlInput("");
+          if (onCoverChange) onCoverChange(res.coverUrl);
+          setFeedback({
+            type: "success",
+            message: "URL da foto de capa atualizada e salva com sucesso!",
+          });
+        } else {
+          setFeedback({
+            type: "error",
+            message: res?.error || "Erro ao atualizar a foto de capa por URL.",
+          });
+        }
+      } catch (clientErr: any) {
         setFeedback({
           type: "error",
-          message: res.error || "Erro ao atualizar a foto de capa por URL.",
+          message: clientErr?.message || "Erro ao comunicar com o servidor.",
         });
       }
     });
@@ -148,19 +161,26 @@ export function CoverImageUploader({
     setFeedback(null);
 
     startApplyTransition(async () => {
-      const res = await removeTenantCoverAction(tenantId);
-      if (res.success) {
-        setCurrentCoverUrl("");
-        setUrlInput("");
-        if (onCoverChange) onCoverChange("");
-        setFeedback({
-          type: "success",
-          message: "Foto de capa removida. A vitrine exibirá a imagem padrão do estabelecimento.",
-        });
-      } else {
+      try {
+        const res = await removeTenantCoverAction(tenantId);
+        if (res?.success) {
+          setCurrentCoverUrl("");
+          setUrlInput("");
+          if (onCoverChange) onCoverChange("");
+          setFeedback({
+            type: "success",
+            message: "Foto de capa removida. A vitrine exibirá a imagem padrão do estabelecimento.",
+          });
+        } else {
+          setFeedback({
+            type: "error",
+            message: res?.error || "Erro ao remover a foto de capa.",
+          });
+        }
+      } catch (clientErr: any) {
         setFeedback({
           type: "error",
-          message: res.error || "Erro ao remover a foto de capa.",
+          message: clientErr?.message || "Erro ao comunicar com o servidor.",
         });
       }
     });

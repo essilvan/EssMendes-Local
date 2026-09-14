@@ -75,7 +75,7 @@ export async function createServiceAction(
       is_active: isActive,
     })
     .select()
-    .single();
+    .maybeSingle();
 
   if (insertRes.error && insertRes.error.message.includes("price") && insertRes.error.message.includes("not-null")) {
     insertRes = await supabase
@@ -89,7 +89,7 @@ export async function createServiceAction(
         is_active: isActive,
       })
       .select()
-      .single();
+      .maybeSingle();
   }
 
   const { data, error } = insertRes;
@@ -167,7 +167,7 @@ export async function updateServiceAction(
     .eq("id", id)
     .eq("tenant_id", tenantContext.tenantId)
     .select()
-    .single();
+    .maybeSingle();
 
   if (updateRes.error && updateRes.error.message.includes("price") && updateRes.error.message.includes("not-null")) {
     updateRes = await supabase
@@ -183,7 +183,7 @@ export async function updateServiceAction(
       .eq("id", id)
       .eq("tenant_id", tenantContext.tenantId)
       .select()
-      .single();
+      .maybeSingle();
   }
 
   const { data, error } = updateRes;

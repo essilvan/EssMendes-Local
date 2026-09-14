@@ -543,7 +543,7 @@ export async function createTenantFromGoogleMapsAction(
         presence_score: rating ? 75 : 55,
       })
       .select("id, name, slug")
-      .single();
+      .maybeSingle();
 
     if (insertTenantError || !newTenant) {
       return {

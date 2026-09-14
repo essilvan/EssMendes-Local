@@ -1,7 +1,5 @@
-import { redirect } from "next/navigation";
+import ConfiguracoesPage from "../(admin)/admin/configuracoes/page";
 
 export const dynamic = "force-dynamic";
 
-export default function RootConfiguracoesRedirect() {
-  redirect("/admin/configuracoes");
-}
+export default ConfiguracoesPage;

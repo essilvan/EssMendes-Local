@@ -53,7 +53,7 @@ export async function createProductAction(
       .from("tenant_products")
       .insert(payload)
       .select()
-      .single();
+      .maybeSingle();
 
     if (dbError) {
       console.error("[createProductAction] Erro no banco:", dbError);
@@ -113,7 +113,7 @@ export async function updateProductAction(
       .eq("id", productId)
       .eq("tenant_id", tenantCtx.tenantId)
       .select()
-      .single();
+      .maybeSingle();
 
     if (dbError) {
       console.error("[updateProductAction] Erro no banco:", dbError);

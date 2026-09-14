@@ -51,7 +51,7 @@ export async function createPortfolioItemAction(
         is_active: isActive,
       })
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error("[createPortfolioItemAction] Erro no Supabase:", error);
@@ -115,7 +115,7 @@ export async function updatePortfolioItemAction(
       .eq("id", id)
       .eq("tenant_id", tenantContext.tenantId)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error("[updatePortfolioItemAction] Erro no Supabase:", error);
