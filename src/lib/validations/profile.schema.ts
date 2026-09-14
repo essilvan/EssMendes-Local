@@ -42,6 +42,7 @@ export const updateProfileSchema = z.object({
   templateId: z.string().optional().or(z.literal("")),
   themeNiche: z.string().optional().or(z.literal("")),
   businessAttributes: z.string().optional().or(z.literal("")),
+  coverImageUrl: z.string().optional().or(z.literal("")),
 });
 
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;

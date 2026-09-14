@@ -30,6 +30,7 @@ export async function updateTenantProfileAction(
     templateId: formData.get("templateId")?.toString().trim() || "premium",
     themeNiche: formData.get("themeNiche")?.toString().trim() || "",
     businessAttributes: formData.get("businessAttributes")?.toString().trim() || "",
+    coverImageUrl: formData.get("coverImageUrl")?.toString().trim() || "",
   };
 
   // 1. Validação com Zod
@@ -55,6 +56,7 @@ export async function updateTenantProfileAction(
     templateId,
     themeNiche,
     businessAttributes,
+    coverImageUrl,
   } = validation.data;
 
   // 2. Obter tenant_id e usuário autenticado com tratamento de erros
@@ -115,6 +117,10 @@ export async function updateTenantProfileAction(
       tenantUpdateData.business_attributes = parsedBusinessAttributes;
     }
 
+    if (coverImageUrl) {
+      tenantUpdateData.cover_image_url = coverImageUrl;
+    }
+
     const { error: tenantError } = await adminSupabase
       .from("tenants")
       .update(tenantUpdateData)
@@ -141,6 +147,11 @@ export async function updateTenantProfileAction(
       review_count: reviewCount ?? 128,
       updated_at: new Date().toISOString(),
     };
+
+    if (coverImageUrl) {
+      profilePayload.cover_image_url = coverImageUrl;
+      profilePayload.hero_image_url = coverImageUrl;
+    }
 
     if (parsedPhotos !== undefined) {
       profilePayload.place_photos = parsedPhotos;

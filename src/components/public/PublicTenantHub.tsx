@@ -206,7 +206,7 @@ export function PublicTenantHub({
   return (
     <div
       style={{ ...colorStyles, "--brand-primary": brandColor } as React.CSSProperties}
-      className={`min-h-screen w-full max-w-full overflow-x-hidden transition-colors duration-200 ${selectedTemplateClass} ${
+      className={`min-h-screen w-full max-w-full overflow-x-hidden transition-colors duration-200 relative ${selectedTemplateClass} ${
         activeTemplate === "minimal"
           ? "bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100"
           : isAuto
@@ -218,6 +218,17 @@ export function PublicTenantHub({
           : "bg-neutral-50/50 text-neutral-900"
       } selection:bg-neutral-900 selection:text-white`}
     >
+      {/* Imagem de Fundo Hero com Dimensões Explícitas e Overlay */}
+      <div className="absolute inset-0 w-full h-full z-0 overflow-hidden pointer-events-none">
+        <img 
+          src={tenant.cover_image_url || heroBg} 
+          alt={tenant.name} 
+          className="w-full h-full object-cover object-center"
+          referrerPolicy="no-referrer"
+        />
+        <div className="absolute inset-0 bg-neutral-950/75 bg-gradient-to-t from-neutral-950 via-neutral-950/70 to-neutral-950/40" />
+      </div>
+
       {/* Tracker de Analytics (Zero PII) */}
       <PublicPageTracker tenantId={tenant.id} />
 
@@ -266,7 +277,7 @@ export function PublicTenantHub({
       )}
 
       {/* Container Centralizado com Conteúdo Real Dinâmico por Template */}
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-14 md:py-16">
+      <main className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-14 md:py-16">
         {activeTemplate === "conversion" && (
           <ConversionTemplateView
             tenant={tenant}

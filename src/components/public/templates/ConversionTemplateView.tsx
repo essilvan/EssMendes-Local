@@ -152,7 +152,7 @@ export function ConversionTemplateView({
             className="w-full h-full object-cover object-center"
             referrerPolicy="no-referrer"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/80 to-neutral-950/50" />
+          <div className="absolute inset-0 bg-neutral-950/75 bg-gradient-to-t from-neutral-950 via-neutral-950/70 to-neutral-950/40" />
         </div>
 
         {/* Efeitos de iluminação ambiente suaves */}

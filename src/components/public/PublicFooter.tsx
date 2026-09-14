@@ -62,7 +62,7 @@ export function PublicFooter({
 
   return (
     <>
-      <section className="bg-neutral-900 text-neutral-200 border-t border-neutral-800 py-12 sm:py-16 mt-16 shadow-xl">
+      <section className="relative z-10 bg-neutral-900 text-neutral-200 border-t border-neutral-800 py-12 sm:py-16 mt-16 shadow-xl">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 space-y-8">
           
           {/* Topo com Botões de Ação Rápida */}
@@ -164,7 +164,7 @@ export function PublicFooter({
       </section>
 
       {/* Rodapé das Vitrines Públicas - Selo EssMendes Tecnologia */}
-      <footer className="w-full py-8 border-t border-neutral-800/80 bg-neutral-950 text-center pb-24 sm:pb-8">
+      <footer className="relative z-10 w-full py-8 border-t border-neutral-800/80 bg-neutral-950 text-center pb-24 sm:pb-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-neutral-500">
             © {new Date().getFullYear()} {tenantName}. Todos os direitos reservados.

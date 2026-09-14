@@ -76,7 +76,7 @@ export default async function ConfiguracoesPage() {
   // Busca dados adicionais do tenant (incluindo atributos e comodidades e theme_settings)
   const { data: tenantData } = await supabase
     .from("tenants")
-    .select("id, business_attributes, theme_niche, theme_settings")
+    .select("id, business_attributes, theme_niche, theme_settings, cover_image_url")
     .eq("id", tenantContext.tenantId)
     .maybeSingle();
 
@@ -88,6 +88,7 @@ export default async function ConfiguracoesPage() {
     phoneWhatsapp: profile?.phone_whatsapp || "",
     address: profile?.address || "",
     logoUrl: profile?.logo_url || (cleanPlacePhotos.length > 0 ? cleanPlacePhotos[0] : ""),
+    coverImageUrl: (tenantData as any)?.cover_image_url || profile?.cover_image_url || (profile as any)?.hero_image_url || "",
     placePhotos: cleanPlacePhotos,
     primaryColor: tenantData?.theme_settings?.primary_color || profile?.primary_color || "#0d9488",
     themeNiche: tenantData?.theme_settings?.niche || profile?.template_id || (tenantContext.tenant as any)?.theme_niche || "servicos",

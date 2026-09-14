@@ -40,6 +40,7 @@ import {
   Check,
 } from "lucide-react";
 import { ImageUpload } from "@/components/ui/ImageUpload";
+import { CoverImageUploader } from "@/components/admin/CoverImageUploader";
 import { COLOR_PRESETS } from "@/utils/color";
 import { NICHE_THEMES, type ThemeNiche } from "@/config/tenant-themes";
 import type { BusinessAttributes } from "@/types";
@@ -214,6 +215,7 @@ interface ProfileFormProps {
     phoneWhatsapp: string;
     address: string;
     logoUrl: string;
+    coverImageUrl?: string;
     placePhotos?: string[];
     primaryColor?: string;
     themeNiche?: string;
@@ -256,6 +258,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
     initialData.editorialSummary || initialData.description || ""
   );
   const [logoUrl, setLogoUrl] = useState(initialData.logoUrl || "");
+  const [coverImageUrl, setCoverImageUrl] = useState(initialData.coverImageUrl || "");
   const [placePhotos, setPlacePhotos] = useState<string[]>(
     initialData.placePhotos || []
   );
@@ -716,6 +719,16 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
               </div>
             </div>
 
+            {/* 🖼️ Foto de Capa da Vitrine (Hero) */}
+            <div className="sm:col-span-2">
+              <CoverImageUploader
+                tenantId={initialData.tenantId}
+                initialCoverUrl={coverImageUrl}
+                onCoverChange={(newUrl) => setCoverImageUrl(newUrl)}
+              />
+              <input type="hidden" name="coverImageUrl" value={coverImageUrl} />
+            </div>
+
             {/* Logotipo / Imagem de Perfil */}
             <div className="sm:col-span-2 space-y-4">
               <ImageUpload
@@ -791,11 +804,12 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                   <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3">
                     {placePhotos.map((photo, idx) => {
                       const isCurrentLogo = logoUrl === photo;
+                      const isCurrentCover = coverImageUrl === photo;
                       return (
                         <div
                           key={idx}
                           className={`group relative overflow-hidden rounded-xl border-2 transition ${
-                            isCurrentLogo
+                            isCurrentLogo || isCurrentCover
                               ? "border-teal-600 ring-2 ring-teal-600/30 shadow-sm"
                               : "border-slate-200 hover:border-slate-300"
                           } bg-white aspect-square`}
@@ -808,13 +822,21 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                             className="h-full w-full object-cover"
                           />
 
-                          {/* Badge de Logo Atual */}
-                          {isCurrentLogo && (
-                            <div className="absolute top-1.5 left-1.5 rounded-md bg-teal-700 px-2 py-0.5 text-[9px] font-black uppercase text-white shadow-xs flex items-center gap-1">
-                              <Crown className="h-3 w-3" />
-                              <span>Logo</span>
-                            </div>
-                          )}
+                          {/* Badges */}
+                          <div className="absolute top-1.5 left-1.5 flex flex-col gap-1">
+                            {isCurrentLogo && (
+                              <div className="rounded-md bg-teal-700 px-2 py-0.5 text-[9px] font-black uppercase text-white shadow-xs flex items-center gap-1">
+                                <Crown className="h-3 w-3" />
+                                <span>Logo</span>
+                              </div>
+                            )}
+                            {isCurrentCover && (
+                              <div className="rounded-md bg-amber-600 px-2 py-0.5 text-[9px] font-black uppercase text-white shadow-xs flex items-center gap-1">
+                                <Sparkles className="h-3 w-3" />
+                                <span>Capa</span>
+                              </div>
+                            )}
+                          </div>
 
                           {/* Overlay com Ações */}
                           <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center gap-1.5 p-2 backdrop-blur-2xs">
@@ -825,6 +847,15 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                                 className="w-full rounded-lg bg-white/95 py-1 text-[10px] font-bold text-slate-900 shadow-2xs hover:bg-white transition"
                               >
                                 Usar como Logo
+                              </button>
+                            )}
+                            {!isCurrentCover && (
+                              <button
+                                type="button"
+                                onClick={() => setCoverImageUrl(photo)}
+                                className="w-full rounded-lg bg-teal-600/95 py-1 text-[10px] font-bold text-white shadow-2xs hover:bg-teal-700 transition"
+                              >
+                                Usar como Capa
                               </button>
                             )}
                             <button
