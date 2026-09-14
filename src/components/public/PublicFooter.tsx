@@ -19,6 +19,7 @@ interface PublicFooterProps {
   address?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  placeId?: string | null;
   openingHours?: any;
   isOpenNow?: boolean;
   statusBadgeText?: string;
@@ -33,6 +34,7 @@ export function PublicFooter({
   address,
   latitude,
   longitude,
+  placeId,
   openingHours,
   isOpenNow,
   statusBadgeText,
@@ -44,12 +46,9 @@ export function PublicFooter({
   const whatsappUrl = generateWhatsAppUrl(phoneWhatsapp || "", tenantName);
   const displayAddress = address || "Atendimento Presencial";
   
-  const hasCoords = typeof latitude === "number" && typeof longitude === "number";
-  const googleMapsUrl =
-    customGoogleMapsUrl ||
-    (hasCoords
-      ? `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`
-      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(displayAddress)}`);
+  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+    `${tenantName}, ${displayAddress}`
+  )}${placeId ? `&destination_place_id=${placeId}` : ""}`;
 
   const status = openingHours
     ? getBusinessStatus(openingHours)
@@ -142,7 +141,7 @@ export function PublicFooter({
 
           {/* Ação 4: Como Chegar */}
           <a
-            href={googleMapsUrl}
+            href={directionsUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-3.5 rounded-2xl bg-white/5 border border-white/10 p-5 hover:bg-white/10 transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5"

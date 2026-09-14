@@ -51,11 +51,18 @@ export function MinimalTemplateView({
   const realReviewCount =
     profile?.google_reviews_count ?? profile?.review_count ?? tenant.google_reviews_count ?? reviews.length;
 
-  const googleMapsUrl =
-    profile?.google_maps_url ||
-    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-      tenant.name + " " + (profile?.address || "")
-    )}`;
+  const placeId =
+    tenant.place_id ||
+    tenant.google_place_id ||
+    profile?.place_id ||
+    profile?.google_place_id ||
+    null;
+
+  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+    `${tenant.name}, ${profile?.address || ""}`
+  )}${placeId ? `&destination_place_id=${placeId}` : ""}`;
+
+  const googleMapsUrl = profile?.google_maps_url || directionsUrl;
 
   // Formatação de horários da semana
   const hoursList = tenant.opening_hours || profile?.opening_hours_json || [];
@@ -304,12 +311,12 @@ export function MinimalTemplateView({
 
           <div className="pt-2">
             <a
-              href={googleMapsUrl}
+              href={directionsUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 text-xs font-medium text-neutral-950 dark:text-white hover:text-neutral-600 dark:hover:text-neutral-300 underline underline-offset-4 transition"
             >
-              <span>Abrir no Google Maps</span>
+              <span>🗺️ Como Chegar (Maps)</span>
               <ExternalLink className="h-3 w-3" />
             </a>
           </div>

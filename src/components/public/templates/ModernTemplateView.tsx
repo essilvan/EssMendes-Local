@@ -445,7 +445,8 @@ export function ModernTemplateView({
       {/* 6. LOCALIZAÇÃO E HORÁRIOS */}
       <MapLocationCard
         tenantName={tenant.name}
-        address={profile?.address}
+        address={profile?.address || tenant.address}
+        placeId={tenant.place_id || tenant.google_place_id || profile?.place_id || profile?.google_place_id}
         latitude={profile?.latitude}
         longitude={profile?.longitude}
         openingHours={tenant.opening_hours || profile?.opening_hours_json}

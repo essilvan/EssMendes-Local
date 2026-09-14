@@ -138,6 +138,7 @@ export interface TenantProfile {
   primary_color?: string | null;
   google_maps_url?: string | null;
   google_place_id?: string | null;
+  place_id?: string | null;
   rating?: number | null;
   google_rating?: number | null;
   review_count?: number | null;

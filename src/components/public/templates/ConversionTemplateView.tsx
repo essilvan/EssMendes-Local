@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Image from "next/image";
 import {
   MessageCircle,
@@ -10,11 +10,14 @@ import {
   Calendar,
   Clock,
   MapPin,
-  CheckCircle2,
   ExternalLink,
   ArrowRight,
   Zap,
   Camera,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Navigation,
 } from "lucide-react";
 import type {
   Service,
@@ -34,13 +37,15 @@ import { GoogleReviewsCard } from "../GoogleReviewsCard";
 import { MapLocationCard } from "../MapLocationCard";
 import { BusinessAttributes } from "../BusinessAttributes";
 import { AboutBusinessSection } from "../AboutBusinessSection";
-import { PlacePhotoGallery } from "../PlacePhotoGallery";
 
 export interface TemplateViewProps {
   tenant: {
     id: string;
     name: string;
     slug: string;
+    place_id?: string | null;
+    google_place_id?: string | null;
+    address?: string | null;
     category?: string | null;
     google_types?: string[] | null;
     theme_niche?: string | null;
@@ -93,10 +98,11 @@ export function ConversionTemplateView({
   galleryPhotos: customGalleryPhotos,
   onOpenBooking,
 }: TemplateViewProps) {
-  const contrastText = getContrastTextColor(brandColor);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
+
   const rawPhone = profile?.phone_whatsapp || profile?.phone || "";
   const cleanPhone = sanitizePhoneNumber(rawPhone);
-  const formattedPhone = formatBrazilianPhone(rawPhone);
   const whatsappUrl = generateWhatsAppUrl(
     rawPhone,
     tenant.name,
@@ -105,19 +111,27 @@ export function ConversionTemplateView({
 
   const photosData = getUnifiedEstablishmentPhotos(tenant, profile);
   const effectiveHeroImage = customHeroImage || photosData.heroImage;
-  const effectiveGalleryPhotos = (customGalleryPhotos && customGalleryPhotos.length > 0) ? customGalleryPhotos : photosData.galleryPhotos;
+  const effectiveGalleryPhotos =
+    customGalleryPhotos && customGalleryPhotos.length > 0
+      ? customGalleryPhotos
+      : photosData.allPhotos;
   const allEstablishmentPhotos = photosData.allPhotos;
 
   const realRating = profile?.google_rating ?? profile?.rating ?? tenant.google_rating ?? 5.0;
   const realReviewCount =
     profile?.google_reviews_count ?? profile?.review_count ?? tenant.google_reviews_count ?? reviews.length;
 
-  const googleMapsUrl = profile?.google_maps_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(tenant.name + " " + (profile?.address || ""))}`;
+  const placeId =
+    tenant.place_id ||
+    tenant.google_place_id ||
+    profile?.place_id ||
+    profile?.google_place_id ||
+    null;
 
   return (
     <div className="space-y-16 md:space-y-24 pb-20">
       {/* 1. HERO DE ALTO IMPACTO (CONVERSION HERO - COM FOTO REAL DE FUNDO & ALTO CONTRASTE) */}
-      <section className="relative overflow-hidden rounded-3xl bg-neutral-950 text-white p-7 sm:p-12 lg:p-16 border border-white/10 shadow-2xl shadow-black/40 min-h-[460px] flex items-center justify-center">
+      <section className="relative overflow-hidden rounded-3xl bg-neutral-950 text-white p-7 sm:p-12 lg:p-16 border border-white/10 shadow-2xl shadow-black/40 min-h-[480px] flex items-center justify-center">
         {/* Foto de Destaque Obrigatória no Hero (object-cover) */}
         <div className="absolute inset-0 z-0">
           <Image
@@ -131,7 +145,7 @@ export function ConversionTemplateView({
           />
           {/* Overlay escuro (bg-black/75 ou bg-neutral-950/80) para contraste máximo dos textos e botões */}
           <div className="absolute inset-0 bg-neutral-950/80 backdrop-blur-[1px]" />
-          <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/65 to-black/75" />
+          <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/70 to-black/75" />
         </div>
 
         {/* Efeitos de iluminação ambiente suaves */}
@@ -141,58 +155,69 @@ export function ConversionTemplateView({
           style={{ backgroundColor: brandColor }}
         />
 
-        <div className="relative z-10 max-w-3xl mx-auto text-center space-y-7">
-          {/* Badge cápsula refinada com micro-interação */}
-          <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold tracking-wide border border-white/15 bg-white/5 backdrop-blur-md text-emerald-400 shadow-inner">
+        <div className="relative z-10 max-w-3xl mx-auto text-center space-y-6 sm:space-y-7">
+          {/* Badge superior: "⚡ Atendimento Rápido • Aberto Agora" (estilo cápsula verde/escuro) */}
+          <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold tracking-wide border border-emerald-500/30 bg-emerald-950/80 backdrop-blur-md text-emerald-400 shadow-inner">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
             </span>
-            <span className="text-white/90">⚡ Atendimento Rápido</span>
-            <span className="text-white/30">•</span>
-            <span className="text-emerald-400 font-bold">
-              {isOpenNow ? "Aberto Agora" : "Atendimento Online"}
-            </span>
+            <span>⚡ Atendimento Rápido • Aberto Agora</span>
           </div>
 
-          {/* Título com tracking refinado e contraste impecável */}
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.1] sm:leading-[1.08] drop-shadow-md">
+          {/* Título do negócio em caixa alta, branco e negrito (tracking-tight font-bold text-3xl md:text-5xl) */}
+          <h1 className="uppercase tracking-tight font-bold text-3xl sm:text-5xl lg:text-6xl text-white leading-[1.1] sm:leading-[1.08] drop-shadow-md">
             {tenant.name}
           </h1>
 
-          {/* Descrição legível com entrelinha relaxada */}
-          <p className="text-base sm:text-lg text-neutral-200 font-normal max-w-2xl mx-auto leading-relaxed drop-shadow-sm">
+          {/* Frase de impacto / descrição curta logo abaixo em tom dourado/off-white */}
+          <p className="text-base sm:text-lg text-amber-100/90 dark:text-amber-100/90 font-medium max-w-2xl mx-auto leading-relaxed drop-shadow-sm">
             {profile?.editorial_summary ||
               profile?.description ||
-              "Atendimento prioritário com resposta rápida pelo WhatsApp. Solicite orçamentos, tire dúvidas ou agende seu horário com total agilidade."}
+              "Atendimento prioritário com resposta rápida pelo WhatsApp. Solicite orçamentos, tire dúvidas ou faça seu pedido com total agilidade."}
           </p>
 
-          {/* Ações Primárias com acabamento nobre */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 pt-2 max-w-lg mx-auto">
-            {/* 1. Botão WhatsApp com verde esmeralda refinado */}
+          {/* Prova social: Estrelas douradas (⭐⭐⭐⭐⭐), nota média (ex: 4.9) e contagem de avaliações entre parênteses */}
+          <div className="inline-flex items-center justify-center gap-2 px-4 py-1.5 rounded-full bg-black/40 border border-white/10 backdrop-blur-xs">
+            <div className="flex items-center gap-0.5 text-amber-400">
+              {[...Array(5)].map((_, i) => (
+                <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />
+              ))}
+            </div>
+            <span className="font-bold text-amber-400 text-sm">
+              {Number(realRating).toFixed(1)}
+            </span>
+            <span className="text-white/80 text-xs font-medium">
+              ({realReviewCount} avaliações)
+            </span>
+          </div>
+
+          {/* Dois botões de ação lado a lado */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 pt-2 max-w-lg mx-auto w-full">
+            {/* 1. "💬 Falar no WhatsApp Agora" (verde chamativo, destaque primário) */}
             <a
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-base sm:text-lg px-8 py-4 shadow-xl shadow-emerald-600/25 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+              className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-base sm:text-lg px-8 py-4 shadow-xl shadow-emerald-500/30 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
             >
-              <MessageCircle className="h-5 w-5 fill-white text-emerald-600 shrink-0" />
-              <span>Falar no WhatsApp Agora</span>
+              <MessageCircle className="h-5 w-5 fill-white text-emerald-500 shrink-0" />
+              <span>💬 Falar no WhatsApp Agora</span>
             </a>
 
-            {/* 2. Botão secundário de ligação com visual translúcido */}
+            {/* 2. "📞 Ligar Agora" (secundário com fundo neutro/cinza escuro) */}
             {cleanPhone && (
               <a
                 href={`tel:+55${cleanPhone}`}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-semibold text-base px-6 py-4 border border-white/15 backdrop-blur-md shadow-md transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-neutral-900/90 hover:bg-neutral-800 text-white font-semibold text-base px-7 py-4 border border-neutral-700/80 backdrop-blur-md shadow-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
               >
-                <Phone className="h-4 w-4 text-emerald-400 shrink-0" />
-                <span>Ligar Agora</span>
+                <Phone className="h-4 w-4 text-neutral-300 shrink-0" />
+                <span>📞 Ligar Agora</span>
               </a>
             )}
           </div>
 
-          {/* Chamada sutil para agendamento online */}
+          {/* Chamada para agendamento online */}
           <div className="pt-2">
             <button
               type="button"
@@ -209,176 +234,138 @@ export function ConversionTemplateView({
         </div>
       </section>
 
-      {/* 2. BLOCO DE CONFIANÇA IMEDIATO (LOGO ABAIXO DO HERO) */}
-      <section className="max-w-4xl mx-auto -mt-6 sm:-mt-10 relative z-20 px-2 sm:px-4">
-        <a
-          href={googleMapsUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="group block rounded-2xl border border-neutral-200/80 dark:border-white/10 bg-white/95 dark:bg-neutral-900/90 backdrop-blur-md p-5 sm:p-6 shadow-xl shadow-black/5 hover:shadow-2xl transition-all duration-300 hover:border-neutral-300 dark:hover:border-white/20"
-        >
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500 font-extrabold text-2xl shrink-0 shadow-inner">
-                {Number(realRating).toFixed(1)}
-              </div>
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <div className="flex items-center gap-0.5">
-                    {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i}
-                        className="h-4 w-4 fill-amber-400 text-amber-400"
-                      />
-                    ))}
-                  </div>
-                  <span className="text-xs font-bold text-neutral-900 dark:text-white">
-                    {Number(realRating).toFixed(1)} de 5.0
-                  </span>
-                </div>
-                <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">
-                  Baseado em <strong className="text-neutral-900 dark:text-white">{realReviewCount} avaliações reais</strong> verificadas no Google Maps
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2.5 sm:self-center">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-3 py-1 text-xs font-semibold">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                <span>Perfil Verificado</span>
-              </span>
-              <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-white flex items-center gap-1 transition">
-                <span>Ver comentários</span>
-                <ExternalLink className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
-              </span>
-            </div>
-          </div>
-        </a>
-      </section>
-
-      {/* 3. CATÁLOGO DE AÇÃO DIRETA (SERVIÇOS DE ALTA CONVERSÃO) */}
-      {services.length > 0 && (
-        <section className="space-y-8">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-neutral-200/80 dark:border-white/10 pb-4">
+      {/* 2. GALERIA / FOTOS DO LOCAL */}
+      {effectiveGalleryPhotos.length > 0 && (
+        <section className="space-y-6">
+          <div className="flex items-center justify-between border-b border-neutral-200/80 dark:border-white/10 pb-4">
             <div className="space-y-1">
-              <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                <Zap className="h-3.5 w-3.5" />
-                <span>Serviços & Atendimentos</span>
-              </span>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white tracking-tight">
-                Escolha o que Precisa e Peça Agora
+              <h2 className="text-xl sm:text-2xl font-extrabold uppercase tracking-tight text-neutral-900 dark:text-white flex items-center gap-2.5">
+                <span>📸</span>
+                <span>GALERIA / FOTOS DO LOCAL</span>
               </h2>
+              <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400">
+                Salão, Pratos, Fachada e ambiente real do estabelecimento
+              </p>
             </div>
-            <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400">
-              Resposta rápida e confirmação imediata
-            </p>
+            <span className="text-xs font-semibold px-3 py-1 rounded-full bg-neutral-100 dark:bg-white/10 text-neutral-700 dark:text-neutral-300">
+              Fotos Reais
+            </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-5">
+            {effectiveGalleryPhotos.map((photoUrl: string, idx: number) => (
+              <div
+                key={idx}
+                className="group relative overflow-hidden rounded-xl sm:rounded-2xl bg-neutral-100 dark:bg-neutral-900 aspect-4/3 border border-neutral-200/80 dark:border-white/10 shadow-sm transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer"
+                onClick={() => {
+                  setSelectedPhotoIndex(idx);
+                  setIsLightboxOpen(true);
+                }}
+              >
+                <Image
+                  src={photoUrl}
+                  alt={`Foto ${idx + 1} - ${tenant.name}`}
+                  fill
+                  unoptimized
+                  referrerPolicy="no-referrer"
+                  className="object-cover transition duration-500 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-neutral-950/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* 3. SERVIÇOS / CARDÁPIO COM PREÇOS */}
+      {services.length > 0 && (
+        <section className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 border-b border-neutral-200/80 dark:border-white/10 pb-4">
+            <div className="space-y-1">
+              <h2 className="text-xl sm:text-2xl font-extrabold uppercase tracking-tight text-neutral-900 dark:text-white flex items-center gap-2.5">
+                <span>🍽️</span>
+                <span>SERVIÇOS / CARDÁPIO COM PREÇOS</span>
+              </h2>
+              <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400">
+                Lista de itens atualizados com preços transparentes
+              </p>
+            </div>
+            <span className="text-xs font-semibold px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 self-start sm:self-auto">
+              {services.length} Itens Disponíveis
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {services.map((service) => {
               const serviceWhatsappUrl = generateWhatsAppUrl(
                 rawPhone,
                 tenant.name,
-                `Olá! Gostaria de agendar ou tirar dúvidas sobre o serviço: "${service.name}".`
+                `Olá! Gostaria de pedir ou tirar dúvidas sobre o item: "${service.name}".`
               );
 
               return (
                 <div
                   key={service.id}
-                  className="rounded-2xl border border-neutral-200/80 dark:border-white/10 bg-white/95 dark:bg-neutral-900/80 backdrop-blur-md p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between space-y-5 group"
+                  className="rounded-2xl border border-neutral-200/80 dark:border-white/10 bg-white/95 dark:bg-neutral-900/80 backdrop-blur-md p-5 sm:p-6 shadow-xs hover:shadow-md transition-all duration-300 flex flex-col justify-between group"
                 >
-                  <div className="space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <h3 className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white tracking-tight leading-snug group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                  <div className="space-y-2">
+                    {/* Linha com Nome, Linha Pontilhada e Preço */}
+                    <div className="flex items-baseline justify-between gap-2">
+                      <h3 className="font-bold text-base sm:text-lg text-neutral-900 dark:text-white tracking-tight group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
                         {service.name}
                       </h3>
-                      {service.price && Number(service.price) > 0 ? (
-                        <span className="shrink-0 text-sm font-extrabold text-neutral-900 dark:text-white bg-neutral-100 dark:bg-white/10 px-2.5 py-1 rounded-lg">
-                          R$ {Number(service.price).toFixed(2)}
-                        </span>
-                      ) : (
-                        <span className="shrink-0 text-xs font-semibold text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-white/5 px-2.5 py-1 rounded-lg">
-                          Sob Consulta
-                        </span>
-                      )}
+                      <div className="flex-1 mx-3 border-b-2 border-dotted border-neutral-300 dark:border-neutral-700 min-w-4 self-center" />
+                      <div className="shrink-0 text-right">
+                        {service.price && Number(service.price) > 0 ? (
+                          <span className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                            R$ {Number(service.price).toFixed(2)}
+                          </span>
+                        ) : (
+                          <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-white/5 px-2.5 py-1 rounded-md">
+                            Sob Consulta
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {service.description && (
-                      <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 line-clamp-3 leading-relaxed">
+                      <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">
                         {service.description}
                       </p>
                     )}
 
                     {service.duration_minutes > 0 && (
-                      <div className="flex items-center gap-1.5 text-xs text-neutral-400 dark:text-neutral-500 font-medium">
+                      <div className="flex items-center gap-1.5 text-xs text-neutral-400 dark:text-neutral-500 font-medium pt-1">
                         <Clock className="h-3.5 w-3.5" />
-                        <span>Duração estimada: {service.duration_minutes} min</span>
+                        <span>Duração: {service.duration_minutes} min</span>
                       </div>
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2.5 pt-4 border-t border-neutral-100 dark:border-white/10">
+                  {/* Ações do Serviço / Item */}
+                  <div className="mt-4 pt-3 border-t border-neutral-100 dark:border-white/5 flex items-center justify-between gap-3">
                     <a
                       href={serviceWhatsappUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs py-3 px-3 shadow-md shadow-emerald-600/15 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                      className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-2 px-3.5 shadow-sm shadow-emerald-600/15 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
                     >
-                      <MessageCircle className="h-4 w-4 fill-white text-emerald-600 shrink-0" />
-                      <span>WhatsApp</span>
+                      <MessageCircle className="h-3.5 w-3.5 fill-white text-emerald-600 shrink-0" />
+                      <span>Pedir no WhatsApp</span>
                     </a>
 
                     <button
                       type="button"
                       onClick={() => onOpenBooking(service.id)}
-                      className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-neutral-200 dark:border-white/15 bg-neutral-50 hover:bg-neutral-100 dark:bg-white/5 dark:hover:bg-white/10 text-neutral-800 dark:text-neutral-200 text-xs font-semibold py-3 px-3 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition cursor-pointer"
                     >
                       <Calendar className="h-3.5 w-3.5" />
-                      <span>Agendar</span>
+                      <span>Agendar Horário</span>
                     </button>
                   </div>
                 </div>
               );
             })}
-          </div>
-        </section>
-      )}
-
-      {/* 3.1 GALERIA RÁPIDA DE CONFIANÇA (GRID DE 3 A 4 FOTOS REAIS DO LOCAL LOGO ABAIXO DOS SERVIÇOS) */}
-      {effectiveGalleryPhotos.length > 0 && (
-        <section className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 border-b border-neutral-200/80 dark:border-white/10 pb-4">
-            <div className="space-y-1">
-              <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                <Camera className="h-3.5 w-3.5" />
-                <span>Ambiente & Estrutura</span>
-              </span>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white tracking-tight">
-                Conheça Nosso Espaço
-              </h2>
-            </div>
-            <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400">
-              Fotos reais do estabelecimento e infraestrutura
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
-            {effectiveGalleryPhotos.slice(0, 4).map((photoUrl: string, idx: number) => (
-              <div
-                key={idx}
-                className="group relative overflow-hidden rounded-2xl bg-neutral-100 dark:bg-neutral-900 aspect-4/3 border border-neutral-200/80 dark:border-white/10 shadow-sm transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5"
-              >
-                <Image
-                  src={photoUrl}
-                  alt={`Ambiente ${tenant.name} - Foto ${idx + 1}`}
-                  fill
-                  unoptimized
-                  referrerPolicy="no-referrer"
-                  className="object-cover transition duration-300 group-hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-neutral-950/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              </div>
-            ))}
           </div>
         </section>
       )}
@@ -393,17 +380,31 @@ export function ConversionTemplateView({
         />
       )}
 
-      {/* 5. SOBRE & COMODIDADES */}
-      <AboutBusinessSection
-        tenantName={tenant.name}
-        description={profile?.description}
-        editorialSummary={profile?.editorial_summary}
-        address={profile?.address}
-        phoneWhatsapp={rawPhone}
-        businessCategory={profile?.business_category}
-        theme={theme}
-        onOpenBooking={() => onOpenBooking()}
-      />
+      {/* 5. AVALIAÇÕES DO GOOGLE MAPS */}
+      {reviews.length > 0 && (
+        <GoogleReviewsCard
+          tenantName={tenant.name}
+          rating={realRating}
+          reviewCount={realReviewCount}
+          reviews={reviews}
+          googleMapsUrl={profile?.google_maps_url}
+          theme={theme}
+        />
+      )}
+
+      {/* 6. SOBRE & COMODIDADES */}
+      {profile?.description && (
+        <AboutBusinessSection
+          tenantName={tenant.name}
+          description={profile?.description}
+          editorialSummary={profile?.editorial_summary}
+          address={profile?.address}
+          phoneWhatsapp={rawPhone}
+          businessCategory={profile?.business_category}
+          theme={theme}
+          onOpenBooking={() => onOpenBooking()}
+        />
+      )}
 
       {tenant.business_attributes && (
         <BusinessAttributes
@@ -412,31 +413,11 @@ export function ConversionTemplateView({
         />
       )}
 
-      {/* 5.1 SEÇÃO GLOBAL DE FOTOS DO ESTABELECIMENTO (AMBIENTE & ESTRUTURA COM LIGHTBOX) */}
-      {effectiveGalleryPhotos.length > 0 && (
-        <PlacePhotoGallery
-          photos={allEstablishmentPhotos}
-          tenantName={tenant.name}
-          address={profile?.address}
-          theme={theme}
-          title="Fotos do Estabelecimento • Nosso Ambiente"
-        />
-      )}
-
-      {/* 6. PROVA SOCIAL OFICIAL */}
-      <GoogleReviewsCard
-        tenantName={tenant.name}
-        rating={realRating}
-        reviewCount={realReviewCount}
-        reviews={reviews}
-        googleMapsUrl={profile?.google_maps_url}
-        theme={theme}
-      />
-
       {/* 7. HORÁRIOS & LOCALIZAÇÃO */}
       <MapLocationCard
         tenantName={tenant.name}
-        address={profile?.address}
+        address={profile?.address || tenant.address}
+        placeId={placeId}
         latitude={profile?.latitude}
         longitude={profile?.longitude}
         openingHours={tenant.opening_hours || profile?.opening_hours_json}
@@ -445,7 +426,70 @@ export function ConversionTemplateView({
         statusDetailText={statusDetailText}
         statusBadgeText={statusBadgeText}
         theme={theme}
+        title="📅 HORÁRIOS & LOCALIZAÇÃO"
       />
+
+      {/* Modal Lightbox para fotos em tamanho real */}
+      {isLightboxOpen && allEstablishmentPhotos.length > 0 && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-md"
+          onClick={() => setIsLightboxOpen(false)}
+        >
+          <div
+            className="relative max-w-4xl max-h-[85vh] w-full h-full flex items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setIsLightboxOpen(false)}
+              className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-neutral-900/80 text-white hover:bg-neutral-800 transition cursor-pointer"
+            >
+              <X className="h-6 w-6" />
+            </button>
+
+            <div className="relative w-full h-full max-h-[75vh]">
+              <Image
+                src={
+                  allEstablishmentPhotos[selectedPhotoIndex] ||
+                  allEstablishmentPhotos[0]
+                }
+                alt={`Foto ${selectedPhotoIndex + 1} - ${tenant.name}`}
+                fill
+                unoptimized
+                referrerPolicy="no-referrer"
+                className="object-contain"
+              />
+            </div>
+
+            {allEstablishmentPhotos.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSelectedPhotoIndex((prev) =>
+                      prev === 0 ? allEstablishmentPhotos.length - 1 : prev - 1
+                    )
+                  }
+                  className="absolute left-2 sm:left-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-neutral-900/80 text-white hover:bg-neutral-800 transition cursor-pointer"
+                >
+                  <ChevronLeft className="h-6 w-6" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSelectedPhotoIndex((prev) =>
+                      prev === allEstablishmentPhotos.length - 1 ? 0 : prev + 1
+                    )
+                  }
+                  className="absolute right-2 sm:right-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-neutral-900/80 text-white hover:bg-neutral-800 transition cursor-pointer"
+                >
+                  <ChevronRight className="h-6 w-6" />
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

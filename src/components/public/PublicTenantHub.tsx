@@ -28,6 +28,9 @@ interface PublicTenantHubProps {
     id: string;
     name: string;
     slug: string;
+    place_id?: string | null;
+    google_place_id?: string | null;
+    address?: string | null;
     category?: string | null;
     google_types?: string[] | null;
     theme_niche?: string | null;
@@ -342,9 +345,10 @@ export function PublicTenantHub({
         <PublicFooter
           tenantName={tenant.name}
           phoneWhatsapp={profile?.phone_whatsapp || profile?.phone}
-          address={profile?.address}
+          address={profile?.address || tenant.address}
           latitude={profile?.latitude}
           longitude={profile?.longitude}
+          placeId={tenant.place_id || tenant.google_place_id || profile?.place_id || profile?.google_place_id}
           openingHours={tenant.opening_hours || profile?.opening_hours_json}
           isOpenNow={isOpenNow}
           statusBadgeText={statusBadgeText}
@@ -359,9 +363,10 @@ export function PublicTenantHub({
         tenantId={tenant.id}
         tenantName={tenant.name}
         phoneWhatsapp={profile?.phone_whatsapp || profile?.phone}
-        address={profile?.address}
+        address={profile?.address || tenant.address}
         latitude={profile?.latitude}
         longitude={profile?.longitude}
+        placeId={tenant.place_id || tenant.google_place_id || profile?.place_id || profile?.google_place_id}
         googleMapsUrl={profile?.google_maps_url}
         isOpenNow={isOpenNow}
         statusBadgeText={statusBadgeText}

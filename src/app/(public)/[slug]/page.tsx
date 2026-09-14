@@ -340,6 +340,7 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
         primary_color: profile.primary_color || "#0d9488",
         google_maps_url: profile.google_maps_url || null,
         google_place_id: profile.google_place_id || null,
+        place_id: profile.google_place_id || (profile as any).place_id || (tenant as any)?.google_place_id || (tenant as any)?.place_id || null,
         rating: profile.rating ?? profile.google_rating ?? null,
         google_rating: profile.google_rating ?? profile.rating ?? null,
         review_count: profile.review_count ?? profile.google_reviews_count ?? null,
@@ -488,6 +489,9 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
       <PublicTenantHub
         tenant={{
           ...tenant,
+          place_id: (tenant as any)?.place_id || (tenant as any)?.google_place_id || typedProfile?.place_id || typedProfile?.google_place_id || null,
+          google_place_id: (tenant as any)?.google_place_id || (tenant as any)?.place_id || typedProfile?.google_place_id || null,
+          address: typedProfile?.address || (tenant as any)?.address || null,
           cover_image_url:
             tenant.cover_image_url ||
             typedProfile?.cover_image_url ||

@@ -17,6 +17,7 @@ import { NICHE_THEMES } from "@/config/tenant-themes";
 interface MapLocationCardProps {
   tenantName: string;
   address?: string | null;
+  placeId?: string | null;
   latitude?: number | null;
   longitude?: number | null;
   openingHours?: string[] | null;
@@ -25,11 +26,13 @@ interface MapLocationCardProps {
   statusDetailText?: string;
   statusBadgeText?: string;
   theme?: NicheThemeConfig;
+  title?: string;
 }
 
 export function MapLocationCard({
   tenantName,
   address,
+  placeId,
   latitude,
   longitude,
   openingHours,
@@ -38,6 +41,7 @@ export function MapLocationCard({
   statusDetailText,
   statusBadgeText,
   theme,
+  title,
 }: MapLocationCardProps) {
   const [isCopied, setIsCopied] = useState(false);
   const currentTheme = theme || NICHE_THEMES.retail_default;
@@ -49,11 +53,17 @@ export function MapLocationCard({
     ? `https://waze.com/ul?ll=${latitude},${longitude}&navigate=yes`
     : `https://waze.com/ul?q=${encodeURIComponent(displayAddress)}`;
 
-  const googleMapsUrl =
-    customGoogleMapsUrl ||
-    (hasCoords
-      ? `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`
-      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(displayAddress)}`);
+  const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  const queryLocation = encodeURIComponent(`${tenantName}, ${address || ""}`);
+  const mapEmbedSrc = (placeId && mapsApiKey)
+    ? `https://www.google.com/maps/embed/v1/place?key=${mapsApiKey}&q=place_id:${placeId}`
+    : `https://maps.google.com/maps?q=${queryLocation}&t=&z=16&ie=UTF8&iwloc=B&output=embed`;
+
+  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+    `${tenantName}, ${address || ""}`
+  )}${placeId ? `&destination_place_id=${placeId}` : ""}`;
+
+  const googleMapsUrl = customGoogleMapsUrl || directionsUrl;
 
   const businessStatus = getBusinessStatus(openingHours);
   const scheduleList = businessStatus.scheduleList;
@@ -87,10 +97,10 @@ export function MapLocationCard({
             <span>Localização & Horários</span>
           </div>
           <h2 className={`text-xl sm:text-2xl font-extrabold ${currentTheme.textPrimary} tracking-tight`}>
-            Endereço, Horários da Semana & Rotas GPS
+            {title || "📅 HORÁRIOS & LOCALIZAÇÃO"}
           </h2>
           <p className={`text-xs sm:text-sm ${currentTheme.textMuted}`}>
-            Venha nos visitar ou trace sua rota direta pelo Waze ou Google Maps.
+            Venha nos visitar ou trace sua rota direta pelo Google Maps ou Waze.
           </p>
         </div>
 
@@ -119,36 +129,49 @@ export function MapLocationCard({
            ========================================================================= */}
         <div className="lg:col-span-7 space-y-4 flex flex-col justify-between">
           
-          {/* Iframe Interativo do Google Maps */}
+          {/* Iframe Interativo do Google Maps com Pin Exato */}
           <div className="relative w-full h-72 sm:h-80 rounded-2xl overflow-hidden border border-neutral-200/80 dark:border-white/10 shadow-sm">
             <iframe
               title={`Localização Google Maps - ${tenantName}`}
-              src={`https://www.google.com/maps?q=${encodeURIComponent(
-                address || tenantName + " " + displayAddress
-              )}&output=embed`}
+              src={mapEmbedSrc}
               className="w-full h-full border-0"
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
             />
           </div>
 
-          {/* Bloco de Endereço + Botão Copiar */}
+          {/* Bloco de Endereço + Botão Estilizado Como Chegar (Maps) */}
           <div className={`rounded-2xl border border-neutral-200/80 dark:border-white/10 ${
             currentTheme.isDark ? "bg-neutral-900/80" : "bg-neutral-50"
-          } p-5 space-y-2`}>
-            <span className={`text-[11px] font-semibold uppercase tracking-wider ${currentTheme.textMuted} flex items-center gap-1.5`}>
-              <MapPin className="h-3.5 w-3.5" />
-              <span>Endereço Oficial</span>
-            </span>
-            <p className={`text-xs sm:text-sm font-semibold ${currentTheme.textPrimary} leading-relaxed`}>
-              {displayAddress}
-            </p>
+          } p-5 space-y-3`}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="space-y-1">
+                <span className={`text-[11px] font-semibold uppercase tracking-wider ${currentTheme.textMuted} flex items-center gap-1.5`}>
+                  <MapPin className="h-3.5 w-3.5" />
+                  <span>Endereço Completo</span>
+                </span>
+                <p className={`text-xs sm:text-sm font-semibold ${currentTheme.textPrimary} leading-relaxed`}>
+                  {displayAddress}
+                </p>
+              </div>
+
+              {/* Botão Estilizado Como Chegar (Maps) */}
+              <a
+                href={directionsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-4 py-2.5 shadow-md shadow-blue-600/20 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <Navigation className="h-3.5 w-3.5" />
+                <span>🗺️ Como Chegar (Maps)</span>
+              </a>
+            </div>
 
             {address && (
               <button
                 type="button"
                 onClick={handleCopyAddress}
-                className={`mt-1 inline-flex items-center gap-1.5 text-xs font-semibold hover:underline cursor-pointer ${currentTheme.accentText}`}
+                className={`inline-flex items-center gap-1.5 text-xs font-semibold hover:underline cursor-pointer ${currentTheme.accentText}`}
               >
                 {isCopied ? (
                   <>
@@ -168,6 +191,21 @@ export function MapLocationCard({
           {/* Botões de Ação de Rota Direta */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
             <a
+              href={directionsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between rounded-xl border border-blue-200/80 dark:border-blue-500/20 bg-blue-50/60 dark:bg-blue-950/30 hover:bg-blue-100/70 px-4 py-3 text-xs font-bold text-blue-950 dark:text-blue-200 transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] shadow-2xs"
+            >
+              <span className="flex items-center gap-2.5">
+                <span className="flex h-5 w-5 items-center justify-center rounded-md bg-blue-600 text-white font-black text-[10px]">
+                  G
+                </span>
+                <span>🗺️ Como Chegar (Maps)</span>
+              </span>
+              <ExternalLink className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            </a>
+
+            <a
               href={wazeUrl}
               target="_blank"
               rel="noopener noreferrer"
@@ -180,21 +218,6 @@ export function MapLocationCard({
                 <span>Traçar Rota no Waze</span>
               </span>
               <Navigation className="h-4 w-4 text-cyan-600" />
-            </a>
-
-            <a
-              href={googleMapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-between rounded-xl border border-neutral-200/80 dark:border-white/10 bg-white hover:bg-neutral-50 dark:bg-neutral-900 dark:hover:bg-neutral-850 px-4 py-3 text-xs font-bold text-neutral-900 dark:text-white transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] shadow-2xs"
-            >
-              <span className="flex items-center gap-2.5">
-                <span className="flex h-5 w-5 items-center justify-center rounded-md bg-red-500 text-white font-black text-[10px]">
-                  G
-                </span>
-                <span>Abrir no Google Maps</span>
-              </span>
-              <ExternalLink className="h-4 w-4 text-neutral-400" />
             </a>
           </div>
 

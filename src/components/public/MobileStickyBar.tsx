@@ -14,6 +14,7 @@ interface MobileStickyBarProps {
   address?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  placeId?: string | null;
   googleMapsUrl?: string | null;
   openingHours?: any;
   isOpenNow?: boolean;
@@ -32,6 +33,7 @@ export function MobileStickyBar({
   address,
   latitude,
   longitude,
+  placeId,
   googleMapsUrl,
   openingHours,
   isOpenNow,
@@ -45,7 +47,11 @@ export function MobileStickyBar({
   const cleanPhone = phoneWhatsapp ? sanitizePhoneNumber(phoneWhatsapp) : "";
   const whatsappUrl = generateWhatsAppUrl(phoneWhatsapp || "", tenantName);
   const hasCoords = typeof latitude === "number" && typeof longitude === "number";
+  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+    `${tenantName}, ${address || ""}`
+  )}${placeId ? `&destination_place_id=${placeId}` : ""}`;
   const locationUrl =
+    directionsUrl ||
     googleMapsUrl ||
     (hasCoords
       ? `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`
@@ -102,27 +108,16 @@ export function MobileStickyBar({
       </div>
 
       {activeTemplate === "conversion" ? (
-        <div className="flex items-center gap-2 max-w-lg mx-auto">
-          {cleanPhone && (
-            <a
-              href={`tel:+55${cleanPhone}`}
-              onClick={handlePhoneClick}
-              className="flex flex-col items-center justify-center gap-0.5 rounded-2xl border border-neutral-200/80 dark:border-white/10 bg-neutral-100 dark:bg-white/5 py-3 px-3 text-xs font-semibold text-neutral-800 dark:text-neutral-200 active:scale-95 transition-all shrink-0 shadow-xs"
-              title="Ligar para o estabelecimento"
-            >
-              <Phone className="h-4 w-4 text-neutral-700 dark:text-neutral-300" />
-              <span className="text-[10px]">Ligar</span>
-            </a>
-          )}
+        <div className="w-full max-w-lg mx-auto">
           <a
             href={whatsappUrl}
             target="_blank"
             rel="noopener noreferrer"
             onClick={handleWhatsAppClick}
-            className="flex-1 flex items-center justify-center gap-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 py-3.5 px-4 text-sm font-bold text-white shadow-lg shadow-emerald-600/25 transition-all duration-300 active:scale-[0.98]"
+            className="w-full flex items-center justify-center gap-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 py-3.5 sm:py-4 px-5 text-sm sm:text-base font-bold text-white shadow-xl shadow-emerald-600/30 transition-all duration-300 active:scale-[0.98]"
           >
             <MessageCircle className="h-5 w-5 fill-white text-emerald-600 shrink-0" />
-            <span>Falar no WhatsApp Agora</span>
+            <span>💬 Pedir pelo WhatsApp</span>
           </a>
         </div>
       ) : (
