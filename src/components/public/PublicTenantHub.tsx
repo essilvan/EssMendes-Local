@@ -218,15 +218,16 @@ export function PublicTenantHub({
           : "bg-neutral-50/50 text-neutral-900"
       } selection:bg-neutral-900 selection:text-white`}
     >
-      {/* Imagem de Fundo Hero com Dimensões Explícitas e Overlay */}
-      <div className="absolute inset-0 w-full h-full z-0 overflow-hidden pointer-events-none">
+      {/* Container da Imagem de Fundo Geral */}
+      <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-0">
         <img 
-          src={tenant.cover_image_url || heroBg} 
-          alt={tenant.name} 
-          className="w-full h-full object-cover object-center"
+          src={heroBg} 
+          alt="Fundo" 
+          className="w-full h-full object-cover object-center brightness-95 contrast-100"
           referrerPolicy="no-referrer"
         />
-        <div className="absolute inset-0 bg-neutral-950/75 bg-gradient-to-t from-neutral-950 via-neutral-950/70 to-neutral-950/40" />
+        {/* Máscara suave apenas com 30% a 40% de opacidade para a foto aparecer com clareza */}
+        <div className="absolute inset-0 bg-black/35" />
       </div>
 
       {/* Tracker de Analytics (Zero PII) */}

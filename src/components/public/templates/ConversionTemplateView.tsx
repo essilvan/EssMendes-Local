@@ -144,15 +144,16 @@ export function ConversionTemplateView({
     <div className="space-y-16 md:space-y-24 pb-20">
       {/* 1. HERO DE ALTO IMPACTO (CONVERSION HERO - COM FOTO REAL DE FUNDO & ALTO CONTRASTE) */}
       <section className="relative overflow-hidden rounded-3xl bg-neutral-950 text-white p-7 sm:p-12 lg:p-16 border border-white/10 shadow-2xl shadow-black/40 min-h-[480px] flex items-center justify-center">
-        {/* Imagem de Fundo com Dimensões Explícitas e Overlay */}
+        {/* Container da Imagem de Fundo Geral */}
         <div className="absolute inset-0 w-full h-full overflow-hidden z-0 pointer-events-none">
           <img
             src={heroBg}
             alt={tenant.name || "Estabelecimento"}
-            className="w-full h-full object-cover object-center"
+            className="w-full h-full object-cover object-center brightness-95 contrast-100"
             referrerPolicy="no-referrer"
           />
-          <div className="absolute inset-0 bg-neutral-950/75 bg-gradient-to-t from-neutral-950 via-neutral-950/70 to-neutral-950/40" />
+          {/* Máscara suave apenas com 30% a 40% de opacidade para a foto aparecer com clareza */}
+          <div className="absolute inset-0 bg-black/35" />
         </div>
 
         {/* Efeitos de iluminação ambiente suaves */}
