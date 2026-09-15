@@ -149,7 +149,7 @@ export function ConversionTemplateView({
           <img
             src={heroBg}
             alt={tenant.name || "Estabelecimento"}
-            className="w-full h-full object-cover object-center brightness-95 contrast-100"
+            className="w-full h-full object-cover object-center brightness-95 contrast-100 blur-[1px] scale-105"
             referrerPolicy="no-referrer"
           />
           {/* Máscara suave apenas com 30% a 40% de opacidade para a foto aparecer com clareza */}

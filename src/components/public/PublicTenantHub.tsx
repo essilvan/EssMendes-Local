@@ -218,16 +218,31 @@ export function PublicTenantHub({
           : "bg-neutral-50/50 text-neutral-900"
       } selection:bg-neutral-900 selection:text-white`}
     >
-      {/* Container da Imagem de Fundo Geral */}
-      <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-0">
+      {/* Container da Imagem de Fundo Geral — Restrito à primeira dobra do Hero com transição em degradê profissional */}
+      <div 
+        className="absolute top-0 left-0 right-0 h-[560px] sm:h-[620px] max-h-[680px] w-full overflow-hidden pointer-events-none z-0"
+        style={{
+          maskImage: "linear-gradient(to bottom, black 50%, transparent 100%)",
+          WebkitMaskImage: "linear-gradient(to bottom, black 50%, transparent 100%)",
+        }}
+      >
         <img 
           src={heroBg} 
           alt="Fundo" 
-          className="w-full h-full object-cover object-center brightness-95 contrast-100"
+          className="w-full h-full object-cover object-center brightness-95 contrast-100 blur-[1px] scale-105"
           referrerPolicy="no-referrer"
         />
-        {/* Máscara suave apenas com 30% a 40% de opacidade para a foto aparecer com clareza */}
-        <div className="absolute inset-0 bg-black/35" />
+
+        {/* Iluminação radial suave em tom âmbar/laranja (SaaS / Dark Mode refinado) */}
+        <div 
+          className="absolute inset-0 z-1"
+          style={{
+            background: "radial-gradient(ellipse 80% 50% at 50% -20%, rgba(249, 115, 22, 0.15), rgba(10, 10, 10, 0.6) 75%, rgba(10, 10, 10, 0.95) 100%)",
+          }}
+        />
+
+        {/* Fusão em degradê para a cor de fundo do site */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-neutral-950/60 to-neutral-950 z-2" />
       </div>
 
       {/* Tracker de Analytics (Zero PII) */}
