@@ -436,36 +436,26 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
         currentPrice !== undefined &&
         !isNaN(Number(currentPrice)) &&
         Number(currentPrice) > 0;
-      const productImage = p.image_url || schemaImage || undefined;
 
-      // Itens sem preço ou com "Sob Consulta" são tipados como Service para evitar o validador rígido de e-commerce do Google
-      if (!hasNumericPrice) {
-        return {
-          "@type": "Offer",
-          "itemOffered": {
-            "@type": "Service",
-            "name": p.name,
-            "description": p.description || `Item disponível em ${tenant.name}`,
-          },
-          "priceSpecification": {
-            "@type": "PriceSpecification",
-            "priceCurrency": "BRL",
-            "description": "Sob Consulta / Orçamento",
-          },
-        };
-      }
-
-      // Caso tenha preço numérico fixo e imagem, estrutura conforme exigido pelo Google
       return {
         "@type": "Offer",
-        "price": Number(currentPrice).toFixed(2),
-        "priceCurrency": "BRL",
         "itemOffered": {
-          "@type": "Product",
+          "@type": "Service",
           "name": p.name,
-          "description": p.description || `${p.name} disponível em ${tenant.name}`,
-          ...(productImage ? { "image": productImage } : {}),
+          "description": p.description || `Item/produto disponível em ${tenant.name}`,
         },
+        ...(hasNumericPrice
+          ? {
+              "price": Number(currentPrice).toFixed(2),
+              "priceCurrency": "BRL",
+            }
+          : {
+              "priceSpecification": {
+                "@type": "PriceSpecification",
+                "priceCurrency": "BRL",
+                "description": "Sob Consulta / Orçamento",
+              },
+            }),
       };
     }),
   ];
