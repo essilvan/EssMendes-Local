@@ -6,6 +6,7 @@ import {
   MessageCircle,
   Phone,
   Clock,
+  Clock as ClockIcon,
   MapPin,
   Calendar,
   ExternalLink,
@@ -50,6 +51,11 @@ export function MinimalTemplateView({
   const realRating = profile?.google_rating ?? profile?.rating ?? tenant.google_rating ?? 5.0;
   const realReviewCount =
     profile?.google_reviews_count ?? profile?.review_count ?? tenant.google_reviews_count ?? reviews.length;
+
+  // Identificar segmento do tenant
+  const isTimeBasedNiche = ['barbearia', 'salao', 'estetica', 'salao_beleza', 'beleza'].some(n => 
+    (tenant.category || tenant.segment || tenant.template || tenant.theme_niche || profile?.business_category || profile?.template_id || '').toLowerCase().includes(n)
+  );
 
   const placeId =
     tenant.place_id ||
@@ -161,6 +167,9 @@ export function MinimalTemplateView({
                 `Olá! Gostaria de agendar o serviço: ${service.name}.`
               );
 
+              // Só exibir o badge de tempo se houver valor preenchido E (for nicho de agendamento OU o lojista definiu explicitamente com show_duration)
+              const shouldShowDuration = service.duration_minutes && (isTimeBasedNiche || service.show_duration);
+
               return (
                 <div
                   key={service.id}
@@ -171,9 +180,11 @@ export function MinimalTemplateView({
                       <h3 className="text-base sm:text-lg font-semibold text-neutral-900 dark:text-white group-hover:text-neutral-600 dark:group-hover:text-neutral-300 transition-colors">
                         {service.name}
                       </h3>
-                      {service.duration_minutes > 0 && (
-                        <span className="text-xs font-mono text-neutral-400">
-                          {service.duration_minutes}m
+                      {/* Badge de Tempo (Renderização condicional) */}
+                      {shouldShowDuration && (
+                        <span className="text-xs text-neutral-400 flex items-center gap-1 font-mono">
+                          <ClockIcon className="w-3.5 h-3.5"/>
+                          {service.duration_minutes} min
                         </span>
                       )}
                     </div>
@@ -186,15 +197,10 @@ export function MinimalTemplateView({
 
                   <div className="flex items-center gap-5 shrink-0 sm:self-center">
                     <div className="text-right">
-                      {service.price && Number(service.price) > 0 ? (
-                        <span className="text-base font-mono font-bold text-neutral-950 dark:text-white">
-                          R$ {Number(service.price).toFixed(2)}
-                        </span>
-                      ) : (
-                        <span className="text-xs font-mono text-neutral-500 dark:text-neutral-400">
-                          Sob consulta
-                        </span>
-                      )}
+                      {/* Badge de Preço */}
+                      <span className="bg-amber-500/10 text-amber-500 text-xs px-2.5 py-1 rounded-full font-medium">
+                        {service.price ? `R$ ${Number(service.price).toFixed(2)}` : 'Sob Consulta / Orçamento'}
+                      </span>
                     </div>
 
                     <button

@@ -8,6 +8,7 @@ import { generateWhatsAppUrl } from "@/utils/phone";
 import {
   Sparkles,
   Clock,
+  Clock as ClockIcon,
   Calendar,
   Gift,
   Copy,
@@ -23,6 +24,11 @@ interface ConversionDashboardProps {
     id: string;
     name: string;
     slug: string;
+    category?: string | null;
+    segment?: string | null;
+    template?: string | null;
+    theme_niche?: string | null;
+    [key: string]: any;
   };
   profile: TenantProfile | null;
   services: Service[];
@@ -93,8 +99,12 @@ export function ConversionDashboard({
 
   const currentTheme = theme || NICHE_THEMES.retail_default;
 
+  const isTimeBasedNiche = ['barbearia', 'salao', 'estetica', 'salao_beleza', 'beleza'].some(n => 
+    (tenant.category || tenant.segment || tenant.template || tenant.theme_niche || profile?.business_category || profile?.template_id || '').toLowerCase().includes(n)
+  );
+
   return (
-    <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+    <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
       
       {/* =========================================================================
           COLUNA 1: Nossos Serviços (Catálogo Universal de Serviços)
@@ -138,6 +148,9 @@ export function ConversionDashboard({
               const phone = profile?.phone_whatsapp || profile?.phone;
               const whatsappOrderText = `👋 Olá! Gostaria de um orçamento/agendamento para o serviço: *${service.name}*.`;
 
+              // Só exibir o badge de tempo se houver valor preenchido E (for nicho de agendamento OU o lojista definiu explicitamente com show_duration)
+              const shouldShowDuration = service.duration_minutes && (isTimeBasedNiche || service.show_duration);
+
               return (
                 <div
                   key={service.id}
@@ -157,25 +170,20 @@ export function ConversionDashboard({
                       )}
                     </div>
 
-                    {hasPrice ? (
-                      <span
-                        className="text-sm sm:text-base font-extrabold shrink-0"
-                        style={{ color: "var(--brand-primary, #0d9488)" }}
-                      >
-                        {formatCurrency(Number(service.price))}
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-500 border border-amber-500/30 shrink-0">
-                        Sob Consulta
-                      </span>
-                    )}
+                    {/* Badge de Preço */}
+                    <span className="bg-amber-500/10 text-amber-500 text-xs px-2.5 py-1 rounded-full font-medium shrink-0">
+                      {service.price ? `R$ ${Number(service.price).toFixed(2)}` : 'Sob Consulta / Orçamento'}
+                    </span>
                   </div>
 
-                  <div className={`flex flex-wrap items-center justify-between gap-2.5 pt-3 border-t border-neutral-100 dark:border-white/10`}>
-                    <span className={`text-xs font-medium ${currentTheme.textMuted} flex items-center gap-1`}>
-                      <Clock className="h-3.5 w-3.5" />
-                      <span>{service.duration_minutes} min</span>
-                    </span>
+                  <div className={`flex flex-wrap items-center ${shouldShowDuration ? "justify-between" : "justify-end"} gap-2.5 pt-3 border-t border-neutral-100 dark:border-white/10`}>
+                    {/* Badge de Tempo (Renderização condicional) */}
+                    {shouldShowDuration && (
+                      <span className="text-xs text-neutral-400 flex items-center gap-1">
+                        <ClockIcon className="w-3.5 h-3.5"/>
+                        {service.duration_minutes} min
+                      </span>
+                    )}
 
                     <div className="flex flex-wrap items-center gap-2">
                       {/* Botão de Orçamento no WhatsApp */}

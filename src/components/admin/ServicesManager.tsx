@@ -14,6 +14,7 @@ import {
   Edit2,
   Trash2,
   Clock,
+  Clock as ClockIcon,
   DollarSign,
   CheckCircle2,
   AlertCircle,
@@ -28,16 +29,24 @@ export interface ServiceItem {
   name: string;
   description: string | null;
   price: number | null;
-  duration_minutes: number;
+  duration_minutes: number | null;
+  show_duration?: boolean;
   is_active: boolean;
   created_at: string;
 }
 
 interface ServicesManagerProps {
   initialServices: ServiceItem[];
+  tenant?: {
+    category?: string | null;
+    segment?: string | null;
+    template?: string | null;
+    theme_niche?: string | null;
+    [key: string]: any;
+  } | null;
 }
 
-export function ServicesManager({ initialServices }: ServicesManagerProps) {
+export function ServicesManager({ initialServices, tenant }: ServicesManagerProps) {
   const router = useRouter();
   const [services, setServices] = useState<ServiceItem[]>(initialServices);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -173,6 +182,11 @@ export function ServicesManager({ initialServices }: ServicesManagerProps) {
     }).format(val);
   };
 
+  // Identificar segmento do tenant
+  const isTimeBasedNiche = ['barbearia', 'salao', 'estetica', 'salao_beleza', 'beleza'].some(n => 
+    (tenant?.category || tenant?.segment || tenant?.template || tenant?.theme_niche || '').toLowerCase().includes(n)
+  );
+
   return (
     <div className="space-y-6">
       
@@ -254,6 +268,9 @@ export function ServicesManager({ initialServices }: ServicesManagerProps) {
           {services.map((service) => {
             const isItemPending = isPending && pendingItemId === service.id;
 
+            // Só exibir o badge de tempo se houver valor preenchido E (for nicho de agendamento OU o lojista definiu explicitamente com show_duration)
+            const shouldShowDuration = service.duration_minutes && (isTimeBasedNiche || service.show_duration);
+
             return (
               <div
                 key={service.id}
@@ -315,21 +332,19 @@ export function ServicesManager({ initialServices }: ServicesManagerProps) {
 
                 {/* Detalhes de Preço e Duração */}
                 <div className="mt-5 border-t border-slate-100 pt-4 space-y-3">
-                  <div className="flex items-center justify-between text-xs">
-                    {service.price !== null && Number(service.price) > 0 ? (
-                      <span className="flex items-center gap-1.5 font-bold text-teal-800 text-sm">
-                        <DollarSign className="h-4 w-4 text-teal-600" />
-                        {formatCurrency(Number(service.price))}
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                        Sob Consulta / Orçamento
+                  <div className={`flex items-center text-xs ${shouldShowDuration ? "justify-between" : "justify-start"}`}>
+                    {/* Badge de Preço */}
+                    <span className="bg-amber-500/10 text-amber-500 text-xs px-2.5 py-1 rounded-full font-medium">
+                      {service.price ? `R$ ${Number(service.price).toFixed(2)}` : 'Sob Consulta / Orçamento'}
+                    </span>
+
+                    {/* Badge de Tempo (Renderização condicional) */}
+                    {shouldShowDuration && (
+                      <span className="text-xs text-neutral-400 flex items-center gap-1">
+                        <ClockIcon className="w-3.5 h-3.5"/>
+                        {service.duration_minutes} min
                       </span>
                     )}
-                    <span className="flex items-center gap-1 text-slate-500 font-medium">
-                      <Clock className="h-3.5 w-3.5 text-slate-400" />
-                      {service.duration_minutes} min
-                    </span>
                   </div>
 
                   {/* Botões de Ação */}
@@ -458,30 +473,35 @@ export function ServicesManager({ initialServices }: ServicesManagerProps) {
                 </div>
 
                 <div>
-                  <label
-                    htmlFor="durationMinutes"
-                    className="block text-xs font-semibold uppercase tracking-wider text-slate-700"
-                  >
-                    Duração (minutos) *
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label
+                      htmlFor="durationMinutes"
+                      className="block text-xs font-semibold uppercase tracking-wider text-slate-700"
+                    >
+                      Duração / Tempo Estimado
+                    </label>
+                    <span className="text-[10px] text-slate-400 font-medium">(Opcional)</span>
+                  </div>
                   <div className="relative mt-1.5">
                     <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                      <Clock className="h-4 w-4" />
+                      <ClockIcon className="h-4 w-4" />
                     </div>
                     <input
                       id="durationMinutes"
                       name="durationMinutes"
                       type="number"
-                      min="5"
+                      min="0"
                       max="720"
                       step="5"
-                      required
                       disabled={isPending}
-                      defaultValue={editingService?.duration_minutes || 30}
-                      placeholder="30"
+                      defaultValue={editingService?.duration_minutes && editingService.duration_minutes > 0 ? editingService.duration_minutes : ""}
+                      placeholder="Ex: 45 (opcional)"
                       className="block w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600 disabled:bg-slate-100 disabled:cursor-not-allowed"
                     />
                   </div>
+                  <p className="mt-1 text-[11px] text-slate-400">
+                    Opcional (recomendado para barbearias, clínicas e salões).
+                  </p>
                 </div>
               </div>
 
@@ -504,24 +524,43 @@ export function ServicesManager({ initialServices }: ServicesManagerProps) {
                 />
               </div>
 
-              {/* Status Ativo */}
-              <div className="flex items-center gap-2 pt-1">
-                <input
-                  id="isActive"
-                  name="isActive"
-                  type="checkbox"
-                  disabled={isPending}
-                  defaultChecked={
-                    editingService !== null ? editingService.is_active : true
-                  }
-                  className="h-4 w-4 rounded border-slate-300 text-teal-700 focus:ring-teal-600 disabled:cursor-not-allowed"
-                />
-                <label
-                  htmlFor="isActive"
-                  className="text-xs font-medium text-slate-700 cursor-pointer"
-                >
-                  Serviço ativo e disponível para agendamento online
-                </label>
+              {/* Opções de Exibição e Status */}
+              <div className="space-y-2.5 pt-1">
+                <div className="flex items-center gap-2">
+                  <input
+                    id="showDuration"
+                    name="showDuration"
+                    type="checkbox"
+                    disabled={isPending}
+                    defaultChecked={Boolean(editingService?.show_duration)}
+                    className="h-4 w-4 rounded border-slate-300 text-teal-700 focus:ring-teal-600 disabled:cursor-not-allowed"
+                  />
+                  <label
+                    htmlFor="showDuration"
+                    className="text-xs text-slate-600 cursor-pointer"
+                  >
+                    Exibir tempo de duração no card do serviço na vitrine pública
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    id="isActive"
+                    name="isActive"
+                    type="checkbox"
+                    disabled={isPending}
+                    defaultChecked={
+                      editingService !== null ? editingService.is_active : true
+                    }
+                    className="h-4 w-4 rounded border-slate-300 text-teal-700 focus:ring-teal-600 disabled:cursor-not-allowed"
+                  />
+                  <label
+                    htmlFor="isActive"
+                    className="text-xs font-medium text-slate-700 cursor-pointer"
+                  >
+                    Serviço ativo e disponível para catálogo/agendamento online
+                  </label>
+                </div>
               </div>
 
               {/* Botões do Modal com Feedback de Loading */}

@@ -8,6 +8,7 @@ import { recordAnalyticsEvent } from "@/actions/analytics";
 import {
   Scissors,
   Clock,
+  Clock as ClockIcon,
   Calendar,
   MessageCircle,
   Sparkles,
@@ -23,6 +24,11 @@ interface PublicServicesViewProps {
     id: string;
     name: string;
     slug: string;
+    category?: string | null;
+    segment?: string | null;
+    template?: string | null;
+    theme_niche?: string | null;
+    [key: string]: any;
   };
   profile: TenantProfile | null;
   services: Service[];
@@ -47,6 +53,11 @@ export function PublicServicesView({
 
   const isControlled = typeof externalIsOpen !== "undefined";
   const isOpen = isControlled ? externalIsOpen : internalIsOpen;
+
+  // Identificar segmento do tenant
+  const isTimeBasedNiche = ['barbearia', 'salao', 'estetica', 'salao_beleza', 'beleza'].some(n => 
+    (tenant.category || (tenant as any).segment || (tenant as any).template || (tenant as any).theme_niche || profile?.business_category || profile?.template_id || '').toLowerCase().includes(n)
+  );
 
   const handleOpenBooking = (serviceId?: string) => {
     const isMobile =
@@ -123,47 +134,46 @@ export function PublicServicesView({
           </div>
         ) : (
           <div className="grid gap-3.5">
-            {services.map((service) => (
-              <div
-                key={service.id}
-                className="group flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-slate-50/50 p-4 sm:p-5 hover:border-slate-300 hover:bg-slate-50/90 transition shadow-2xs"
-              >
-                {/* Informações do Serviço */}
-                <div className="space-y-1 sm:max-w-[62%]">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base font-bold text-slate-900 group-hover:text-slate-700 transition">
-                      {service.name}
-                    </h3>
+            {services.map((service) => {
+              // Só exibir o badge de tempo se houver valor preenchido E (for nicho de agendamento OU o lojista definiu explicitamente com show_duration)
+              const shouldShowDuration = service.duration_minutes && (isTimeBasedNiche || service.show_duration);
+
+              return (
+                <div
+                  key={service.id}
+                  className="group flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-slate-50/50 p-4 sm:p-5 hover:border-slate-300 hover:bg-slate-50/90 transition shadow-2xs"
+                >
+                  {/* Informações do Serviço */}
+                  <div className="space-y-1 sm:max-w-[62%]">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-bold text-slate-900 group-hover:text-slate-700 transition">
+                        {service.name}
+                      </h3>
+                    </div>
+
+                    {service.description && (
+                      <p className="text-xs text-slate-600 leading-relaxed font-normal">
+                        {service.description}
+                      </p>
+                    )}
+
+                    {/* Badge de Tempo (Renderização condicional) */}
+                    {shouldShowDuration && (
+                      <div className="flex items-center gap-3 pt-1 text-xs text-neutral-400">
+                        <span className="text-xs text-neutral-400 flex items-center gap-1">
+                          <ClockIcon className="w-3.5 h-3.5" />
+                          <span>{service.duration_minutes} min</span>
+                        </span>
+                      </div>
+                    )}
                   </div>
 
-                  {service.description && (
-                    <p className="text-xs text-slate-600 leading-relaxed font-normal">
-                      {service.description}
-                    </p>
-                  )}
-
-                  <div className="flex items-center gap-3 pt-1 text-xs text-slate-500">
-                    <span className="flex items-center gap-1 font-medium bg-white px-2 py-0.5 rounded-md border border-slate-200">
-                      <Clock className="h-3 w-3 text-slate-400" />
-                      <span>{service.duration_minutes} min</span>
+                  {/* Preço e Botões de Conversão */}
+                  <div className="flex sm:flex-col items-center sm:items-end justify-between gap-3 border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-200">
+                    {/* Badge de Preço */}
+                    <span className="bg-amber-500/10 text-amber-500 text-xs px-2.5 py-1 rounded-full font-medium">
+                      {service.price ? `R$ ${Number(service.price).toFixed(2)}` : 'Sob Consulta / Orçamento'}
                     </span>
-                  </div>
-                </div>
-
-                {/* Preço e Botões de Conversão */}
-                <div className="flex sm:flex-col items-center sm:items-end justify-between gap-3 border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-200">
-                  {service.price !== null && Number(service.price) > 0 ? (
-                    <span
-                      className="text-lg sm:text-xl font-black"
-                      style={{ color: "var(--primary-color, #0d9488)" }}
-                    >
-                      {formatCurrency(Number(service.price))}
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                      Sob Consulta
-                    </span>
-                  )}
 
                   <div className="flex flex-wrap items-center gap-2">
                     {profile?.phone_whatsapp && (
@@ -211,7 +221,8 @@ export function PublicServicesView({
                   </div>
                 </div>
               </div>
-            ))}
+            );
+          })}
           </div>
         )}
       </div>

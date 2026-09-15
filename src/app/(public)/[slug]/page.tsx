@@ -234,7 +234,8 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
     name: s.name,
     description: s.description,
     price: s.price !== null && s.price !== undefined ? Number(s.price) : null,
-    duration_minutes: s.duration_minutes,
+    duration_minutes: s.duration_minutes !== null && s.duration_minutes !== undefined && Number(s.duration_minutes) > 0 ? Number(s.duration_minutes) : null,
+    show_duration: Boolean(s.show_duration),
     is_active: s.is_active,
     created_at: s.created_at,
     updated_at: s.updated_at,
@@ -489,6 +490,9 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
       <PublicTenantHub
         tenant={{
           ...tenant,
+          category: profile?.business_category || (tenant as any)?.category || null,
+          segment: tenant.theme_niche || (tenant.theme_settings as any)?.niche || null,
+          template: profile?.template_id || (tenant.theme_settings as any)?.template || null,
           place_id: (tenant as any)?.place_id || (tenant as any)?.google_place_id || typedProfile?.place_id || typedProfile?.google_place_id || null,
           google_place_id: (tenant as any)?.google_place_id || (tenant as any)?.place_id || typedProfile?.google_place_id || null,
           address: typedProfile?.address || (tenant as any)?.address || null,

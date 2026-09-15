@@ -6,6 +6,7 @@ import {
   MessageCircle,
   Phone,
   Clock,
+  Clock as ClockIcon,
   MapPin,
   Calendar,
   Star,
@@ -57,6 +58,11 @@ export function ModernTemplateView({
   const realRating = profile?.google_rating ?? profile?.rating ?? tenant.google_rating ?? 5.0;
   const realReviewCount =
     profile?.google_reviews_count ?? profile?.review_count ?? tenant.google_reviews_count ?? reviews.length;
+
+  // Identificar segmento do tenant
+  const isTimeBasedNiche = ['barbearia', 'salao', 'estetica', 'salao_beleza', 'beleza'].some(n => 
+    (tenant.category || tenant.segment || tenant.template || tenant.theme_niche || profile?.business_category || profile?.template_id || '').toLowerCase().includes(n)
+  );
 
   const googleMapsUrl =
     profile?.google_maps_url ||
@@ -363,50 +369,54 @@ export function ModernTemplateView({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
-            {services.map((service) => (
-              <div
-                key={service.id}
-                className="rounded-3xl border border-neutral-200/80 dark:border-white/10 bg-white/95 dark:bg-neutral-900/80 backdrop-blur-md p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between space-y-5 group"
-              >
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <h3 className="text-base sm:text-lg font-bold text-neutral-950 dark:text-white tracking-tight leading-snug group-hover:text-neutral-600 dark:group-hover:text-neutral-300 transition-colors">
-                      {service.name}
-                    </h3>
-                    {service.price && Number(service.price) > 0 ? (
-                      <span className="shrink-0 text-sm font-extrabold text-neutral-950 dark:text-white bg-neutral-100 dark:bg-white/10 px-2.5 py-1 rounded-xl">
-                        R$ {Number(service.price).toFixed(2)}
+            {services.map((service) => {
+              // Só exibir o badge de tempo se houver valor preenchido E (for nicho de agendamento OU o lojista definiu explicitamente com show_duration)
+              const shouldShowDuration = service.duration_minutes && (isTimeBasedNiche || service.show_duration);
+
+              return (
+                <div
+                  key={service.id}
+                  className="rounded-3xl border border-neutral-200/80 dark:border-white/10 bg-white/95 dark:bg-neutral-900/80 backdrop-blur-md p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between space-y-5 group"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="text-base sm:text-lg font-bold text-neutral-950 dark:text-white tracking-tight leading-snug group-hover:text-neutral-600 dark:group-hover:text-neutral-300 transition-colors">
+                        {service.name}
+                      </h3>
+                      {/* Badge de Preço */}
+                      <span className="bg-amber-500/10 text-amber-500 text-xs px-2.5 py-1 rounded-full font-medium shrink-0">
+                        {service.price ? `R$ ${Number(service.price).toFixed(2)}` : 'Sob Consulta / Orçamento'}
                       </span>
-                    ) : null}
+                    </div>
+
+                    {service.description && (
+                      <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 line-clamp-3 leading-relaxed">
+                        {service.description}
+                      </p>
+                    )}
                   </div>
 
-                  {service.description && (
-                    <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 line-clamp-3 leading-relaxed">
-                      {service.description}
-                    </p>
-                  )}
-                </div>
+                  <div className={`flex items-center ${shouldShowDuration ? "justify-between" : "justify-end"} pt-4 border-t border-neutral-100 dark:border-white/10`}>
+                    {/* Badge de Tempo (Renderização condicional) */}
+                    {shouldShowDuration && (
+                      <span className="text-xs text-neutral-400 flex items-center gap-1">
+                        <ClockIcon className="w-3.5 h-3.5"/>
+                        {service.duration_minutes} min
+                      </span>
+                    )}
 
-                <div className="flex items-center justify-between pt-4 border-t border-neutral-100 dark:border-white/10">
-                  {service.duration_minutes > 0 ? (
-                    <span className="text-xs text-neutral-500 dark:text-neutral-400 font-medium">
-                      ⏱ {service.duration_minutes} min
-                    </span>
-                  ) : (
-                    <span className="text-xs text-neutral-400 dark:text-neutral-500">Atendimento presencial</span>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => onOpenBooking(service.id)}
-                    className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-xs"
-                    style={{ backgroundColor: brandColor, color: contrastText }}
-                  >
-                    <span>Agendar</span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => onOpenBooking(service.id)}
+                      className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-xs"
+                      style={{ backgroundColor: brandColor, color: contrastText }}
+                    >
+                      <span>Agendar</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}

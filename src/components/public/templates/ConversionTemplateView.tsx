@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   Calendar,
   Clock,
+  Clock as ClockIcon,
   MapPin,
   ExternalLink,
   ArrowRight,
@@ -120,6 +121,11 @@ export function ConversionTemplateView({
   const realRating = profile?.google_rating ?? profile?.rating ?? tenant.google_rating ?? 5.0;
   const realReviewCount =
     profile?.google_reviews_count ?? profile?.review_count ?? tenant.google_reviews_count ?? reviews.length;
+
+  // Identificar segmento do tenant
+  const isTimeBasedNiche = ['barbearia', 'salao', 'estetica', 'salao_beleza', 'beleza'].some(n => 
+    (tenant.category || (tenant as any).segment || (tenant as any).template || tenant.theme_niche || profile?.business_category || profile?.template_id || '').toLowerCase().includes(n)
+  );
 
   const placeId =
     tenant.place_id ||
@@ -311,6 +317,9 @@ export function ConversionTemplateView({
                 `Olá! Gostaria de pedir ou tirar dúvidas sobre o item: "${service.name}".`
               );
 
+              // Só exibir o badge de tempo se houver valor preenchido E (for nicho de agendamento OU o lojista definiu explicitamente com show_duration)
+              const shouldShowDuration = service.duration_minutes && (isTimeBasedNiche || service.show_duration);
+
               return (
                 <div
                   key={service.id}
@@ -324,15 +333,10 @@ export function ConversionTemplateView({
                       </h3>
                       <div className="flex-1 mx-3 border-b-2 border-dotted border-neutral-300 dark:border-neutral-700 min-w-4 self-center" />
                       <div className="shrink-0 text-right">
-                        {service.price && Number(service.price) > 0 ? (
-                          <span className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 font-mono">
-                            R$ {Number(service.price).toFixed(2)}
-                          </span>
-                        ) : (
-                          <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-white/5 px-2.5 py-1 rounded-md">
-                            Sob Consulta
-                          </span>
-                        )}
+                        {/* Badge de Preço */}
+                        <span className="bg-amber-500/10 text-amber-500 text-xs px-2.5 py-1 rounded-full font-medium">
+                          {service.price ? `R$ ${Number(service.price).toFixed(2)}` : 'Sob Consulta / Orçamento'}
+                        </span>
                       </div>
                     </div>
 
@@ -342,9 +346,10 @@ export function ConversionTemplateView({
                       </p>
                     )}
 
-                    {service.duration_minutes > 0 && (
+                    {/* Badge de Tempo (Renderização condicional) */}
+                    {shouldShowDuration && (
                       <div className="flex items-center gap-1.5 text-xs text-neutral-400 dark:text-neutral-500 font-medium pt-1">
-                        <Clock className="h-3.5 w-3.5" />
+                        <ClockIcon className="w-3.5 h-3.5" />
                         <span>Duração: {service.duration_minutes} min</span>
                       </div>
                     )}

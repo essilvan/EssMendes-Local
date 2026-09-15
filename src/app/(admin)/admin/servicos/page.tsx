@@ -32,26 +32,47 @@ export default async function ServicosPage() {
 
   const supabase = await createClient();
 
-  // Busca lista de serviços do tenant
-  const { data: rawServices, error: servicesError } = await supabase
-    .from("services")
-    .select("*")
-    .eq("tenant_id", tenantContext.tenantId)
-    .order("created_at", { ascending: false });
+  // Busca lista de serviços e dados de nicho/categoria do tenant
+  const [servicesRes, tenantRes, profileRes] = await Promise.all([
+    supabase
+      .from("services")
+      .select("*")
+      .eq("tenant_id", tenantContext.tenantId)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("tenants")
+      .select("id, name, slug, theme_niche, theme_settings")
+      .eq("id", tenantContext.tenantId)
+      .maybeSingle(),
+    supabase
+      .from("tenant_profiles")
+      .select("business_category, template_id")
+      .eq("tenant_id", tenantContext.tenantId)
+      .maybeSingle(),
+  ]);
 
-  if (servicesError) {
-    console.error("[ServicosPage] Erro ao buscar serviços:", servicesError);
+  if (servicesRes.error) {
+    console.error("[ServicosPage] Erro ao buscar serviços:", servicesRes.error);
   }
 
-  const services: ServiceItem[] = (rawServices || []).map((s) => ({
+  const services: ServiceItem[] = (servicesRes.data || []).map((s: any) => ({
     id: s.id,
     name: s.name,
     description: s.description,
-    price: Number(s.price),
-    duration_minutes: Number(s.duration_minutes),
+    price: s.price !== null && s.price !== undefined ? Number(s.price) : null,
+    duration_minutes: s.duration_minutes !== null && s.duration_minutes !== undefined && Number(s.duration_minutes) > 0 ? Number(s.duration_minutes) : null,
+    show_duration: Boolean(s.show_duration),
     is_active: Boolean(s.is_active),
     created_at: s.created_at,
   }));
+
+  const tenantInfo = {
+    ...(tenantContext.tenant || {}),
+    category: profileRes.data?.business_category || null,
+    segment: tenantRes.data?.theme_niche || (tenantRes.data?.theme_settings as any)?.niche || null,
+    template: profileRes.data?.template_id || (tenantRes.data?.theme_settings as any)?.template || null,
+    theme_niche: tenantRes.data?.theme_niche || null,
+  };
 
   return (
     <div className="space-y-6">
@@ -70,18 +91,18 @@ export default async function ServicosPage() {
         </p>
       </div>
 
-      {servicesError && (
+      {servicesRes.error && (
         <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-xs text-red-800">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
           <div>
             <p className="font-semibold">Erro ao carregar lista de serviços do banco de dados:</p>
-            <p className="mt-0.5">{servicesError.message}</p>
+            <p className="mt-0.5">{servicesRes.error.message}</p>
           </div>
         </div>
       )}
 
       {/* Gerenciador */}
-      <ServicesManager initialServices={services} />
+      <ServicesManager initialServices={services} tenant={tenantInfo} />
 
     </div>
   );

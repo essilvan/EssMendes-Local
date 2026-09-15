@@ -16,11 +16,15 @@ export const serviceSchema = z.object({
     const num = Number(val);
     return isNaN(num) ? null : num;
   }, z.number().min(0, "O preço não pode ser negativo.").nullable().optional()),
-  durationMinutes: z.coerce
-    .number()
-    .int("A duração deve ser um número inteiro de minutos.")
-    .min(5, "A duração mínima é de 5 minutos.")
-    .max(720, "A duração máxima é de 720 minutos (12 horas)."),
+  durationMinutes: z.preprocess((val) => {
+    if (val === "" || val === null || val === undefined || val === "0" || val === 0) return null;
+    const num = Number(val);
+    return isNaN(num) || num <= 0 ? null : num;
+  }, z.number().int("A duração deve ser um número inteiro de minutos.").min(0, "A duração não pode ser negativa.").max(720, "A duração máxima é de 720 minutos (12 horas).").nullable().optional()),
+  showDuration: z.preprocess((val) => {
+    if (typeof val === "boolean") return val;
+    return val === "true" || val === "on";
+  }, z.boolean().optional().default(false)),
   isActive: z.boolean().default(true),
 });
 

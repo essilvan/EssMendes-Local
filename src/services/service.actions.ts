@@ -22,11 +22,14 @@ export async function createServiceAction(
   const rawPrice = formData.get("price")?.toString().trim();
   const parsedPrice = rawPrice && rawPrice !== "" ? rawPrice.replace(",", ".") : null;
 
+  const rawDuration = formData.get("durationMinutes")?.toString().trim();
+
   const rawData = {
     name: formData.get("name")?.toString().trim() || "",
     description: formData.get("description")?.toString().trim() || "",
     price: parsedPrice,
-    durationMinutes: formData.get("durationMinutes")?.toString() || 0,
+    durationMinutes: rawDuration && rawDuration !== "" ? rawDuration : null,
+    showDuration: formData.get("showDuration") === "true" || formData.get("showDuration") === "on",
     isActive: formData.get("isActive") === "true" || formData.get("isActive") === "on",
   };
 
@@ -61,33 +64,48 @@ export async function createServiceAction(
     };
   }
 
-  const { name, description, price, durationMinutes, isActive } = validation.data;
+  const { name, description, price, durationMinutes, showDuration, isActive } = validation.data;
 
-  // Inserção com tenant_id garantido (com fallback para 0.00 se banco legado tiver not null)
+  // Inserção com tenant_id garantido e fallbacks para colunas do banco
+  let insertPayload: Record<string, any> = {
+    tenant_id: tenantContext.tenantId,
+    name,
+    description: description || null,
+    price: price ?? null,
+    duration_minutes: durationMinutes ?? null,
+    show_duration: Boolean(showDuration),
+    is_active: isActive,
+  };
+
   let insertRes = await supabase
     .from("services")
-    .insert({
-      tenant_id: tenantContext.tenantId,
-      name,
-      description: description || null,
-      price: price ?? null,
-      duration_minutes: durationMinutes,
-      is_active: isActive,
-    })
+    .insert(insertPayload)
     .select()
     .maybeSingle();
 
-  if (insertRes.error && insertRes.error.message.includes("price") && insertRes.error.message.includes("not-null")) {
+  if (insertRes.error && insertRes.error.message.includes("show_duration")) {
+    delete insertPayload.show_duration;
     insertRes = await supabase
       .from("services")
-      .insert({
-        tenant_id: tenantContext.tenantId,
-        name,
-        description: description || null,
-        price: 0.00,
-        duration_minutes: durationMinutes,
-        is_active: isActive,
-      })
+      .insert(insertPayload)
+      .select()
+      .maybeSingle();
+  }
+
+  if (insertRes.error && insertRes.error.message.includes("duration_minutes") && insertRes.error.message.includes("not-null")) {
+    insertPayload.duration_minutes = 0;
+    insertRes = await supabase
+      .from("services")
+      .insert(insertPayload)
+      .select()
+      .maybeSingle();
+  }
+
+  if (insertRes.error && insertRes.error.message.includes("price") && insertRes.error.message.includes("not-null")) {
+    insertPayload.price = 0.00;
+    insertRes = await supabase
+      .from("services")
+      .insert(insertPayload)
       .select()
       .maybeSingle();
   }
@@ -127,12 +145,15 @@ export async function updateServiceAction(
   const rawPrice = formData.get("price")?.toString().trim();
   const parsedPrice = rawPrice && rawPrice !== "" ? rawPrice.replace(",", ".") : null;
 
+  const rawDuration = formData.get("durationMinutes")?.toString().trim();
+
   const rawData = {
     id,
     name: formData.get("name")?.toString().trim() || "",
     description: formData.get("description")?.toString().trim() || "",
     price: parsedPrice,
-    durationMinutes: formData.get("durationMinutes")?.toString() || 0,
+    durationMinutes: rawDuration && rawDuration !== "" ? rawDuration : null,
+    showDuration: formData.get("showDuration") === "true" || formData.get("showDuration") === "on",
     isActive: formData.get("isActive") === "true" || formData.get("isActive") === "on",
   };
 
@@ -150,36 +171,55 @@ export async function updateServiceAction(
     return { error: tenantError || "Nenhum estabelecimento associado." };
   }
 
-  const { name, description, price, durationMinutes, isActive } = validation.data;
+  const { name, description, price, durationMinutes, showDuration, isActive } = validation.data;
   const supabase = await createClient();
 
   // Atualização restrita pelo ID do serviço E pelo tenant_id
+  let updatePayload: Record<string, any> = {
+    name,
+    description: description || null,
+    price: price ?? null,
+    duration_minutes: durationMinutes ?? null,
+    show_duration: Boolean(showDuration),
+    is_active: isActive,
+    updated_at: new Date().toISOString(),
+  };
+
   let updateRes = await supabase
     .from("services")
-    .update({
-      name,
-      description: description || null,
-      price: price ?? null,
-      duration_minutes: durationMinutes,
-      is_active: isActive,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updatePayload)
     .eq("id", id)
     .eq("tenant_id", tenantContext.tenantId)
     .select()
     .maybeSingle();
 
-  if (updateRes.error && updateRes.error.message.includes("price") && updateRes.error.message.includes("not-null")) {
+  if (updateRes.error && updateRes.error.message.includes("show_duration")) {
+    delete updatePayload.show_duration;
     updateRes = await supabase
       .from("services")
-      .update({
-        name,
-        description: description || null,
-        price: 0.00,
-        duration_minutes: durationMinutes,
-        is_active: isActive,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
+      .eq("id", id)
+      .eq("tenant_id", tenantContext.tenantId)
+      .select()
+      .maybeSingle();
+  }
+
+  if (updateRes.error && updateRes.error.message.includes("duration_minutes") && updateRes.error.message.includes("not-null")) {
+    updatePayload.duration_minutes = 0;
+    updateRes = await supabase
+      .from("services")
+      .update(updatePayload)
+      .eq("id", id)
+      .eq("tenant_id", tenantContext.tenantId)
+      .select()
+      .maybeSingle();
+  }
+
+  if (updateRes.error && updateRes.error.message.includes("price") && updateRes.error.message.includes("not-null")) {
+    updatePayload.price = 0.00;
+    updateRes = await supabase
+      .from("services")
+      .update(updatePayload)
       .eq("id", id)
       .eq("tenant_id", tenantContext.tenantId)
       .select()

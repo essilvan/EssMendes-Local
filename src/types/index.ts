@@ -201,7 +201,8 @@ export interface Service {
   name: string;
   description?: string | null;
   price: number | null;
-  duration_minutes: number;
+  duration_minutes: number | null;
+  show_duration?: boolean;
   is_active: boolean;
   image_url?: string | null;
   created_at: string;

@@ -102,7 +102,7 @@ export function PublicBookingFlow({
     getAvailableSlotsAction({
       tenantId,
       date: selectedDate,
-      totalDuration: selectedService.duration_minutes,
+      totalDuration: selectedService.duration_minutes || 30,
     })
       .then((res) => {
         if (!isMounted) return;
@@ -187,7 +187,7 @@ export function PublicBookingFlow({
         serviceId: selectedService.id,
         serviceName: selectedService.name,
         price: selectedService.price ? Number(selectedService.price) : 0,
-        durationMinutes: selectedService.duration_minutes,
+        durationMinutes: selectedService.duration_minutes || 30,
         date: selectedDate,
         time: selectedTime,
         customerName: customerName.trim(),
@@ -373,10 +373,12 @@ export function PublicBookingFlow({
                       >
                         <div className="space-y-0.5">
                           <p className="text-xs font-bold text-slate-900">{service.name}</p>
-                          <p className="text-[11px] text-slate-500 flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {service.duration_minutes} min
-                          </p>
+                          {service.duration_minutes && Number(service.duration_minutes) > 0 ? (
+                            <p className="text-[11px] text-slate-500 flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {service.duration_minutes} min
+                            </p>
+                          ) : null}
                         </div>
                         {service.price !== null && Number(service.price) > 0 ? (
                           <span
