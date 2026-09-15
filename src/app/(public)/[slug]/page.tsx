@@ -397,7 +397,80 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
   const schemaLng = (tenant as any).longitude ?? typedProfile?.longitude ?? null;
   const schemaType = (tenant as any).schema_type || "AutoRepair";
 
-  const standardizedSchemaJsonLd = {
+  const offerCatalogItems = [
+    ...activeServices.map((s) => {
+      const hasNumericPrice =
+        s.price !== null &&
+        s.price !== undefined &&
+        !isNaN(Number(s.price)) &&
+        Number(s.price) > 0;
+
+      return {
+        "@type": "Offer",
+        "itemOffered": {
+          "@type": "Service",
+          "name": s.name,
+          "description": s.description || `Serviço prestado por ${tenant.name}`,
+        },
+        ...(hasNumericPrice
+          ? {
+              "price": Number(s.price).toFixed(2),
+              "priceCurrency": "BRL",
+            }
+          : {
+              "priceSpecification": {
+                "@type": "PriceSpecification",
+                "priceCurrency": "BRL",
+                "description": "Sob Consulta / Orçamento",
+              },
+            }),
+      };
+    }),
+    ...products.map((p) => {
+      const currentPrice =
+        p.promotional_price && Number(p.promotional_price) > 0
+          ? p.promotional_price
+          : p.price;
+      const hasNumericPrice =
+        currentPrice !== null &&
+        currentPrice !== undefined &&
+        !isNaN(Number(currentPrice)) &&
+        Number(currentPrice) > 0;
+      const productImage = p.image_url || schemaImage || undefined;
+
+      // Itens sem preço ou com "Sob Consulta" são tipados como Service para evitar o validador rígido de e-commerce do Google
+      if (!hasNumericPrice) {
+        return {
+          "@type": "Offer",
+          "itemOffered": {
+            "@type": "Service",
+            "name": p.name,
+            "description": p.description || `Item disponível em ${tenant.name}`,
+          },
+          "priceSpecification": {
+            "@type": "PriceSpecification",
+            "priceCurrency": "BRL",
+            "description": "Sob Consulta / Orçamento",
+          },
+        };
+      }
+
+      // Caso tenha preço numérico fixo e imagem, estrutura conforme exigido pelo Google
+      return {
+        "@type": "Offer",
+        "price": Number(currentPrice).toFixed(2),
+        "priceCurrency": "BRL",
+        "itemOffered": {
+          "@type": "Product",
+          "name": p.name,
+          "description": p.description || `${p.name} disponível em ${tenant.name}`,
+          ...(productImage ? { "image": productImage } : {}),
+        },
+      };
+    }),
+  ];
+
+  const standardizedSchemaJsonLd: Record<string, any> = {
     "@context": "https://schema.org",
     "@type": schemaType,
     name: tenant.name,
@@ -415,32 +488,15 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
       latitude: schemaLat,
       longitude: schemaLng,
     },
-    hasOfferCatalog: {
-      "@type": "OfferCatalog",
-      name: "Serviços e Produtos",
-      itemListElement: [
-        ...activeServices.map((s) => ({
-          "@type": "Offer",
-          itemOffered: {
-            "@type": "Service",
-            name: s.name,
-            description: s.description || undefined,
-            price: s.price,
-            priceCurrency: "BRL",
+    ...(offerCatalogItems.length > 0
+      ? {
+          hasOfferCatalog: {
+            "@type": "OfferCatalog",
+            name: "Serviços e Produtos",
+            itemListElement: offerCatalogItems,
           },
-        })),
-        ...products.map((p) => ({
-          "@type": "Offer",
-          itemOffered: {
-            "@type": "Product",
-            name: p.name,
-            description: p.description || undefined,
-            price: p.price,
-            priceCurrency: "BRL",
-          },
-        })),
-      ],
-    },
+        }
+      : {}),
   };
 
   // Schemas Estruturados para Artigos e Posts de SEO Local (Schema.org BlogPosting)
