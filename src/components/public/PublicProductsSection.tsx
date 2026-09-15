@@ -4,8 +4,9 @@ import React from "react";
 import type { TenantProduct } from "@/types";
 import type { NicheThemeConfig } from "@/config/tenant-themes";
 import { NICHE_THEMES } from "@/config/tenant-themes";
-import { ShoppingBag, MessageCircle, Tag, Star, ArrowRight } from "lucide-react";
+import { ShoppingBag, MessageCircle, Tag, Star, ArrowRight, Eye } from "lucide-react";
 import { sanitizePhoneNumber } from "@/utils/phone";
+import { ItemDetailModal, type ItemDetailData } from "./ItemDetailModal";
 
 interface PublicProductsSectionProps {
   products: TenantProduct[];
@@ -20,6 +21,7 @@ export function PublicProductsSection({
   phoneWhatsapp,
   theme,
 }: PublicProductsSectionProps) {
+  const [selectedProduct, setSelectedProduct] = React.useState<ItemDetailData | null>(null);
   const activeProducts = products.filter((p) => p.is_available);
 
   if (activeProducts.length === 0) {
@@ -77,7 +79,18 @@ export function PublicProductsSection({
           return (
             <div
               key={p.id}
-              className={`group flex flex-col justify-between overflow-hidden rounded-3xl border border-neutral-200/80 dark:border-white/10 ${currentTheme.bgCard} shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300`}
+              onClick={() =>
+                setSelectedProduct({
+                  title: p.name,
+                  description: p.description,
+                  price: p.price,
+                  promotional_price: p.promotional_price,
+                  image_url: p.image_url,
+                  category: p.category,
+                  isService: false,
+                })
+              }
+              className={`group flex flex-col justify-between overflow-hidden rounded-3xl border border-neutral-200/80 dark:border-white/10 ${currentTheme.bgCard} shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer`}
             >
               <div>
                 {/* Imagem do Produto */}
@@ -143,6 +156,11 @@ export function PublicProductsSection({
                       </span>
                     )}
                   </div>
+
+                  <div className="pt-1 flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 group-hover:underline">
+                    <Eye className="h-3 w-3" />
+                    <span>Ver detalhes completos</span>
+                  </div>
                 </div>
               </div>
 
@@ -152,6 +170,7 @@ export function PublicProductsSection({
                   href={orderUrl}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
                   className={`flex items-center justify-center gap-2 w-full rounded-2xl ${currentTheme.ctaButtonClass} px-4 py-3 text-xs font-bold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-sm`}
                 >
                   <MessageCircle className="h-4 w-4" />
@@ -162,6 +181,15 @@ export function PublicProductsSection({
           );
         })}
       </div>
+
+      {/* Modal de Detalhes Completos do Produto */}
+      <ItemDetailModal
+        isOpen={Boolean(selectedProduct)}
+        onClose={() => setSelectedProduct(null)}
+        item={selectedProduct}
+        phone={phoneWhatsapp}
+        tenantName={tenantName}
+      />
     </section>
   );
 }

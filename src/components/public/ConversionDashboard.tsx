@@ -15,9 +15,11 @@ import {
   Check,
   ArrowRight,
   MessageCircle,
+  Eye,
 } from "lucide-react";
 import type { NicheThemeConfig } from "@/config/tenant-themes";
 import { NICHE_THEMES } from "@/config/tenant-themes";
+import { ItemDetailModal, type ItemDetailData } from "./ItemDetailModal";
 
 interface ConversionDashboardProps {
   tenant: {
@@ -55,6 +57,7 @@ export function ConversionDashboard({
   onOpenBookingModal,
 }: ConversionDashboardProps) {
   const [copiedCoupon, setCopiedCoupon] = React.useState(false);
+  const [selectedItem, setSelectedItem] = React.useState<ItemDetailData | null>(null);
 
   // Identifica se há algum cupom real ativo (via prop ou post promocional)
   const promoPostWithCoupon = posts.find(
@@ -154,9 +157,19 @@ export function ConversionDashboard({
               return (
                 <div
                   key={service.id}
+                  onClick={() =>
+                    setSelectedItem({
+                      title: service.name,
+                      description: service.description,
+                      price: service.price,
+                      duration_minutes: service.duration_minutes,
+                      show_duration: service.show_duration,
+                      isService: true,
+                    })
+                  }
                   className={`group rounded-2xl border border-neutral-200/80 dark:border-white/10 ${
                     currentTheme.isDark ? 'bg-neutral-900/80 hover:bg-neutral-900' : 'bg-white/95 hover:bg-white'
-                  } p-5 space-y-4 transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5`}
+                  } p-5 space-y-4 transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 cursor-pointer`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-1">
@@ -168,6 +181,10 @@ export function ConversionDashboard({
                           {service.description}
                         </p>
                       )}
+                      <div className="pt-1 flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 group-hover:underline">
+                        <Eye className="h-3 w-3" />
+                        <span>Ver detalhes</span>
+                      </div>
                     </div>
 
                     {/* Badge de Preço */}
@@ -192,6 +209,7 @@ export function ConversionDashboard({
                           href={generateWhatsAppUrl(phone, whatsappOrderText)}
                           target="_blank"
                           rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
                           className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-xs ${
                             !hasPrice
                               ? "bg-emerald-600 hover:bg-emerald-500 text-white"
@@ -211,7 +229,10 @@ export function ConversionDashboard({
                       {/* Botão de Agendamento com CTA do tema */}
                       <button
                         type="button"
-                        onClick={() => onOpenBookingModal(service.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenBookingModal(service.id);
+                        }}
                         className={`inline-flex items-center gap-1.5 rounded-xl ${
                           hasPrice
                             ? currentTheme.ctaButtonClass
@@ -231,6 +252,16 @@ export function ConversionDashboard({
           </div>
         )}
       </div>
+
+      {/* Modal de Detalhes do Serviço */}
+      <ItemDetailModal
+        isOpen={Boolean(selectedItem)}
+        onClose={() => setSelectedItem(null)}
+        item={selectedItem}
+        phone={profile?.phone_whatsapp || profile?.phone}
+        tenantName={tenant.name}
+        themeNiche={tenant.theme_niche || tenant.category}
+      />
 
       {/* =========================================================================
           COLUNA 2: Antes & Depois + Banner de Cupom Real (se houver dados reais)

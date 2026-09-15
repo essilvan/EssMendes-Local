@@ -4,25 +4,27 @@ import { createClient } from '@/lib/supabase/server';
 export const dynamic = 'force-dynamic';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://local.essmendes.com.br';
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.essmendes.com.br';
 
   try {
     const supabase = await createClient();
     const { data: tenants, error } = await supabase
       .from('tenants')
-      .select('slug, updated_at')
+      .select('slug, updated_at, created_at')
       .order('updated_at', { ascending: false });
 
     if (error) {
       console.error('[sitemap] Erro ao buscar tenants no Supabase:', error);
     }
 
-    const tenantEntries: MetadataRoute.Sitemap = (tenants || []).map((t) => ({
-      url: `${baseUrl}/${t.slug}`,
-      lastModified: t.updated_at ? new Date(t.updated_at) : new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    }));
+    const tenantEntries: MetadataRoute.Sitemap = (tenants || [])
+      .filter((t) => Boolean(t.slug))
+      .map((t) => ({
+        url: `${baseUrl}/${t.slug}`,
+        lastModified: t.updated_at ? new Date(t.updated_at) : new Date(t.created_at || Date.now()),
+        changeFrequency: 'weekly',
+        priority: 0.8,
+      }));
 
     return [
       {

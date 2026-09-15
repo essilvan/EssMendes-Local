@@ -17,6 +17,7 @@ import {
   ArrowRight,
   CheckCircle2,
   Camera,
+  Eye,
 } from "lucide-react";
 import type { TemplateViewProps } from "./ConversionTemplateView";
 import { generateWhatsAppUrl, sanitizePhoneNumber, formatBrazilianPhone } from "@/utils/phone";
@@ -26,6 +27,7 @@ import { PublicProductsSection } from "../PublicProductsSection";
 import { PlacePhotoGallery } from "../PlacePhotoGallery";
 import { MapLocationCard } from "../MapLocationCard";
 import { GoogleReviewsCard } from "../GoogleReviewsCard";
+import { ItemDetailModal, type ItemDetailData } from "../ItemDetailModal";
 
 export function ModernTemplateView({
   tenant,
@@ -44,6 +46,7 @@ export function ModernTemplateView({
   galleryPhotos: customGalleryPhotos,
   onOpenBooking,
 }: TemplateViewProps) {
+  const [selectedDetailItem, setSelectedDetailItem] = React.useState<ItemDetailData | null>(null);
   const contrastText = getContrastTextColor(brandColor);
   const rawPhone = profile?.phone_whatsapp || profile?.phone || "";
   const cleanPhone = sanitizePhoneNumber(rawPhone);
@@ -376,7 +379,17 @@ export function ModernTemplateView({
               return (
                 <div
                   key={service.id}
-                  className="rounded-3xl border border-neutral-200/80 dark:border-white/10 bg-white/95 dark:bg-neutral-900/80 backdrop-blur-md p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between space-y-5 group"
+                  onClick={() =>
+                    setSelectedDetailItem({
+                      title: service.name,
+                      description: service.description,
+                      price: service.price,
+                      duration_minutes: service.duration_minutes,
+                      show_duration: service.show_duration,
+                      isService: true,
+                    })
+                  }
+                  className="rounded-3xl border border-neutral-200/80 dark:border-white/10 bg-white/95 dark:bg-neutral-900/80 backdrop-blur-md p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between space-y-5 group cursor-pointer"
                 >
                   <div className="space-y-3">
                     <div className="flex items-start justify-between gap-3">
@@ -390,10 +403,15 @@ export function ModernTemplateView({
                     </div>
 
                     {service.description && (
-                      <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 line-clamp-3 leading-relaxed">
+                      <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 line-clamp-2 leading-relaxed">
                         {service.description}
                       </p>
                     )}
+
+                    <div className="pt-1 flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 group-hover:underline">
+                      <Eye className="h-3 w-3" />
+                      <span>Ver detalhes</span>
+                    </div>
                   </div>
 
                   <div className={`flex items-center ${shouldShowDuration ? "justify-between" : "justify-end"} pt-4 border-t border-neutral-100 dark:border-white/10`}>
@@ -407,7 +425,10 @@ export function ModernTemplateView({
 
                     <button
                       type="button"
-                      onClick={() => onOpenBooking(service.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenBooking(service.id);
+                      }}
                       className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-xs"
                       style={{ backgroundColor: brandColor, color: contrastText }}
                     >
@@ -418,6 +439,16 @@ export function ModernTemplateView({
               );
             })}
           </div>
+
+          {/* Modal de Detalhes do Serviço */}
+          <ItemDetailModal
+            isOpen={Boolean(selectedDetailItem)}
+            onClose={() => setSelectedDetailItem(null)}
+            item={selectedDetailItem}
+            phone={rawPhone}
+            tenantName={tenant.name}
+            themeNiche={tenant.theme_niche || tenant.category}
+          />
         </section>
       )}
 

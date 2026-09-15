@@ -14,10 +14,12 @@ import {
   Sparkles,
   ArrowRight,
   CheckCircle2,
+  Eye,
 } from "lucide-react";
 
 import type { NicheThemeConfig } from "@/config/tenant-themes";
 import { NICHE_THEMES } from "@/config/tenant-themes";
+import { ItemDetailModal, type ItemDetailData } from "./ItemDetailModal";
 
 interface PublicServicesViewProps {
   tenant: {
@@ -50,6 +52,7 @@ export function PublicServicesView({
   const currentTheme = theme || NICHE_THEMES.retail_default;
   const [internalIsOpen, setInternalIsOpen] = useState<boolean>(false);
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
+  const [selectedDetailItem, setSelectedDetailItem] = useState<ItemDetailData | null>(null);
 
   const isControlled = typeof externalIsOpen !== "undefined";
   const isOpen = isControlled ? externalIsOpen : internalIsOpen;
@@ -141,7 +144,17 @@ export function PublicServicesView({
               return (
                 <div
                   key={service.id}
-                  className="group flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-slate-50/50 p-4 sm:p-5 hover:border-slate-300 hover:bg-slate-50/90 transition shadow-2xs"
+                  onClick={() =>
+                    setSelectedDetailItem({
+                      title: service.name,
+                      description: service.description,
+                      price: service.price,
+                      duration_minutes: service.duration_minutes,
+                      show_duration: service.show_duration,
+                      isService: true,
+                    })
+                  }
+                  className="group flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-slate-50/50 p-4 sm:p-5 hover:border-slate-300 hover:bg-slate-50/90 transition shadow-2xs cursor-pointer"
                 >
                   {/* Informações do Serviço */}
                   <div className="space-y-1 sm:max-w-[62%]">
@@ -152,10 +165,15 @@ export function PublicServicesView({
                     </div>
 
                     {service.description && (
-                      <p className="text-xs text-slate-600 leading-relaxed font-normal">
+                      <p className="text-xs text-slate-600 leading-relaxed font-normal line-clamp-2">
                         {service.description}
                       </p>
                     )}
+
+                    <div className="pt-1 flex items-center gap-1 text-[11px] font-semibold text-emerald-600 group-hover:underline">
+                      <Eye className="h-3 w-3" />
+                      <span>Ver detalhes</span>
+                    </div>
 
                     {/* Badge de Tempo (Renderização condicional) */}
                     {shouldShowDuration && (
@@ -184,7 +202,10 @@ export function PublicServicesView({
                         )}
                         target="_blank"
                         rel="noopener noreferrer"
-                        onClick={handleWhatsAppClick}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleWhatsAppClick();
+                        }}
                         className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition shadow-2xs ${
                           service.price === null || Number(service.price) <= 0
                             ? "bg-emerald-600 hover:bg-emerald-700 text-white"
@@ -203,8 +224,11 @@ export function PublicServicesView({
 
                     <button
                       type="button"
-                      onClick={() => handleOpenBooking(service.id)}
-                      className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition hover:opacity-90 active:scale-95 shadow-xs ${
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenBooking(service.id);
+                      }}
+                      className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition hover:opacity-90 active:scale-95 shadow-xs cursor-pointer ${
                         service.price !== null && Number(service.price) > 0
                           ? "text-white"
                           : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
@@ -226,6 +250,16 @@ export function PublicServicesView({
           </div>
         )}
       </div>
+
+      {/* Modal de Detalhes do Serviço */}
+      <ItemDetailModal
+        isOpen={Boolean(selectedDetailItem)}
+        onClose={() => setSelectedDetailItem(null)}
+        item={selectedDetailItem}
+        phone={profile?.phone_whatsapp || profile?.phone}
+        tenantName={tenant.name}
+        themeNiche={tenant.theme_niche || tenant.category}
+      />
 
       {/* Modal de Agendamento */}
       <PublicBookingFlow

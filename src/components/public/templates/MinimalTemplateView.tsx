@@ -13,12 +13,14 @@ import {
   Star,
   Check,
   Camera,
+  Eye,
 } from "lucide-react";
 import type { TemplateViewProps } from "./ConversionTemplateView";
 import { generateWhatsAppUrl, sanitizePhoneNumber, formatBrazilianPhone } from "@/utils/phone";
 import { getContrastTextColor } from "@/utils/color";
 import { getUnifiedEstablishmentPhotos } from "@/utils/establishment-photos";
 import { PlacePhotoGallery } from "../PlacePhotoGallery";
+import { ItemDetailModal, type ItemDetailData } from "../ItemDetailModal";
 
 export function MinimalTemplateView({
   tenant,
@@ -37,6 +39,7 @@ export function MinimalTemplateView({
   galleryPhotos: customGalleryPhotos,
   onOpenBooking,
 }: TemplateViewProps) {
+  const [selectedDetailItem, setSelectedDetailItem] = React.useState<ItemDetailData | null>(null);
   const contrastText = getContrastTextColor(brandColor);
   const rawPhone = profile?.phone_whatsapp || profile?.phone || "";
   const cleanPhone = sanitizePhoneNumber(rawPhone);
@@ -173,7 +176,17 @@ export function MinimalTemplateView({
               return (
                 <div
                   key={service.id}
-                  className="py-6 flex flex-col sm:flex-row sm:items-baseline justify-between gap-4 group transition-colors"
+                  onClick={() =>
+                    setSelectedDetailItem({
+                      title: service.name,
+                      description: service.description,
+                      price: service.price,
+                      duration_minutes: service.duration_minutes,
+                      show_duration: service.show_duration,
+                      isService: true,
+                    })
+                  }
+                  className="py-6 flex flex-col sm:flex-row sm:items-baseline justify-between gap-4 group transition-colors cursor-pointer"
                 >
                   <div className="space-y-1.5 max-w-xl">
                     <div className="flex items-baseline gap-3">
@@ -189,10 +202,14 @@ export function MinimalTemplateView({
                       )}
                     </div>
                     {service.description && (
-                      <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">
+                      <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed line-clamp-2">
                         {service.description}
                       </p>
                     )}
+                    <div className="pt-1 flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 group-hover:underline">
+                      <Eye className="h-3 w-3" />
+                      <span>Ver detalhes</span>
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-5 shrink-0 sm:self-center">
@@ -205,7 +222,10 @@ export function MinimalTemplateView({
 
                     <button
                       type="button"
-                      onClick={() => onOpenBooking(service.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenBooking(service.id);
+                      }}
                       className="text-xs font-medium px-4 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 hover:border-neutral-900 dark:hover:border-white text-neutral-900 dark:text-white hover:bg-neutral-950 hover:text-white dark:hover:bg-white dark:hover:text-neutral-950 transition-colors duration-200 cursor-pointer"
                     >
                       Agendar
@@ -234,17 +254,32 @@ export function MinimalTemplateView({
             {products.map((prod) => (
               <div
                 key={prod.id}
-                className="py-5 flex items-center justify-between gap-4"
+                onClick={() =>
+                  setSelectedDetailItem({
+                    title: prod.name,
+                    description: prod.description,
+                    price: prod.price,
+                    promotional_price: prod.promotional_price,
+                    image_url: prod.image_url,
+                    category: prod.category,
+                    isService: false,
+                  })
+                }
+                className="py-5 flex items-center justify-between gap-4 cursor-pointer group"
               >
                 <div>
-                  <h3 className="text-sm sm:text-base font-medium text-neutral-900 dark:text-white">
+                  <h3 className="text-sm sm:text-base font-medium text-neutral-900 dark:text-white group-hover:text-neutral-600 dark:group-hover:text-neutral-300 transition-colors">
                     {prod.name}
                   </h3>
                   {prod.description && (
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-1">
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-2">
                       {prod.description}
                     </p>
                   )}
+                  <div className="pt-0.5 flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 group-hover:underline">
+                    <Eye className="h-3 w-3" />
+                    <span>Ver detalhes</span>
+                  </div>
                 </div>
                 <div className="flex items-center gap-4 shrink-0">
                   <span className="text-sm sm:text-base font-mono font-bold text-neutral-950 dark:text-white">
@@ -258,6 +293,7 @@ export function MinimalTemplateView({
                     )}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
                     className="text-xs font-medium px-4 py-1.5 rounded-xl border border-neutral-300 dark:border-neutral-700 hover:border-neutral-900 dark:hover:border-white text-neutral-900 dark:text-white hover:bg-neutral-950 hover:text-white dark:hover:bg-white dark:hover:text-neutral-950 transition-colors duration-200"
                   >
                     Pedir
@@ -268,6 +304,16 @@ export function MinimalTemplateView({
           </div>
         </section>
       )}
+
+      {/* Modal de Detalhes de Produtos/Serviços */}
+      <ItemDetailModal
+        isOpen={Boolean(selectedDetailItem)}
+        onClose={() => setSelectedDetailItem(null)}
+        item={selectedDetailItem}
+        phone={rawPhone}
+        tenantName={tenant.name}
+        themeNiche={tenant.theme_niche || tenant.category}
+      />
 
       {/* 3.1 SEÇÃO GLOBAL DE FOTOS DO ESTABELECIMENTO (AMBIENTE & ESTRUTURA COM LIGHTBOX) */}
       {effectiveGalleryPhotos.length > 0 && (

@@ -23,12 +23,13 @@ export async function generateMetadata({
   params,
 }: PublicPageProps): Promise<Metadata> {
   const { slug } = await params;
+  const cleanSlug = typeof slug === "string" ? slug.trim() : slug;
   const supabase = await createClient();
 
   const { data: tenant } = await supabase
     .from("tenants")
-    .select("id, name, slug")
-    .eq("slug", slug)
+    .select("id, name, slug, city, cover_image_url")
+    .eq("slug", cleanSlug)
     .maybeSingle();
 
   if (!tenant) {
@@ -38,27 +39,37 @@ export async function generateMetadata({
     };
   }
 
-  const { data: profile } = await supabase
-    .from("tenant_profiles")
-    .select("name, description, editorial_summary, logo_url, address, phone_whatsapp, phone, business_category, place_photos")
-    .eq("tenant_id", tenant.id)
-    .maybeSingle();
+  const [profileRes, servicesRes, rawPostsRes] = await Promise.all([
+    supabase
+      .from("tenant_profiles")
+      .select("name, description, editorial_summary, logo_url, address, phone_whatsapp, phone, business_category, place_photos, cover_image_url")
+      .eq("tenant_id", tenant.id)
+      .maybeSingle(),
+    supabase
+      .from("services")
+      .select("name")
+      .eq("tenant_id", tenant.id)
+      .eq("is_active", true)
+      .limit(10),
+    supabase
+      .from("tenant_posts")
+      .select("tags, title")
+      .eq("tenant_id", tenant.id)
+      .eq("is_active", true)
+      .limit(5),
+  ]);
 
-  // Busca tags dos posts ativos para enriquecer as palavras-chave de SEO
-  const { data: rawPosts } = await supabase
-    .from("tenant_posts")
-    .select("tags, title")
-    .eq("tenant_id", tenant.id)
-    .eq("is_active", true)
-    .limit(5);
+  const profile = profileRes.data;
+  const services = servicesRes.data || [];
+  const rawPosts = rawPostsRes.data || [];
 
-  const postTags: string[] = (rawPosts || []).flatMap((p) => p.tags || []);
+  const postTags: string[] = rawPosts.flatMap((p) => p.tags || []);
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://local.essmendes.com.br";
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.essmendes.com.br";
   const canonicalUrl = `${baseUrl}/${tenant.slug}`;
 
   // Trata fotos do local para Open Graph
-  let ogImage = profile?.logo_url || null;
+  let ogImage = tenant.cover_image_url || profile?.cover_image_url || profile?.logo_url || null;
   if (!ogImage && profile?.place_photos) {
     if (Array.isArray(profile.place_photos) && profile.place_photos.length > 0) {
       ogImage = profile.place_photos[0];
@@ -72,14 +83,14 @@ export async function generateMetadata({
     }
   }
 
-  const cleanLocation = extractNeighborhoodAndCity(profile?.address);
-  const cleanDescription = sanitizeDescription(profile?.description, profile?.address);
+  const tenantCity = tenant.city || extractNeighborhoodAndCity(profile?.address) || "Sua Região";
+  const title = `${tenant.name} - Serviços e Produtos em ${tenantCity}`;
 
-  const title = `${profile?.name || tenant.name} | Agendamento Online & Catálogo`;
+  const serviceNames = services.slice(0, 4).map((s: any) => s.name).filter(Boolean);
   const description =
-    profile?.editorial_summary ||
-    cleanDescription ||
-    `Conheça os serviços, preços e faça seu agendamento de horário online em ${profile?.name || tenant.name}. Localizado em ${cleanLocation || profile?.address || "Atendimento local"}. WhatsApp: ${profile?.phone_whatsapp || profile?.phone || ""}.`;
+    serviceNames.length > 0
+      ? `Conheça os serviços e produtos de ${tenant.name}: ${serviceNames.join(", ")}.`
+      : `Conheça os serviços e produtos de ${tenant.name}.`;
 
   const ogImages = ogImage
     ? [
@@ -87,20 +98,22 @@ export async function generateMetadata({
           url: ogImage,
           width: 1200,
           height: 630,
-          alt: `Fotos e presença digital de ${profile?.name || tenant.name}`,
+          alt: `Capa e presença digital de ${tenant.name}`,
         },
       ]
     : [];
 
   const dynamicKeywords = Array.from(
     new Set([
+      tenant.name,
       profile?.name || tenant.name,
       profile?.business_category || "",
       "agendamento online",
       "horário marcado",
       "catálogo de serviços",
+      "catálogo de produtos",
       "atendimento local",
-      cleanLocation,
+      tenantCity,
       ...postTags,
     ])
   ).filter(Boolean);
@@ -368,55 +381,66 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
   // Cálculo dinâmico do horário de funcionamento real do estabelecimento
   const businessStatus = getBusinessStatus(cleanOpeningHours);
 
-  // 2.10 Schemas Estruturados Rich Data (Schema.org LocalBusiness + OfferCatalog + BlogPosting)
-  const localBusinessJsonLd: Record<string, any> = {
+  // 2.10 Schema.org JSON-LD Padronizado com LocalBusiness e OfferCatalog Universal
+  const schemaAddress = (tenant as any).address || typedProfile?.address || "";
+  const schemaCity = tenant.city || extractNeighborhoodAndCity(typedProfile?.address) || "";
+  const schemaState = (tenant as any).state || "SP";
+  const schemaPhone = tenant.phone || typedProfile?.phone_whatsapp || typedProfile?.phone || "";
+  const schemaImage =
+    (tenant as any).cover_url ||
+    tenant.cover_image_url ||
+    (tenant as any).logo_url ||
+    typedProfile?.cover_image_url ||
+    typedProfile?.logo_url ||
+    (cleanPlacePhotos.length > 0 ? cleanPlacePhotos[0] : undefined);
+  const schemaLat = (tenant as any).latitude ?? typedProfile?.latitude ?? null;
+  const schemaLng = (tenant as any).longitude ?? typedProfile?.longitude ?? null;
+  const schemaType = (tenant as any).schema_type || "AutoRepair";
+
+  const standardizedSchemaJsonLd = {
     "@context": "https://schema.org",
-    "@type": "LocalBusiness",
-    "@id": canonicalUrl,
-    name: typedProfile?.name || tenant.name,
-    description: typedProfile?.editorial_summary || typedProfile?.description || (typedProfile?.business_category ? `${typedProfile.business_category} - ${tenant.name}` : `Presença profissional e catálogo de serviços de ${tenant.name}.`),
-    url: canonicalUrl,
-    telephone: internationalPhone,
-    image: typedProfile?.logo_url || (cleanPlacePhotos.length > 0 ? cleanPlacePhotos[0] : undefined),
-    priceRange: "R$",
-    address: typedProfile?.address
-      ? {
-          "@type": "PostalAddress",
-          streetAddress: typedProfile.address,
-          addressCountry: "BR",
-        }
-      : undefined,
-    geo: typedProfile?.latitude && typedProfile?.longitude
-      ? {
-          "@type": "GeoCoordinates",
-          latitude: typedProfile.latitude,
-          longitude: typedProfile.longitude,
-        }
-      : undefined,
-    aggregateRating: typedProfile?.google_rating || typedProfile?.rating
-      ? {
-          "@type": "AggregateRating",
-          ratingValue: typedProfile.google_rating || typedProfile.rating,
-          reviewCount: typedProfile.google_reviews_count || typedProfile.review_count || 1,
-        }
-      : undefined,
-    hasOfferCatalog: activeServices.length > 0
-      ? {
-          "@type": "OfferCatalog",
-          name: "Catálogo de Serviços Disponíveis",
-          itemListElement: activeServices.map((srv, idx) => ({
-            "@type": "Offer",
-            itemOffered: {
-              "@type": "Service",
-              name: srv.name,
-              description: srv.description || undefined,
-            },
-            price: srv.price && Number(srv.price) > 0 ? Number(srv.price).toFixed(2) : undefined,
-            priceCurrency: srv.price && Number(srv.price) > 0 ? "BRL" : undefined,
-            position: idx + 1,
-          })),
-        }
-      : undefined,
+    "@type": schemaType,
+    name: tenant.name,
+    image: schemaImage,
+    telephone: schemaPhone,
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: schemaAddress,
+      addressLocality: schemaCity,
+      addressRegion: schemaState,
+      addressCountry: "BR",
+    },
+    geo: {
+      "@type": "GeoCoordinates",
+      latitude: schemaLat,
+      longitude: schemaLng,
+    },
+    hasOfferCatalog: {
+      "@type": "OfferCatalog",
+      name: "Serviços e Produtos",
+      itemListElement: [
+        ...activeServices.map((s) => ({
+          "@type": "Offer",
+          itemOffered: {
+            "@type": "Service",
+            name: s.name,
+            description: s.description || undefined,
+            price: s.price,
+            priceCurrency: "BRL",
+          },
+        })),
+        ...products.map((p) => ({
+          "@type": "Offer",
+          itemOffered: {
+            "@type": "Product",
+            name: p.name,
+            description: p.description || undefined,
+            price: p.price,
+            priceCurrency: "BRL",
+          },
+        })),
+      ],
+    },
   };
 
   // Schemas Estruturados para Artigos e Posts de SEO Local (Schema.org BlogPosting)
@@ -441,29 +465,6 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
     mainEntityOfPage: `${canonicalUrl}#novidades`,
   }));
 
-  // Schemas Estruturados para Catálogo de Produtos Físicos (Schema.org Product + Offer)
-  const productJsonLdList = products.map((prod) => ({
-    "@context": "https://schema.org",
-    "@type": "Product",
-    name: prod.name,
-    description: prod.description || `${prod.name} disponível em ${typedProfile?.name || tenant.name}`,
-    image: prod.image_url || undefined,
-    offers: {
-      "@type": "Offer",
-      price: (prod.promotional_price && prod.promotional_price > 0 ? prod.promotional_price : prod.price).toFixed(2),
-      priceCurrency: "BRL",
-      availability: "https://schema.org/InStock",
-      seller: {
-        "@type": "LocalBusiness",
-        name: typedProfile?.name || tenant.name,
-        address: typedProfile?.address || undefined,
-        telephone: internationalPhone,
-      },
-    },
-  }));
-
-  const allStructuredData = [localBusinessJsonLd, ...articleJsonLdList, ...productJsonLdList];
-
   const templateId = tenant.theme_settings?.template_id || typedProfile?.template_id || "premium";
   const primaryColor = tenant.theme_settings?.primary_color || typedProfile?.primary_color || "#e11d48";
 
@@ -480,11 +481,23 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
       className={`w-full max-w-full overflow-x-hidden ${selectedTemplateClass}`}
       style={{ "--brand-primary": primaryColor } as React.CSSProperties}
     >
-      {/* Injeção JSON-LD para SEO Local, Artigos e Produtos */}
+      {/* Injeção JSON-LD Estruturado para SEO Local (LocalBusiness + OfferCatalog) */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(allStructuredData) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(standardizedSchemaJsonLd),
+        }}
       />
+
+      {/* Injeção JSON-LD para Artigos e Posts de SEO Local (se houver) */}
+      {articleJsonLdList.length > 0 && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(articleJsonLdList),
+          }}
+        />
+      )}
 
       {/* Renderização do Local Business Hub */}
       <PublicTenantHub

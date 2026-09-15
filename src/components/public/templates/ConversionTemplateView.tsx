@@ -19,6 +19,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Navigation,
+  Eye,
 } from "lucide-react";
 import type {
   Service,
@@ -38,6 +39,7 @@ import { GoogleReviewsCard } from "../GoogleReviewsCard";
 import { MapLocationCard } from "../MapLocationCard";
 import { BusinessAttributes } from "../BusinessAttributes";
 import { AboutBusinessSection } from "../AboutBusinessSection";
+import { ItemDetailModal, type ItemDetailData } from "../ItemDetailModal";
 
 export interface TemplateViewProps {
   tenant: {
@@ -101,6 +103,7 @@ export function ConversionTemplateView({
 }: TemplateViewProps) {
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
+  const [selectedDetailItem, setSelectedDetailItem] = useState<ItemDetailData | null>(null);
 
   const rawPhone = profile?.phone_whatsapp || profile?.phone || "";
   const cleanPhone = sanitizePhoneNumber(rawPhone);
@@ -323,7 +326,17 @@ export function ConversionTemplateView({
               return (
                 <div
                   key={service.id}
-                  className="rounded-2xl border border-neutral-200/80 dark:border-white/10 bg-white/95 dark:bg-neutral-900/80 backdrop-blur-md p-5 sm:p-6 shadow-xs hover:shadow-md transition-all duration-300 flex flex-col justify-between group"
+                  onClick={() =>
+                    setSelectedDetailItem({
+                      title: service.name,
+                      description: service.description,
+                      price: service.price,
+                      duration_minutes: service.duration_minutes,
+                      show_duration: service.show_duration,
+                      isService: true,
+                    })
+                  }
+                  className="rounded-2xl border border-neutral-200/80 dark:border-white/10 bg-white/95 dark:bg-neutral-900/80 backdrop-blur-md p-5 sm:p-6 shadow-xs hover:shadow-md transition-all duration-300 flex flex-col justify-between group cursor-pointer"
                 >
                   <div className="space-y-2">
                     {/* Linha com Nome, Linha Pontilhada e Preço */}
@@ -341,10 +354,15 @@ export function ConversionTemplateView({
                     </div>
 
                     {service.description && (
-                      <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                      <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed line-clamp-2">
                         {service.description}
                       </p>
                     )}
+
+                    <div className="pt-0.5 flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 group-hover:underline">
+                      <Eye className="h-3 w-3" />
+                      <span>Ver detalhes</span>
+                    </div>
 
                     {/* Badge de Tempo (Renderização condicional) */}
                     {shouldShowDuration && (
@@ -361,6 +379,7 @@ export function ConversionTemplateView({
                       href={serviceWhatsappUrl}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
                       className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-2 px-3.5 shadow-sm shadow-emerald-600/15 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
                     >
                       <MessageCircle className="h-3.5 w-3.5 fill-white text-emerald-600 shrink-0" />
@@ -369,7 +388,10 @@ export function ConversionTemplateView({
 
                     <button
                       type="button"
-                      onClick={() => onOpenBooking(service.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenBooking(service.id);
+                      }}
                       className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition cursor-pointer"
                     >
                       <Calendar className="h-3.5 w-3.5" />
@@ -380,6 +402,16 @@ export function ConversionTemplateView({
               );
             })}
           </div>
+
+          {/* Modal de Detalhes do Serviço */}
+          <ItemDetailModal
+            isOpen={Boolean(selectedDetailItem)}
+            onClose={() => setSelectedDetailItem(null)}
+            item={selectedDetailItem}
+            phone={rawPhone}
+            tenantName={tenant.name}
+            themeNiche={tenant.theme_niche || tenant.category}
+          />
         </section>
       )}
 
