@@ -122,7 +122,7 @@ export interface Tenant {
   updated_at: string;
 }
 
-export type OfferType = "setup_monthly" | "semiannual" | "monthly_renewal";
+export type OfferType = "setup_monthly" | "semiannual" | "monthly_renewal" | "setup";
 
 export interface TenantProfile {
   id: string;

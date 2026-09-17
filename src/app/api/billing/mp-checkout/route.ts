@@ -14,6 +14,12 @@ interface OfferConfig {
 }
 
 const OFFERS_MAP: Record<OfferType, OfferConfig> = {
+  setup: {
+    unitPrice: 197.00,
+    getTitle: (name) => `Taxa de Implantação e Setup - ${name}`,
+    days: 30,
+    itemId: "taxa-setup-implantacao",
+  },
   setup_monthly: {
     unitPrice: 297.00,
     getTitle: (name) => `Setup Profissional + 1º Mês Vitrine EssMendes - ${name}`,
@@ -88,14 +94,57 @@ export async function POST(req: Request) {
 
     tenantName = tenantName || "Estabelecimento";
 
-    // Resolução da oferta selecionada
-    const rawOfferType: OfferType = body.offerType;
-    const offerType: OfferType = OFFERS_MAP[rawOfferType] ? rawOfferType : "monthly_renewal";
+    // Resolução da oferta selecionada (suporta offerType ou type)
+    const rawOfferType: string = body.type || body.offerType;
+    const offerType: OfferType = OFFERS_MAP[rawOfferType as OfferType]
+      ? (rawOfferType as OfferType)
+      : "monthly_renewal";
     const selectedOffer = OFFERS_MAP[offerType];
 
-    let itemPrice = selectedOffer.unitPrice;
-    let itemTitle = selectedOffer.getTitle(tenantName);
+    let itemPrice = Number(body.amount) || Number(body.customAmount) || selectedOffer.unitPrice;
+    let itemTitle = body.description || selectedOffer.getTitle(tenantName);
     const diasVigencia = selectedOffer.days;
+
+    // Se for cobrança de setup exclusiva
+    if (offerType === "setup") {
+      let tenantSetupFee = (authContext?.tenant as any)?.setup_fee_amount ?? (authContext?.tenant as any)?.setup_fee;
+
+      if (tenantSetupFee === undefined || tenantSetupFee === null) {
+        try {
+          const supabaseKey =
+            process.env.SUPABASE_SERVICE_ROLE_KEY ||
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+          const supabaseAdmin = createAdminClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            supabaseKey
+          );
+
+          const { data: tenantRow } = await supabaseAdmin
+            .from("tenants")
+            .select("setup_fee_amount, name")
+            .eq("id", tenantId)
+            .maybeSingle();
+
+          if (tenantRow) {
+            tenantSetupFee = tenantRow.setup_fee_amount;
+            if (tenantRow.name) {
+              tenantName = tenantRow.name;
+            }
+          }
+        } catch (err) {
+          console.warn("[MP-Checkout] Erro ao consultar setup_fee_amount no banco:", err);
+        }
+      }
+
+      const amount =
+        Number(body.amount) ||
+        Number(body.customAmount) ||
+        (tenantSetupFee !== null && tenantSetupFee !== undefined ? Number(tenantSetupFee) : 197.00);
+      itemPrice = amount;
+      if (!body.description) {
+        itemTitle = `Taxa de Implantação e Setup - ${tenantName}`;
+      }
+    }
 
     // Integração Dinâmica: Ao gerar a cobrança (Pix/Cartão) para renovação da mensalidade do tenant,
     // buscar o valor dinâmico do banco (const amount = Number(tenant.monthly_fee_amount) || 97.00)
@@ -133,13 +182,16 @@ export async function POST(req: Request) {
       const tenantObj = { monthly_fee_amount: tenantMonthlyFee };
       const amount = Number(tenantObj.monthly_fee_amount) || Number(body.customAmount) || Number(body.amount) || 97.00;
       itemPrice = amount;
-      itemTitle = `Mensalidade Vitrine EssMendes (R$ ${amount.toFixed(2).replace(".", ",")}) - ${tenantName}`;
+      if (!body.description) {
+        itemTitle = `Mensalidade Vitrine EssMendes (R$ ${amount.toFixed(2).replace(".", ",")}) - ${tenantName}`;
+      }
     }
 
-    // Embutir na external_reference o tenantId, offerType e dias
+    // Embutir na external_reference o tenantId, offerType, type e dias
     const externalReference = JSON.stringify({
       tenantId,
       offerType,
+      type: offerType,
       days: diasVigencia,
       amount: itemPrice,
     });
@@ -225,6 +277,7 @@ export async function POST(req: Request) {
       method: "pix",
       paymentId: result.id,
       offerType,
+      type: offerType,
       amount: itemPrice,
       qrCode: pointOfInteraction?.qr_code, // Código copia e cola
       qrCodeBase64: pointOfInteraction?.qr_code_base64, // Imagem do QR Code em base64

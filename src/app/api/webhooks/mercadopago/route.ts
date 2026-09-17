@@ -40,7 +40,7 @@ export async function POST(req: Request) {
           const parsed = JSON.parse(payment.external_reference);
           if (parsed && typeof parsed === "object" && parsed.tenantId) {
             tenantId = parsed.tenantId;
-            offerType = parsed.offerType || null;
+            offerType = parsed.offerType || parsed.type || null;
             days = Number(parsed.days) || 30;
           } else {
             tenantId = String(payment.external_reference);
@@ -61,6 +61,7 @@ export async function POST(req: Request) {
           );
 
           // Calcula a nova data de expiração: now() + days
+          const now = new Date();
           const expirationDate = new Date();
           expirationDate.setDate(expirationDate.getDate() + days);
 
@@ -70,14 +71,23 @@ export async function POST(req: Request) {
             mp_payment_id: String(id),
             current_period_end: expirationDate.toISOString(),
             subscription_expires_at: expirationDate.toISOString(),
-            updated_at: new Date().toISOString(),
+            updated_at: now.toISOString(),
           };
 
           if (offerType) {
             updatePayload.subscription_plan = offerType;
-            if (offerType === "setup_monthly" || offerType === "semiannual") {
-              updatePayload.setup_paid = true;
-            }
+          }
+
+          const isSetupOffer =
+            offerType === "setup" ||
+            offerType === "setup_monthly" ||
+            offerType === "semiannual";
+
+          if (isSetupOffer) {
+            updatePayload.setup_paid = true;
+            updatePayload.setup_fee_paid = true;
+            updatePayload.setup_paid_at = now.toISOString();
+            updatePayload.subscription_starts_at = now.toISOString();
           }
 
           const { error: updateError } = await supabase

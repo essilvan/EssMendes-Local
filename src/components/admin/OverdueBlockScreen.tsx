@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import {
   AlertTriangle,
   ShieldAlert,
@@ -8,9 +8,6 @@ import {
   Lock,
   LogOut,
   Wrench,
-  Copy,
-  Check,
-  MessageCircle,
   ExternalLink,
 } from "lucide-react";
 import { MercadoPagoSubscribeButton } from "./MercadoPagoSubscribeButton";
@@ -32,45 +29,11 @@ export function OverdueBlockScreen({
   tenant,
   userEmail = "",
 }: OverdueBlockScreenProps) {
-  const [isCopiedPix, setIsCopiedPix] = useState(false);
-
   const isSetupPending = tenant.setup_fee_paid === false;
   const setupAmount =
     tenant.setup_fee_amount !== null && tenant.setup_fee_amount !== undefined
       ? Number(tenant.setup_fee_amount)
       : 197;
-
-  const agencyPixKey =
-    process.env.NEXT_PUBLIC_AGENCY_PIX_KEY || "essilvanmendes@gmail.com";
-  const agencyPhone =
-    process.env.NEXT_PUBLIC_SUPPORT_PHONE ||
-    process.env.NEXT_PUBLIC_AGENCY_WHATSAPP ||
-    "5511999999999";
-
-  const handleCopyPix = async () => {
-    try {
-      if (navigator?.clipboard) {
-        await navigator.clipboard.writeText(agencyPixKey);
-      } else {
-        const textArea = document.createElement("textarea");
-        textArea.value = agencyPixKey;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand("copy");
-        document.body.removeChild(textArea);
-      }
-      setIsCopiedPix(true);
-      setTimeout(() => setIsCopiedPix(false), 2500);
-    } catch (err) {
-      console.error("Erro ao copiar Pix:", err);
-    }
-  };
-
-  const whatsappMessage = `Olá! Segue o comprovante do pagamento da taxa de setup da vitrine ${tenant.name} (R$ ${setupAmount.toFixed(2).replace(".", ",")}). Aguardo a liberação.`;
-  const cleanPhone = agencyPhone.replace(/\D/g, "");
-  const whatsappUrl = `https://wa.me/${cleanPhone.startsWith("55") ? cleanPhone : "55" + cleanPhone}?text=${encodeURIComponent(
-    whatsappMessage
-  )}`;
 
   // CASO 1: SETUP PENDENTE (Tela contextual de implantação com Pix Manual e WhatsApp)
   if (isSetupPending) {
@@ -96,59 +59,21 @@ export function OverdueBlockScreen({
             </p>
           </div>
 
-          {/* Dados do Pix Manual */}
-          <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-5 text-left space-y-3">
-            <div className="flex items-center justify-between border-b border-amber-200/80 pb-3">
-              <span className="text-xs font-semibold text-slate-700">Taxa de Implantação & Setup:</span>
-              <span className="text-xl font-black text-amber-950">
-                R$ {setupAmount.toFixed(2).replace(".", ",")}
-              </span>
-            </div>
-
-            <div className="space-y-1.5">
-              <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-                Chave Pix Comercial (E-mail):
-              </span>
-              <div className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white p-2.5 shadow-2xs">
-                <span className="font-mono text-xs font-bold text-slate-800 select-all truncate">
-                  {agencyPixKey}
-                </span>
-                <button
-                  type="button"
-                  onClick={handleCopyPix}
-                  className="inline-flex items-center gap-1 text-[11px] font-bold text-teal-700 hover:text-teal-900 transition px-2 py-1 rounded bg-teal-50 hover:bg-teal-100 cursor-pointer shrink-0"
-                >
-                  {isCopiedPix ? (
-                    <>
-                      <Check className="h-3.5 w-3.5 text-emerald-600" />
-                      <span>Copiada!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="h-3.5 w-3.5" />
-                      <span>Copiar Chave</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            <p className="text-[11px] text-slate-500">
-              Após realizar a transferência Pix, clique no botão abaixo para enviar o comprovante ao nosso WhatsApp oficial.
-            </p>
-          </div>
-
-          {/* Botão de Enviar Comprovante no WhatsApp */}
+          {/* Botão de Pagamento Instantâneo Pix Mercado Pago */}
           <div className="space-y-2">
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-5 py-3.5 text-sm font-bold text-white shadow-md transition hover:scale-101"
-            >
-              <MessageCircle className="h-5 w-5" />
-              <span>Enviar Comprovante no WhatsApp</span>
-            </a>
+            <MercadoPagoSubscribeButton
+              tenantId={tenant.id}
+              tenantName={tenant.name}
+              userEmail={userEmail}
+              payerName={tenant.name}
+              type="setup"
+              offerType="setup"
+              amount={setupAmount}
+              customAmount={setupAmount}
+              description={`Taxa de Implantação e Setup - ${tenant.name}`}
+              pixButtonText={`⚡ Pagar Setup via Pix Instantâneo (R$ ${setupAmount.toFixed(2).replace(".", ",")})`}
+              pixOnly={true}
+            />
           </div>
 
           {/* Rodapé */}

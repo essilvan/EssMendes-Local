@@ -1,8 +1,6 @@
 import { getAuthenticatedTenant } from "@/lib/supabase/tenant";
 import { redirect } from "next/navigation";
 import { MercadoPagoSubscribeButton } from "@/components/admin/MercadoPagoSubscribeButton";
-import { CopyPixButton } from "@/components/admin/CopyPixButton";
-import { getPlatformPixSettingsAction } from "@/services/platform-settings.actions";
 import {
   ShieldCheck,
   Calendar,
@@ -47,21 +45,12 @@ export default async function AdminAssinaturaPage({ searchParams }: AssinaturaPa
   const tenant = tenantContext.tenant;
   const user = tenantContext.user;
 
-  // Busca configurações globais de cobrança da agência (Chave Pix e Titular)
-  const { data: pixSettings } = await getPlatformPixSettingsAction();
-  const agencyPixKey =
-    pixSettings?.pix_agency_key ||
-    process.env.NEXT_PUBLIC_AGENCY_PIX_KEY ||
-    "essilvanmendes@gmail.com";
-  const agencyPixHolder =
-    pixSettings?.pix_agency_holder ||
-    process.env.NEXT_PUBLIC_AGENCY_HOLDER ||
-    "EssMendes Tecnologia";
-
-  // Status de Setup Manual e Mensalidade Customizada
+  // Status de Setup e Mensalidade
   const isSetupPaid = Boolean(tenant?.setup_fee_paid ?? tenant?.setup_paid);
   const setupFeeAmount =
-    tenant?.setup_fee_amount !== null && tenant?.setup_fee_amount !== undefined
+    (tenant as any)?.setup_fee !== null && (tenant as any)?.setup_fee !== undefined
+      ? Number((tenant as any).setup_fee)
+      : tenant?.setup_fee_amount !== null && tenant?.setup_fee_amount !== undefined
       ? Number(tenant.setup_fee_amount)
       : 197;
   const monthlyFeeAmount =
@@ -112,15 +101,6 @@ export default async function AdminAssinaturaPage({ searchParams }: AssinaturaPa
       formattedPeriodEnd = expirationDateRaw;
     }
   }
-
-  const agencyPhone =
-    process.env.NEXT_PUBLIC_SUPPORT_PHONE ||
-    process.env.NEXT_PUBLIC_AGENCY_WHATSAPP ||
-    "5511999999999";
-  const cleanPhone = agencyPhone.replace(/\D/g, "");
-  const whatsappSetupProofUrl = `https://wa.me/${cleanPhone.startsWith("55") ? cleanPhone : "55" + cleanPhone}?text=${encodeURIComponent(
-    `Olá! Segue o comprovante de pagamento da taxa de setup da vitrine ${tenant?.name || ""} (R$ ${setupFeeAmount.toFixed(2).replace(".", ",")}). Aguardo a liberação.`
-  )}`;
 
   return (
     <div className="space-y-8 max-w-5xl mx-auto pb-12">
@@ -213,7 +193,7 @@ export default async function AdminAssinaturaPage({ searchParams }: AssinaturaPa
                 </div>
                 <div>
                   <h3 className="text-base sm:text-lg font-black text-emerald-950">
-                    ✅ Setup & Otimização Google Maps Concluídos
+                    ✅ Setup Concluído com Sucesso
                   </h3>
                   <p className="text-xs text-emerald-800 mt-0.5">
                     {formattedSetupPaidAt
@@ -225,12 +205,12 @@ export default async function AdminAssinaturaPage({ searchParams }: AssinaturaPa
 
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-900 border border-emerald-200 shrink-0">
                 <Check className="h-3.5 w-3.5 text-emerald-600" />
-                Setup Concluído
+                Setup Concluído com Sucesso
               </span>
             </div>
           </div>
         ) : (
-          /* Setup Pendente com Chave Pix e WhatsApp */
+          /* Setup Pendente com Ação Rápida Pix Mercado Pago */
           <div className="rounded-3xl border-2 border-amber-300 bg-amber-50/60 p-6 sm:p-8 shadow-sm space-y-5 animate-in fade-in">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-amber-200/80 pb-4">
               <div className="flex items-start gap-3">
@@ -245,46 +225,38 @@ export default async function AdminAssinaturaPage({ searchParams }: AssinaturaPa
                     Taxa de Implantação e Setup Pendente: R$ {setupFeeAmount.toFixed(2).replace(".", ",")}
                   </h3>
                   <p className="text-xs text-slate-600 mt-0.5">
-                    Configure a vitrine oficial do seu negócio e ative o ranqueamento no Google Maps efetuando o pagamento único de setup.
+                    Configure a vitrine oficial do seu negócio e ative o ranqueamento no Google Maps efetuando o pagamento único de setup com aprovação instantânea.
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Box com Chave Pix, Titular e Copiar */}
-            <div className="rounded-2xl border border-amber-200 bg-white p-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-800">
-                  Chave Pix Comercial da Agência:
-                </span>
-                <CopyPixButton pixKey={agencyPixKey} />
-              </div>
-
-              <div className="rounded-xl bg-slate-50 border border-slate-200 p-3 font-mono text-sm font-bold text-slate-800 select-all">
-                {agencyPixKey}
-              </div>
-
-              <div className="flex items-center gap-1.5 text-xs text-slate-600">
-                <span className="font-semibold text-slate-500">Titular da Conta:</span>
-                <strong className="text-slate-800">{agencyPixHolder}</strong>
-              </div>
-
-              <p className="text-[11px] text-slate-500">
-                Transfira o valor de <strong>R$ {setupFeeAmount.toFixed(2).replace(".", ",")}</strong> e clique no botão abaixo para enviar o comprovante diretamente para nossa equipe de suporte no WhatsApp.
-              </p>
-            </div>
-
-            {/* Botão Enviar Comprovante WhatsApp */}
-            <div>
-              <a
-                href={whatsappSetupProofUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-5 py-3.5 text-sm font-bold text-white shadow-md transition hover:scale-101"
-              >
-                <MessageCircle className="h-5 w-5" />
-                <span>Enviar Comprovante no WhatsApp</span>
-              </a>
+            {/* Botão de Ação Rápida Pix Mercado Pago */}
+            <div className="space-y-2 pt-1">
+              <MercadoPagoSubscribeButton
+                tenantId={tenantContext.tenantId}
+                tenantName={tenant?.name || "Estabelecimento"}
+                userEmail={user.email || ""}
+                payerName={
+                  (user.user_metadata?.full_name as string) ||
+                  (user.user_metadata?.name as string) ||
+                  tenant?.name ||
+                  ""
+                }
+                payerCpf={
+                  (user.user_metadata?.cpf as string) ||
+                  (user.user_metadata?.cnpj as string) ||
+                  ""
+                }
+                type="setup"
+                offerType="setup"
+                amount={setupFeeAmount}
+                customAmount={setupFeeAmount}
+                description={`Taxa de Implantação e Setup - ${tenant?.name || "Estabelecimento"}`}
+                pixButtonText={`⚡ Pagar Setup via Pix Instantâneo (R$ ${setupFeeAmount.toFixed(2).replace(".", ",")})`}
+                cardButtonText={`💳 Pagar Setup no Cartão de Crédito (R$ ${setupFeeAmount.toFixed(2).replace(".", ",")})`}
+                pixOnly={true}
+              />
             </div>
           </div>
         )}
