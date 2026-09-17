@@ -349,6 +349,7 @@ export async function syncGoogleReviews(
       updated_at: new Date().toISOString(),
     }));
 
+    let insertedReviews: any[] = [];
     if (reviewsToInsert.length > 0) {
       // Limpa avaliações anteriores para evitar duplicidade
       await supabase
@@ -356,12 +357,15 @@ export async function syncGoogleReviews(
         .delete()
         .eq("tenant_id", tenantId);
 
-      const { error: insertError } = await supabase
+      const { data: insertedData, error: insertError } = await supabase
         .from("tenant_reviews")
-        .insert(reviewsToInsert);
+        .insert(reviewsToInsert)
+        .select("*");
 
       if (insertError) {
         console.error("[syncGoogleReviews] Erro ao inserir avaliações:", insertError);
+      } else if (insertedData) {
+        insertedReviews = insertedData;
       }
     }
 
@@ -381,7 +385,7 @@ export async function syncGoogleReviews(
         userRatingsTotal,
         placeName: placeResult.name,
         placePhotos: photoUrls,
-        reviews: reviewsToInsert,
+        reviews: insertedReviews.length > 0 ? insertedReviews : reviewsToInsert,
       },
     };
   } catch (err) {

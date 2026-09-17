@@ -90,20 +90,20 @@ export function ReviewsManager({
       const res = await syncGoogleReviews({ input: inputUrlOrPlaceId.trim() });
       if (res.success && res.data) {
         if (res.data.reviews && res.data.reviews.length > 0) {
-          const mapped: TenantReview[] = res.data.reviews.map((r, idx) => ({
-            id: String(Date.now() + idx),
-            tenant_id: "",
-            author_name: r.author_name,
-            author_photo_url: r.profile_photo_url || null,
-            profile_photo_url: r.profile_photo_url || null,
+          const mapped: TenantReview[] = res.data.reviews.map((r: any) => ({
+            id: r.id || (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : ""),
+            tenant_id: r.tenant_id || "",
+            author_name: r.author_name || "Cliente Google",
+            author_photo_url: r.profile_photo_url || r.author_photo_url || null,
+            profile_photo_url: r.profile_photo_url || r.author_photo_url || null,
             author_url: r.author_url || null,
-            rating: r.rating,
-            text: r.text,
-            review_text: r.text,
-            relative_time: r.relative_time || "recentemente",
-            relative_time_description: r.relative_time || "recentemente",
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
+            rating: Number(r.rating) || 5,
+            text: r.text || r.review_text || "",
+            review_text: r.text || r.review_text || "",
+            relative_time: r.relative_time || r.relative_time_description || "recentemente",
+            relative_time_description: r.relative_time || r.relative_time_description || "recentemente",
+            created_at: r.created_at || new Date().toISOString(),
+            updated_at: r.updated_at || new Date().toISOString(),
           }));
           setReviews(mapped);
         }
@@ -148,19 +148,17 @@ export function ReviewsManager({
           type: "success",
           message: "Avaliação adicionada e visível na vitrine pública!",
         });
-        setReviews([
-          {
-            id: String(Date.now()),
-            tenant_id: "",
-            author_name: authorName,
-            rating,
-            text,
-            relative_time: relativeTime,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-          ...reviews,
-        ]);
+        const newReview: TenantReview = res.data || {
+          id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "",
+          tenant_id: "",
+          author_name: authorName,
+          rating,
+          text,
+          relative_time: relativeTime,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        setReviews((prev) => [newReview, ...prev]);
         setAuthorName("");
         setText("");
         setIsAdding(false);
@@ -172,12 +170,17 @@ export function ReviewsManager({
     if (!confirm("Deseja realmente remover esta avaliação?")) return;
     setDeletingId(id);
 
+    // Atualização otimista imediata na interface
+    const previousReviews = reviews;
+    setReviews((prev) => prev.filter((r) => r.id !== id));
+
     startTransition(async () => {
       const res = await deleteTenantReviewAction(id);
       if (res.error) {
+        // Reverte se houver erro
+        setReviews(previousReviews);
         setFeedback({ type: "error", message: res.error });
       } else {
-        setReviews(reviews.filter((r) => r.id !== id));
         setFeedback({
           type: "success",
           message: "Avaliação removida com sucesso.",

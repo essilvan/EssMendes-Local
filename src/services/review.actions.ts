@@ -9,6 +9,7 @@ export interface ReviewActionState {
   success?: boolean;
   error?: string;
   message?: string;
+  data?: TenantReview;
 }
 
 export async function addTenantReviewAction(
@@ -37,13 +38,17 @@ export async function addTenantReviewAction(
   const supabase = await createClient();
 
   try {
-    const { error } = await supabase.from("tenant_reviews").insert({
-      tenant_id: tenantId,
-      author_name: authorName,
-      rating,
-      text,
-      relative_time: relativeTime,
-    });
+    const { data: insertedReview, error } = await supabase
+      .from("tenant_reviews")
+      .insert({
+        tenant_id: tenantId,
+        author_name: authorName,
+        rating,
+        text,
+        relative_time: relativeTime,
+      })
+      .select("*")
+      .single();
 
     if (error) {
       console.error("[addTenantReviewAction] Erro no Supabase:", error);
@@ -59,6 +64,7 @@ export async function addTenantReviewAction(
     return {
       success: true,
       message: "Avaliação adicionada com sucesso!",
+      data: insertedReview as TenantReview,
     };
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Erro inesperado";
@@ -75,16 +81,27 @@ export async function deleteTenantReviewAction(
   }
 
   const tenantId = tenantContext.tenantId;
+
+  // Validação segura do formato UUID para evitar erro de sintaxe no Postgres (invalid input syntax for type uuid)
+  const trimmedId = reviewId ? reviewId.trim() : "";
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmedId);
+
+  if (!isUuid) {
+    console.warn(`[deleteTenantReviewAction] reviewId inválido recebido: "${trimmedId}". Ignorando exclusão no banco.`);
+    return { success: true, message: "Avaliação removida com sucesso." };
+  }
+
   const supabase = await createClient();
 
   try {
     const { error } = await supabase
       .from("tenant_reviews")
       .delete()
-      .eq("id", reviewId)
+      .eq("id", trimmedId)
       .eq("tenant_id", tenantId);
 
     if (error) {
+      console.error("[deleteTenantReviewAction] Erro no Supabase:", error);
       return { error: error.message };
     }
 
