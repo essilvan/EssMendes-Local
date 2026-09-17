@@ -34,6 +34,7 @@ export async function POST(req: Request) {
       if (payment.status === "approved" && payment.external_reference) {
         let tenantId = "";
         let offerType: string | null = null;
+        let period: string | null = null;
         let days = 30;
 
         try {
@@ -41,7 +42,8 @@ export async function POST(req: Request) {
           if (parsed && typeof parsed === "object" && parsed.tenantId) {
             tenantId = parsed.tenantId;
             offerType = parsed.offerType || parsed.type || null;
-            days = Number(parsed.days) || 30;
+            period = parsed.period || null;
+            days = Number(parsed.days) || (period === "yearly" || offerType === "yearly" ? 365 : 30);
           } else {
             tenantId = String(payment.external_reference);
           }
@@ -60,10 +62,17 @@ export async function POST(req: Request) {
             supabaseKey
           );
 
-          // Calcula a nova data de expiração: now() + days
+          // Se o pagamento for do ciclo anual: 365 dias à frente (+ 1 year). Se for mensal: 30 dias à frente (+ 30 days).
+          const isYearly = period === "yearly" || offerType === "yearly" || days >= 365;
+          const effectiveDays = isYearly ? 365 : days;
+
           const now = new Date();
           const expirationDate = new Date();
-          expirationDate.setDate(expirationDate.getDate() + days);
+          if (isYearly) {
+            expirationDate.setFullYear(expirationDate.getFullYear() + 1);
+          } else {
+            expirationDate.setDate(expirationDate.getDate() + effectiveDays);
+          }
 
           const updatePayload: Record<string, any> = {
             subscription_status: "active",
@@ -71,6 +80,7 @@ export async function POST(req: Request) {
             mp_payment_id: String(id),
             current_period_end: expirationDate.toISOString(),
             subscription_expires_at: expirationDate.toISOString(),
+            next_billing_date: expirationDate.toISOString(),
             updated_at: now.toISOString(),
           };
 
@@ -90,10 +100,19 @@ export async function POST(req: Request) {
             updatePayload.subscription_starts_at = now.toISOString();
           }
 
-          const { error: updateError } = await supabase
+          let { error: updateError } = await supabase
             .from("tenants")
             .update(updatePayload)
             .eq("id", tenantId);
+
+          if (updateError && updateError.message?.includes("next_billing_date")) {
+            delete updatePayload.next_billing_date;
+            const retryResult = await supabase
+              .from("tenants")
+              .update(updatePayload)
+              .eq("id", tenantId);
+            updateError = retryResult.error;
+          }
 
           if (updateError) {
             console.error("[Webhook MercadoPago] Erro ao atualizar tenant:", updateError);

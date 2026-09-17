@@ -38,6 +38,12 @@ const OFFERS_MAP: Record<OfferType, OfferConfig> = {
     days: 30,
     itemId: "mensalidade-vitrine-essmendes",
   },
+  yearly: {
+    unitPrice: 970.00,
+    getTitle: (name) => `Plano Anual Vitrine EssMendes - ${name}`,
+    days: 365,
+    itemId: "plano-anual-vitrine-essmendes",
+  },
 };
 
 export async function POST(req: Request) {
@@ -94,16 +100,24 @@ export async function POST(req: Request) {
 
     tenantName = tenantName || "Estabelecimento";
 
-    // Resolução da oferta selecionada (suporta offerType ou type)
-    const rawOfferType: string = body.type || body.offerType;
+    const period =
+      body.period ||
+      (body.offerType === "yearly" || body.type === "yearly" ? "yearly" : "monthly");
+    const isYearly =
+      period === "yearly" || body.offerType === "yearly" || body.type === "yearly";
+
+    // Resolução da oferta selecionada (suporta offerType, type ou period)
+    const rawOfferType: string = isYearly ? "yearly" : (body.type || body.offerType);
     const offerType: OfferType = OFFERS_MAP[rawOfferType as OfferType]
       ? (rawOfferType as OfferType)
+      : isYearly
+      ? "yearly"
       : "monthly_renewal";
     const selectedOffer = OFFERS_MAP[offerType];
 
     let itemPrice = Number(body.amount) || Number(body.customAmount) || selectedOffer.unitPrice;
     let itemTitle = body.description || selectedOffer.getTitle(tenantName);
-    const diasVigencia = selectedOffer.days;
+    const diasVigencia = isYearly ? 365 : selectedOffer.days;
 
     // Se for cobrança de setup exclusiva
     if (offerType === "setup") {
@@ -146,10 +160,50 @@ export async function POST(req: Request) {
       }
     }
 
+    // Se for cobrança do Plano Anual (com desconto de 2 meses)
+    if (offerType === "yearly" || isYearly) {
+      let tenantMonthlyFee = (authContext?.tenant as any)?.monthly_fee_amount;
+
+      if (tenantMonthlyFee === undefined || tenantMonthlyFee === null) {
+        try {
+          const supabaseKey =
+            process.env.SUPABASE_SERVICE_ROLE_KEY ||
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+          const supabaseAdmin = createAdminClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            supabaseKey
+          );
+
+          const { data: tenantRow } = await supabaseAdmin
+            .from("tenants")
+            .select("monthly_fee_amount, name")
+            .eq("id", tenantId)
+            .maybeSingle();
+
+          if (tenantRow) {
+            tenantMonthlyFee = tenantRow.monthly_fee_amount;
+            if (tenantRow.name) {
+              tenantName = tenantRow.name;
+            }
+          }
+        } catch (err) {
+          console.warn("[MP-Checkout] Erro ao consultar monthly_fee_amount no banco:", err);
+        }
+      }
+
+      const monthlyBase = Number(tenantMonthlyFee) || 97.00;
+      const defaultYearly = monthlyBase * 10;
+      const amount = Number(body.amount) || Number(body.customAmount) || defaultYearly;
+      itemPrice = amount;
+      if (!body.description) {
+        itemTitle = `Plano Anual Vitrine EssMendes (R$ ${amount.toFixed(2).replace(".", ",")}) - ${tenantName}`;
+      }
+    }
+
     // Integração Dinâmica: Ao gerar a cobrança (Pix/Cartão) para renovação da mensalidade do tenant,
     // buscar o valor dinâmico do banco (const amount = Number(tenant.monthly_fee_amount) || 97.00)
     // e não utilizar valores estáticos fixos no código.
-    if (offerType === "monthly_renewal") {
+    if (offerType === "monthly_renewal" && !isYearly) {
       let tenantMonthlyFee = (authContext?.tenant as any)?.monthly_fee_amount;
 
       if (tenantMonthlyFee === undefined || tenantMonthlyFee === null) {
@@ -187,11 +241,12 @@ export async function POST(req: Request) {
       }
     }
 
-    // Embutir na external_reference o tenantId, offerType, type e dias
+    // Embutir na external_reference o tenantId, offerType, type, period e dias
     const externalReference = JSON.stringify({
       tenantId,
       offerType,
       type: offerType,
+      period: isYearly ? "yearly" : "monthly",
       days: diasVigencia,
       amount: itemPrice,
     });
@@ -242,6 +297,8 @@ export async function POST(req: Request) {
         method: "card",
         checkoutUrl: prefResult.init_point,
         offerType,
+        type: offerType,
+        period: isYearly ? "yearly" : "monthly",
         amount: itemPrice,
       });
     }
@@ -278,6 +335,7 @@ export async function POST(req: Request) {
       paymentId: result.id,
       offerType,
       type: offerType,
+      period: isYearly ? "yearly" : "monthly",
       amount: itemPrice,
       qrCode: pointOfInteraction?.qr_code, // Código copia e cola
       qrCodeBase64: pointOfInteraction?.qr_code_base64, // Imagem do QR Code em base64

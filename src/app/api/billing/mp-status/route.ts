@@ -55,6 +55,7 @@ async function handleStatusCheck(req: Request) {
 
         if (payment && payment.status === "approved") {
           let offerType: string | null = null;
+          let period: string | null = null;
           let days = 30;
 
           if (payment.external_reference) {
@@ -63,7 +64,8 @@ async function handleStatusCheck(req: Request) {
               if (parsed && typeof parsed === "object") {
                 tenantId = tenantId || parsed.tenantId;
                 offerType = parsed.offerType || parsed.type || null;
-                days = Number(parsed.days) || 30;
+                period = parsed.period || null;
+                days = Number(parsed.days) || (period === "yearly" || offerType === "yearly" ? 365 : 30);
               } else {
                 tenantId = tenantId || String(payment.external_reference);
               }
@@ -73,9 +75,16 @@ async function handleStatusCheck(req: Request) {
           }
 
           if (tenantId) {
+            const isYearly = period === "yearly" || offerType === "yearly" || days >= 365;
+            const effectiveDays = isYearly ? 365 : days;
+
             const now = new Date();
             const expirationDate = new Date();
-            expirationDate.setDate(expirationDate.getDate() + days);
+            if (isYearly) {
+              expirationDate.setFullYear(expirationDate.getFullYear() + 1);
+            } else {
+              expirationDate.setDate(expirationDate.getDate() + effectiveDays);
+            }
 
             const isSetupOffer =
               offerType === "setup" ||
@@ -88,6 +97,7 @@ async function handleStatusCheck(req: Request) {
               mp_payment_id: String(paymentId),
               current_period_end: expirationDate.toISOString(),
               subscription_expires_at: expirationDate.toISOString(),
+              next_billing_date: expirationDate.toISOString(),
               updated_at: now.toISOString(),
             };
 
@@ -102,10 +112,18 @@ async function handleStatusCheck(req: Request) {
               updatePayload.subscription_starts_at = now.toISOString();
             }
 
-            await supabase
+            let { error: updateError } = await supabase
               .from("tenants")
               .update(updatePayload)
               .eq("id", tenantId);
+
+            if (updateError && updateError.message?.includes("next_billing_date")) {
+              delete updatePayload.next_billing_date;
+              await supabase
+                .from("tenants")
+                .update(updatePayload)
+                .eq("id", tenantId);
+            }
 
             return NextResponse.json({
               success: true,

@@ -26,6 +26,7 @@ interface MercadoPagoSubscribeButtonProps {
   payerCpf?: string;
   offerType?: OfferType;
   type?: "setup" | OfferType;
+  period?: "monthly" | "yearly";
   amount?: number;
   description?: string;
   label?: string;
@@ -84,6 +85,13 @@ const OFFER_DETAILS: Record<
     cardLabel: "💳 Pagar com Cartão de Crédito (em até 12x)",
     title: "Renovação Mensal",
   },
+  yearly: {
+    amount: 970.0,
+    formattedAmount: "R$ 970,00",
+    pixLabel: "⚡ Pagar Plano Anual via Pix Instantâneo (R$ 970,00)",
+    cardLabel: "💳 Pagar Plano Anual no Cartão (em até 12x)",
+    title: "Plano Anual Vitrine EssMendes",
+  },
 };
 
 export function MercadoPagoSubscribeButton({
@@ -94,6 +102,7 @@ export function MercadoPagoSubscribeButton({
   payerCpf = "",
   offerType: initialOfferType,
   type,
+  period,
   amount: explicitAmount,
   description,
   pixButtonText,
@@ -117,6 +126,8 @@ export function MercadoPagoSubscribeButton({
       ? type
       : initialOfferType && OFFER_DETAILS[initialOfferType]
       ? initialOfferType
+      : period === "yearly"
+      ? "yearly"
       : "monthly_renewal";
 
   const offerInfo = OFFER_DETAILS[effectiveOfferType] || OFFER_DETAILS.monthly_renewal;
@@ -141,6 +152,7 @@ export function MercadoPagoSubscribeButton({
           method,
           offerType: effectiveOfferType,
           type: effectiveOfferType,
+          period: period || (effectiveOfferType === "yearly" ? "yearly" : "monthly"),
           customAmount: effectiveAmount,
           amount: effectiveAmount,
           description,

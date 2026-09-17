@@ -1,6 +1,7 @@
 import { getAuthenticatedTenant } from "@/lib/supabase/tenant";
 import { redirect } from "next/navigation";
 import { MercadoPagoSubscribeButton } from "@/components/admin/MercadoPagoSubscribeButton";
+import { Etapa2SubscriptionSection } from "@/components/admin/Etapa2SubscriptionSection";
 import {
   ShieldCheck,
   Calendar,
@@ -262,126 +263,29 @@ export default async function AdminAssinaturaPage({ searchParams }: AssinaturaPa
         )}
       </div>
 
-      {/* 2. CARD DE MENSALIDADE & HOSPEDAGEM */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
-          <Zap className="h-4 w-4 text-teal-600" />
-          <span>Etapa 2: Mensalidade, Hospedagem & Manutenção Contínua</span>
-        </div>
-
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
-            <div className="space-y-1.5">
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-xl sm:text-2xl font-black text-slate-900">
-                  Mensalidade Regular da Vitrine EssMendes
-                </h2>
-
-                {isActive && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">
-                    <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                    Plano Ativo
-                  </span>
-                )}
-
-                {isOverdue && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-800">
-                    <AlertTriangle className="h-4 w-4 text-red-600" />
-                    Mensalidade em Atraso
-                  </span>
-                )}
-
-                {isTrialOrPending && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">
-                    <Clock className="h-4 w-4 text-amber-600" />
-                    Aguardando Vencimento / Pagamento
-                  </span>
-                )}
-              </div>
-
-              <p className="text-xs text-slate-500">
-                Hospedagem de alta velocidade, sincronização do Google Places, catálogo de produtos e posts de SEO Local contínuos.
-              </p>
-            </div>
-
-            {/* Próxima Fatura Mensal */}
-            <div className="flex flex-col sm:items-end bg-slate-50 sm:bg-transparent p-3 sm:p-0 rounded-xl border sm:border-0 border-slate-200">
-              <span className="text-xs text-slate-500 font-semibold">Data da Próxima Fatura Mensal</span>
-              {formattedPeriodEnd ? (
-                <div className="flex items-baseline gap-2 mt-0.5">
-                  <span className="text-2xl font-black text-slate-900">
-                    {formattedPeriodEnd}
-                  </span>
-                  {daysRemaining !== null && (
-                    <span
-                      className={`text-xs font-bold px-2 py-0.5 rounded-md ${
-                        daysRemaining > 5
-                          ? "bg-emerald-100 text-emerald-800"
-                          : daysRemaining >= 0
-                          ? "bg-amber-100 text-amber-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
-                    >
-                      {daysRemaining > 0
-                        ? `${daysRemaining} dias restantes`
-                        : daysRemaining === 0
-                        ? "Vence hoje"
-                        : "Expirado"}
-                    </span>
-                  )}
-                </div>
-              ) : (
-                <span className="text-sm font-bold text-amber-700 mt-0.5">
-                  Agendada para 30 dias após confirmação do setup
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Destaque do Valor da Mensalidade */}
-          <div className="rounded-2xl bg-slate-50 p-4 border border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                Valor Recorrente Acordado
-              </span>
-              <div className="flex items-baseline gap-1.5 mt-0.5">
-                <span className="text-3xl font-black text-slate-900">
-                  R$ {monthlyFeeAmount.toFixed(2).replace(".", ",")}
-                </span>
-                <span className="text-xs text-slate-500 font-medium">/ mês</span>
-              </div>
-            </div>
-
-            <div className="text-xs text-slate-600 max-w-sm">
-              Cobrança mensal exclusiva de hospedagem, domínio, suporte e manutenção contínua da vitrine oficial.
-            </div>
-          </div>
-
-          {/* Botão Mercado Pago Exclusivo para Mensalidade Recorrente */}
-          <div className="space-y-2 pt-1 border-t border-slate-100">
-            <MercadoPagoSubscribeButton
-              tenantId={tenantContext.tenantId}
-              tenantName={tenant?.name || "Estabelecimento"}
-              userEmail={user.email || ""}
-              payerName={
-                (user.user_metadata?.full_name as string) ||
-                (user.user_metadata?.name as string) ||
-                tenant?.name ||
-                ""
-              }
-              payerCpf={
-                (user.user_metadata?.cpf as string) ||
-                (user.user_metadata?.cnpj as string) ||
-                ""
-              }
-              offerType="monthly_renewal"
-              customAmount={monthlyFeeAmount}
-              pixButtonText={`⚡ Pagar Mensalidade via Pix Instantâneo (R$ ${monthlyFeeAmount.toFixed(2).replace(".", ",")})`}
-              cardButtonText={`💳 Pagar Mensalidade no Cartão de Crédito (R$ ${monthlyFeeAmount.toFixed(2).replace(".", ",")})`}
-            />
-          </div>
-        </div>
-      </div>
+      {/* 2. CARD DE MENSALIDADE & HOSPEDAGEM (SELETOR MENSAL / ANUAL COM DESCONTO) */}
+      <Etapa2SubscriptionSection
+        tenantId={tenantContext.tenantId}
+        tenantName={tenant?.name || "Estabelecimento"}
+        userEmail={user.email || ""}
+        payerName={
+          (user.user_metadata?.full_name as string) ||
+          (user.user_metadata?.name as string) ||
+          tenant?.name ||
+          ""
+        }
+        payerCpf={
+          (user.user_metadata?.cpf as string) ||
+          (user.user_metadata?.cnpj as string) ||
+          ""
+        }
+        monthlyFeeAmount={monthlyFeeAmount}
+        isActive={isActive}
+        isOverdue={isOverdue}
+        isTrialOrPending={isTrialOrPending}
+        formattedPeriodEnd={formattedPeriodEnd}
+        daysRemaining={daysRemaining}
+      />
 
       {/* Card Informativo de Recursos Inclusos */}
       <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-6">

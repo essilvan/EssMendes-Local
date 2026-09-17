@@ -29,6 +29,7 @@ export interface SuperAdminTenantItem {
   setup_paid_at?: string | null;
   monthly_fee_amount?: number | null;
   subscription_status?: string | null;
+  next_billing_date?: string | null;
   subscription_expires_at?: string | null;
   created_at: string;
 }
@@ -122,7 +123,7 @@ export interface Tenant {
   updated_at: string;
 }
 
-export type OfferType = "setup_monthly" | "semiannual" | "monthly_renewal" | "setup";
+export type OfferType = "setup_monthly" | "semiannual" | "monthly_renewal" | "setup" | "yearly";
 
 export interface TenantProfile {
   id: string;
