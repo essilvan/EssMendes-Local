@@ -779,9 +779,22 @@ export async function syncGooglePlaceData(
     revalidatePath("/admin/portfolio");
     revalidatePath("/admin/posts");
     revalidatePath("/admin/dashboard");
-    if (tenantContext.tenant?.slug) {
-      revalidatePath(`/${tenantContext.tenant.slug}`);
+    let tenantSlug = tenantContext.tenant?.slug;
+    if (!tenantSlug) {
+      const { data: tenantData } = await supabase
+        .from("tenants")
+        .select("slug")
+        .eq("id", tenantId)
+        .maybeSingle();
+      tenantSlug = tenantData?.slug;
     }
+    if (tenantSlug) {
+      revalidatePath(`/${tenantSlug}`);
+      revalidatePath(`/${tenantSlug}`, "page");
+      revalidatePath(`/${tenantSlug}`, "layout");
+    }
+    revalidatePath("/[slug]", "page");
+    revalidatePath("/[slug]", "layout");
 
     return {
       success: true,

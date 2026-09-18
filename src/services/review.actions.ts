@@ -55,11 +55,28 @@ export async function addTenantReviewAction(
       return { error: `Erro ao salvar avaliação: ${error.message}` };
     }
 
+    // 1. Obter o slug do tenant de forma resiliente
+    let tenantSlug = tenantContext.tenant?.slug;
+    if (!tenantSlug) {
+      const { data: tenantData } = await supabase
+        .from("tenants")
+        .select("slug")
+        .eq("id", tenantId)
+        .maybeSingle();
+      tenantSlug = tenantData?.slug;
+    }
+
+    // 2. Revalidação de Cache imediata (Admin e Vitrine Pública)
     revalidatePath("/admin/perfil");
     revalidatePath("/admin/avaliacoes");
-    if (tenantContext.tenant?.slug) {
-      revalidatePath(`/${tenantContext.tenant.slug}`);
+    revalidatePath("/admin/dashboard");
+    if (tenantSlug) {
+      revalidatePath(`/${tenantSlug}`);
+      revalidatePath(`/${tenantSlug}`, "page");
+      revalidatePath(`/${tenantSlug}`, "layout");
     }
+    revalidatePath("/[slug]", "page");
+    revalidatePath("/[slug]", "layout");
 
     return {
       success: true,
@@ -105,11 +122,29 @@ export async function deleteTenantReviewAction(
       return { error: error.message };
     }
 
+    // 1. Obter o slug do tenant de forma resiliente
+    let tenantSlug = tenantContext.tenant?.slug;
+    if (!tenantSlug) {
+      const { data: tenantData } = await supabase
+        .from("tenants")
+        .select("slug")
+        .eq("id", tenantId)
+        .maybeSingle();
+      tenantSlug = tenantData?.slug;
+    }
+
+    // 2. Revalidação de Cache imediata (Admin e Vitrine Pública)
     revalidatePath("/admin/perfil");
     revalidatePath("/admin/avaliacoes");
-    if (tenantContext.tenant?.slug) {
-      revalidatePath(`/${tenantContext.tenant.slug}`);
+    revalidatePath("/admin/dashboard");
+
+    if (tenantSlug) {
+      revalidatePath(`/${tenantSlug}`);
+      revalidatePath(`/${tenantSlug}`, "page");
+      revalidatePath(`/${tenantSlug}`, "layout");
     }
+    revalidatePath("/[slug]", "page");
+    revalidatePath("/[slug]", "layout");
 
     return { success: true, message: "Avaliação removida com sucesso." };
   } catch (err) {

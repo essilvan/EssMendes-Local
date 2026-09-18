@@ -374,7 +374,13 @@ export async function syncGoogleReviews(
     revalidatePath("/admin/perfil");
     revalidatePath("/admin/integracoes");
     revalidatePath("/admin/dashboard");
-    revalidatePath(`/${tenantSlug}`);
+    if (tenantSlug) {
+      revalidatePath(`/${tenantSlug}`);
+      revalidatePath(`/${tenantSlug}`, "page");
+      revalidatePath(`/${tenantSlug}`, "layout");
+    }
+    revalidatePath("/[slug]", "page");
+    revalidatePath("/[slug]", "layout");
 
     return {
       success: true,
