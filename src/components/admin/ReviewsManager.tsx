@@ -166,16 +166,18 @@ export function ReviewsManager({
     });
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = (id: string, authorName?: string) => {
     if (!confirm("Deseja realmente remover esta avaliação?")) return;
     setDeletingId(id);
 
     // Atualização otimista imediata na interface
     const previousReviews = reviews;
-    setReviews((prev) => prev.filter((r) => r.id !== id));
+    setReviews((prev) =>
+      prev.filter((r) => r.id !== id && (!authorName || r.author_name !== authorName))
+    );
 
     startTransition(async () => {
-      const res = await deleteTenantReviewAction(id);
+      const res = await deleteTenantReviewAction(id, authorName);
       if (res.error) {
         // Reverte se houver erro
         setReviews(previousReviews);
@@ -617,7 +619,7 @@ export function ReviewsManager({
                   <button
                     type="button"
                     disabled={deletingId === rev.id}
-                    onClick={() => handleDelete(rev.id)}
+                    onClick={() => handleDelete(rev.id, rev.author_name)}
                     className="inline-flex items-center gap-1 text-[11px] font-bold text-red-600 hover:text-red-800 transition"
                   >
                     <Trash2 className="h-3.5 w-3.5" />

@@ -90,7 +90,8 @@ export async function addTenantReviewAction(
 }
 
 export async function deleteTenantReviewAction(
-  reviewId: string
+  reviewId: string,
+  authorName?: string
 ): Promise<ReviewActionState> {
   const { data: tenantContext, error: tenantError } = await getAuthenticatedTenant();
   if (tenantError || !tenantContext) {
@@ -98,42 +99,83 @@ export async function deleteTenantReviewAction(
   }
 
   const tenantId = tenantContext.tenantId;
-
-  // Validação segura do formato UUID para evitar erro de sintaxe no Postgres (invalid input syntax for type uuid)
   const trimmedId = reviewId ? reviewId.trim() : "";
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmedId);
-
-  if (!isUuid) {
-    console.warn(`[deleteTenantReviewAction] reviewId inválido recebido: "${trimmedId}". Ignorando exclusão no banco.`);
-    return { success: true, message: "Avaliação removida com sucesso." };
-  }
 
   const supabase = await createClient();
 
   try {
-    const { error } = await supabase
-      .from("tenant_reviews")
-      .delete()
-      .eq("id", trimmedId)
-      .eq("tenant_id", tenantId);
+    let deletedCount = 0;
+    let targetTenantId = tenantId;
 
-    if (error) {
-      console.error("[deleteTenantReviewAction] Erro no Supabase:", error);
-      return { error: error.message };
+    // 1. Tentar deletar por ID se for UUID válido
+    if (isUuid) {
+      // Localiza o registro antes para obter o tenant_id real
+      const { data: reviewRow } = await supabase
+        .from("tenant_reviews")
+        .select("id, tenant_id, author_name")
+        .eq("id", trimmedId)
+        .maybeSingle();
+
+      if (reviewRow?.tenant_id) {
+        targetTenantId = reviewRow.tenant_id;
+      }
+
+      const deleteQuery = supabase
+        .from("tenant_reviews")
+        .delete({ count: "exact" })
+        .eq("id", trimmedId);
+
+      // Se não for super admin, restringe ao tenant autenticado
+      if (!tenantContext.isSuperAdmin) {
+        deleteQuery.eq("tenant_id", tenantId);
+      }
+
+      const { error: delError, count } = await deleteQuery;
+      if (delError) {
+        console.error("[deleteTenantReviewAction] Erro ao deletar do Supabase por ID:", delError);
+        return { error: delError.message };
+      }
+      deletedCount = count ?? 0;
     }
 
-    // 1. Obter o slug do tenant de forma resiliente
+    // 2. Se não deletou por ID (ex: id inválido/timestamp ou count === 0), executa fallback por author_name
+    const targetAuthor = authorName || (!isUuid && trimmedId ? trimmedId : null);
+    if (deletedCount === 0 && targetAuthor) {
+      console.log(`[deleteTenantReviewAction] Executando fallback de exclusão por author_name: "${targetAuthor}"`);
+      const authorDeleteQuery = supabase
+        .from("tenant_reviews")
+        .delete({ count: "exact" })
+        .ilike("author_name", targetAuthor);
+
+      if (!tenantContext.isSuperAdmin) {
+        authorDeleteQuery.eq("tenant_id", tenantId);
+      }
+
+      const { error: authError, count: authCount } = await authorDeleteQuery;
+      if (authError) {
+        console.error("[deleteTenantReviewAction] Erro ao deletar do Supabase por autor:", authError);
+      } else {
+        deletedCount = authCount ?? 0;
+      }
+    }
+
+    console.log(`[deleteTenantReviewAction] Concluído. Registros deletados do Supabase: ${deletedCount}`);
+
+    // 3. Obter o slug do tenant de forma resiliente
     let tenantSlug = tenantContext.tenant?.slug;
-    if (!tenantSlug) {
+    if (!tenantSlug || targetTenantId !== tenantId) {
       const { data: tenantData } = await supabase
         .from("tenants")
         .select("slug")
-        .eq("id", tenantId)
+        .eq("id", targetTenantId)
         .maybeSingle();
-      tenantSlug = tenantData?.slug;
+      if (tenantData?.slug) {
+        tenantSlug = tenantData.slug;
+      }
     }
 
-    // 2. Revalidação de Cache imediata (Admin e Vitrine Pública)
+    // 4. Revalidação de Cache imediata (Admin e Vitrine Pública)
     revalidatePath("/admin/perfil");
     revalidatePath("/admin/avaliacoes");
     revalidatePath("/admin/dashboard");

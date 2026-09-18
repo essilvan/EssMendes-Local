@@ -206,6 +206,7 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
       .from("tenant_reviews")
       .select("*")
       .eq("tenant_id", tenant.id)
+      .neq("is_visible", false)
       .order("created_at", { ascending: false }),
     supabase
       .from("tenant_posts")
