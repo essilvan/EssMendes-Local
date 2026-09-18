@@ -4,6 +4,7 @@ import React, { useState, useTransition } from "react";
 import {
   addTenantReviewAction,
   deleteTenantReviewAction,
+  toggleTenantReviewVisibilityAction,
 } from "@/services/review.actions";
 import { generateReviewResponse } from "@/services/ai-review.actions";
 import { syncGoogleReviews } from "@/services/google-reviews.actions";
@@ -23,6 +24,8 @@ import {
   RefreshCw,
   X,
   Building2,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 interface ReviewsManagerProps {
@@ -71,6 +74,7 @@ export function ReviewsManager({
 
   const [isPending, startTransition] = useTransition();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [togglingVisibilityId, setTogglingVisibilityId] = useState<string | null>(null);
 
   // Sincronizar Avaliações Reais via Link do Google Maps ou Place ID
   const handleSyncGoogle = async (e?: React.FormEvent) => {
@@ -189,6 +193,36 @@ export function ReviewsManager({
         });
       }
       setDeletingId(null);
+    });
+  };
+
+  // Alternar Visibilidade da Avaliação (Ocultar/Exibir na Vitrine Pública)
+  const handleToggleVisibility = (id: string, currentVisible: boolean) => {
+    const nextVisible = !currentVisible;
+    setTogglingVisibilityId(id);
+
+    // Atualização otimista imediata na interface
+    setReviews((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, is_visible: nextVisible } : r))
+    );
+
+    startTransition(async () => {
+      const res = await toggleTenantReviewVisibilityAction(id, nextVisible);
+      if (res.error) {
+        // Reverte se houver erro
+        setReviews((prev) =>
+          prev.map((r) => (r.id === id ? { ...r, is_visible: currentVisible } : r))
+        );
+        setFeedback({ type: "error", message: res.error });
+      } else {
+        setFeedback({
+          type: "success",
+          message: nextVisible
+            ? "Avaliação agora está visível na vitrine pública!"
+            : "Avaliação ocultada da vitrine pública com sucesso.",
+        });
+      }
+      setTogglingVisibilityId(null);
     });
   };
 
@@ -349,7 +383,19 @@ export function ReviewsManager({
           Gerencie depoimentos oficiais do Google e responda com IA para acelerar a reputação do seu negócio.
         </p>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Botão Superior: Ressincronizar Avaliações do Google */}
+          <button
+            type="button"
+            disabled={isSyncingGoogle}
+            onClick={() => handleSyncGoogle()}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 px-3.5 py-2 text-xs font-bold shadow-2xs transition disabled:opacity-60"
+            title="Ressincronizar avaliações do Google Places via upsert sem duplicar"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isSyncingGoogle ? "animate-spin" : ""}`} />
+            <span>{isSyncingGoogle ? "Ressincronizando..." : "Ressincronizar Avaliações do Google"}</span>
+          </button>
+
           {mapsLink && (
             <a
               href={mapsLink}
@@ -479,11 +525,16 @@ export function ReviewsManager({
             const isGeneratingThis = loadingReviewId === rev.id;
             const reviewText = rev.text || rev.review_text || "";
             const authorPhoto = rev.author_photo_url || rev.profile_photo_url;
+            const isHidden = rev.is_visible === false;
 
             return (
               <div
                 key={rev.id}
-                className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-2xs space-y-3 transition hover:shadow-xs"
+                className={`flex flex-col justify-between rounded-2xl border ${
+                  isHidden
+                    ? "border-amber-200 bg-amber-50/20 border-dashed"
+                    : "border-slate-200 bg-white"
+                } p-4 sm:p-5 shadow-2xs space-y-3 transition hover:shadow-xs`}
               >
                 <div className="space-y-2.5">
                   <div className="flex items-start justify-between gap-2">
@@ -501,8 +552,19 @@ export function ReviewsManager({
                         </div>
                       )}
                       <div>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <p className="font-bold text-xs text-slate-900">{rev.author_name}</p>
+                          {isHidden ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-[10px] font-bold border border-amber-300">
+                              <EyeOff className="h-3 w-3 text-amber-600" />
+                              <span>Oculto da Vitrine</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 px-2 py-0.5 text-[10px] font-semibold border border-emerald-200">
+                              <Eye className="h-3 w-3 text-emerald-600" />
+                              <span>Visível</span>
+                            </span>
+                          )}
                           {rev.author_url && (
                             <a
                               href={rev.author_url}
@@ -605,26 +667,52 @@ export function ReviewsManager({
                   )}
                 </div>
 
-                {/* Rodapé do Card com o Botão de IA */}
-                <div className="flex items-center justify-between pt-3 border-t border-slate-100 gap-2">
+                {/* Rodapé do Card com Ações */}
+                <div className="flex flex-wrap items-center justify-between pt-3 border-t border-slate-100 gap-2">
                   <button
                     type="button"
                     onClick={() => handleGenerateResponse(rev.id, rev.author_name, rev.rating, reviewText)}
                     disabled={loadingReviewId === rev.id}
                     className="flex items-center gap-1 text-xs font-semibold text-purple-600 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-3 py-1.5 rounded-md transition-all disabled:opacity-50"
                   >
-                    {loadingReviewId === rev.id ? "⏳ Gerando resposta..." : "✨ Gerar Resposta com IA"}
+                    {loadingReviewId === rev.id ? "⏳ Gerando..." : "✨ Resposta IA"}
                   </button>
 
-                  <button
-                    type="button"
-                    disabled={deletingId === rev.id}
-                    onClick={() => handleDelete(rev.id, rev.author_name)}
-                    className="inline-flex items-center gap-1 text-[11px] font-bold text-red-600 hover:text-red-800 transition"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    <span>Excluir</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {/* Botão de Alternar Visibilidade (Ocultar/Mostrar na Vitrine) */}
+                    <button
+                      type="button"
+                      disabled={togglingVisibilityId === rev.id}
+                      onClick={() => handleToggleVisibility(rev.id, !isHidden)}
+                      className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition ${
+                        isHidden
+                          ? "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                          : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                      }`}
+                      title={isHidden ? "Exibir esta avaliação na vitrine pública" : "Ocultar esta avaliação da vitrine pública"}
+                    >
+                      {togglingVisibilityId === rev.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : isHidden ? (
+                        <Eye className="h-3.5 w-3.5 text-emerald-600" />
+                      ) : (
+                        <EyeOff className="h-3.5 w-3.5 text-slate-500" />
+                      )}
+                      <span>{isHidden ? "Mostrar na Vitrine" : "Ocultar da Vitrine"}</span>
+                    </button>
+
+                    {/* Botão de Eliminar Definitivamente */}
+                    <button
+                      type="button"
+                      disabled={deletingId === rev.id}
+                      onClick={() => handleDelete(rev.id, rev.author_name)}
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-red-600 hover:text-red-800 transition px-2 py-1.5 rounded-lg hover:bg-red-50"
+                      title="Eliminar permanentemente do banco de dados"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      <span>Eliminar</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             );

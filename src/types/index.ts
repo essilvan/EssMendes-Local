@@ -173,6 +173,7 @@ export interface TenantReview {
   reply_text?: string | null;
   replied_at?: string | null;
   is_official_google?: boolean;
+  is_visible?: boolean;
   created_at: string;
   updated_at: string;
 }

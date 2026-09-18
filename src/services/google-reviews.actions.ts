@@ -349,24 +349,44 @@ export async function syncGoogleReviews(
       updated_at: new Date().toISOString(),
     }));
 
-    let insertedReviews: any[] = [];
+    let allCurrentReviews: any[] = [];
     if (reviewsToInsert.length > 0) {
-      // Limpa avaliações anteriores para evitar duplicidade
-      await supabase
+      // 1. Busca avaliações existentes para preservar IDs e estado de visibilidade (is_visible)
+      const { data: existingReviews } = await supabase
         .from("tenant_reviews")
-        .delete()
+        .select("*")
         .eq("tenant_id", tenantId);
 
-      const { data: insertedData, error: insertError } = await supabase
-        .from("tenant_reviews")
-        .insert(reviewsToInsert)
-        .select("*");
+      const existingByAuthorAndRating = new Map<string, any>();
+      (existingReviews || []).forEach((r: any) => {
+        const key = `${(r.author_name || "").trim().toLowerCase()}_${r.rating}`;
+        existingByAuthorAndRating.set(key, r);
+      });
 
-      if (insertError) {
-        console.error("[syncGoogleReviews] Erro ao inserir avaliações:", insertError);
-      } else if (insertedData) {
-        insertedReviews = insertedData;
+      // 2. Filtra apenas as avaliações que ainda não existem
+      const newReviewsToInsert = reviewsToInsert.filter((r: any) => {
+        const key = `${(r.author_name || "").trim().toLowerCase()}_${r.rating}`;
+        return !existingByAuthorAndRating.has(key);
+      });
+
+      if (newReviewsToInsert.length > 0) {
+        const { error: insertError } = await supabase
+          .from("tenant_reviews")
+          .insert(newReviewsToInsert);
+
+        if (insertError) {
+          console.error("[syncGoogleReviews] Erro ao inserir avaliações faltantes:", insertError);
+        }
       }
+
+      // 3. Busca a lista completa atualizada com seus UUIDs reais
+      const { data: refreshedReviews } = await supabase
+        .from("tenant_reviews")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .order("created_at", { ascending: false });
+
+      allCurrentReviews = refreshedReviews || [];
     }
 
     // 11. Revalidação de Cache
@@ -386,12 +406,12 @@ export async function syncGoogleReviews(
       success: true,
       data: {
         placeId: targetPlaceId,
-        reviewsCount: reviewsToInsert.length,
+        reviewsCount: allCurrentReviews.length,
         rating,
         userRatingsTotal,
         placeName: placeResult.name,
         placePhotos: photoUrls,
-        reviews: insertedReviews.length > 0 ? insertedReviews : reviewsToInsert,
+        reviews: allCurrentReviews,
       },
     };
   } catch (err) {

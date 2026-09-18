@@ -194,3 +194,85 @@ export async function deleteTenantReviewAction(
     return { error: msg };
   }
 }
+
+export async function toggleTenantReviewVisibilityAction(
+  reviewId: string,
+  isVisible: boolean
+): Promise<ReviewActionState> {
+  const { data: tenantContext, error: tenantError } = await getAuthenticatedTenant();
+  if (tenantError || !tenantContext) {
+    return { error: "Sessão expirada." };
+  }
+
+  const tenantId = tenantContext.tenantId;
+  const trimmedId = reviewId ? reviewId.trim() : "";
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmedId);
+
+  if (!isUuid) {
+    return { error: "Identificador de avaliação inválido para atualização." };
+  }
+
+  const supabase = await createClient();
+
+  try {
+    // 1. Obter registro para capturar o tenant_id real
+    const { data: reviewRow } = await supabase
+      .from("tenant_reviews")
+      .select("id, tenant_id")
+      .eq("id", trimmedId)
+      .maybeSingle();
+
+    const targetTenantId = reviewRow?.tenant_id || tenantId;
+
+    const updateQuery = supabase
+      .from("tenant_reviews")
+      .update({ is_visible: isVisible, updated_at: new Date().toISOString() })
+      .eq("id", trimmedId);
+
+    if (!tenantContext.isSuperAdmin) {
+      updateQuery.eq("tenant_id", targetTenantId);
+    }
+
+    const { error: updateError } = await updateQuery;
+    if (updateError) {
+      console.error("[toggleTenantReviewVisibilityAction] Erro no Supabase:", updateError);
+      return { error: updateError.message };
+    }
+
+    // 2. Obter o slug do tenant de forma resiliente
+    let tenantSlug = tenantContext.tenant?.slug;
+    if (!tenantSlug || targetTenantId !== tenantId) {
+      const { data: tenantData } = await supabase
+        .from("tenants")
+        .select("slug")
+        .eq("id", targetTenantId)
+        .maybeSingle();
+      if (tenantData?.slug) {
+        tenantSlug = tenantData.slug;
+      }
+    }
+
+    // 3. Revalidação de Cache imediata (Admin e Vitrine Pública)
+    revalidatePath("/admin/perfil");
+    revalidatePath("/admin/avaliacoes");
+    revalidatePath("/admin/dashboard");
+
+    if (tenantSlug) {
+      revalidatePath(`/${tenantSlug}`);
+      revalidatePath(`/${tenantSlug}`, "page");
+      revalidatePath(`/${tenantSlug}`, "layout");
+    }
+    revalidatePath("/[slug]", "page");
+    revalidatePath("/[slug]", "layout");
+
+    return {
+      success: true,
+      message: isVisible
+        ? "Avaliação agora está visível na vitrine pública!"
+        : "Avaliação ocultada da vitrine pública com sucesso.",
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Erro inesperado";
+    return { error: msg };
+  }
+}
