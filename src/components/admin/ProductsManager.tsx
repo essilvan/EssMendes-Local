@@ -6,11 +6,13 @@ import {
   updateProductAction,
   deleteProductAction,
   toggleProductAvailabilityAction,
+  updateProductStockAction,
 } from "@/services/product.actions";
 import type { TenantProduct } from "@/types";
 import {
   ShoppingBag,
   Plus,
+  Minus,
   Trash2,
   Edit2,
   CheckCircle2,
@@ -23,6 +25,7 @@ import {
   ExternalLink,
   X,
   MessageCircle,
+  Package,
 } from "lucide-react";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 import { getTenantPublicUrl } from "@/utils/tenant-url";
@@ -50,6 +53,8 @@ export function ProductsManager({
   const [promotionalPrice, setPromotionalPrice] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [isFeatured, setIsFeatured] = useState(false);
+  const [isUnlimitedStock, setIsUnlimitedStock] = useState(true);
+  const [stockQuantity, setStockQuantity] = useState<number>(10);
 
   const [feedback, setFeedback] = useState<{
     type: "success" | "error";
@@ -59,6 +64,7 @@ export function ProductsManager({
   const [isPending, startTransition] = useTransition();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [stockUpdatingId, setStockUpdatingId] = useState<string | null>(null);
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -76,6 +82,8 @@ export function ProductsManager({
     setPromotionalPrice("");
     setImageUrl("");
     setIsFeatured(false);
+    setIsUnlimitedStock(true);
+    setStockQuantity(10);
     setIsAdding(true);
     setFeedback(null);
   };
@@ -89,6 +97,8 @@ export function ProductsManager({
     setPromotionalPrice(p.promotional_price ? String(p.promotional_price) : "");
     setImageUrl(p.image_url || "");
     setIsFeatured(p.is_featured);
+    setIsUnlimitedStock(p.stock_quantity === null || p.stock_quantity === undefined);
+    setStockQuantity(typeof p.stock_quantity === "number" ? p.stock_quantity : 10);
     setIsAdding(true);
     setFeedback(null);
   };
@@ -96,6 +106,35 @@ export function ProductsManager({
   const handleCancelForm = () => {
     setIsAdding(false);
     setEditingProduct(null);
+  };
+
+  const handleQuickStockChange = (productId: string, newStock: number | null) => {
+    setStockUpdatingId(productId);
+    const previousProducts = [...products];
+    setProducts((prev) =>
+      prev.map((item) => (item.id === productId ? { ...item, stock_quantity: newStock } : item))
+    );
+
+    startTransition(async () => {
+      const res = await updateProductStockAction(productId, newStock);
+      if (!res.success) {
+        setProducts(previousProducts);
+        setFeedback({
+          type: "error",
+          message: res.error || "Falha ao atualizar estoque do produto.",
+        });
+      } else {
+        const prod = products.find((p) => p.id === productId);
+        setFeedback({
+          type: "success",
+          message:
+            newStock === null
+              ? `Estoque de "${prod?.name || "Produto"}" definido como ilimitado / sob encomenda.`
+              : `Estoque de "${prod?.name || "Produto"}" atualizado para ${newStock} unidade(s).`,
+        });
+      }
+      setStockUpdatingId(null);
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -119,6 +158,7 @@ export function ProductsManager({
       price: numPrice,
       promotional_price: numPromo,
       image_url: imageUrl.trim() || undefined,
+      stock_quantity: isUnlimitedStock ? null : Math.max(0, Math.floor(stockQuantity)),
       is_available: editingProduct ? editingProduct.is_available : true,
       is_featured: isFeatured,
       display_order: editingProduct ? editingProduct.display_order : 0,
@@ -343,6 +383,116 @@ export function ProductsManager({
               />
             </div>
 
+            {/* Controle de Estoque Manipulável */}
+            <div className="sm:col-span-2 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-teal-100 text-teal-800 shadow-2xs">
+                    <Package className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                      Controle de Estoque & Disponibilidade
+                    </h4>
+                    <p className="text-[11px] text-slate-500">
+                      Defina a quantidade de unidades físicas prontas para entrega
+                    </p>
+                  </div>
+                </div>
+
+                <label className="inline-flex items-center gap-2 cursor-pointer select-none bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs">
+                  <input
+                    type="checkbox"
+                    checked={isUnlimitedStock}
+                    onChange={(e) => {
+                      setIsUnlimitedStock(e.target.checked);
+                      if (!e.target.checked && stockQuantity <= 0) {
+                        setStockQuantity(10);
+                      }
+                    }}
+                    className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
+                  />
+                  <span className="text-xs font-semibold text-slate-700">
+                    Disponibilidade Ilimitada / Sob Encomenda
+                  </span>
+                </label>
+              </div>
+
+              {!isUnlimitedStock && (
+                <div className="pt-3 border-t border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in duration-200">
+                  <div className="space-y-1.5">
+                    <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                      Quantidade em Estoque (Unidades)
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setStockQuantity(Math.max(0, stockQuantity - 1))}
+                        className="h-9 w-9 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 flex items-center justify-center font-black text-sm text-slate-700 shadow-2xs transition active:scale-95 cursor-pointer"
+                        title="Diminuir 1 unidade"
+                      >
+                        <Minus className="h-4 w-4" />
+                      </button>
+
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={stockQuantity}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value, 10);
+                          setStockQuantity(isNaN(val) || val < 0 ? 0 : val);
+                        }}
+                        className="w-24 text-center rounded-xl border border-slate-300 p-2 text-sm font-bold text-slate-900 focus:border-teal-600 focus:outline-none bg-white shadow-2xs"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => setStockQuantity(stockQuantity + 1)}
+                        className="h-9 w-9 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 flex items-center justify-center font-black text-sm text-slate-700 shadow-2xs transition active:scale-95 cursor-pointer"
+                        title="Aumentar 1 unidade"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+
+                      <div className="flex items-center gap-1.5 ml-2">
+                        <button
+                          type="button"
+                          onClick={() => setStockQuantity(stockQuantity + 5)}
+                          className="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 transition cursor-pointer"
+                          title="Adicionar 5 unidades"
+                        >
+                          +5
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setStockQuantity(stockQuantity + 10)}
+                          className="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 transition cursor-pointer"
+                          title="Adicionar 10 unidades"
+                        >
+                          +10
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="self-start sm:self-center">
+                    {stockQuantity > 0 ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300/60 px-3.5 py-1 text-xs font-bold">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                        <span>Em Estoque: {stockQuantity} {stockQuantity === 1 ? "unidade" : "unidades"}</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300/60 px-3.5 py-1 text-xs font-bold">
+                        <AlertCircle className="h-3.5 w-3.5 text-amber-600" />
+                        <span>Esgotado (Sob Encomenda)</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="sm:col-span-2">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
                 Foto do Produto
@@ -485,6 +635,82 @@ export function ProductsManager({
                         {formatCurrency(p.price)}
                       </span>
                     )}
+                  </div>
+
+                  {/* Controle Rápido de Estoque Diretamente no Card */}
+                  <div className="pt-2 pb-1 border-t border-slate-100">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                        <Package className="h-3 w-3 text-slate-400" />
+                        <span>Estoque:</span>
+                      </span>
+
+                      {p.stock_quantity === null || p.stock_quantity === undefined ? (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                            Ilimitado
+                          </span>
+                          <button
+                            type="button"
+                            disabled={stockUpdatingId === p.id}
+                            onClick={() => handleQuickStockChange(p.id, 10)}
+                            className="text-[10px] font-bold text-teal-700 hover:text-teal-900 hover:underline cursor-pointer"
+                            title="Ativar controle de unidades"
+                          >
+                            Ativar
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            disabled={stockUpdatingId === p.id || (p.stock_quantity || 0) <= 0}
+                            onClick={() =>
+                              handleQuickStockChange(
+                                p.id,
+                                Math.max(0, (p.stock_quantity || 0) - 1)
+                              )
+                            }
+                            className="h-6 w-6 rounded-md border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center font-black text-xs text-slate-700 transition active:scale-95 cursor-pointer shadow-2xs"
+                            title="Diminuir 1 unidade"
+                          >
+                            <Minus className="h-3 w-3" />
+                          </button>
+
+                          <span
+                            className={`text-[11px] font-extrabold px-2 py-0.5 rounded-md min-w-[50px] text-center ${
+                              p.stock_quantity > 0
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
+                                : "bg-red-50 text-red-700 border border-red-200/60"
+                            }`}
+                          >
+                            {p.stock_quantity > 0 ? `${p.stock_quantity} un.` : "Esgotado"}
+                          </span>
+
+                          <button
+                            type="button"
+                            disabled={stockUpdatingId === p.id}
+                            onClick={() =>
+                              handleQuickStockChange(p.id, (p.stock_quantity || 0) + 1)
+                            }
+                            className="h-6 w-6 rounded-md border border-slate-200 bg-white hover:bg-slate-100 flex items-center justify-center font-black text-xs text-slate-700 transition active:scale-95 cursor-pointer shadow-2xs"
+                            title="Adicionar 1 unidade"
+                          >
+                            <Plus className="h-3 w-3" />
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={stockUpdatingId === p.id}
+                            onClick={() => handleQuickStockChange(p.id, null)}
+                            className="text-[11px] font-bold text-slate-400 hover:text-slate-700 px-1 py-0.5 rounded hover:bg-slate-100 cursor-pointer ml-0.5"
+                            title="Tornar ilimitado / sob encomenda"
+                          >
+                            ∞
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 

@@ -234,6 +234,7 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
     price: Number(p.price) || 0,
     promotional_price: p.promotional_price ? Number(p.promotional_price) : null,
     image_url: p.image_url || null,
+    stock_quantity: p.stock_quantity !== undefined && p.stock_quantity !== null ? Number(p.stock_quantity) : null,
     is_available: p.is_available ?? true,
     is_featured: p.is_featured ?? false,
     display_order: p.display_order ?? 0,
@@ -444,10 +445,15 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
       return {
         "@type": "Offer",
         "itemOffered": {
-          "@type": "Service",
+          "@type": "Product",
           "name": p.name,
           "description": p.description || `Item/produto disponível em ${tenant.name}`,
+          ...(p.image_url ? { "image": p.image_url } : {}),
         },
+        "availability":
+          p.stock_quantity === 0
+            ? "https://schema.org/OutOfStock"
+            : "https://schema.org/InStock",
         ...(hasNumericPrice
           ? {
               "price": Number(currentPrice).toFixed(2),

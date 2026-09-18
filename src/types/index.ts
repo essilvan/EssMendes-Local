@@ -270,6 +270,7 @@ export interface TenantProduct {
   price: number;
   promotional_price?: number | null;
   image_url?: string | null;
+  stock_quantity?: number | null;
   is_available: boolean;
   is_featured: boolean;
   display_order: number;

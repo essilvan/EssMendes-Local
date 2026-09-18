@@ -4,7 +4,17 @@ import React from "react";
 import type { TenantProduct } from "@/types";
 import type { NicheThemeConfig } from "@/config/tenant-themes";
 import { NICHE_THEMES } from "@/config/tenant-themes";
-import { ShoppingBag, MessageCircle, Tag, Star, ArrowRight, Eye } from "lucide-react";
+import {
+  ShoppingBag,
+  MessageCircle,
+  Tag,
+  Star,
+  ArrowRight,
+  Eye,
+  Package,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
 import { sanitizePhoneNumber } from "@/utils/phone";
 import { ItemDetailModal, type ItemDetailData } from "./ItemDetailModal";
 
@@ -37,11 +47,15 @@ export function PublicProductsSection({
     }).format(val);
   };
 
-  const getWhatsAppProductLink = (productName: string, price: number) => {
+  const getWhatsAppProductLink = (productName: string, price: number, isOutOfStock?: boolean) => {
     const formattedPrice = formatCurrency(price);
-    const message = encodeURIComponent(
-      `👋 Olá! Vi no site o produto *${productName}* por ${formattedPrice}. Gostaria de confirmar a disponibilidade para retirada ou entrega.`
-    );
+    const message = isOutOfStock
+      ? encodeURIComponent(
+          `👋 Olá! Vi no site o produto *${productName}* e gostaria de consultar a encomenda e prazo de reposição.`
+        )
+      : encodeURIComponent(
+          `👋 Olá! Vi no site o produto *${productName}* por ${formattedPrice}. Gostaria de confirmar a disponibilidade para retirada ou entrega.`
+        );
     return `https://wa.me/55${cleanPhone}?text=${message}`;
   };
 
@@ -74,7 +88,8 @@ export function PublicProductsSection({
         {activeProducts.map((p) => {
           const hasPromo = p.promotional_price && p.promotional_price > 0 && p.promotional_price < p.price;
           const currentPrice = hasPromo ? p.promotional_price! : p.price;
-          const orderUrl = cleanPhone ? getWhatsAppProductLink(p.name, currentPrice) : "#";
+          const isOutOfStock = typeof p.stock_quantity === "number" && p.stock_quantity === 0;
+          const orderUrl = cleanPhone ? getWhatsAppProductLink(p.name, currentPrice, isOutOfStock) : "#";
 
           return (
             <div
@@ -87,6 +102,7 @@ export function PublicProductsSection({
                   promotional_price: p.promotional_price,
                   image_url: p.image_url,
                   category: p.category,
+                  stock_quantity: p.stock_quantity,
                   isService: false,
                 })
               }
@@ -128,12 +144,28 @@ export function PublicProductsSection({
 
                 {/* Conteúdo */}
                 <div className="p-5 space-y-2.5">
-                  {p.category && (
-                    <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider ${currentTheme.badgeText} ${currentTheme.badgeBg} px-2.5 py-0.5 rounded-md`}>
-                      <Tag className="h-2.5 w-2.5" />
-                      {p.category}
-                    </span>
-                  )}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {p.category && (
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider ${currentTheme.badgeText} ${currentTheme.badgeBg} px-2.5 py-0.5 rounded-md`}>
+                        <Tag className="h-2.5 w-2.5" />
+                        {p.category}
+                      </span>
+                    )}
+
+                    {typeof p.stock_quantity === "number" && p.stock_quantity > 0 && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md">
+                        <CheckCircle2 className="h-2.5 w-2.5 text-emerald-500" />
+                        <span>Em Estoque: {p.stock_quantity} un.</span>
+                      </span>
+                    )}
+
+                    {isOutOfStock && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md">
+                        <AlertCircle className="h-2.5 w-2.5 text-amber-500" />
+                        <span>Esgotado / Sob Encomenda</span>
+                      </span>
+                    )}
+                  </div>
 
                   <h3 className={`font-bold text-sm sm:text-base ${currentTheme.textPrimary} line-clamp-2 leading-snug group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors`}>
                     {p.name}
@@ -171,10 +203,14 @@ export function PublicProductsSection({
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className={`flex items-center justify-center gap-2 w-full rounded-2xl ${currentTheme.ctaButtonClass} px-4 py-3 text-xs font-bold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-sm`}
+                  className={`flex items-center justify-center gap-2 w-full rounded-2xl ${
+                    isOutOfStock
+                      ? "border border-amber-500/30 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 hover:bg-amber-100"
+                      : currentTheme.ctaButtonClass
+                  } px-4 py-3 text-xs font-bold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-sm`}
                 >
                   <MessageCircle className="h-4 w-4" />
-                  <span>Pedir no WhatsApp</span>
+                  <span>{isOutOfStock ? "Consultar Encomenda" : "Pedir no WhatsApp"}</span>
                 </a>
               </div>
             </div>

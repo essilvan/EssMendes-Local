@@ -1,7 +1,17 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { X, MessageCircle, Clock, ShoppingBag, Sparkles, Tag } from "lucide-react";
+import {
+  X,
+  MessageCircle,
+  Clock,
+  ShoppingBag,
+  Sparkles,
+  Tag,
+  Package,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
 import { sanitizePhoneNumber } from "@/utils/phone";
 
 export interface ItemDetailData {
@@ -14,6 +24,7 @@ export interface ItemDetailData {
   duration_minutes?: number | null;
   show_duration?: boolean;
   isService?: boolean;
+  stock_quantity?: number | null;
 }
 
 interface ItemDetailModalProps {
@@ -55,7 +66,10 @@ export function ItemDetailModal({
   if (!isOpen || !item) return null;
 
   const cleanPhone = phone ? sanitizePhoneNumber(phone) : "";
-  const whatsappText = `Olá! Gostaria de mais informações sobre: ${item.title}`;
+  const isOutOfStock = typeof item.stock_quantity === "number" && item.stock_quantity === 0;
+  const whatsappText = isOutOfStock
+    ? `👋 Olá! Vi no site o item *${item.title}*, mas consta como esgotado. Gostaria de consultar encomenda ou previsão de reposição.`
+    : `Olá! Gostaria de mais informações sobre: ${item.title}`;
   const whatsappUrl = cleanPhone
     ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(whatsappText)}`
     : null;
@@ -148,6 +162,20 @@ export function ItemDetailModal({
                 <span>⏱️ {item.duration_minutes} min</span>
               </span>
             )}
+
+            {typeof item.stock_quantity === "number" && item.stock_quantity > 0 && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                <span>Em Estoque: {item.stock_quantity} {item.stock_quantity === 1 ? "unidade" : "unidades"}</span>
+              </span>
+            )}
+
+            {isOutOfStock && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 px-3 py-1 text-xs font-bold text-amber-600 dark:text-amber-400">
+                <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
+                <span>Esgotado / Sob Encomenda</span>
+              </span>
+            )}
           </div>
 
           {/* Cabeçalho: Título Completo e Preço */}
@@ -208,10 +236,18 @@ export function ItemDetailModal({
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-bold shadow-md shadow-emerald-600/20 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+              className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl ${
+                isOutOfStock
+                  ? "bg-amber-600 hover:bg-amber-500 text-white shadow-amber-600/20"
+                  : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20"
+              } text-xs sm:text-sm font-bold shadow-md transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]`}
             >
-              <MessageCircle className="h-4 w-4 fill-white text-emerald-600" />
-              <span>Pedir / Tirar Dúvidas no WhatsApp</span>
+              <MessageCircle className="h-4 w-4 fill-white" />
+              <span>
+                {isOutOfStock
+                  ? "Consultar Encomenda no WhatsApp"
+                  : "Pedir / Tirar Dúvidas no WhatsApp"}
+              </span>
             </a>
           )}
         </div>

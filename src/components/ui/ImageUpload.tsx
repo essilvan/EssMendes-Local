@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import {
   UploadCloud,
   Image as ImageIcon,
+  Camera,
   Loader2,
   X,
   CheckCircle2,
@@ -21,6 +22,7 @@ interface ImageUploadProps {
   folder?: string;
   aspectRatio?: "square" | "video" | "banner" | "auto";
   disabled?: boolean;
+  withCamera?: boolean;
 }
 
 export function ImageUpload({
@@ -32,6 +34,7 @@ export function ImageUpload({
   folder = "general",
   aspectRatio = "auto",
   disabled = false,
+  withCamera = true,
 }: ImageUploadProps) {
   const [currentUrl, setCurrentUrl] = useState<string>(value || "");
   const [isUploading, setIsUploading] = useState<boolean>(false);
@@ -39,6 +42,8 @@ export function ImageUpload({
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [showUrlInput, setShowUrlInput] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = async (file: File) => {
     if (!file) return;
@@ -111,6 +116,8 @@ export function ImageUpload({
     setCurrentUrl("");
     if (onChange) onChange("");
     if (fileInputRef.current) fileInputRef.current.value = "";
+    if (cameraInputRef.current) cameraInputRef.current.value = "";
+    if (galleryInputRef.current) galleryInputRef.current.value = "";
   };
 
   const handleManualUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -155,9 +162,9 @@ export function ImageUpload({
 
       {/* Preview se já houver imagem */}
       {currentUrl ? (
-        <div className="relative group rounded-xl border border-slate-200 bg-slate-50 p-2 flex items-center gap-4 overflow-hidden shadow-2xs">
+        <div className="relative group rounded-xl border border-slate-200 bg-slate-50 p-3 flex flex-col sm:flex-row items-start sm:items-center gap-4 overflow-hidden shadow-2xs">
           <div
-            className={`relative rounded-lg overflow-hidden border border-slate-200 bg-white flex items-center justify-center ${
+            className={`relative rounded-lg overflow-hidden border border-slate-200 bg-white flex items-center justify-center shrink-0 ${
               aspectRatio === "square"
                 ? "h-20 w-20"
                 : aspectRatio === "banner"
@@ -173,28 +180,43 @@ export function ImageUpload({
             />
           </div>
 
-          <div className="flex-1 min-w-0 space-y-1">
+          <div className="flex-1 min-w-0 space-y-1.5 w-full">
             <p className="text-xs font-bold text-slate-900 truncate">
-              Imagem Carregada
+              Imagem Carregada com Sucesso
             </p>
             <p className="text-[11px] text-slate-500 truncate max-w-xs font-mono">
               {currentUrl}
             </p>
-            <div className="flex items-center gap-2 pt-1">
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              {withCamera && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => cameraInputRef.current?.click()}
+                    disabled={disabled || isUploading}
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-teal-700 hover:text-teal-900 bg-teal-50 hover:bg-teal-100 px-2.5 py-1 rounded-lg transition"
+                  >
+                    <Camera className="h-3 w-3" />
+                    <span>Tirar Nova Foto</span>
+                  </button>
+                  <span className="text-slate-300">•</span>
+                </>
+              )}
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => galleryInputRef.current?.click()}
                 disabled={disabled || isUploading}
-                className="text-[11px] font-semibold text-teal-700 hover:underline"
+                className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-700 hover:text-slate-900 bg-slate-200 hover:bg-slate-300 px-2.5 py-1 rounded-lg transition"
               >
-                Trocar Imagem
+                <ImageIcon className="h-3 w-3" />
+                <span>Trocar da Galeria</span>
               </button>
               <span className="text-slate-300">•</span>
               <button
                 type="button"
                 onClick={handleRemove}
                 disabled={disabled || isUploading}
-                className="text-[11px] font-semibold text-red-600 hover:underline"
+                className="text-[11px] font-semibold text-red-600 hover:underline px-1 py-1"
               >
                 Remover
               </button>
@@ -211,45 +233,90 @@ export function ImageUpload({
           onDragLeave={() => setIsDragging(false)}
           onDrop={handleDrop}
           onClick={() => {
-            if (!disabled && !isUploading) fileInputRef.current?.click();
+            if (!disabled && !isUploading) galleryInputRef.current?.click();
           }}
-          className={`relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 text-center cursor-pointer transition ${
+          className={`relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 text-center cursor-pointer transition ${
             isDragging
               ? "border-teal-600 bg-teal-50/60 ring-2 ring-teal-600/20"
               : "border-slate-300 bg-slate-50/50 hover:border-teal-500 hover:bg-slate-50"
           } ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
         >
           {isUploading ? (
-            <div className="flex flex-col items-center gap-2 py-2 text-teal-800">
+            <div className="flex flex-col items-center gap-2 py-3 text-teal-800">
               <Loader2 className="h-7 w-7 animate-spin text-teal-700" />
-              <p className="text-xs font-bold">Enviando imagem...</p>
+              <p className="text-xs font-bold">Enviando foto...</p>
               <p className="text-[11px] text-slate-500">
-                Gerando URL pública no Supabase Storage
+                Processando imagem no Supabase Storage
               </p>
             </div>
           ) : (
-            <div className="flex flex-col items-center gap-2 py-1">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-teal-700 shadow-2xs">
-                <UploadCloud className="h-5 w-5" />
+            <div className="flex flex-col items-center gap-3 py-1 w-full max-w-md">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-teal-50 text-teal-700 shadow-2xs">
+                <UploadCloud className="h-6 w-6" />
               </div>
-              <div>
+              <div className="space-y-0.5">
                 <p className="text-xs font-bold text-slate-800">
-                  Clique para selecionar ou arraste uma foto aqui
+                  Tire uma foto ou escolha da galeria do seu celular
                 </p>
-                <p className="text-[11px] text-slate-500 mt-0.5">
+                <p className="text-[11px] text-slate-500">
                   PNG, JPG ou WebP até 5MB
                 </p>
+              </div>
+
+              {/* Botões de Ação Rápida: Câmera Nativa e Galeria */}
+              <div
+                className="flex flex-wrap items-center justify-center gap-2.5 pt-2 w-full"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {withCamera && (
+                  <button
+                    type="button"
+                    onClick={() => cameraInputRef.current?.click()}
+                    disabled={disabled || isUploading}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-teal-800 hover:bg-teal-900 text-white px-4 py-2.5 text-xs font-bold shadow-xs transition active:scale-95 cursor-pointer"
+                  >
+                    <Camera className="h-4 w-4" />
+                    <span>Tirar Foto com a Câmera</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => galleryInputRef.current?.click()}
+                  disabled={disabled || isUploading}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 px-4 py-2.5 text-xs font-bold shadow-2xs transition active:scale-95 cursor-pointer"
+                >
+                  <ImageIcon className="h-4 w-4 text-slate-500" />
+                  <span>Escolher da Galeria</span>
+                </button>
               </div>
             </div>
           )}
         </div>
       )}
 
-      {/* Input de Arquivo Oculto */}
+      {/* Input Oculto para Câmera do Celular (com capture="environment") */}
       <input
-        ref={fileInputRef}
+        ref={cameraInputRef}
         type="file"
-        accept="image/png,image/jpeg,image/jpg,image/webp"
+        accept="image/*"
+        capture="environment"
+        id={name ? `${name}-camera` : "product-photo-camera"}
+        className="hidden"
+        disabled={disabled || isUploading}
+        onChange={(e) => {
+          if (e.target.files && e.target.files[0]) {
+            handleFileSelect(e.target.files[0]);
+          }
+        }}
+      />
+
+      {/* Input Oculto para Galeria / Arquivos */}
+      <input
+        ref={galleryInputRef}
+        type="file"
+        accept="image/*"
+        id={name ? `${name}-gallery` : "product-photo-gallery"}
         className="hidden"
         disabled={disabled || isUploading}
         onChange={(e) => {
