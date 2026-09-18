@@ -30,8 +30,10 @@ export function GoogleReviewsCard({
 
   console.log('Reviews carregadas no componente GoogleReviewsCard:', reviews?.length);
 
-  const hasReviews = Boolean(reviews && reviews.length > 0);
-  const reviewsToDisplay = Array.isArray(reviews) ? reviews : [];
+  const reviewsToDisplay = Array.isArray(reviews)
+    ? reviews.filter((r) => r.is_visible !== false)
+    : [];
+  const hasReviews = Boolean(reviewsToDisplay && reviewsToDisplay.length > 0);
   const displayRating = typeof rating === "number" && rating > 0 ? rating.toFixed(1) : "5.0";
   const displayCount = typeof reviewCount === "number" && reviewCount > 0 ? reviewCount : reviewsToDisplay.length;
 

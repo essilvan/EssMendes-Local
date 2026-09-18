@@ -53,7 +53,7 @@ export function MinimalTemplateView({
 
   const realRating = profile?.google_rating ?? profile?.rating ?? tenant.google_rating ?? 5.0;
   const realReviewCount =
-    profile?.google_reviews_count ?? profile?.review_count ?? tenant.google_reviews_count ?? reviews.length;
+    profile?.google_reviews_count ?? profile?.review_count ?? tenant.google_reviews_count ?? reviews.filter((r) => r.is_visible !== false).length;
 
   // Identificar segmento do tenant
   const isTimeBasedNiche = ['barbearia', 'salao', 'estetica', 'salao_beleza', 'beleza'].some(n => 

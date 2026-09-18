@@ -161,9 +161,10 @@ export function PublicTenantHub({
   const selectedTemplateClass =
     templateClasses[activeTemplate] || templateClasses.premium;
 
+  const visibleReviews = (reviews || []).filter((r) => r.is_visible !== false);
   const realRating = profile?.google_rating ?? profile?.rating ?? tenant.google_rating ?? 5.0;
   const realReviewCount =
-    profile?.google_reviews_count ?? profile?.review_count ?? tenant.google_reviews_count ?? reviews.length;
+    profile?.google_reviews_count ?? profile?.review_count ?? tenant.google_reviews_count ?? visibleReviews.length;
 
   const handleOpenBooking = (serviceId?: string) => {
     setSelectedServiceId(
@@ -273,7 +274,7 @@ export function PublicTenantHub({
             profile={profile}
             services={services}
             portfolioItems={portfolioItems}
-            reviews={reviews}
+            reviews={visibleReviews}
             posts={posts}
             products={products}
             isOpenNow={isOpenNow}
@@ -293,7 +294,7 @@ export function PublicTenantHub({
             profile={profile}
             services={services}
             portfolioItems={portfolioItems}
-            reviews={reviews}
+            reviews={visibleReviews}
             posts={posts}
             products={products}
             isOpenNow={isOpenNow}
@@ -313,7 +314,7 @@ export function PublicTenantHub({
             profile={profile}
             services={services}
             portfolioItems={portfolioItems}
-            reviews={reviews}
+            reviews={visibleReviews}
             posts={posts}
             products={products}
             isOpenNow={isOpenNow}
@@ -336,7 +337,7 @@ export function PublicTenantHub({
             profile={profile}
             services={services}
             portfolioItems={portfolioItems}
-            reviews={reviews}
+            reviews={visibleReviews}
             posts={posts}
             products={products}
             isOpenNow={isOpenNow}

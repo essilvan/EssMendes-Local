@@ -33,7 +33,7 @@ export function PremiumTemplateView({
 }: TemplateViewProps) {
   const realRating = profile?.google_rating ?? profile?.rating ?? tenant.google_rating ?? 5.0;
   const realReviewCount =
-    profile?.google_reviews_count ?? profile?.review_count ?? tenant.google_reviews_count ?? reviews.length;
+    profile?.google_reviews_count ?? profile?.review_count ?? tenant.google_reviews_count ?? reviews.filter((r) => r.is_visible !== false).length;
   const rawPhone = profile?.phone_whatsapp || profile?.phone || "";
 
   const photosData = getUnifiedEstablishmentPhotos(tenant, profile);
@@ -56,7 +56,7 @@ export function PremiumTemplateView({
         businessCategory={profile?.business_category}
         rating={realRating}
         reviewCount={realReviewCount}
-        reviews={reviews}
+        reviews={reviews.filter((r) => r.is_visible !== false)}
         googleMapsUrl={profile?.google_maps_url}
         theme={theme}
         onOpenBooking={() => onOpenBooking()}
@@ -127,7 +127,7 @@ export function PremiumTemplateView({
         tenantName={tenant.name}
         rating={realRating}
         reviewCount={realReviewCount}
-        reviews={reviews}
+        reviews={reviews.filter((r) => r.is_visible !== false)}
         googleMapsUrl={profile?.google_maps_url}
         theme={theme}
       />

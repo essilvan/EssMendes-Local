@@ -262,21 +262,24 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
   const { data: rawReviews, error: reviewsError } = reviewsRes;
   console.log('Reviews carregadas na vitrine:', rawReviews?.length, reviewsError);
 
-  const reviews: TenantReview[] = (rawReviews || []).map((r: any) => ({
-    id: r.id,
-    tenant_id: r.tenant_id,
-    author_name: r.author_name || r.author || "Cliente Google",
-    author_photo_url: r.author_photo_url || r.profile_photo_url || r.photo_url || null,
-    profile_photo_url: r.author_photo_url || r.profile_photo_url || null,
-    author_url: r.author_url || null,
-    rating: Number(r.rating) || 5,
-    text: r.review_text || r.text || "",
-    review_text: r.review_text || r.text || "",
-    relative_time: r.relative_time_description || r.relative_time || "recentemente",
-    relative_time_description: r.relative_time_description || r.relative_time || "recentemente",
-    created_at: r.created_at,
-    updated_at: r.updated_at,
-  }));
+  const reviews: TenantReview[] = (rawReviews || [])
+    .filter((r: any) => r.is_visible !== false)
+    .map((r: any) => ({
+      id: r.id,
+      tenant_id: r.tenant_id,
+      author_name: r.author_name || r.author || "Cliente Google",
+      author_photo_url: r.author_photo_url || r.profile_photo_url || r.photo_url || null,
+      profile_photo_url: r.author_photo_url || r.profile_photo_url || null,
+      author_url: r.author_url || null,
+      rating: Number(r.rating) || 5,
+      text: r.review_text || r.text || "",
+      review_text: r.review_text || r.text || "",
+      relative_time: r.relative_time_description || r.relative_time || "recentemente",
+      relative_time_description: r.relative_time_description || r.relative_time || "recentemente",
+      is_visible: r.is_visible ?? true,
+      created_at: r.created_at,
+      updated_at: r.updated_at,
+    }));
 
   // 2.6 Tratamento e Filtragem de Posts / Artigos de SEO Ativos
   const rawPostsList = postsRes.data || [];

@@ -60,7 +60,7 @@ export function ModernTemplateView({
 
   const realRating = profile?.google_rating ?? profile?.rating ?? tenant.google_rating ?? 5.0;
   const realReviewCount =
-    profile?.google_reviews_count ?? profile?.review_count ?? tenant.google_reviews_count ?? reviews.length;
+    profile?.google_reviews_count ?? profile?.review_count ?? tenant.google_reviews_count ?? reviews.filter((r) => r.is_visible !== false).length;
 
   // Identificar segmento do tenant
   const isTimeBasedNiche = ['barbearia', 'salao', 'estetica', 'salao_beleza', 'beleza'].some(n => 
@@ -75,7 +75,7 @@ export function ModernTemplateView({
 
   const heroImage = effectiveHeroImage;
   const hoursList = tenant.opening_hours || profile?.opening_hours_json || [];
-  const latestReview = reviews.length > 0 ? reviews[0] : null;
+  const latestReview = reviews.filter((r) => r.is_visible !== false)[0] || null;
 
   // Extrair atributos de comodidades para chips
   const amenitiesList: string[] = [
@@ -478,7 +478,7 @@ export function ModernTemplateView({
         tenantName={tenant.name}
         rating={realRating}
         reviewCount={realReviewCount}
-        reviews={reviews}
+        reviews={reviews.filter((r) => r.is_visible !== false)}
         googleMapsUrl={profile?.google_maps_url}
         theme={theme}
       />
