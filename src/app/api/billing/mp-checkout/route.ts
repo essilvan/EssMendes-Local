@@ -76,19 +76,25 @@ export async function POST(req: Request) {
     // Se estiver autenticado, complementa com os dados da sessão do tenant
     const { data: authContext } = await getAuthenticatedTenant();
     if (authContext?.tenant) {
-      tenantId = authContext.tenantId || tenantId;
-      tenantName = tenantName || authContext.tenant.name;
-      email = email || authContext.user.email;
-      payerName =
-        payerName ||
-        (authContext.user.user_metadata?.full_name as string) ||
-        (authContext.user.user_metadata?.name as string) ||
-        authContext.tenant.name;
-      payerCpf =
-        payerCpf ||
-        (authContext.user.user_metadata?.cpf as string) ||
-        (authContext.user.user_metadata?.cnpj as string) ||
-        (authContext.tenant as any)?.document;
+      if (authContext.isSuperAdmin && body.tenantId) {
+        // Super Admin operando em favor de um estabelecimento específico
+        tenantId = body.tenantId;
+        tenantName = body.tenantName || tenantName;
+      } else {
+        tenantId = authContext.tenantId || tenantId;
+        tenantName = tenantName || authContext.tenant.name;
+        email = email || authContext.user.email;
+        payerName =
+          payerName ||
+          (authContext.user.user_metadata?.full_name as string) ||
+          (authContext.user.user_metadata?.name as string) ||
+          authContext.tenant.name;
+        payerCpf =
+          payerCpf ||
+          (authContext.user.user_metadata?.cpf as string) ||
+          (authContext.user.user_metadata?.cnpj as string) ||
+          (authContext.tenant as any)?.document;
+      }
     }
 
     if (!tenantId) {
@@ -121,7 +127,10 @@ export async function POST(req: Request) {
 
     // Se for cobrança de setup exclusiva
     if (offerType === "setup") {
-      let tenantSetupFee = (authContext?.tenant as any)?.setup_fee_amount ?? (authContext?.tenant as any)?.setup_fee;
+      let tenantSetupFee =
+        authContext?.tenant && (!authContext.isSuperAdmin || body.tenantId === authContext.tenantId)
+          ? ((authContext.tenant as any)?.setup_fee_amount ?? (authContext.tenant as any)?.setup_fee)
+          : undefined;
 
       if (tenantSetupFee === undefined || tenantSetupFee === null) {
         try {
@@ -135,7 +144,7 @@ export async function POST(req: Request) {
 
           const { data: tenantRow } = await supabaseAdmin
             .from("tenants")
-            .select("setup_fee_amount, name")
+            .select("setup_fee_amount, name, contact_email")
             .eq("id", tenantId)
             .maybeSingle();
 
@@ -143,6 +152,9 @@ export async function POST(req: Request) {
             tenantSetupFee = tenantRow.setup_fee_amount;
             if (tenantRow.name) {
               tenantName = tenantRow.name;
+            }
+            if (!email && tenantRow.contact_email) {
+              email = tenantRow.contact_email;
             }
           }
         } catch (err) {
@@ -156,7 +168,9 @@ export async function POST(req: Request) {
         (tenantSetupFee !== null && tenantSetupFee !== undefined ? Number(tenantSetupFee) : 197.00);
       itemPrice = amount;
       if (!body.description) {
-        itemTitle = `Taxa de Implantação e Setup - ${tenantName}`;
+        itemTitle = `Taxa de Implantação e Otimização - ${tenantName}`;
+      } else {
+        itemTitle = body.description;
       }
     }
 
@@ -312,8 +326,8 @@ export async function POST(req: Request) {
         description: itemTitle,
         payment_method_id: "pix",
         payer: {
-          email: email || "cliente@essmendes.com.br",
-          first_name: payerName ? payerName.split(" ")[0] : "Cliente",
+          email: email || "financeiro@essmendes.com.br",
+          first_name: payerName ? payerName.split(" ")[0] : (tenantName ? tenantName.split(" ")[0] : "Cliente"),
           last_name: payerName ? payerName.split(" ").slice(1).join(" ") || "Local" : "EssMendes",
           identification: {
             type: payerCpf && payerCpf.replace(/\D/g, "").length > 11 ? "CNPJ" : "CPF",

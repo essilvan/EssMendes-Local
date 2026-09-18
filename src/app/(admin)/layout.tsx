@@ -4,6 +4,7 @@ import { AdminMobileNav } from "@/components/admin/AdminMobileNav";
 import { AdminPermissionNotice } from "@/components/admin/AdminPermissionNotice";
 import { OverdueBlockScreen } from "@/components/admin/OverdueBlockScreen";
 import { clearManagedTenantAction } from "@/services/super-admin.actions";
+import { AdminManagedBarBillingButton } from "@/components/admin/AdminManagedBarBillingButton";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import Link from "next/link";
@@ -120,6 +121,20 @@ export default async function AdminLayout({
           </div>
 
           <div className="flex items-center gap-2">
+            {tenant?.id && (
+              <AdminManagedBarBillingButton
+                tenant={{
+                  id: tenant.id,
+                  name: companyName,
+                  slug: companySlug,
+                  phone: (tenant as any)?.phone || null,
+                  contact_email: (tenant as any)?.contact_email || user.email || null,
+                  setup_fee_amount: (tenant as any)?.setup_fee_amount ?? (tenant as any)?.setup_fee ?? 197,
+                  setup_fee_paid: (tenant as any)?.setup_fee_paid ?? (tenant as any)?.setup_paid,
+                  setup_paid: (tenant as any)?.setup_paid,
+                }}
+              />
+            )}
             <Link
               href="/super-admin"
               className="inline-flex items-center gap-1 rounded-md bg-slate-950 px-2.5 py-1 text-[11px] font-bold text-amber-300 hover:bg-slate-900 transition"
@@ -130,7 +145,7 @@ export default async function AdminLayout({
             <form action={clearManagedTenantAction}>
               <button
                 type="submit"
-                className="inline-flex items-center gap-1 rounded-md bg-white px-2 py-1 text-[11px] font-bold text-slate-800 hover:bg-slate-100 transition"
+                className="inline-flex items-center gap-1 rounded-md bg-white px-2 py-1 text-[11px] font-bold text-slate-800 hover:bg-slate-100 transition cursor-pointer"
               >
                 <X className="h-3 w-3" />
                 <span>Encerrar</span>

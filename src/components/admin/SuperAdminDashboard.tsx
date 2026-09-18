@@ -17,6 +17,7 @@ import { TenantDeleteModal } from "@/components/admin/TenantDeleteModal";
 import { TenantPermissionsModal } from "@/components/admin/TenantPermissionsModal";
 import { SuperAdminUsersModal } from "@/components/admin/SuperAdminUsersModal";
 import { TenantSetupModal } from "@/components/admin/TenantSetupModal";
+import { AdminPixBillingModal } from "@/components/admin/AdminPixBillingModal";
 import {
   Building2,
   Plus,
@@ -28,6 +29,7 @@ import {
   Globe,
   Loader2,
   MapPin,
+  Zap,
   Sparkles,
   Phone,
   ArrowRight,
@@ -79,6 +81,7 @@ export function SuperAdminDashboard({
   // Modais de Acesso Master, Exclusão e Permissões
   const [accessModalTenant, setAccessModalTenant] = useState<SuperAdminTenantItem | null>(null);
   const [setupModalTenant, setSetupModalTenant] = useState<SuperAdminTenantItem | null>(null);
+  const [billingModalTenant, setBillingModalTenant] = useState<SuperAdminTenantItem | null>(null);
   const [deleteModalTenant, setDeleteModalTenant] = useState<SuperAdminTenantItem | null>(null);
   const [permissionsModalTenant, setPermissionsModalTenant] = useState<SuperAdminTenantItem | null>(null);
   const [isDeletingTenant, setIsDeletingTenant] = useState(false);
@@ -86,6 +89,26 @@ export function SuperAdminDashboard({
     type: "success" | "error";
     message: string;
   } | null>(null);
+
+  const handlePixSetupPaid = (paidTenantId: string) => {
+    setTenants((prev) =>
+      prev.map((t) =>
+        t.id === paidTenantId
+          ? {
+              ...t,
+              setup_fee_paid: true,
+              setup_paid_at: new Date().toISOString(),
+            }
+          : t
+      )
+    );
+    const paidTenant = tenants.find((t) => t.id === paidTenantId);
+    setFeedbackNotification({
+      type: "success",
+      message: `🎉 Taxa de Setup de "${paidTenant?.name || "Estabelecimento"}" validada e quitada com sucesso via Pix Mercado Pago!`,
+    });
+    router.refresh();
+  };
 
   const handleConfirmDelete = async (tenantId: string) => {
     setIsDeletingTenant(true);
@@ -266,6 +289,8 @@ export function SuperAdminDashboard({
     0
   );
 
+  const activeTenant = tenants.find((t) => t.id === activeTenantId);
+
   const filteredTenants = tenants.filter((t) => {
     const term = searchTerm.toLowerCase();
     return (
@@ -390,21 +415,42 @@ export function SuperAdminDashboard({
 
       {/* Alerta se houver tenant ativo sendo gerenciado */}
       {activeTenantId && (
-        <div className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-900 shadow-xs">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-amber-700 shrink-0" />
-            <span>
-              Você possui uma empresa em gerenciamento ativo. Para atuar de forma neutra ou limpar a seleção:
-            </span>
+            <div>
+              <span>
+                Você possui uma empresa em gerenciamento ativo:{" "}
+                <strong>{activeTenant?.name || "Empresa Ativa"}</strong>
+              </span>
+              {activeTenant && !activeTenant.setup_fee_paid && (
+                <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-amber-200/80 px-2 py-0.5 text-[10px] font-bold text-amber-950">
+                  <Clock className="h-3 w-3 text-amber-800" />
+                  Setup Pendente
+                </span>
+              )}
+            </div>
           </div>
-          <form action={clearManagedTenantAction}>
-            <button
-              type="submit"
-              className="rounded-lg bg-amber-200/80 px-3 py-1 font-bold text-amber-950 hover:bg-amber-300 transition cursor-pointer"
-            >
-              Desconectar Empresa Ativa
-            </button>
-          </form>
+          <div className="flex items-center gap-2 flex-wrap">
+            {activeTenant && !activeTenant.setup_fee_paid && (
+              <button
+                type="button"
+                onClick={() => setBillingModalTenant(activeTenant)}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-black text-white hover:bg-emerald-500 transition shadow-xs cursor-pointer animate-pulse hover:animate-none"
+              >
+                <Zap className="h-3.5 w-3.5 fill-white" />
+                <span>⚡ Cobrar Setup via Pix (R$ {Number(activeTenant.setup_fee_amount || 197).toFixed(0)},00)</span>
+              </button>
+            )}
+            <form action={clearManagedTenantAction}>
+              <button
+                type="submit"
+                className="rounded-lg bg-amber-200/80 px-3 py-1.5 font-bold text-amber-950 hover:bg-amber-300 transition cursor-pointer"
+              >
+                Desconectar Empresa Ativa
+              </button>
+            </form>
+          </div>
         </div>
       )}
 
@@ -597,6 +643,29 @@ export function SuperAdminDashboard({
                       <td className="px-5 py-4 text-right">
                         <div className="flex flex-col items-end gap-1.5">
                           <div className="inline-flex items-center gap-1.5 flex-wrap justify-end">
+                            {/* Botão Cobrar Setup via Pix (Mercado Pago Instantâneo + WhatsApp) */}
+                            {!t.setup_fee_paid ? (
+                              <button
+                                type="button"
+                                onClick={() => setBillingModalTenant(t)}
+                                title="⚡ Gerar Cobrança Pix de Setup no Mercado Pago e Enviar no WhatsApp"
+                                className="inline-flex items-center gap-1 rounded-lg border border-emerald-500 bg-emerald-600 px-2.5 py-1.5 text-[11px] font-black text-white hover:bg-emerald-700 transition shadow-xs cursor-pointer animate-pulse hover:animate-none"
+                              >
+                                <Zap className="h-3.5 w-3.5 fill-white" />
+                                <span>⚡ Cobrar Setup via Pix (R$ {Number(t.setup_fee_amount || 197).toFixed(0)})</span>
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setBillingModalTenant(t)}
+                                title="⚡ Visualizar ou Reenviar Pix de Setup (Já Quitado)"
+                                className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-800 hover:bg-emerald-100 transition shadow-2xs cursor-pointer"
+                              >
+                                <Check className="h-3 w-3 text-emerald-600" />
+                                <span>Pix Setup</span>
+                              </button>
+                            )}
+
                             {/* Botão Gerenciar Setup Customizado / Mensalidade e Confirmar Pagamento Pix */}
                             <button
                               type="button"
@@ -781,6 +850,14 @@ export function SuperAdminDashboard({
         onClose={() => setSetupModalTenant(null)}
         tenant={setupModalTenant}
         onSuccess={handleSetupSuccess}
+      />
+
+      {/* Modal: ⚡ Cobrança Pix de Setup via Mercado Pago + WhatsApp */}
+      <AdminPixBillingModal
+        isOpen={Boolean(billingModalTenant)}
+        onClose={() => setBillingModalTenant(null)}
+        tenant={billingModalTenant}
+        onPaymentApproved={handlePixSetupPaid}
       />
     </div>
   );
