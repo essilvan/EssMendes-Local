@@ -10,6 +10,13 @@ import { createServerClient } from "@supabase/ssr";
  * 3. Preserva domínio principal, preview no Vercel e rotas do sistema
  */
 export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+
+  // 0. Exceção explícita para faturas públicas: bypass total sem reescrita e sem autenticação
+  if (pathname.startsWith('/fatura')) {
+    return NextResponse.next();
+  }
+
   const url = request.nextUrl;
   const rawHostname = request.headers.get("host") || "";
   const hostname = rawHostname.toLowerCase();
@@ -17,9 +24,9 @@ export async function middleware(request: NextRequest) {
 
   // 1. Ignorar arquivos estáticos, rotas internas do Next.js e extensões de arquivo
   if (
-    url.pathname.startsWith("/_next") ||
-    url.pathname.startsWith("/api") ||
-    url.pathname.includes(".")
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/api") ||
+    pathname.includes(".")
   ) {
     return NextResponse.next();
   }

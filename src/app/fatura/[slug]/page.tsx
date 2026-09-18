@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@supabase/supabase-js";
 import { MercadoPagoConfig, Payment } from "mercadopago";
+import { AlertCircle, ArrowLeft } from "lucide-react";
 import {
   PublicInvoiceClient,
   type PublicInvoicePixData,
@@ -16,20 +17,33 @@ interface FaturaPageProps {
 export async function generateMetadata({
   params,
 }: FaturaPageProps): Promise<Metadata> {
-  const { slug } = await params;
+  const resolvedParams = await params;
+  const rawSlug = resolvedParams?.slug || "";
+  const slug = typeof rawSlug === "string" ? decodeURIComponent(rawSlug).trim() : "";
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseKey =
     process.env.SUPABASE_SERVICE_ROLE_KEY ||
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    supabaseKey
-  );
+
+  const supabase = createClient(supabaseUrl, supabaseKey, {
+    auth: { persistSession: false },
+  });
 
   let { data: tenant } = await supabase
     .from("tenants")
     .select("name")
     .eq("slug", slug)
     .maybeSingle();
+
+  if (!tenant && slug) {
+    const { data: lowerTenant } = await supabase
+      .from("tenants")
+      .select("name")
+      .eq("slug", slug.toLowerCase())
+      .maybeSingle();
+    tenant = lowerTenant;
+  }
 
   if (!tenant && /^[0-9a-fA-F-]{36}$/.test(slug)) {
     const { data: byId } = await supabase
@@ -57,38 +71,85 @@ export async function generateMetadata({
 }
 
 export default async function FaturaPage({ params }: FaturaPageProps) {
-  const { slug } = await params;
+  const resolvedParams = await params;
+  const rawSlug = resolvedParams?.slug || "";
+  const slug = typeof rawSlug === "string" ? decodeURIComponent(rawSlug).trim() : "";
 
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseKey =
     process.env.SUPABASE_SERVICE_ROLE_KEY ||
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    supabaseKey
-  );
 
-  // 1. Busca os dados do tenant pelo slug (ou id como fallback)
+  const supabase = createClient(supabaseUrl, supabaseKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+
+  // 1. Busca os dados completos do tenant pelo slug utilizando .select('*')
   let { data: tenant, error } = await supabase
     .from("tenants")
-    .select(
-      "id, name, slug, phone, contact_email, setup_fee_amount, setup_fee_paid, setup_paid, subscription_status, mp_payment_id"
-    )
+    .select("*")
     .eq("slug", slug)
     .maybeSingle();
 
+  // Fallback 1: Caso o slug esteja com case diferente no banco
+  if (!tenant && slug) {
+    const { data: lowerTenant } = await supabase
+      .from("tenants")
+      .select("*")
+      .eq("slug", slug.toLowerCase())
+      .maybeSingle();
+    tenant = lowerTenant;
+  }
+
+  // Fallback 2: Se for um UUID (ID do tenant)
   if (!tenant && /^[0-9a-fA-F-]{36}$/.test(slug)) {
     const { data: byId } = await supabase
       .from("tenants")
-      .select(
-        "id, name, slug, phone, contact_email, setup_fee_amount, setup_fee_paid, setup_paid, subscription_status, mp_payment_id"
-      )
+      .select("*")
       .eq("id", slug)
       .maybeSingle();
     tenant = byId;
   }
 
-  if (error || !tenant) {
-    notFound();
+  // Se o tenant não existir, retorna mensagem amigável e segura
+  if (!tenant) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center p-4 antialiased selection:bg-emerald-500 selection:text-white">
+        <div className="w-full max-w-md mx-auto rounded-3xl bg-white text-slate-900 p-8 shadow-2xl text-center space-y-5 animate-in fade-in zoom-in-95">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-amber-600 border border-amber-300">
+            <AlertCircle className="h-8 w-8" />
+          </div>
+          <div className="space-y-1">
+            <h1 className="text-xl font-black text-slate-900">
+              Fatura Não Encontrada
+            </h1>
+            <p className="text-xs text-slate-500">
+              Não encontramos nenhuma empresa vinculada a{" "}
+              <strong className="font-mono text-slate-800">/fatura/{slug || "desconhecida"}</strong>.
+            </p>
+          </div>
+          <div className="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-xl p-3 text-left space-y-1">
+            <p className="font-bold text-slate-800">O que você pode fazer:</p>
+            <ul className="list-disc list-inside space-y-0.5 text-[11px] text-slate-600">
+              <li>Verifique se o link foi copiado por completo do WhatsApp.</li>
+              <li>Entre em contato com o suporte caso o link tenha expirado.</li>
+            </ul>
+          </div>
+          <div className="pt-2">
+            <a
+              href="/"
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 hover:bg-slate-800 px-4 py-3 text-xs font-bold text-white transition shadow-xs"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              <span>Voltar para a Página Inicial</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   let isAlreadyPaid = Boolean(tenant.setup_paid || tenant.setup_fee_paid);
