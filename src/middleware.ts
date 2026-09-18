@@ -80,7 +80,8 @@ export async function middleware(request: NextRequest) {
   const isSystemRoute =
     url.pathname.startsWith("/login") ||
     url.pathname.startsWith("/register") ||
-    url.pathname.startsWith("/diagnostico");
+    url.pathname.startsWith("/diagnostico") ||
+    url.pathname.startsWith("/fatura");
 
   if (isSystemRoute) {
     return NextResponse.next();

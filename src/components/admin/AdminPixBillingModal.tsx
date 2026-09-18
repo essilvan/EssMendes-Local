@@ -61,15 +61,12 @@ export function AdminPixBillingModal({
 
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Formata o telefone removendo caracteres não numéricos e adicionando DDI 55 se necessário
+  // Formata o telefone removendo caracteres não numéricos e extraindo DDI 55 se presente
   const cleanPhoneForWhatsApp = (raw: string): string => {
     const cleaned = raw.replace(/\D/g, "");
     if (!cleaned) return "";
     if (cleaned.startsWith("55") && (cleaned.length === 12 || cleaned.length === 13)) {
-      return cleaned;
-    }
-    if (cleaned.length === 10 || cleaned.length === 11) {
-      return `55${cleaned}`;
+      return cleaned.slice(2);
     }
     return cleaned;
   };
@@ -210,16 +207,21 @@ export function AdminPixBillingModal({
     }
   };
 
-  // Copiar código Pix
+  // Botão A: Copiar apenas o código Pix bruto (qrCodeRaw)
   const handleCopyPix = async () => {
-    if (!pixData?.qrCode) return;
+    const qrCodeRaw = pixData?.qrCode;
+    if (!qrCodeRaw) return;
     try {
-      await navigator.clipboard.writeText(pixData.qrCode);
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(qrCodeRaw);
+      } else {
+        throw new Error("Clipboard API unavailable");
+      }
       setCopied(true);
       setTimeout(() => setCopied(false), 3000);
     } catch {
       const textArea = document.createElement("textarea");
-      textArea.value = pixData.qrCode;
+      textArea.value = qrCodeRaw;
       document.body.appendChild(textArea);
       textArea.select();
       document.execCommand("copy");
@@ -229,27 +231,32 @@ export function AdminPixBillingModal({
     }
   };
 
-  // Enviar mensagem formatada no WhatsApp
+  // Botão B: Enviar mensagem no WhatsApp com link direto da fatura simplificada
   const handleSendWhatsApp = () => {
-    if (!tenant || !pixData?.qrCode) return;
+    if (!tenant) return;
 
-    const formattedAmount = Number(pixData.amount || 197).toFixed(2).replace(".", ",");
-    const message =
-      `Olá! Segue o código Pix para ativação e implantação da sua vitrine oficial no Google:\n\n` +
-      `🏢 Empresa: ${tenant.name}\n` +
-      `💰 Valor: R$ ${formattedAmount} (Taxa Única de Setup e Otimização)\n\n` +
-      `📋 *Pix Copia e Cola:*\n${pixData.qrCode}\n\n` +
-      `Basta copiar o código acima, abrir o app do seu banco na opção 'Pix Copia e Cola' e confirmar o pagamento. Assim que compensar, o sistema valida automaticamente!`;
+    const phoneRaw = clientPhone || tenant.phone || "";
+    const cleanDigits = phoneRaw.replace(/\D/g, "");
+    const cleanPhone =
+      cleanDigits.startsWith("55") && (cleanDigits.length === 12 || cleanDigits.length === 13)
+        ? cleanDigits.slice(2)
+        : cleanDigits;
 
-    const cleaned = cleanPhoneForWhatsApp(clientPhone);
-    let waUrl = "";
-    if (cleaned) {
-      waUrl = `https://wa.me/${cleaned}?text=${encodeURIComponent(message)}`;
-    } else {
-      waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
-    }
+    const slug = tenant.slug || tenant.id;
+    const invoiceUrl = `https://app.essmendes.com.br/fatura/${slug}`;
+    const text = [
+      `Olá! Segue o link para ativação da vitrine oficial da *${tenant.name}*:`,
+      ``,
+      `👉 ${invoiceUrl}`,
+      ``,
+      `(Toque no link para visualizar o QR Code ou copiar o código Pix em 1 clique)`,
+    ].join("\n");
 
-    window.open(waUrl, "_blank");
+    const whatsappUrl = cleanPhone
+      ? `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(text)}`
+      : `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+
+    window.open(whatsappUrl, "_blank");
   };
 
   if (!isOpen || !tenant) return null;
@@ -403,13 +410,30 @@ export function AdminPixBillingModal({
                 </span>
               </div>
 
+              <div className="flex items-center justify-between rounded-xl bg-emerald-50/80 border border-emerald-200/80 px-3 py-2 text-[11px] text-emerald-950 font-medium">
+                <span className="truncate">
+                  👉 Link: <strong className="font-mono text-emerald-800">app.essmendes.com.br/fatura/{tenant.slug || tenant.id}</strong>
+                </span>
+                <a
+                  href={`/fatura/${tenant.slug || tenant.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-2 inline-flex items-center gap-1 text-emerald-700 hover:text-emerald-900 font-bold shrink-0 underline decoration-dotted"
+                  title="Abrir fatura pública em nova guia"
+                >
+                  <span>Abrir</span>
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </div>
+
+              {/* Botão B: Enviar Mensagem no WhatsApp */}
               <button
                 type="button"
                 onClick={handleSendWhatsApp}
                 className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] px-4 py-3 text-xs font-black text-white shadow-md hover:shadow-lg transition cursor-pointer"
               >
                 <MessageCircle className="h-4 w-4 fill-white" />
-                <span>📲 Enviar Cobrança no WhatsApp do Cliente</span>
+                <span>Enviar Mensagem no WhatsApp</span>
               </button>
             </div>
 
@@ -447,11 +471,12 @@ export function AdminPixBillingModal({
                   />
                 </div>
 
+                {/* Botão A: Copiar Apenas o Código Pix */}
                 <button
                   type="button"
                   onClick={handleCopyPix}
                   className={cn(
-                    "w-full inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition shadow-xs cursor-pointer",
+                    "w-full inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-xs font-bold transition shadow-xs cursor-pointer",
                     copied
                       ? "bg-emerald-600 text-white"
                       : "bg-slate-900 text-white hover:bg-slate-800"
@@ -460,12 +485,12 @@ export function AdminPixBillingModal({
                   {copied ? (
                     <>
                       <Check className="h-3.5 w-3.5" />
-                      <span>Código Copiado!</span>
+                      <span>Código Pix Copiado!</span>
                     </>
                   ) : (
                     <>
                       <Copy className="h-3.5 w-3.5" />
-                      <span>Copiar Código Pix</span>
+                      <span>Copiar Apenas o Código Pix</span>
                     </>
                   )}
                 </button>
