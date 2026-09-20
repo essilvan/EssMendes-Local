@@ -43,6 +43,7 @@ export interface PlatformPixSettings {
 export interface TenantPermissions {
   dashboard: boolean;          // Dashboard
   appointments: boolean;       // Agendamentos
+  professionals?: boolean;     // Profissionais / Equipe
   services: boolean;           // Serviços
   products: boolean;           // Vitrine Produtos
   before_after: boolean;       // Antes & Depois
@@ -61,6 +62,7 @@ export interface TenantPermissions {
 export const DEFAULT_TENANT_PERMISSIONS: TenantPermissions = {
   dashboard: true,
   appointments: true,
+  professionals: true,
   services: true,
   products: true,
   before_after: true,
@@ -213,6 +215,19 @@ export interface Service {
 
 export type AppointmentStatus = "pending" | "confirmed" | "completed" | "canceled";
 
+export interface TenantProfessional {
+  id: string;
+  tenant_id: string;
+  name: string;
+  phone: string;
+  role_title?: string | null;
+  specialty?: string | null;
+  avatar_url?: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at?: string;
+}
+
 export interface Customer {
   id: string;
   tenant_id: string;
@@ -228,6 +243,14 @@ export interface Appointment {
   tenant_id: string;
   customer_id?: string | null;
   service_id?: string | null;
+  professional_id?: string | null;
+  professional?: TenantProfessional | {
+    id: string;
+    name: string;
+    phone?: string | null;
+    avatar_url?: string | null;
+    role_title?: string | null;
+  } | null;
   service_name: string;
   customer_name: string;
   customer_phone: string;

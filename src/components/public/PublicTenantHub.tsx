@@ -8,6 +8,7 @@ import type {
   TenantReview,
   TenantPost,
   TenantProduct,
+  TenantProfessional,
 } from "@/types";
 import { getThemeColorStyles, getContrastTextColor } from "@/utils/color";
 import { getTenantTheme, NICHE_THEMES } from "@/config/tenant-themes";
@@ -48,10 +49,12 @@ interface PublicTenantHubProps {
     cover_image_url?: string | null;
     photos?: string[] | null;
     google_photo_url?: string | null;
+    phone?: string | null;
     [key: string]: any;
   };
   profile: TenantProfile | null;
   services: Service[];
+  professionals?: TenantProfessional[];
   portfolioItems: PortfolioItem[];
   reviews?: TenantReview[];
   posts?: TenantPost[];
@@ -125,6 +128,7 @@ export function PublicTenantHub({
   tenant,
   profile,
   services,
+  professionals = [],
   portfolioItems,
   reviews = [],
   posts = [],
@@ -390,14 +394,16 @@ export function PublicTenantHub({
         onOpenBooking={() => handleOpenBooking()}
       />
 
-      {/* Modal / Drawer Global de Agendamento em 3 Passos */}
+      {/* Modal / Drawer Global de Agendamento em 4 Passos */}
       <PublicBookingFlow
         tenantId={tenant.id}
         tenantName={tenant.name}
         tenantSlug={tenant.slug}
-        businessPhone={profile?.phone_whatsapp}
-        businessAddress={profile?.address}
+        tenantPhone={tenant.phone || profile?.phone_whatsapp || profile?.phone}
+        businessPhone={profile?.phone_whatsapp || tenant.phone}
+        businessAddress={profile?.address || tenant.address}
         services={services}
+        professionals={professionals}
         selectedServiceId={selectedServiceId}
         isOpen={isBookingOpen}
         onClose={handleCloseBooking}

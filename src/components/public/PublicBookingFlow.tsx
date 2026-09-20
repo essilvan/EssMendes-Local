@@ -17,22 +17,26 @@ import {
   Scissors,
   ArrowRight,
   ShieldCheck,
+  Users,
+  Check,
 } from "lucide-react";
 import {
   getAvailableSlotsAction,
   createAppointmentAction,
 } from "@/services/appointment.actions";
 import { recordAnalyticsEvent } from "@/actions/analytics";
-import type { Service, AvailableSlot, Appointment } from "@/types";
+import type { Service, AvailableSlot, Appointment, TenantProfessional } from "@/types";
 import { sanitizePhoneNumber } from "@/utils/phone";
 
 interface PublicBookingFlowProps {
   tenantId: string;
   tenantName: string;
   tenantSlug: string;
+  tenantPhone?: string | null;
   businessPhone?: string | null;
   businessAddress?: string | null;
   services: Service[];
+  professionals?: TenantProfessional[];
   selectedServiceId?: string | null;
   isOpen: boolean;
   onClose: () => void;
@@ -42,15 +46,20 @@ export function PublicBookingFlow({
   tenantId,
   tenantName,
   tenantSlug,
+  tenantPhone,
   businessPhone,
   businessAddress,
   services,
+  professionals = [],
   selectedServiceId,
   isOpen,
   onClose,
 }: PublicBookingFlowProps) {
   // Service selection
   const [selectedService, setSelectedService] = useState<Service | null>(null);
+
+  // Professional selection (null = qualquer / primeiro disponível)
+  const [selectedProfessional, setSelectedProfessional] = useState<TenantProfessional | null>(null);
 
   // Date selection (default today YYYY-MM-DD)
   const getTodayStr = () => {
@@ -186,6 +195,7 @@ export function PublicBookingFlow({
         tenantId,
         serviceId: selectedService.id,
         serviceName: selectedService.name,
+        professionalId: selectedProfessional?.id || null,
         price: selectedService.price ? Number(selectedService.price) : 0,
         durationMinutes: selectedService.duration_minutes || 30,
         date: selectedDate,
@@ -202,29 +212,93 @@ export function PublicBookingFlow({
         const isMobile = typeof navigator !== "undefined" && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
         recordAnalyticsEvent(tenantId, "booking_completed", isMobile ? "mobile" : "desktop");
         setConfirmedAppointment(res.data);
+
+        // Roteamento Dinâmico para o WhatsApp individual ou geral
+        const targetPhoneRaw =
+          selectedProfessional?.phone?.replace(/\D/g, "") ||
+          tenantPhone?.replace(/\D/g, "") ||
+          businessPhone?.replace(/\D/g, "");
+
+        if (targetPhoneRaw) {
+          const targetPhone = targetPhoneRaw.startsWith("55")
+            ? targetPhoneRaw.slice(2)
+            : targetPhoneRaw;
+          const professionalGreeting = selectedProfessional
+            ? `Olá, ${selectedProfessional.name}!`
+            : `Olá, equipe ${tenantName}!`;
+
+          const appointmentDate = new Date(`${selectedDate}T00:00:00`).toLocaleDateString("pt-BR", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+          });
+          const appointmentTime = selectedTime;
+          const serviceName = selectedService.name;
+          const clientName = customerName.trim();
+          const clientPhone = customerPhone.trim();
+
+          const message = [
+            `${professionalGreeting} Gostaria de confirmar meu agendamento realizado pela vitrine:`,
+            ``,
+            `👤 *Cliente:* ${clientName}`,
+            `✂️ *Serviço:* ${serviceName}`,
+            `📅 *Data e Horário:* ${appointmentDate} às ${appointmentTime}`,
+            `📱 *Meu WhatsApp:* ${clientPhone}`,
+            selectedProfessional ? `💈 *Profissional:* ${selectedProfessional.name}` : ``,
+            ``,
+            `Aguardo sua confirmação!`
+          ].filter(Boolean).join('\n');
+
+          const whatsappUrl = `https://wa.me/55${targetPhone}?text=${encodeURIComponent(message)}`;
+          try {
+            window.open(whatsappUrl, '_blank');
+          } catch (err) {
+            console.warn("Abertura automática de popup bloqueada pelo navegador:", err);
+          }
+        }
       }
     });
   };
 
   // Generate WhatsApp confirmation URL
   const getConfirmationWhatsAppUrl = () => {
-    if (!businessPhone) return "#";
-    const cleanPhone = businessPhone.replace(/\D/g, "");
-    const formattedPhone = cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`;
-    const dateFormatted = new Date(`${selectedDate}T00:00:00`).toLocaleDateString("pt-BR", {
+    const targetPhoneRaw =
+      selectedProfessional?.phone?.replace(/\D/g, "") ||
+      tenantPhone?.replace(/\D/g, "") ||
+      businessPhone?.replace(/\D/g, "");
+
+    if (!targetPhoneRaw) return "#";
+
+    const targetPhone = targetPhoneRaw.startsWith("55")
+      ? targetPhoneRaw.slice(2)
+      : targetPhoneRaw;
+    const professionalGreeting = selectedProfessional
+      ? `Olá, ${selectedProfessional.name}!`
+      : `Olá, equipe ${tenantName}!`;
+
+    const appointmentDate = new Date(`${selectedDate}T00:00:00`).toLocaleDateString("pt-BR", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
     });
+    const appointmentTime = selectedTime;
+    const serviceName = confirmedAppointment?.service_name || selectedService?.name || "Serviço";
+    const clientName = customerName.trim();
+    const clientPhone = customerPhone.trim();
 
-    const message = encodeURIComponent(
-      `👋 Olá! Acabei de solicitar um agendamento pelo site:\n\n` +
-      `🚗 *Serviço:* ${confirmedAppointment?.service_name || selectedService?.name || "Serviço"}\n` +
-      `📅 *Data:* ${dateFormatted} às ${selectedTime}\n` +
-      `👤 *Cliente:* ${customerName} (${customerPhone})`
-    );
+    const message = [
+      `${professionalGreeting} Gostaria de confirmar meu agendamento realizado pela vitrine:`,
+      ``,
+      `👤 *Cliente:* ${clientName}`,
+      `✂️ *Serviço:* ${serviceName}`,
+      `📅 *Data e Horário:* ${appointmentDate} às ${appointmentTime}`,
+      `📱 *Meu WhatsApp:* ${clientPhone}`,
+      selectedProfessional ? `💈 *Profissional:* ${selectedProfessional.name}` : ``,
+      ``,
+      `Aguardo sua confirmação!`
+    ].filter(Boolean).join('\n');
 
-    return `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${message}`;
+    return `https://wa.me/55${targetPhone}?text=${encodeURIComponent(message)}`;
   };
 
   // Reset modal state
@@ -232,6 +306,7 @@ export function PublicBookingFlow({
     setConfirmedAppointment(null);
     setSubmitError(null);
     setSelectedTime("");
+    setSelectedProfessional(null);
     onClose();
   };
 
@@ -290,6 +365,12 @@ export function PublicBookingFlow({
                   <span className="font-bold text-slate-900">{confirmedAppointment.service_name}</span>
                 </div>
                 <div className="flex justify-between pb-2 border-b border-slate-200">
+                  <span className="text-slate-500">Profissional:</span>
+                  <span className="font-bold text-slate-900">
+                    {selectedProfessional ? selectedProfessional.name : "Qualquer Profissional / Equipe"}
+                  </span>
+                </div>
+                <div className="flex justify-between pb-2 border-b border-slate-200">
                   <span className="text-slate-500">Data e Horário:</span>
                   <span
                     className="font-bold"
@@ -320,16 +401,14 @@ export function PublicBookingFlow({
 
               {/* Ações de Conclusão */}
               <div className="space-y-2.5 pt-2">
-                {businessPhone && (
-                  <a
-                    href={getConfirmationWhatsAppUrl()}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 w-full py-3.5 px-6 rounded-xl font-bold text-white bg-[#25D366] hover:bg-[#1EBE5D] transition-all shadow-md mt-4"
-                  >
-                    <span>🟢 Confirmar Agendamento no WhatsApp</span>
-                  </a>
-                )}
+                <a
+                  href={getConfirmationWhatsAppUrl()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 w-full py-3.5 px-6 rounded-xl font-bold text-white bg-[#25D366] hover:bg-[#1EBE5D] transition-all shadow-md mt-4"
+                >
+                  <span>🟢 Confirmar Agendamento no WhatsApp</span>
+                </a>
 
                 <button
                   type="button"
@@ -398,11 +477,100 @@ export function PublicBookingFlow({
                 </div>
               </div>
 
-              {/* 2. Seleção de Data */}
+              {/* 2. Seleção do Profissional */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
-                    2. Escolha o Dia
+                    2. Selecione o Profissional
+                  </label>
+                  <span className="text-[11px] text-slate-500 font-medium">
+                    {selectedProfessional ? selectedProfessional.name : "Qualquer atendente"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto pr-1">
+                  {/* Opção Padrão: Qualquer Profissional / Primeiro Disponível */}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedProfessional(null)}
+                    className={`flex items-center gap-3 rounded-xl border p-2.5 text-left transition ${
+                      selectedProfessional === null
+                        ? "border-teal-700 bg-teal-50/70 ring-1 ring-teal-700/20 shadow-2xs"
+                        : "border-slate-200 bg-white hover:border-slate-300"
+                    }`}
+                  >
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-600 shrink-0">
+                      <Users className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-slate-900 leading-tight truncate">
+                        Qualquer Profissional
+                      </p>
+                      <p className="text-[10px] text-slate-500 truncate">
+                        Primeiro disponível
+                      </p>
+                    </div>
+                    {selectedProfessional === null && (
+                      <Check className="h-4 w-4 text-teal-700 shrink-0" />
+                    )}
+                  </button>
+
+                  {/* Lista de Profissionais Cadastrados */}
+                  {professionals.map((prof) => {
+                    const isSelected = selectedProfessional?.id === prof.id;
+                    const role = prof.role_title || prof.specialty || "Profissional";
+                    return (
+                      <button
+                        key={prof.id}
+                        type="button"
+                        onClick={() => setSelectedProfessional(prof)}
+                        className={`flex items-center gap-3 rounded-xl border p-2.5 text-left transition ${
+                          isSelected
+                            ? "border-teal-700 bg-teal-50/70 ring-1 ring-teal-700/20 shadow-2xs"
+                            : "border-slate-200 bg-white hover:border-slate-300"
+                        }`}
+                      >
+                        {prof.avatar_url ? (
+                          <img
+                            src={prof.avatar_url}
+                            alt={prof.name}
+                            className="h-9 w-9 rounded-xl object-cover border border-slate-200 shrink-0"
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = "none";
+                            }}
+                          />
+                        ) : (
+                          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-100 text-teal-800 font-bold text-xs shrink-0">
+                            {prof.name
+                              .split(" ")
+                              .slice(0, 2)
+                              .map((n) => n[0])
+                              .join("")
+                              .toUpperCase()}
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-slate-900 leading-tight truncate">
+                            {prof.name}
+                          </p>
+                          <p className="text-[10px] text-slate-500 truncate">
+                            {role}
+                          </p>
+                        </div>
+                        {isSelected && (
+                          <Check className="h-4 w-4 text-teal-700 shrink-0" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 3. Escolha de Data e Horário */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
+                    3. Escolha o Dia
                   </label>
                   <input
                     type="date"
@@ -441,10 +609,10 @@ export function PublicBookingFlow({
                 </div>
               </div>
 
-              {/* 3. Seleção de Horário */}
+              {/* Horário */}
               <div className="space-y-2">
                 <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
-                  3. Selecione o Horário
+                  Horário Disponível
                 </label>
 
                 {isLoadingSlots ? (

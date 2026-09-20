@@ -13,8 +13,10 @@ import {
   CheckCircle2,
   AlertCircle,
   Scissors,
+  Users,
 } from "lucide-react";
 import { createAdminAppointmentAction } from "@/services/appointment.actions";
+import type { TenantProfessional } from "@/types";
 
 export interface ServiceOption {
   id: string;
@@ -26,6 +28,7 @@ export interface ServiceOption {
 
 interface NewAppointmentModalProps {
   services: ServiceOption[];
+  professionals?: TenantProfessional[];
 }
 
 function formatPhone(value: string): string {
@@ -47,7 +50,7 @@ function getTodayString(): string {
   return `${year}-${month}-${day}`;
 }
 
-export function NewAppointmentModal({ services }: NewAppointmentModalProps) {
+export function NewAppointmentModal({ services, professionals = [] }: NewAppointmentModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -56,6 +59,7 @@ export function NewAppointmentModal({ services }: NewAppointmentModalProps) {
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [selectedServiceId, setSelectedServiceId] = useState("");
+  const [selectedProfessionalId, setSelectedProfessionalId] = useState("");
   const [customServiceName, setCustomServiceName] = useState("");
   const [price, setPrice] = useState<number | string>(0);
   const [durationMinutes, setDurationMinutes] = useState<number | string>(30);
@@ -72,6 +76,7 @@ export function NewAppointmentModal({ services }: NewAppointmentModalProps) {
     setCustomerName("");
     setCustomerPhone("");
     setCustomerEmail("");
+    setSelectedProfessionalId("");
     const initialSvcId = services.length > 0 ? services[0].id : "custom";
     setSelectedServiceId(initialSvcId);
     if (services.length > 0) {
@@ -177,6 +182,7 @@ export function NewAppointmentModal({ services }: NewAppointmentModalProps) {
         customerEmail: customerEmail.trim() || undefined,
         serviceId: finalServiceId,
         serviceName: finalServiceName,
+        professionalId: selectedProfessionalId ? selectedProfessionalId : undefined,
         price: Number(price) || 0,
         durationMinutes: Number(durationMinutes) || 30,
         date,
@@ -340,6 +346,30 @@ export function NewAppointmentModal({ services }: NewAppointmentModalProps) {
                     placeholder="Ex: Consultoria especial, Manutenção..."
                     className="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2 px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-600 transition"
                   />
+                </div>
+              )}
+
+              {/* Seleção de Profissional */}
+              {professionals.length > 0 && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Profissional / Atendente (opcional)
+                  </label>
+                  <div className="relative">
+                    <Users className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 pointer-events-none" />
+                    <select
+                      value={selectedProfessionalId}
+                      onChange={(e) => setSelectedProfessionalId(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2 pl-9 pr-3 text-sm text-slate-900 focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-600 transition"
+                    >
+                      <option value="">Qualquer profissional / Sem preferência</option>
+                      {professionals.map((prof) => (
+                        <option key={prof.id} value={prof.id}>
+                          {prof.name} {prof.role_title ? `(${prof.role_title})` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               )}
 

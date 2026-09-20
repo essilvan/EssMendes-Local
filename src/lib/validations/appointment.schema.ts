@@ -4,6 +4,12 @@ export const appointmentSchema = z.object({
   tenantId: z.string().uuid("ID do estabelecimento inválido."),
   serviceId: z.string().uuid("Selecione um serviço válido."),
   serviceName: z.string().min(1, "Nome do serviço é obrigatório."),
+  professionalId: z
+    .string()
+    .uuid("ID do profissional inválido.")
+    .optional()
+    .nullable()
+    .or(z.literal("")),
   price: z.coerce.number().min(0, "Preço inválido."),
   durationMinutes: z.coerce.number().min(5, "Duração mínima é de 5 minutos."),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data deve estar no formato AAAA-MM-DD."),
@@ -42,6 +48,12 @@ export const adminAppointmentSchema = z.object({
     .or(z.literal("")),
   serviceId: z.string().uuid("ID de serviço inválido.").optional().nullable().or(z.literal("")),
   serviceName: z.string().min(1, "Nome do serviço é obrigatório."),
+  professionalId: z
+    .string()
+    .uuid("ID do profissional inválido.")
+    .optional()
+    .nullable()
+    .or(z.literal("")),
   price: z.coerce.number().min(0, "Preço inválido.").default(0),
   durationMinutes: z.coerce.number().min(5, "Duração mínima é de 5 minutos.").default(30),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data deve estar no formato AAAA-MM-DD."),

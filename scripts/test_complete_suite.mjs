@@ -118,6 +118,10 @@ async function runAllTests() {
     assert(!leadErr && leads !== null, 'Tabela lead_diagnostics', `Total de leads analisados: ${leads?.length || 0}`);
   }
 
+  // 1.12 Tenant Professionals (Cadastro de Profissionais e Equipe)
+  const { data: professionals, error: profErr } = await supabase.from('tenant_professionals').select('*').eq('tenant_id', tenant.id);
+  assert(!profErr && professionals !== null, 'Tabela tenant_professionals (Equipe & Profissionais)', `Total de profissionais: ${professionals?.length || 0}`);
+
   console.log('\n📅 2. TESTE DO MOTOR DE AGENDAMENTO & REGRAS DE CONFLITO');
   
   // Cria agendamento de teste temporário

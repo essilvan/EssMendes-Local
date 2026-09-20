@@ -186,12 +186,15 @@ export async function createAppointmentAction(
     }
 
     // 3. Insere o agendamento
+    const professionalId = input.professionalId && input.professionalId.trim() !== '' ? input.professionalId : null;
+
     const { data: appointment, error: insertError } = await supabase
       .from('appointments')
       .insert({
         tenant_id: input.tenantId,
         customer_id: customerId,
         service_id: input.serviceId,
+        professional_id: professionalId,
         service_name: input.serviceName,
         customer_name: input.customerName,
         customer_phone: input.customerPhone,
@@ -321,6 +324,7 @@ export async function createAdminAppointmentAction(
 
     // 2. Insere o agendamento
     const serviceId = input.serviceId && input.serviceId.trim() !== '' ? input.serviceId : null;
+    const professionalId = input.professionalId && input.professionalId.trim() !== '' ? input.professionalId : null;
 
     const { data: appointment, error: insertError } = await supabase
       .from('appointments')
@@ -328,6 +332,7 @@ export async function createAdminAppointmentAction(
         tenant_id: tenantId,
         customer_id: customerId,
         service_id: serviceId,
+        professional_id: professionalId,
         service_name: input.serviceName,
         customer_name: input.customerName,
         customer_phone: input.customerPhone,

@@ -272,13 +272,25 @@ export function BookingWidgetCard({
               {confirmedAppointment.service_name} • {selectedDate} às {selectedTime}
             </p>
           </div>
+          {businessPhone && (
+            <a
+              href={`https://wa.me/55${businessPhone.replace(/\D/g, "")}?text=${encodeURIComponent(
+                `Olá! Gostaria de confirmar meu agendamento de ${confirmedAppointment.service_name} para ${selectedDate} às ${selectedTime}. Cliente: ${customerName} (${customerPhone})`
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl font-bold text-white bg-[#25D366] hover:bg-[#1EBE5D] transition-all text-xs shadow-xs"
+            >
+              <span>Confirmar no WhatsApp</span>
+            </a>
+          )}
           <button
             type="button"
             onClick={() => {
               setConfirmedAppointment(null);
               setCurrentStep(1);
             }}
-            className="w-full rounded-xl border border-slate-200 bg-white py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
+            className="w-full rounded-xl border border-slate-200 bg-white py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
           >
             Realizar Novo Agendamento
           </button>

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { getAuthenticatedTenant } from '@/lib/supabase/tenant';
+import Link from 'next/link';
 import {
   Calendar,
   Clock,
@@ -10,10 +11,11 @@ import {
   CalendarCheck,
   CheckCircle2,
   AlertCircle,
+  Users,
 } from 'lucide-react';
 import AppointmentStatusButton from './AppointmentStatusButton';
 import NewAppointmentModal, { type ServiceOption } from './NewAppointmentModal';
-import type { Appointment } from '@/types';
+import type { Appointment, TenantProfessional } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,8 +36,8 @@ export default async function AdminAgendamentosPage() {
   const tenantId = tenantData.tenantId;
   const supabase = await createClient();
 
-  // Busca agendamentos e serviços ativos do tenant em paralelo
-  const [appointmentsRes, servicesRes] = await Promise.all([
+  // Busca agendamentos, serviços e profissionais do tenant em paralelo
+  const [appointmentsRes, servicesRes, professionalsRes] = await Promise.all([
     supabase
       .from('appointments')
       .select('*')
@@ -47,6 +49,11 @@ export default async function AdminAgendamentosPage() {
       .eq('tenant_id', tenantId)
       .eq('is_active', true)
       .order('name', { ascending: true }),
+    supabase
+      .from('tenant_professionals')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('name', { ascending: true }),
   ]);
 
   if (appointmentsRes.error) {
@@ -55,6 +62,11 @@ export default async function AdminAgendamentosPage() {
 
   const appointments = (appointmentsRes.data || []) as Appointment[];
   const activeServices = (servicesRes.data || []) as ServiceOption[];
+  const professionals = (professionalsRes.data || []) as TenantProfessional[];
+
+  const professionalsMap = new Map<string, TenantProfessional>(
+    professionals.map((p) => [p.id, p])
+  );
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -101,7 +113,19 @@ export default async function AdminAgendamentosPage() {
           </p>
         </div>
 
-        <NewAppointmentModal services={activeServices} />
+        <div className="flex items-center gap-2">
+          <Link
+            href="/admin/profissionais"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition shadow-2xs"
+          >
+            <Users className="h-4 w-4 text-teal-700" />
+            <span>Gerenciar Equipe</span>
+          </Link>
+          <NewAppointmentModal
+            services={activeServices}
+            professionals={professionals.filter((p) => p.is_active)}
+          />
+        </div>
       </div>
 
       {/* KPI Cards */}
@@ -131,77 +155,116 @@ export default async function AdminAgendamentosPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {appointments.map((app) => (
-            <div
-              key={app.id}
-              className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs hover:border-slate-300 transition-colors flex flex-col md:flex-row justify-between items-start md:items-center gap-5"
-            >
-              <div className="space-y-2.5 flex-1">
-                {/* Cliente e Status */}
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="font-bold text-base text-slate-900 flex items-center gap-2">
-                    <User className="w-4 h-4 text-slate-500" /> {app.customer_name}
-                  </span>
-                  
-                  <span
-                    className={`text-xs px-2.5 py-0.5 rounded-full font-semibold ${
-                      app.status === 'confirmed'
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : app.status === 'pending'
-                        ? 'bg-amber-100 text-amber-800'
-                        : app.status === 'completed'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-slate-100 text-slate-600'
-                    }`}
-                  >
-                    {app.status === 'confirmed' && 'Confirmado'}
-                    {app.status === 'pending' && 'Aguardando Confirmação'}
-                    {app.status === 'completed' && 'Concluído'}
-                    {app.status === 'canceled' && 'Cancelado'}
-                  </span>
+          {appointments.map((app) => {
+            const professional = app.professional_id
+              ? professionalsMap.get(app.professional_id)
+              : null;
 
-                  <span className="text-xs font-extrabold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-md">
-                    {app.service_name}
-                  </span>
-                </div>
-
-                {/* Detalhes de Data, Hora e Telefone */}
-                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-600">
-                  <span className="flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-teal-700" />
-                    <strong className="text-slate-800">{formatDate(app.start_time)}</strong>
-                  </span>
-
-                  <span className="flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-teal-700" />
-                    <span>
-                      {formatTime(app.start_time)} - {formatTime(app.end_time)} ({app.total_duration} min)
+            return (
+              <div
+                key={app.id}
+                className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs hover:border-slate-300 transition-colors flex flex-col md:flex-row justify-between items-start md:items-center gap-5"
+              >
+                <div className="space-y-2.5 flex-1">
+                  {/* Cliente e Status */}
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <span className="font-bold text-base text-slate-900 flex items-center gap-2">
+                      <User className="w-4 h-4 text-slate-500" /> {app.customer_name}
                     </span>
-                  </span>
-
-                  <span className="flex items-center gap-1.5">
-                    <Phone className="w-3.5 h-3.5 text-emerald-600" />
-                    <a
-                      href={`https://wa.me/55${app.customer_phone.replace(/\D/g, '')}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-emerald-700 font-medium hover:underline"
+                    
+                    <span
+                      className={`text-xs px-2.5 py-0.5 rounded-full font-semibold ${
+                        app.status === 'confirmed'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : app.status === 'pending'
+                          ? 'bg-amber-100 text-amber-800'
+                          : app.status === 'completed'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-slate-100 text-slate-600'
+                      }`}
                     >
-                      {app.customer_phone}
-                    </a>
-                  </span>
-
-                  {app.customer_email && (
-                    <span className="flex items-center gap-1.5">
-                      <Mail className="w-3.5 h-3.5 text-slate-400" />
-                      <span>{app.customer_email}</span>
+                      {app.status === 'confirmed' && 'Confirmado'}
+                      {app.status === 'pending' && 'Aguardando Confirmação'}
+                      {app.status === 'completed' && 'Concluído'}
+                      {app.status === 'canceled' && 'Cancelado'}
                     </span>
-                  )}
 
-                  <span className="font-bold text-slate-900">
-                    {formatCurrency(Number(app.price))}
-                  </span>
-                </div>
+                    <span className="text-xs font-extrabold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-md">
+                      {app.service_name}
+                    </span>
+
+                    {/* Badge do Profissional */}
+                    {professional ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-md bg-teal-50 border border-teal-200 px-2 py-0.5 text-xs font-bold text-teal-900">
+                        <Users className="w-3.5 h-3.5 text-teal-700" />
+                        <span>{professional.name}</span>
+                        {professional.role_title && (
+                          <span className="text-[10px] font-normal text-teal-700">
+                            ({professional.role_title})
+                          </span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 border border-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                        <Users className="w-3 h-3 text-slate-400" />
+                        <span>Primeiro disponível</span>
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Detalhes de Data, Hora e Telefone */}
+                  <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-600">
+                    <span className="flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-teal-700" />
+                      <strong className="text-slate-800">{formatDate(app.start_time)}</strong>
+                    </span>
+
+                    <span className="flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-teal-700" />
+                      <span>
+                        {formatTime(app.start_time)} - {formatTime(app.end_time)} ({app.total_duration} min)
+                      </span>
+                    </span>
+
+                    <span className="flex items-center gap-1.5">
+                      <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                      <a
+                        href={`https://wa.me/55${app.customer_phone.replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-emerald-700 font-medium hover:underline"
+                        title="WhatsApp do cliente"
+                      >
+                        {app.customer_phone}
+                      </a>
+                    </span>
+
+                    {professional?.phone && (
+                      <span className="flex items-center gap-1.5">
+                        <Phone className="w-3.5 h-3.5 text-teal-600" />
+                        <a
+                          href={`https://wa.me/55${professional.phone.replace(/\D/g, '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-teal-700 font-medium hover:underline"
+                          title={`WhatsApp direto de ${professional.name}`}
+                        >
+                          Whats Profissional: {professional.phone}
+                        </a>
+                      </span>
+                    )}
+
+                    {app.customer_email && (
+                      <span className="flex items-center gap-1.5">
+                        <Mail className="w-3.5 h-3.5 text-slate-400" />
+                        <span>{app.customer_email}</span>
+                      </span>
+                    )}
+
+                    <span className="font-bold text-slate-900">
+                      {formatCurrency(Number(app.price))}
+                    </span>
+                  </div>
 
                 {/* Observações */}
                 {app.notes && (
@@ -220,7 +283,8 @@ export default async function AdminAgendamentosPage() {
                 />
               </div>
             </div>
-          ))}
+          );
+        })}
         </div>
       )}
     </div>

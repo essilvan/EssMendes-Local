@@ -5,7 +5,7 @@ import { PublicTenantHub } from "@/components/public/PublicTenantHub";
 import { sanitizePhoneNumber } from "@/utils/phone";
 import { getBusinessStatus } from "@/utils/opening-hours";
 import { extractNeighborhoodAndCity, sanitizeDescription } from "@/utils/address";
-import type { Service, TenantProfile, PortfolioItem, TenantReview, TenantPost, TenantProduct } from "@/types";
+import type { Service, TenantProfile, PortfolioItem, TenantReview, TenantPost, TenantProduct, TenantProfessional } from "@/types";
 
 interface PublicPageProps {
   params: Promise<{
@@ -183,6 +183,7 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
     reviewsRes,
     postsRes,
     productsRes,
+    professionalsRes,
   ] = await Promise.all([
     supabase
       .from("tenant_profiles")
@@ -220,9 +221,28 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
       .eq("is_available", true)
       .order("display_order", { ascending: true })
       .order("created_at", { ascending: false }),
+    supabase
+      .from("tenant_professionals")
+      .select("id, tenant_id, name, phone, role_title, specialty, avatar_url, is_active, created_at")
+      .eq("tenant_id", tenant.id)
+      .eq("is_active", true)
+      .order("name", { ascending: true }),
   ]);
 
   const profile = profileRes.data;
+
+  // 2.2.0 Tratamento Seguro dos Profissionais da Equipe
+  const professionals: TenantProfessional[] = (professionalsRes.data || []).map((p: any) => ({
+    id: p.id,
+    tenant_id: p.tenant_id,
+    name: p.name,
+    phone: p.phone,
+    role_title: p.role_title || p.specialty || "Profissional",
+    specialty: p.specialty || p.role_title || "Profissional",
+    avatar_url: p.avatar_url || null,
+    is_active: p.is_active ?? true,
+    created_at: p.created_at,
+  }));
 
   // 2.2.1 Tratamento Seguro de Produtos Físicos
   const products: TenantProduct[] = (productsRes.data || []).map((p: any) => ({
@@ -580,6 +600,7 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
         }}
         profile={typedProfile}
         services={activeServices}
+        professionals={professionals}
         portfolioItems={portfolioItems}
         reviews={reviews}
         posts={posts}

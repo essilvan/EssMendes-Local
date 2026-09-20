@@ -2,6 +2,7 @@ import React from "react";
 import {
   LayoutDashboard,
   CalendarCheck,
+  Users,
   Scissors,
   ShoppingBag,
   Sparkles,
@@ -23,19 +24,20 @@ export interface AdminNavItem {
 }
 
 /**
- * Lista canônica dos 11 módulos oficiais de navegação do EssMendes Local.
+ * Lista canônica dos módulos oficiais de navegação do EssMendes Local.
  * Compartilhada estritamente entre a Sidebar Desktop e o Drawer/Sheet Mobile:
  * 1. 📊 Dashboard (dashboard) -> /admin
  * 2. 📅 Agendamentos (appointments) -> /admin/agendamentos
- * 3. 🛠️ Serviços (services) -> /admin/servicos
- * 4. 🛍️ Vitrine Produtos (products) -> /admin/produtos
- * 5. 🔄 Antes & Depois (before_after) -> /admin/antes-depois
- * 6. ⭐ Avaliações Google (reviews) -> /admin/avaliacoes
- * 7. 🚀 Posts & SEO (posts_seo) -> /admin/posts-seo
- * 8. 📈 Resultados & Relatórios (reports) -> /admin/relatorios
- * 9. 👑 Assinatura Pro (subscription_pro) -> /admin/assinatura
- * 10. 💳 Faturamento & Planos (billing_plans) -> /admin/faturamento
- * 11. ⚙️ Configurações (settings) -> /admin/configuracoes
+ * 3. 👥 Profissionais (professionals) -> /admin/profissionais
+ * 4. 🛠️ Serviços (services) -> /admin/servicos
+ * 5. 🛍️ Vitrine Produtos (products) -> /admin/produtos
+ * 6. 🔄 Antes & Depois (before_after) -> /admin/antes-depois
+ * 7. ⭐ Avaliações Google (reviews) -> /admin/avaliacoes
+ * 8. 🚀 Posts & SEO (posts_seo) -> /admin/posts-seo
+ * 9. 📈 Resultados & Relatórios (reports) -> /admin/relatorios
+ * 10. 👑 Assinatura Pro (subscription_pro) -> /admin/assinatura
+ * 11. 💳 Faturamento & Planos (billing_plans) -> /admin/faturamento
+ * 12. ⚙️ Configurações (settings) -> /admin/configuracoes
  */
 export const ADMIN_NAV_MODULES: AdminNavItem[] = [
   {
@@ -49,6 +51,12 @@ export const ADMIN_NAV_MODULES: AdminNavItem[] = [
     href: "/admin/agendamentos",
     icon: CalendarCheck,
     key: "appointments",
+  },
+  {
+    name: "Profissionais",
+    href: "/admin/profissionais",
+    icon: Users,
+    key: "professionals",
   },
   {
     name: "Serviços",
@@ -125,6 +133,12 @@ export const SUPER_ADMIN_NAV_MODULES: AdminNavItem[] = [
 export function isNavItemActive(pathname: string, item: AdminNavItem): boolean {
   if (item.key === "dashboard") {
     return pathname === "/admin" || pathname === "/admin/dashboard";
+  }
+  if (item.key === "professionals") {
+    return (
+      pathname.startsWith("/admin/profissionais") ||
+      pathname.startsWith("/admin/equipe")
+    );
   }
   if (item.key === "before_after") {
     return (
