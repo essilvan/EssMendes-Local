@@ -27,6 +27,7 @@ import {
 import { recordAnalyticsEvent } from "@/actions/analytics";
 import type { Service, AvailableSlot, Appointment, TenantProfessional } from "@/types";
 import { sanitizePhoneNumber } from "@/utils/phone";
+import { createClient } from "@/lib/supabase/client";
 
 interface PublicBookingFlowProps {
   tenantId: string;
@@ -60,6 +61,55 @@ export function PublicBookingFlow({
 
   // Professional selection (null = qualquer / primeiro disponível)
   const [selectedProfessional, setSelectedProfessional] = useState<TenantProfessional | null>(null);
+  const [activeProfessionals, setActiveProfessionals] = useState<TenantProfessional[]>(professionals);
+
+  // Sincronizar quando a prop professionals mudar
+  useEffect(() => {
+    if (professionals && professionals.length > 0) {
+      setActiveProfessionals(professionals);
+    }
+  }, [professionals]);
+
+  // Carregamento dinâmico resiliente caso a prop venha vazia
+  useEffect(() => {
+    if (!isOpen || (activeProfessionals.length > 0 && professionals.length > 0) || !tenantId) return;
+
+    let isMounted = true;
+    const loadProfessionals = async () => {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from("tenant_professionals")
+          .select("*")
+          .eq("tenant_id", tenantId)
+          .eq("is_active", true)
+          .order("name", { ascending: true });
+
+        if (!error && data && isMounted && data.length > 0) {
+          setActiveProfessionals(
+            data.map((p: any) => ({
+              id: p.id,
+              tenant_id: p.tenant_id,
+              name: p.name,
+              phone: p.phone,
+              role_title: p.role_title || p.specialty || "Profissional",
+              specialty: p.role_title || p.specialty || "Profissional",
+              avatar_url: p.avatar_url || null,
+              is_active: p.is_active ?? true,
+              created_at: p.created_at,
+            }))
+          );
+        }
+      } catch (err) {
+        console.error("Erro ao carregar profissionais:", err);
+      }
+    };
+
+    loadProfessionals();
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, tenantId, professionals, activeProfessionals.length]);
 
   // Date selection (default today YYYY-MM-DD)
   const getTodayStr = () => {
@@ -488,77 +538,83 @@ export function PublicBookingFlow({
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto pr-1">
-                  {/* Opção Padrão: Qualquer Profissional / Primeiro Disponível */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2 max-h-52 overflow-y-auto pr-1">
+                  {/* Opção Padrão */}
                   <button
                     type="button"
                     onClick={() => setSelectedProfessional(null)}
-                    className={`flex items-center gap-3 rounded-xl border p-2.5 text-left transition ${
+                    className={`p-3 rounded-xl border text-left flex items-center gap-3 transition ${
                       selectedProfessional === null
-                        ? "border-teal-700 bg-teal-50/70 ring-1 ring-teal-700/20 shadow-2xs"
-                        : "border-slate-200 bg-white hover:border-slate-300"
+                        ? "border-emerald-500 bg-emerald-500/10 ring-1 ring-emerald-500/20"
+                        : "border-neutral-200 bg-white hover:border-neutral-300"
                     }`}
                   >
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-600 shrink-0">
-                      <Users className="h-4 w-4" />
+                    <div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center font-bold text-xs uppercase text-neutral-700 shrink-0">
+                      <Users className="w-4 h-4 text-neutral-600" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-bold text-slate-900 leading-tight truncate">
+                      <p className="font-medium text-sm text-neutral-800 truncate">
                         Qualquer Profissional
                       </p>
-                      <p className="text-[10px] text-slate-500 truncate">
+                      <p className="text-xs text-neutral-500 truncate">
                         Primeiro disponível
                       </p>
                     </div>
                     {selectedProfessional === null && (
-                      <Check className="h-4 w-4 text-teal-700 shrink-0" />
+                      <Check className="w-4 h-4 text-emerald-600 shrink-0" />
                     )}
                   </button>
 
-                  {/* Lista de Profissionais Cadastrados */}
-                  {professionals.map((prof) => {
+                  {/* Profissionais Cadastrados */}
+                  {activeProfessionals?.map((prof) => {
                     const isSelected = selectedProfessional?.id === prof.id;
-                    const role = prof.role_title || prof.specialty || "Profissional";
+                    const isDirectPhoto =
+                      prof.avatar_url &&
+                      (prof.avatar_url.startsWith("http://") || prof.avatar_url.startsWith("https://")) &&
+                      !prof.avatar_url.includes("instagram.com") &&
+                      !prof.avatar_url.includes("facebook.com") &&
+                      !prof.avatar_url.includes("tiktok.com");
+
                     return (
                       <button
                         key={prof.id}
                         type="button"
                         onClick={() => setSelectedProfessional(prof)}
-                        className={`flex items-center gap-3 rounded-xl border p-2.5 text-left transition ${
+                        className={`p-3 rounded-xl border text-left flex items-center gap-3 transition ${
                           isSelected
-                            ? "border-teal-700 bg-teal-50/70 ring-1 ring-teal-700/20 shadow-2xs"
-                            : "border-slate-200 bg-white hover:border-slate-300"
+                            ? "border-emerald-500 bg-emerald-500/10 ring-1 ring-emerald-500/20"
+                            : "border-neutral-200 bg-white hover:border-neutral-300"
                         }`}
                       >
-                        {prof.avatar_url ? (
+                        {isDirectPhoto ? (
                           <img
-                            src={prof.avatar_url}
+                            src={prof.avatar_url!}
                             alt={prof.name}
-                            className="h-9 w-9 rounded-xl object-cover border border-slate-200 shrink-0"
+                            className="w-8 h-8 rounded-full object-cover border border-neutral-200 shrink-0"
                             onError={(e) => {
                               (e.target as HTMLElement).style.display = "none";
+                              const fallback = (e.target as HTMLElement).nextElementSibling as HTMLElement | null;
+                              if (fallback) fallback.style.display = "flex";
                             }}
                           />
-                        ) : (
-                          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-100 text-teal-800 font-bold text-xs shrink-0">
-                            {prof.name
-                              .split(" ")
-                              .slice(0, 2)
-                              .map((n) => n[0])
-                              .join("")
-                              .toUpperCase()}
-                          </div>
-                        )}
+                        ) : null}
+                        <div
+                          className={`w-8 h-8 rounded-full bg-neutral-200 items-center justify-center font-bold text-xs uppercase text-neutral-800 shrink-0 ${
+                            isDirectPhoto ? "hidden" : "flex"
+                          }`}
+                        >
+                          {prof.name.slice(0, 2)}
+                        </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold text-slate-900 leading-tight truncate">
+                          <p className="font-medium text-sm text-neutral-800 truncate">
                             {prof.name}
                           </p>
-                          <p className="text-[10px] text-slate-500 truncate">
-                            {role}
+                          <p className="text-xs text-neutral-500 truncate">
+                            {prof.role_title || "Profissional"}
                           </p>
                         </div>
                         {isSelected && (
-                          <Check className="h-4 w-4 text-teal-700 shrink-0" />
+                          <Check className="w-4 h-4 text-emerald-600 shrink-0" />
                         )}
                       </button>
                     );

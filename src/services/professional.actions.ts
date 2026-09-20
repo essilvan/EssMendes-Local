@@ -55,6 +55,51 @@ export async function getProfessionalsAction(
 }
 
 /**
+ * Lista profissionais ativos da vitrine pública de um tenant
+ */
+export async function getPublicProfessionalsAction(
+  tenantId: string
+): Promise<ActionResult<TenantProfessional[]>> {
+  try {
+    if (!tenantId) {
+      return { success: false, error: "Tenant ID é obrigatório." };
+    }
+
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("tenant_professionals")
+      .select("*")
+      .eq("tenant_id", tenantId)
+      .eq("is_active", true)
+      .order("name", { ascending: true });
+
+    if (error) {
+      console.error("[getPublicProfessionalsAction] Erro no banco:", error);
+      return { success: false, error: "Falha ao carregar profissionais." };
+    }
+
+    const professionals: TenantProfessional[] = (data || []).map((p: any) => ({
+      id: p.id,
+      tenant_id: p.tenant_id,
+      name: p.name,
+      phone: p.phone,
+      role_title: p.role_title || p.specialty || "Profissional",
+      specialty: p.role_title || p.specialty || "Profissional",
+      avatar_url: p.avatar_url || null,
+      is_active: p.is_active ?? true,
+      created_at: p.created_at,
+    }));
+
+    return { success: true, data: professionals };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Erro inesperado";
+    console.error("[getPublicProfessionalsAction] Exceção:", err);
+    return { success: false, error: msg };
+  }
+}
+
+
+/**
  * Criação de um novo profissional vinculado ao tenant autenticado
  */
 export async function createProfessionalAction(

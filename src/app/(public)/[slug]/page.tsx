@@ -223,13 +223,17 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
       .order("created_at", { ascending: false }),
     supabase
       .from("tenant_professionals")
-      .select("id, tenant_id, name, phone, role_title, specialty, avatar_url, is_active, created_at")
+      .select("*")
       .eq("tenant_id", tenant.id)
       .eq("is_active", true)
       .order("name", { ascending: true }),
   ]);
 
   const profile = profileRes.data;
+
+  if (professionalsRes.error) {
+    console.error("[PublicTenantPage] Erro ao carregar profissionais:", professionalsRes.error);
+  }
 
   // 2.2.0 Tratamento Seguro dos Profissionais da Equipe
   const professionals: TenantProfessional[] = (professionalsRes.data || []).map((p: any) => ({
@@ -238,7 +242,7 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
     name: p.name,
     phone: p.phone,
     role_title: p.role_title || p.specialty || "Profissional",
-    specialty: p.specialty || p.role_title || "Profissional",
+    specialty: p.role_title || p.specialty || "Profissional",
     avatar_url: p.avatar_url || null,
     is_active: p.is_active ?? true,
     created_at: p.created_at,

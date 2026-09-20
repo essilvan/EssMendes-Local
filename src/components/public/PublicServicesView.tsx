@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import type { Service, TenantProfile } from "@/types";
+import type { Service, TenantProfile, TenantProfessional } from "@/types";
 import { PublicBookingFlow } from "./PublicBookingFlow";
 import { generateWhatsAppUrl } from "@/utils/phone";
 import { recordAnalyticsEvent } from "@/actions/analytics";
@@ -34,6 +34,7 @@ interface PublicServicesViewProps {
   };
   profile: TenantProfile | null;
   services: Service[];
+  professionals?: TenantProfessional[];
   isBookingOpen?: boolean;
   theme?: NicheThemeConfig;
   onOpenBooking?: (serviceId?: string) => void;
@@ -44,6 +45,7 @@ export function PublicServicesView({
   tenant,
   profile,
   services,
+  professionals = [],
   isBookingOpen: externalIsOpen,
   theme,
   onOpenBooking: externalOnOpen,
@@ -269,6 +271,7 @@ export function PublicServicesView({
         businessPhone={profile?.phone_whatsapp}
         businessAddress={profile?.address}
         services={services}
+        professionals={professionals}
         selectedServiceId={selectedServiceId}
         isOpen={isOpen}
         onClose={handleCloseBooking}
