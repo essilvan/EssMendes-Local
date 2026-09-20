@@ -69,10 +69,9 @@ export function AdminMobileNav({
     }
   }, [isOpen]);
 
-  const handleCopy = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const url = getTenantPublicUrl(companySlug);
+  const tenantSiteUrl = getTenantPublicUrl(companySlug);
+
+  const copyToClipboard = async (url: string) => {
     try {
       if (navigator?.clipboard) {
         await navigator.clipboard.writeText(url);
@@ -178,35 +177,31 @@ export function AdminMobileNav({
               )}
 
               {/* Link de Vitrine Pública com botão Copiar */}
-              <div className="flex items-center gap-1 rounded-lg border border-teal-100 bg-teal-50/60 p-1 transition hover:border-teal-200">
-                <a
-                  href={getTenantPublicUrl(companySlug)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex flex-1 items-center justify-between px-2 py-1.5 text-xs font-medium text-teal-900 hover:text-teal-950 transition min-w-0"
-                  title={`Acessar ${getTenantDisplayDomain(companySlug)}`}
-                >
-                  <span className="flex items-center gap-2 truncate">
-                    <Globe className="h-3.5 w-3.5 text-teal-700 shrink-0" />
-                    <span className="truncate font-mono text-[11px]">
-                      {getTenantDisplayDomain(companySlug)}
-                    </span>
-                  </span>
-                  <ExternalLink className="h-3 w-3 text-teal-600 shrink-0 ml-1" />
-                </a>
-
-                <button
-                  type="button"
-                  onClick={handleCopy}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition shadow-2xs shrink-0 cursor-pointer"
-                  title={copied ? "Link copiado!" : "Copiar link do subdomínio"}
-                >
-                  {copied ? (
-                    <Check className="h-3.5 w-3.5 text-emerald-600" />
-                  ) : (
-                    <Copy className="h-3.5 w-3.5" />
-                  )}
-                </button>
+              <div className="flex items-center justify-between gap-2 px-3 py-1.5 bg-neutral-900/50 rounded-lg border border-neutral-800 text-xs text-neutral-300">
+                <span className="font-medium text-emerald-400">🌐 Meu Site</span>
+                <div className="flex items-center gap-2">
+                  <a 
+                    href={tenantSiteUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    title="Abrir meu site"
+                    className="text-neutral-400 hover:text-white transition"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5"/>
+                  </a>
+                  <button 
+                    type="button"
+                    onClick={() => copyToClipboard(tenantSiteUrl)} 
+                    title={copied ? "Link copiado!" : "Copiar link do meu site"}
+                    className="text-neutral-400 hover:text-white transition cursor-pointer"
+                  >
+                    {copied ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5"/>
+                    )}
+                  </button>
+                </div>
               </div>
 
               {/* Lista dos 11 Módulos Oficiais */}

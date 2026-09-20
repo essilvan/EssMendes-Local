@@ -12,6 +12,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import AppointmentStatusButton from './AppointmentStatusButton';
+import NewAppointmentModal, { type ServiceOption } from './NewAppointmentModal';
 import type { Appointment } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -33,18 +34,27 @@ export default async function AdminAgendamentosPage() {
   const tenantId = tenantData.tenantId;
   const supabase = await createClient();
 
-  // Busca agendamentos ordenados pelos mais recentes
-  const { data: rawAppointments, error } = await supabase
-    .from('appointments')
-    .select('*')
-    .eq('tenant_id', tenantId)
-    .order('start_time', { ascending: false });
+  // Busca agendamentos e serviços ativos do tenant em paralelo
+  const [appointmentsRes, servicesRes] = await Promise.all([
+    supabase
+      .from('appointments')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('start_time', { ascending: false }),
+    supabase
+      .from('services')
+      .select('id, name, price, duration_minutes, is_active')
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true)
+      .order('name', { ascending: true }),
+  ]);
 
-  if (error) {
-    console.error('[AdminAgendamentosPage] Erro ao carregar agendamentos:', error);
+  if (appointmentsRes.error) {
+    console.error('[AdminAgendamentosPage] Erro ao carregar agendamentos:', appointmentsRes.error);
   }
 
-  const appointments = (rawAppointments || []) as Appointment[];
+  const appointments = (appointmentsRes.data || []) as Appointment[];
+  const activeServices = (servicesRes.data || []) as ServiceOption[];
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -90,6 +100,8 @@ export default async function AdminAgendamentosPage() {
             Acompanhe e gerencie as reservas de atendimento realizadas na sua página pública.
           </p>
         </div>
+
+        <NewAppointmentModal services={activeServices} />
       </div>
 
       {/* KPI Cards */}

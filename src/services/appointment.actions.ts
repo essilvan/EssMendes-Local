@@ -5,8 +5,10 @@ import { getAuthenticatedTenant } from '@/lib/supabase/tenant';
 import {
   appointmentSchema,
   availableSlotsQuerySchema,
+  adminAppointmentSchema,
   type AppointmentInput,
   type AvailableSlotsQuery,
+  type AdminAppointmentInput,
 } from '@/lib/validations/appointment.schema';
 import type { Appointment, AvailableSlot, AppointmentStatus } from '@/types';
 import { revalidatePath } from 'next/cache';
@@ -253,5 +255,106 @@ export async function updateAppointmentStatusAction(
   } catch (err) {
     console.error('[updateAppointmentStatusAction] Erro inesperado:', err);
     return { success: false, error: 'Ocorreu um erro ao atualizar o agendamento.' };
+  }
+}
+
+/**
+ * Criação manual de agendamento pelo Administrador do Tenant
+ */
+export async function createAdminAppointmentAction(
+  rawInput: AdminAppointmentInput
+): Promise<{ success: boolean; data?: Appointment; error?: string }> {
+  try {
+    const { data: tenantData, error: tenantErr } = await getAuthenticatedTenant();
+    if (tenantErr || !tenantData?.tenantId) {
+      return { success: false, error: tenantErr || 'Não autorizado. Faça login novamente.' };
+    }
+
+    const tenantId = tenantData.tenantId;
+
+    const parsed = adminAppointmentSchema.safeParse(rawInput);
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: parsed.error.issues[0]?.message || 'Dados do agendamento inválidos.',
+      };
+    }
+
+    const input = parsed.data;
+    const supabase = await createClient();
+
+    // Monta start_time e end_time em ISO UTC
+    const [h, m] = input.time.split(':').map(Number);
+    const startMinutes = h * 60 + m;
+    const endMinutes = startMinutes + input.durationMinutes;
+
+    const startTimeISO = `${input.date}T${input.time}:00.000Z`;
+    const endTimeISO = `${input.date}T${minutesToTime(endMinutes)}:00.000Z`;
+
+    // 1. Cria ou vincula cliente na base
+    let customerId: string | null = null;
+    const { data: existingCustomer } = await supabase
+      .from('customers')
+      .select('id')
+      .eq('tenant_id', tenantId)
+      .eq('phone', input.customerPhone)
+      .maybeSingle();
+
+    if (existingCustomer?.id) {
+      customerId = existingCustomer.id;
+    } else {
+      const { data: newCustomer } = await supabase
+        .from('customers')
+        .insert({
+          tenant_id: tenantId,
+          name: input.customerName,
+          phone: input.customerPhone,
+          email: input.customerEmail || null,
+        })
+        .select('id')
+        .maybeSingle();
+
+      if (newCustomer?.id) {
+        customerId = newCustomer.id;
+      }
+    }
+
+    // 2. Insere o agendamento
+    const serviceId = input.serviceId && input.serviceId.trim() !== '' ? input.serviceId : null;
+
+    const { data: appointment, error: insertError } = await supabase
+      .from('appointments')
+      .insert({
+        tenant_id: tenantId,
+        customer_id: customerId,
+        service_id: serviceId,
+        service_name: input.serviceName,
+        customer_name: input.customerName,
+        customer_phone: input.customerPhone,
+        customer_email: input.customerEmail || null,
+        start_time: startTimeISO,
+        end_time: endTimeISO,
+        total_duration: input.durationMinutes,
+        price: input.price,
+        status: input.status,
+        notes: input.notes || null,
+      })
+      .select('*')
+      .maybeSingle();
+
+    if (insertError || !appointment) {
+      console.error('[createAdminAppointmentAction] Erro ao inserir agendamento:', insertError);
+      return { success: false, error: 'Não foi possível registrar o agendamento no banco.' };
+    }
+
+    revalidatePath('/admin/agendamentos');
+    if (tenantData.tenant?.slug) {
+      revalidatePath(`/${tenantData.tenant.slug}`);
+    }
+
+    return { success: true, data: appointment as Appointment };
+  } catch (err) {
+    console.error('[createAdminAppointmentAction] Erro inesperado:', err);
+    return { success: false, error: 'Ocorreu um erro ao processar o agendamento.' };
   }
 }
