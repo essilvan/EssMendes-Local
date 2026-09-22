@@ -72,3 +72,19 @@ export const adminAppointmentSchema = z.object({
 export type AdminAppointmentInput = z.input<typeof adminAppointmentSchema>;
 export type AdminAppointmentOutput = z.output<typeof adminAppointmentSchema>;
 
+export const updateAppointmentDetailsSchema = z.object({
+  appointmentId: z.string().uuid("ID do agendamento inválido."),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data deve estar no formato AAAA-MM-DD."),
+  time: z.string().regex(/^\d{2}:\d{2}$/, "Horário deve estar no formato HH:MM."),
+  professionalId: z
+    .string()
+    .uuid("ID do profissional inválido.")
+    .optional()
+    .nullable()
+    .or(z.literal(""))
+    .transform((val) => (val && val.trim() !== "" ? val.trim() : null)),
+});
+
+export type UpdateAppointmentDetailsInput = z.input<typeof updateAppointmentDetailsSchema>;
+export type UpdateAppointmentDetailsOutput = z.output<typeof updateAppointmentDetailsSchema>;
+

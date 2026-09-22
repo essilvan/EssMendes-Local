@@ -7,9 +7,11 @@ import {
   appointmentSchema,
   availableSlotsQuerySchema,
   adminAppointmentSchema,
+  updateAppointmentDetailsSchema,
   type AppointmentInput,
   type AvailableSlotsQuery,
   type AdminAppointmentInput,
+  type UpdateAppointmentDetailsInput,
 } from '@/lib/validations/appointment.schema';
 import type { Appointment, AvailableSlot, AppointmentStatus } from '@/types';
 import { revalidatePath } from 'next/cache';
@@ -447,5 +449,162 @@ export async function createAdminAppointmentAction(
     console.error('Erro detalhado do Supabase:', err);
     console.error('[createAdminAppointmentAction] Erro inesperado:', err);
     return { success: false, error: 'Ocorreu um erro ao processar o agendamento.' };
+  }
+}
+
+/**
+ * Atualiza os detalhes de um agendamento existente (Data, Horário e Profissional)
+ */
+export async function updateAppointmentDetailsAction(
+  rawInput: UpdateAppointmentDetailsInput
+): Promise<{ success: boolean; data?: Appointment; error?: string }> {
+  try {
+    const { data: tenantData, error: tenantErr } = await getAuthenticatedTenant();
+    if (tenantErr || !tenantData?.tenantId) {
+      return { success: false, error: tenantErr || 'Não autorizado. Faça login novamente.' };
+    }
+
+    const tenantId = tenantData.tenantId;
+
+    const parsed = updateAppointmentDetailsSchema.safeParse(rawInput);
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: parsed.error.issues[0]?.message || 'Dados inválidos para alteração.',
+      };
+    }
+
+    const input = parsed.data;
+    const supabase = await createClient();
+
+    // 1. Busca o agendamento atual para verificar se pertence ao tenant e obter duração
+    const { data: currentApp, error: fetchErr } = await supabase
+      .from('appointments')
+      .select('*')
+      .eq('id', input.appointmentId)
+      .eq('tenant_id', tenantId)
+      .maybeSingle();
+
+    if (fetchErr || !currentApp) {
+      return { success: false, error: 'Agendamento não encontrado.' };
+    }
+
+    // 2. Calcula novos start_time e end_time
+    const [h, m] = input.time.split(':').map(Number);
+    const startMinutes = h * 60 + m;
+    const duration = currentApp.total_duration || 30;
+    const endMinutes = startMinutes + duration;
+
+    const startTimeISO = `${input.date}T${input.time}:00.000Z`;
+    const endTimeISO = `${input.date}T${minutesToTime(endMinutes)}:00.000Z`;
+
+    // 3. Sincronização de espelho com 'professionals' se professionalId for informado
+    const professionalId =
+      typeof input.professionalId === 'string' && input.professionalId.trim() !== ''
+        ? input.professionalId.trim()
+        : null;
+
+    if (professionalId) {
+      try {
+        const adminSupabase = createAdminClient();
+        const { data: profExists } = await adminSupabase
+          .from('professionals')
+          .select('id')
+          .eq('id', professionalId)
+          .maybeSingle();
+
+        if (!profExists) {
+          const { data: tp } = await adminSupabase
+            .from('tenant_professionals')
+            .select('*')
+            .eq('id', professionalId)
+            .maybeSingle();
+
+          if (tp) {
+            await adminSupabase.from('professionals').upsert({
+              id: tp.id,
+              tenant_id: tp.tenant_id,
+              name: tp.name,
+              role_title: tp.role_title || 'Profissional',
+              avatar_url: tp.avatar_url || null,
+              is_active: tp.is_active ?? true,
+            });
+          }
+        }
+      } catch (mirrorErr) {
+        console.warn('[updateAppointmentDetailsAction] Erro ao sincronizar espelho:', mirrorErr);
+      }
+    }
+
+    // 4. Executa o update na tabela appointments
+    const { data: updatedAppointment, error: updateErr } = await supabase
+      .from('appointments')
+      .update({
+        start_time: startTimeISO,
+        end_time: endTimeISO,
+        professional_id: professionalId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', input.appointmentId)
+      .eq('tenant_id', tenantId)
+      .select('*')
+      .maybeSingle();
+
+    if (updateErr || !updatedAppointment) {
+      console.error('[updateAppointmentDetailsAction] Erro ao atualizar:', updateErr);
+      return { success: false, error: 'Falha ao atualizar dados do agendamento.' };
+    }
+
+    revalidatePath('/admin/agendamentos');
+    if (tenantData.tenant?.slug) {
+      revalidatePath(`/${tenantData.tenant.slug}`);
+    }
+
+    return { success: true, data: updatedAppointment as Appointment };
+  } catch (err) {
+    console.error('[updateAppointmentDetailsAction] Erro inesperado:', err);
+    return { success: false, error: 'Ocorreu um erro ao atualizar o agendamento.' };
+  }
+}
+
+/**
+ * Exclui um agendamento da base de dados
+ */
+export async function deleteAppointmentAction(
+  appointmentId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { data: tenantData, error: tenantErr } = await getAuthenticatedTenant();
+    if (tenantErr || !tenantData?.tenantId) {
+      return { success: false, error: tenantErr || 'Não autorizado. Faça login novamente.' };
+    }
+
+    if (!appointmentId) {
+      return { success: false, error: 'ID do agendamento é obrigatório.' };
+    }
+
+    const tenantId = tenantData.tenantId;
+    const supabase = await createClient();
+
+    const { error: deleteErr } = await supabase
+      .from('appointments')
+      .delete()
+      .eq('id', appointmentId)
+      .eq('tenant_id', tenantId);
+
+    if (deleteErr) {
+      console.error('[deleteAppointmentAction] Erro ao excluir agendamento:', deleteErr);
+      return { success: false, error: 'Falha ao excluir agendamento do sistema.' };
+    }
+
+    revalidatePath('/admin/agendamentos');
+    if (tenantData.tenant?.slug) {
+      revalidatePath(`/${tenantData.tenant.slug}`);
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error('[deleteAppointmentAction] Erro inesperado:', err);
+    return { success: false, error: 'Ocorreu um erro ao excluir o agendamento.' };
   }
 }
