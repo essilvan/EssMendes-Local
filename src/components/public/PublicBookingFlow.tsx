@@ -123,10 +123,18 @@ export function PublicBookingFlow({
   const [selectedDate, setSelectedDate] = useState<string>(getTodayStr());
   const [selectedTime, setSelectedTime] = useState<string>("");
 
-  // Slots state
-  const [slots, setSlots] = useState<AvailableSlot[]>([]);
+  // Slots state & Occupied appointments
+  const [occupiedAppointments, setOccupiedAppointments] = useState<any[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState<boolean>(false);
   const [slotsError, setSlotsError] = useState<string | null>(null);
+
+  // Grade de horários padrão de atendimento
+  const timeSlots = [
+    "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
+    "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
+    "14:00", "14:30", "15:00", "15:30", "16:00", "16:30",
+    "17:00", "17:30", "18:00", "18:30", "19:00"
+  ];
 
   // Customer form state
   const [customerName, setCustomerName] = useState<string>("");
@@ -149,42 +157,108 @@ export function PublicBookingFlow({
     }
   }, [selectedServiceId, services, selectedService]);
 
-  // Load available slots when date, service or professional changes
+  // Busca reativa dos agendamentos existentes no Supabase ao alterar selectedDate ou selectedProfessional
   useEffect(() => {
-    if (!isOpen || !selectedService || !selectedDate) return;
+    if (!isOpen || !tenantId || !selectedDate) return;
 
     let isMounted = true;
     setIsLoadingSlots(true);
     setSlotsError(null);
     setSelectedTime("");
 
-    getAvailableSlotsAction({
-      tenantId,
-      date: selectedDate,
-      totalDuration: selectedService.duration_minutes || 30,
-      professionalId: selectedProfessional?.id || null,
-    })
-      .then((res) => {
-        if (!isMounted) return;
-        if (res.error) {
-          setSlotsError(res.error);
-          setSlots([]);
-        } else if (res.data) {
-          setSlots(res.data);
+    const loadOccupied = async () => {
+      try {
+        const supabase = createClient();
+        const startOfDay = `${selectedDate}T00:00:00.000Z`;
+        const endOfDay = `${selectedDate}T23:59:59.999Z`;
+
+        let query = supabase
+          .from("appointments")
+          .select("id, start_time, end_time, status, professional_id, total_duration, service_name")
+          .eq("tenant_id", tenantId)
+          .gte("start_time", startOfDay)
+          .lte("start_time", endOfDay)
+          .neq("status", "canceled");
+
+        if (selectedProfessional?.id) {
+          query = query.eq("professional_id", selectedProfessional.id);
         }
-      })
-      .catch(() => {
+
+        const { data, error } = await query;
+
         if (!isMounted) return;
-        setSlotsError("Erro ao carregar horários disponíveis.");
-      })
-      .finally(() => {
+
+        if (error) {
+          console.error("Erro ao carregar agendamentos existentes:", error);
+          setSlotsError("Não foi possível verificar a disponibilidade de horários.");
+          setOccupiedAppointments([]);
+        } else {
+          setOccupiedAppointments(data || []);
+        }
+      } catch (err) {
+        if (!isMounted) return;
+        console.error("Exceção ao buscar horários ocupados:", err);
+        setSlotsError("Erro ao consultar agenda.");
+        setOccupiedAppointments([]);
+      } finally {
         if (isMounted) setIsLoadingSlots(false);
-      });
+      }
+    };
+
+    loadOccupied();
 
     return () => {
       isMounted = false;
     };
-  }, [isOpen, selectedDate, selectedService, selectedProfessional?.id, tenantId]);
+  }, [isOpen, tenantId, selectedDate, selectedProfessional?.id]);
+
+  // Normalizar para "HH:mm" e checar se o horário está ocupado
+  const isTimeSlotOccupied = (timeSlot: string) => {
+    const formattedSlot = timeSlot.slice(0, 5); // Garante "08:30"
+    const [slotH, slotM] = formattedSlot.split(":").map(Number);
+    const slotStartM = slotH * 60 + slotM;
+    const currentDuration = selectedService?.duration_minutes || 30;
+    const slotEndM = slotStartM + currentDuration;
+
+    const checkAppOccupies = (app: any) => {
+      if (app.status === "canceled" || app.status === "cancelled") return false;
+
+      // Normaliza para "HH:mm" (seja de appointment_time ou start_time)
+      const rawTime =
+        app.appointment_time ||
+        (app.start_time
+          ? app.start_time.includes("T")
+            ? app.start_time.split("T")[1]
+            : app.start_time
+          : "");
+      const appTime = rawTime ? rawTime.slice(0, 5) : "";
+
+      if (!appTime) return false;
+
+      // 1. Comparação direta exata de horário (ex: "08:30" === "08:30")
+      if (appTime === formattedSlot) return true;
+
+      // 2. Sobreposição por duração do serviço
+      const [appH, appM] = appTime.split(":").map(Number);
+      const appStartM = appH * 60 + appM;
+      const appDuration = app.total_duration || 30;
+      const appEndM = appStartM + appDuration;
+
+      return slotStartM < appEndM && slotEndM > appStartM;
+    };
+
+    // CASO A: Se tiver profissional selecionado:
+    if (selectedProfessional?.id) {
+      return occupiedAppointments.some(
+        (app) => app.professional_id === selectedProfessional.id && checkAppOccupies(app)
+      );
+    }
+
+    // CASO B: Se for "Qualquer Profissional":
+    const overlappingCount = occupiedAppointments.filter((app) => checkAppOccupies(app)).length;
+    const totalPros = activeProfessionals.length > 0 ? activeProfessionals.length : 1;
+    return overlappingCount >= totalPros;
+  };
 
   if (!isOpen) return null;
 
@@ -689,34 +763,41 @@ export function PublicBookingFlow({
                   <div className="rounded-lg bg-red-50 p-3 text-xs text-red-700">
                     {slotsError}
                   </div>
-                ) : slots.length === 0 ? (
-                  <div className="rounded-lg bg-slate-50 p-4 text-center text-xs text-slate-500">
-                    Nenhum horário disponível para esta data. Por favor, selecione outro dia.
-                  </div>
                 ) : (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-44 overflow-y-auto pr-1">
-                    {slots.map((slot) => {
-                      const isSelected = selectedTime === slot.time;
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-48 overflow-y-auto pr-1">
+                    {timeSlots.map((time) => {
+                      const isOccupied = isTimeSlotOccupied(time);
+                      const formattedTime = time.slice(0, 5);
+                      const isSelected = selectedTime === formattedTime;
+
                       return (
                         <button
-                          key={slot.time}
+                          key={time}
                           type="button"
-                          disabled={!slot.available}
-                          onClick={() => setSelectedTime(slot.time)}
-                          className={`rounded-xl py-2 px-2.5 text-xs font-semibold transition text-center ${
-                            !slot.available
-                              ? "bg-slate-100 text-slate-300 cursor-not-allowed line-through"
+                          disabled={isOccupied}
+                          onClick={() => !isOccupied && setSelectedTime(formattedTime)}
+                          className={`p-2.5 rounded-lg text-sm font-medium transition border text-center ${
+                            isOccupied
+                              ? "bg-neutral-100 dark:bg-neutral-800/50 text-neutral-400 dark:text-neutral-500 border-neutral-200 dark:border-neutral-800 cursor-not-allowed line-through opacity-60"
                               : isSelected
-                              ? "text-white shadow-xs font-bold"
-                              : "border border-slate-200 bg-white text-slate-800 hover:border-slate-400"
+                              ? "bg-teal-700 text-white border-teal-700 shadow-sm font-bold"
+                              : "bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-200 border-neutral-200 dark:border-neutral-700 hover:border-teal-500"
                           }`}
                           style={
-                            isSelected && slot.available
-                              ? { backgroundColor: "var(--primary-color, #0d9488)" }
+                            isSelected && !isOccupied
+                              ? {
+                                  backgroundColor: "var(--primary-color, #0d9488)",
+                                  borderColor: "var(--primary-color, #0d9488)",
+                                }
                               : undefined
                           }
+                          title={
+                            isOccupied
+                              ? "Horário já reservado ou indisponível"
+                              : `Selecionar ${formattedTime}`
+                          }
                         >
-                          {slot.time}
+                          {formattedTime}
                         </button>
                       );
                     })}
