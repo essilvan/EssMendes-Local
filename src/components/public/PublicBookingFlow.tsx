@@ -149,7 +149,7 @@ export function PublicBookingFlow({
     }
   }, [selectedServiceId, services, selectedService]);
 
-  // Load available slots when date or service changes
+  // Load available slots when date, service or professional changes
   useEffect(() => {
     if (!isOpen || !selectedService || !selectedDate) return;
 
@@ -162,6 +162,7 @@ export function PublicBookingFlow({
       tenantId,
       date: selectedDate,
       totalDuration: selectedService.duration_minutes || 30,
+      professionalId: selectedProfessional?.id || null,
     })
       .then((res) => {
         if (!isMounted) return;
@@ -183,7 +184,7 @@ export function PublicBookingFlow({
     return () => {
       isMounted = false;
     };
-  }, [isOpen, selectedDate, selectedService, tenantId]);
+  }, [isOpen, selectedDate, selectedService, selectedProfessional?.id, tenantId]);
 
   if (!isOpen) return null;
 

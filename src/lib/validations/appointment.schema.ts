@@ -36,9 +36,18 @@ export const availableSlotsQuerySchema = z.object({
   tenantId: z.string().uuid("ID do estabelecimento inválido."),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data deve estar no formato AAAA-MM-DD."),
   totalDuration: z.coerce.number().min(5, "Duração mínima é de 5 minutos.").default(30),
+  professionalId: z
+    .string()
+    .uuid("ID do profissional inválido.")
+    .optional()
+    .nullable()
+    .or(z.literal(""))
+    .transform((val) => (val && val.trim() !== "" ? val.trim() : null))
+    .optional(),
 });
 
-export type AvailableSlotsQuery = z.infer<typeof availableSlotsQuerySchema>;
+export type AvailableSlotsQuery = z.input<typeof availableSlotsQuerySchema>;
+export type AvailableSlotsQueryOutput = z.output<typeof availableSlotsQuerySchema>;
 
 export const adminAppointmentSchema = z.object({
   customerName: z.string().min(2, "Nome do cliente é obrigatório (mínimo 2 caracteres).").max(100),

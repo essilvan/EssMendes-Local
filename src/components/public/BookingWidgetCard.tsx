@@ -89,6 +89,7 @@ export function BookingWidgetCard({
       tenantId,
       date: selectedDate,
       totalDuration: selectedService.duration_minutes || 30,
+      professionalId: null,
     })
       .then((res) => {
         if (!isMounted) return;

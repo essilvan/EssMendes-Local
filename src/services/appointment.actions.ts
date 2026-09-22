@@ -48,7 +48,7 @@ export async function getAvailableSlotsAction(
       };
     }
 
-    const { tenantId, date, totalDuration } = parsed.data;
+    const { tenantId, date, totalDuration, professionalId } = parsed.data;
     const startHour = queryInput.startHour ?? 8;
     const endHour = queryInput.endHour ?? 18;
     const intervalMinutes = queryInput.intervalMinutes ?? 30;
@@ -59,14 +59,36 @@ export async function getAvailableSlotsAction(
     const startOfDay = `${date}T00:00:00.000Z`;
     const endOfDay = `${date}T23:59:59.999Z`;
 
-    // Busca agendamentos do dia não cancelados
-    const { data: existingAppointments, error } = await supabase
+    // CASO A: Profissional Específico Selecionado (professionalId)
+    // CASO B: "Qualquer Profissional" Selecionado (professionalId === null)
+    let appointmentsQuery = supabase
       .from('appointments')
-      .select('start_time, end_time, status')
+      .select('id, start_time, end_time, status, professional_id')
       .eq('tenant_id', tenantId)
       .gte('start_time', startOfDay)
       .lte('start_time', endOfDay)
       .neq('status', 'canceled');
+
+    // No Caso A, filtramos apenas os agendamentos do profissional selecionado
+    if (professionalId) {
+      appointmentsQuery = appointmentsQuery.eq('professional_id', professionalId);
+    }
+
+    // No Caso B, obtemos o total de profissionais ativos para capacidade da grade
+    let activeProfessionalsCount = 1;
+    if (!professionalId) {
+      const { data: activePros } = await supabase
+        .from('tenant_professionals')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .eq('is_active', true);
+
+      if (activePros && activePros.length > 0) {
+        activeProfessionalsCount = activePros.length;
+      }
+    }
+
+    const { data: existingAppointments, error } = await appointmentsQuery;
 
     if (error) {
       console.error('[getAvailableSlotsAction] Erro ao buscar agendamentos:', error);
@@ -74,13 +96,15 @@ export async function getAvailableSlotsAction(
     }
 
     // Converte os agendamentos existentes para intervalos em minutos
-    const busyIntervals = (existingAppointments || []).map((app) => {
-      const startDt = new Date(app.start_time);
-      const endDt = new Date(app.end_time);
-      const startM = startDt.getUTCHours() * 60 + startDt.getUTCMinutes();
-      const endM = endDt.getUTCHours() * 60 + endDt.getUTCMinutes();
-      return { start: startM, end: endM };
-    });
+    const busyIntervals = (existingAppointments || [])
+      .filter((app) => app.status !== 'canceled' && (app.status as string) !== 'cancelled')
+      .map((app) => {
+        const startDt = new Date(app.start_time);
+        const endDt = new Date(app.end_time);
+        const startM = startDt.getUTCHours() * 60 + startDt.getUTCMinutes();
+        const endM = endDt.getUTCHours() * 60 + endDt.getUTCMinutes();
+        return { start: startM, end: endM, professionalId: app.professional_id };
+      });
 
     const slots: AvailableSlot[] = [];
     const dayStartMinutes = startHour * 60;
@@ -94,15 +118,37 @@ export async function getAvailableSlotsAction(
       const slotStart = currentMinutes;
       const slotEnd = currentMinutes + totalDuration;
 
-      // Verifica se sobrepõe algum agendamento existente
-      const hasConflict = busyIntervals.some(
-        (busy) => slotStart < busy.end && slotEnd > busy.start
-      );
+      let hasConflict = false;
+      let reason: string | undefined = undefined;
+
+      if (professionalId) {
+        // CASO A: Profissional Específico Selecionado
+        // Apenas agendamentos deste profissional causam indisponibilidade
+        const isBusy = busyIntervals.some(
+          (busy) => slotStart < busy.end && slotEnd > busy.start
+        );
+        if (isBusy) {
+          hasConflict = true;
+          reason = 'Horário indisponível para este profissional';
+        }
+      } else {
+        // CASO B: "Qualquer Profissional" Selecionado
+        // Um horário só deve ser marcado como indisponível se a quantidade de
+        // agendamentos naquele horário for igual ou superior ao total de profissionais ativos
+        const overlappingCount = busyIntervals.filter(
+          (busy) => slotStart < busy.end && slotEnd > busy.start
+        ).length;
+
+        if (overlappingCount >= activeProfessionalsCount) {
+          hasConflict = true;
+          reason = 'Todos os profissionais ocupados neste horário';
+        }
+      }
 
       slots.push({
         time: minutesToTime(slotStart),
         available: !hasConflict,
-        reason: hasConflict ? 'Horário ocupado' : undefined,
+        reason,
       });
     }
 
@@ -139,25 +185,54 @@ export async function createAppointmentAction(
     const startTimeISO = `${input.date}T${input.time}:00.000Z`;
     const endTimeISO = `${input.date}T${minutesToTime(endMinutes)}:00.000Z`;
 
-    // 1. Prevenção de conflito / Race Condition
-    const { data: conflicts, error: conflictErr } = await supabase
+    // Sanitização estrita do professional_id
+    const professionalId =
+      typeof input.professionalId === 'string' && input.professionalId.trim() !== ''
+        ? input.professionalId.trim()
+        : null;
+
+    // 1. Prevenção de conflito / Race Condition com isolamento por profissional
+    let conflictQuery = supabase
       .from('appointments')
-      .select('id')
+      .select('id, professional_id')
       .eq('tenant_id', input.tenantId)
       .neq('status', 'canceled')
       .lt('start_time', endTimeISO)
       .gt('end_time', startTimeISO);
+
+    if (professionalId) {
+      conflictQuery = conflictQuery.eq('professional_id', professionalId);
+    }
+
+    const { data: conflicts, error: conflictErr } = await conflictQuery;
 
     if (conflictErr) {
       console.error('[createAppointmentAction] Erro ao verificar conflitos:', conflictErr);
       return { data: null, error: 'Erro ao verificar disponibilidade.' };
     }
 
-    if (conflicts && conflicts.length > 0) {
-      return {
-        data: null,
-        error: 'Este horário acabou de ser reservado por outro cliente. Por favor, escolha outro.',
-      };
+    if (professionalId) {
+      if (conflicts && conflicts.length > 0) {
+        return {
+          data: null,
+          error: 'Este horário acabou de ser reservado para este profissional. Por favor, escolha outro.',
+        };
+      }
+    } else {
+      // Para "Qualquer Profissional", só há conflito se todos os profissionais ativos estiverem ocupados
+      const { data: activePros } = await supabase
+        .from('tenant_professionals')
+        .select('id')
+        .eq('tenant_id', input.tenantId)
+        .eq('is_active', true);
+
+      const capacity = activePros && activePros.length > 0 ? activePros.length : 1;
+      if (conflicts && conflicts.length >= capacity) {
+        return {
+          data: null,
+          error: 'Todos os profissionais já estão ocupados neste horário. Por favor, escolha outro.',
+        };
+      }
     }
 
     // 2. Cria ou vincula cliente na base
@@ -188,11 +263,7 @@ export async function createAppointmentAction(
       }
     }
 
-    // 3. Insere o agendamento com sanitização estrita do professional_id
-    const professionalId =
-      typeof input.professionalId === 'string' && input.professionalId.trim() !== ''
-        ? input.professionalId.trim()
-        : null;
+    // 3. Insere o agendamento
 
     // Garantir sincronização com a tabela professionals caso a constraint ainda aponte para ela
     if (professionalId) {
