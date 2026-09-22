@@ -241,11 +241,19 @@ export function PublicBookingFlow({
     setSubmitError(null);
 
     startTransition(async () => {
+      // 1. Sanitização estrita do professional_id no payload
+      const cleanProfessionalId =
+        selectedProfessional?.id &&
+        typeof selectedProfessional.id === "string" &&
+        selectedProfessional.id.trim() !== ""
+          ? selectedProfessional.id.trim()
+          : null;
+
       const res = await createAppointmentAction({
         tenantId,
         serviceId: selectedService.id,
         serviceName: selectedService.name,
-        professionalId: selectedProfessional?.id || null,
+        professionalId: cleanProfessionalId,
         price: selectedService.price ? Number(selectedService.price) : 0,
         durationMinutes: selectedService.duration_minutes || 30,
         date: selectedDate,
@@ -263,16 +271,16 @@ export function PublicBookingFlow({
         recordAnalyticsEvent(tenantId, "booking_completed", isMobile ? "mobile" : "desktop");
         setConfirmedAppointment(res.data);
 
-        // Roteamento Dinâmico para o WhatsApp individual ou geral
-        const targetPhoneRaw =
-          selectedProfessional?.phone?.replace(/\D/g, "") ||
-          tenantPhone?.replace(/\D/g, "") ||
-          businessPhone?.replace(/\D/g, "");
+        // 3. Roteamento Dinâmico para o WhatsApp individual ou geral
+        const rawPhone =
+          (selectedProfessional?.phone && selectedProfessional.phone.trim()) ||
+          tenantPhone ||
+          businessPhone ||
+          "";
 
-        if (targetPhoneRaw) {
-          const targetPhone = targetPhoneRaw.startsWith("55")
-            ? targetPhoneRaw.slice(2)
-            : targetPhoneRaw;
+        const cleanDigits = rawPhone.replace(/\D/g, "");
+        if (cleanDigits) {
+          const targetPhone = sanitizePhoneNumber(cleanDigits);
           const professionalGreeting = selectedProfessional
             ? `Olá, ${selectedProfessional.name}!`
             : `Olá, equipe ${tenantName}!`;
@@ -299,7 +307,7 @@ export function PublicBookingFlow({
             `Aguardo sua confirmação!`
           ].filter(Boolean).join('\n');
 
-          const whatsappUrl = `https://wa.me/55${targetPhone}?text=${encodeURIComponent(message)}`;
+          const whatsappUrl = `https://wa.me/${targetPhone}?text=${encodeURIComponent(message)}`;
           try {
             window.open(whatsappUrl, '_blank');
           } catch (err) {
@@ -312,16 +320,16 @@ export function PublicBookingFlow({
 
   // Generate WhatsApp confirmation URL
   const getConfirmationWhatsAppUrl = () => {
-    const targetPhoneRaw =
-      selectedProfessional?.phone?.replace(/\D/g, "") ||
-      tenantPhone?.replace(/\D/g, "") ||
-      businessPhone?.replace(/\D/g, "");
+    const rawPhone =
+      (selectedProfessional?.phone && selectedProfessional.phone.trim()) ||
+      tenantPhone ||
+      businessPhone ||
+      "";
 
-    if (!targetPhoneRaw) return "#";
+    const cleanDigits = rawPhone.replace(/\D/g, "");
+    if (!cleanDigits) return "#";
 
-    const targetPhone = targetPhoneRaw.startsWith("55")
-      ? targetPhoneRaw.slice(2)
-      : targetPhoneRaw;
+    const targetPhone = sanitizePhoneNumber(cleanDigits);
     const professionalGreeting = selectedProfessional
       ? `Olá, ${selectedProfessional.name}!`
       : `Olá, equipe ${tenantName}!`;
@@ -348,7 +356,7 @@ export function PublicBookingFlow({
       `Aguardo sua confirmação!`
     ].filter(Boolean).join('\n');
 
-    return `https://wa.me/55${targetPhone}?text=${encodeURIComponent(message)}`;
+    return `https://wa.me/${targetPhone}?text=${encodeURIComponent(message)}`;
   };
 
   // Reset modal state

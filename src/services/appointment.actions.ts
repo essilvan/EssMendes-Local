@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedTenant } from '@/lib/supabase/tenant';
 import {
   appointmentSchema,
@@ -185,8 +186,44 @@ export async function createAppointmentAction(
       }
     }
 
-    // 3. Insere o agendamento
-    const professionalId = input.professionalId && input.professionalId.trim() !== '' ? input.professionalId : null;
+    // 3. Insere o agendamento com sanitização estrita do professional_id
+    const professionalId =
+      typeof input.professionalId === 'string' && input.professionalId.trim() !== ''
+        ? input.professionalId.trim()
+        : null;
+
+    // Garantir sincronização com a tabela professionals caso a constraint ainda aponte para ela
+    if (professionalId) {
+      try {
+        const adminSupabase = createAdminClient();
+        const { data: profExists } = await adminSupabase
+          .from('professionals')
+          .select('id')
+          .eq('id', professionalId)
+          .maybeSingle();
+
+        if (!profExists) {
+          const { data: tp } = await adminSupabase
+            .from('tenant_professionals')
+            .select('*')
+            .eq('id', professionalId)
+            .maybeSingle();
+
+          if (tp) {
+            await adminSupabase.from('professionals').upsert({
+              id: tp.id,
+              tenant_id: tp.tenant_id,
+              name: tp.name,
+              role_title: tp.role_title || 'Profissional',
+              avatar_url: tp.avatar_url || null,
+              is_active: tp.is_active ?? true,
+            });
+          }
+        }
+      } catch (mirrorErr) {
+        console.warn('[createAppointmentAction] Aviso ao sincronizar espelho do profissional:', mirrorErr);
+      }
+    }
 
     const { data: appointment, error: insertError } = await supabase
       .from('appointments')
@@ -210,8 +247,19 @@ export async function createAppointmentAction(
       .maybeSingle();
 
     if (insertError || !appointment) {
-      console.error('[createAppointmentAction] Erro ao inserir agendamento:', insertError);
-      return { data: null, error: 'Não foi possível registrar o agendamento.' };
+      console.error('Erro detalhado do Supabase:', insertError);
+      console.error('[createAppointmentAction] Erro ao inserir agendamento:', {
+        message: insertError?.message,
+        details: insertError?.details,
+        hint: insertError?.hint,
+        code: insertError?.code,
+      });
+      return {
+        data: null,
+        error: insertError?.message
+          ? `Não foi possível registrar o agendamento: ${insertError.message}`
+          : 'Não foi possível registrar o agendamento.',
+      };
     }
 
     revalidatePath('/[slug]', 'page');
@@ -219,6 +267,7 @@ export async function createAppointmentAction(
 
     return { data: appointment as Appointment, error: null };
   } catch (err) {
+    console.error('Erro detalhado do Supabase:', err);
     console.error('[createAppointmentAction] Erro inesperado:', err);
     return { data: null, error: 'Ocorreu um erro ao processar o agendamento.' };
   }
@@ -323,8 +372,43 @@ export async function createAdminAppointmentAction(
     }
 
     // 2. Insere o agendamento
-    const serviceId = input.serviceId && input.serviceId.trim() !== '' ? input.serviceId : null;
-    const professionalId = input.professionalId && input.professionalId.trim() !== '' ? input.professionalId : null;
+    const serviceId = input.serviceId && input.serviceId.trim() !== '' ? input.serviceId.trim() : null;
+    const professionalId =
+      typeof input.professionalId === 'string' && input.professionalId.trim() !== ''
+        ? input.professionalId.trim()
+        : null;
+
+    if (professionalId) {
+      try {
+        const adminSupabase = createAdminClient();
+        const { data: profExists } = await adminSupabase
+          .from('professionals')
+          .select('id')
+          .eq('id', professionalId)
+          .maybeSingle();
+
+        if (!profExists) {
+          const { data: tp } = await adminSupabase
+            .from('tenant_professionals')
+            .select('*')
+            .eq('id', professionalId)
+            .maybeSingle();
+
+          if (tp) {
+            await adminSupabase.from('professionals').upsert({
+              id: tp.id,
+              tenant_id: tp.tenant_id,
+              name: tp.name,
+              role_title: tp.role_title || 'Profissional',
+              avatar_url: tp.avatar_url || null,
+              is_active: tp.is_active ?? true,
+            });
+          }
+        }
+      } catch (mirrorErr) {
+        console.warn('[createAdminAppointmentAction] Erro ao sincronizar espelho:', mirrorErr);
+      }
+    }
 
     const { data: appointment, error: insertError } = await supabase
       .from('appointments')
@@ -348,6 +432,7 @@ export async function createAdminAppointmentAction(
       .maybeSingle();
 
     if (insertError || !appointment) {
+      console.error('Erro detalhado do Supabase:', insertError);
       console.error('[createAdminAppointmentAction] Erro ao inserir agendamento:', insertError);
       return { success: false, error: 'Não foi possível registrar o agendamento no banco.' };
     }
@@ -359,6 +444,7 @@ export async function createAdminAppointmentAction(
 
     return { success: true, data: appointment as Appointment };
   } catch (err) {
+    console.error('Erro detalhado do Supabase:', err);
     console.error('[createAdminAppointmentAction] Erro inesperado:', err);
     return { success: false, error: 'Ocorreu um erro ao processar o agendamento.' };
   }

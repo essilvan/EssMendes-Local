@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getAuthenticatedTenant } from "@/lib/supabase/tenant";
 import { revalidatePath } from "next/cache";
 import {
@@ -150,7 +151,8 @@ export async function createProfessionalAction(
 
     // 2. Sincronização espelho preventiva com a tabela 'professionals' (compatibilidade legada)
     try {
-      await supabase.from("professionals").upsert({
+      const adminClient = createAdminClient();
+      await adminClient.from("professionals").upsert({
         id: data.id,
         tenant_id: tenantCtx.tenantId,
         name: validation.data.name.trim(),
@@ -227,16 +229,17 @@ export async function updateProfessionalAction(
 
     // 2. Sincronização espelho com 'professionals'
     try {
-      await supabase
+      const adminClient = createAdminClient();
+      await adminClient
         .from("professionals")
-        .update({
+        .upsert({
+          id: id,
+          tenant_id: tenantCtx.tenantId,
           name: validation.data.name.trim(),
           role_title: roleTitle,
           avatar_url: validation.data.avatar_url?.trim() || null,
           is_active: validation.data.is_active,
-        })
-        .eq("id", id)
-        .eq("tenant_id", tenantCtx.tenantId);
+        });
     } catch (syncErr) {
       console.warn("[updateProfessionalAction] Aviso de espelhamento legada:", syncErr);
     }

@@ -9,7 +9,8 @@ export const appointmentSchema = z.object({
     .uuid("ID do profissional inválido.")
     .optional()
     .nullable()
-    .or(z.literal("")),
+    .or(z.literal(""))
+    .transform((val) => (val && val.trim() !== "" ? val.trim() : null)),
   price: z.coerce.number().min(0, "Preço inválido."),
   durationMinutes: z.coerce.number().min(5, "Duração mínima é de 5 minutos."),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data deve estar no formato AAAA-MM-DD."),
@@ -28,7 +29,8 @@ export const appointmentSchema = z.object({
     .or(z.literal("")),
 });
 
-export type AppointmentInput = z.infer<typeof appointmentSchema>;
+export type AppointmentInput = z.input<typeof appointmentSchema>;
+export type AppointmentOutput = z.output<typeof appointmentSchema>;
 
 export const availableSlotsQuerySchema = z.object({
   tenantId: z.string().uuid("ID do estabelecimento inválido."),
@@ -53,7 +55,8 @@ export const adminAppointmentSchema = z.object({
     .uuid("ID do profissional inválido.")
     .optional()
     .nullable()
-    .or(z.literal("")),
+    .or(z.literal(""))
+    .transform((val) => (val && val.trim() !== "" ? val.trim() : null)),
   price: z.coerce.number().min(0, "Preço inválido.").default(0),
   durationMinutes: z.coerce.number().min(5, "Duração mínima é de 5 minutos.").default(30),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data deve estar no formato AAAA-MM-DD."),
@@ -66,5 +69,6 @@ export const adminAppointmentSchema = z.object({
     .or(z.literal("")),
 });
 
-export type AdminAppointmentInput = z.infer<typeof adminAppointmentSchema>;
+export type AdminAppointmentInput = z.input<typeof adminAppointmentSchema>;
+export type AdminAppointmentOutput = z.output<typeof adminAppointmentSchema>;
 

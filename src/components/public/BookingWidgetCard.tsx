@@ -170,6 +170,7 @@ export function BookingWidgetCard({
         tenantId,
         serviceId: selectedService.id,
         serviceName: selectedService.name,
+        professionalId: null,
         price: selectedService.price ? Number(selectedService.price) : 0,
         durationMinutes: selectedService.duration_minutes || 30,
         date: selectedDate,
