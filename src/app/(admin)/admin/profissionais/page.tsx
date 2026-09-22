@@ -51,7 +51,7 @@ export default async function AdminProfissionaisPage() {
       </div>
 
       {/* Main Interactive Client */}
-      <ProfessionalsClient initialProfessionals={professionals} />
+      <ProfessionalsClient initialProfessionals={professionals} tenantId={tenantId} />
     </div>
   );
 }

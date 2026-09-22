@@ -25,6 +25,7 @@ import type { TenantProfessional } from "@/types";
 
 interface ProfessionalsClientProps {
   initialProfessionals: TenantProfessional[];
+  tenantId?: string;
 }
 
 function formatDisplayPhone(phone: string): string {
@@ -40,6 +41,7 @@ function formatDisplayPhone(phone: string): string {
 
 export function ProfessionalsClient({
   initialProfessionals,
+  tenantId,
 }: ProfessionalsClientProps) {
   const [professionals, setProfessionals] = useState<TenantProfessional[]>(
     initialProfessionals
@@ -347,6 +349,7 @@ export function ProfessionalsClient({
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         professionalToEdit={selectedProfessional}
+        tenantId={tenantId}
         onSuccess={() => {
           // Re-fetch or rely on revalidatePath
         }}

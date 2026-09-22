@@ -353,3 +353,58 @@ export async function deleteProfessionalAction(id: string): Promise<ActionResult
     return { success: false, error: msg };
   }
 }
+
+/**
+ * Upload seguro de avatar do profissional para o bucket 'tenant-media' na pasta 'professionals/'
+ */
+export async function uploadProfessionalAvatarAction(
+  formData: FormData
+): Promise<{ success: boolean; url?: string; error?: string }> {
+  try {
+    const { data: tenantCtx, error: authError } = await getAuthenticatedTenant();
+    if (authError || !tenantCtx) {
+      return { success: false, error: authError || "Não autenticado." };
+    }
+
+    const file = formData.get("file") as File | null;
+    if (!file) {
+      return { success: false, error: "Nenhum arquivo enviado." };
+    }
+
+    if (!file.type.startsWith("image/")) {
+      return { success: false, error: "O arquivo deve ser uma imagem válida (JPG, PNG, WebP)." };
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      return { success: false, error: "A imagem deve ter no máximo 5MB." };
+    }
+
+    const fileExt = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const filePath = `professionals/${tenantCtx.tenantId}-${Date.now()}.${fileExt}`;
+    const buffer = Buffer.from(await file.arrayBuffer());
+
+    const adminClient = createAdminClient();
+    const { error: uploadError } = await adminClient.storage
+      .from("tenant-media")
+      .upload(filePath, buffer, {
+        contentType: file.type,
+        cacheControl: "3600",
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error("[uploadProfessionalAvatarAction] Erro no storage:", uploadError);
+      return { success: false, error: uploadError.message };
+    }
+
+    const { data: publicUrlData } = adminClient.storage
+      .from("tenant-media")
+      .getPublicUrl(filePath);
+
+    return { success: true, url: publicUrlData.publicUrl };
+  } catch (err: any) {
+    console.error("[uploadProfessionalAvatarAction] Exceção:", err);
+    return { success: false, error: err.message || "Falha ao enviar imagem." };
+  }
+}
+
