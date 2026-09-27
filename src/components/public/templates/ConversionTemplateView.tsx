@@ -321,7 +321,7 @@ export function ConversionTemplateView({
               const serviceWhatsappUrl = generateWhatsAppUrl(
                 rawPhone,
                 tenant.name,
-                `Olá! Gostaria de pedir ou tirar dúvidas sobre o item: "${service.name}".`
+                `Olá! Gostaria de pedir ou tirar dúvidas sobre o item: "${service?.name ?? ""}".`
               );
 
               // Só exibir o badge de tempo se houver valor preenchido E (for nicho de agendamento OU o lojista definiu explicitamente com show_duration)
@@ -332,7 +332,7 @@ export function ConversionTemplateView({
                   key={service.id}
                   onClick={() =>
                     setSelectedDetailItem({
-                      title: service.name,
+                      title: service?.name ?? "",
                       description: service.description,
                       price: service.price,
                       duration_minutes: service.duration_minutes,
@@ -346,7 +346,7 @@ export function ConversionTemplateView({
                     {/* Linha com Nome, Linha Pontilhada e Preço */}
                     <div className="flex items-baseline justify-between gap-2">
                       <h3 className="font-bold text-base sm:text-lg text-neutral-900 dark:text-white tracking-tight group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                        {service.name}
+                        {service?.name ?? ""}
                       </h3>
                       <div className="flex-1 mx-3 border-b-2 border-dotted border-neutral-300 dark:border-neutral-700 min-w-4 self-center" />
                       <div className="shrink-0 text-right">

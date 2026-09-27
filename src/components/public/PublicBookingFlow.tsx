@@ -337,7 +337,7 @@ export function PublicBookingFlow({
       const res = await createAppointmentAction({
         tenantId,
         serviceId: selectedService.id,
-        serviceName: selectedService.name,
+        serviceName: selectedService?.name ?? "",
         professionalId: cleanProfessionalId,
         price: selectedService.price ? Number(selectedService.price) : 0,
         durationMinutes: selectedService.duration_minutes || 30,
@@ -376,7 +376,7 @@ export function PublicBookingFlow({
             year: "numeric",
           });
           const appointmentTime = selectedTime;
-          const serviceName = selectedService.name;
+          const serviceName = selectedService?.name ?? "";
           const clientName = customerName.trim();
           const clientPhone = customerPhone.trim();
 
@@ -594,8 +594,8 @@ export function PublicBookingFlow({
                         }`}
                       >
                         <div className="space-y-0.5">
-                          <p className="text-xs font-bold text-slate-900">{service.name}</p>
-                          {service.duration_minutes && Number(service.duration_minutes) > 0 ? (
+                          <p className="text-xs font-bold text-slate-900">{service?.name ?? ""}</p>
+                          {service?.duration_minutes && Number(service.duration_minutes) > 0 ? (
                             <p className="text-[11px] text-slate-500 flex items-center gap-1">
                               <Clock className="h-3 w-3" />
                               {service.duration_minutes} min

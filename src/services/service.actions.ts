@@ -126,7 +126,7 @@ export async function createServiceAction(
 
   return {
     success: true,
-    message: `Serviço "${data.name}" cadastrado com sucesso!`,
+    message: `Serviço "${data?.name ?? name ?? 'Serviço'}" cadastrado com sucesso!`,
   };
 }
 
@@ -174,15 +174,14 @@ export async function updateServiceAction(
   const { name, description, price, durationMinutes, showDuration, isActive } = validation.data;
   const supabase = await createClient();
 
-  // Atualização restrita pelo ID do serviço E pelo tenant_id
+  // Atualização restrita pelo ID do serviço E pelo tenant_id (SEM updated_at para evitar erro no schema cache)
   let updatePayload: Record<string, any> = {
     name,
     description: description || null,
-    price: price ?? null,
-    duration_minutes: durationMinutes ?? null,
+    price: price !== null && price !== undefined ? Number(price) : null,
+    duration_minutes: durationMinutes !== null && durationMinutes !== undefined && Number(durationMinutes) > 0 ? Number(durationMinutes) : null,
     show_duration: Boolean(showDuration),
     is_active: isActive,
-    updated_at: new Date().toISOString(),
   };
 
   let updateRes = await supabase
@@ -242,7 +241,7 @@ export async function updateServiceAction(
 
   return {
     success: true,
-    message: `Serviço "${data.name}" atualizado com sucesso!`,
+    message: `Serviço "${data?.name ?? name ?? 'Serviço'}" atualizado com sucesso!`,
   };
 }
 
@@ -265,7 +264,6 @@ export async function toggleServiceStatusAction(
     .from("services")
     .update({
       is_active: !currentStatus,
-      updated_at: new Date().toISOString(),
     })
     .eq("id", serviceId)
     .eq("tenant_id", tenantContext.tenantId);

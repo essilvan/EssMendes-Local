@@ -267,18 +267,25 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
   }));
 
   // 2.3 Tratamento Seguro e Tipagem dos Serviços
-  const activeServices: Service[] = (servicesRes.data || []).map((s: any) => ({
-    id: s.id,
-    tenant_id: s.tenant_id,
-    name: s.name,
-    description: s.description,
-    price: s.price !== null && s.price !== undefined ? Number(s.price) : null,
-    duration_minutes: s.duration_minutes !== null && s.duration_minutes !== undefined && Number(s.duration_minutes) > 0 ? Number(s.duration_minutes) : null,
-    show_duration: Boolean(s.show_duration),
-    is_active: s.is_active,
-    created_at: s.created_at,
-    updated_at: s.updated_at,
-  }));
+  const activeServices: Service[] = (servicesRes.data || [])
+    .filter(Boolean)
+    .map((s: any) => ({
+      id: s?.id || "",
+      tenant_id: s?.tenant_id || "",
+      name: s?.name ?? "",
+      description: s?.description ?? null,
+      price: s?.price !== null && s?.price !== undefined ? Number(s.price) : null,
+      duration_minutes:
+        s?.duration_minutes !== null &&
+        s?.duration_minutes !== undefined &&
+        Number(s.duration_minutes) > 0
+          ? Number(s.duration_minutes)
+          : null,
+      show_duration: Boolean(s?.show_duration),
+      is_active: Boolean(s?.is_active),
+      created_at: s?.created_at || new Date().toISOString(),
+      updated_at: s?.updated_at || s?.created_at || new Date().toISOString(),
+    }));
 
   // 2.4 Tratamento do Portfólio de Transformações (Apenas itens reais)
   const portfolioItems = (portfolioRes.data || []) as PortfolioItem[];

@@ -170,7 +170,7 @@ export function BookingWidgetCard({
       const res = await createAppointmentAction({
         tenantId,
         serviceId: selectedService.id,
-        serviceName: selectedService.name,
+        serviceName: selectedService?.name ?? "",
         professionalId: null,
         price: selectedService.price ? Number(selectedService.price) : 0,
         durationMinutes: selectedService.duration_minutes || 30,
@@ -329,8 +329,8 @@ export function BookingWidgetCard({
                       }`}
                     >
                       <div className="space-y-0.5">
-                        <p className="text-xs font-extrabold text-slate-900">{service.name}</p>
-                        {service.duration_minutes && Number(service.duration_minutes) > 0 ? (
+                        <p className="text-xs font-extrabold text-slate-900">{service?.name ?? ""}</p>
+                        {service?.duration_minutes && Number(service.duration_minutes) > 0 ? (
                           <p className="text-[11px] text-slate-500 flex items-center gap-1">
                             <Clock className="h-3 w-3" />
                             {service.duration_minutes} min

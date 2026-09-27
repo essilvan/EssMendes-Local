@@ -62,8 +62,8 @@ export default async function ServicosPage() {
     .filter(Boolean)
     .map((s: any) => ({
       id: s?.id || "",
-      name: s?.name || "Serviço sem nome",
-      description: s?.description || null,
+      name: s?.name ?? "Serviço sem nome",
+      description: s?.description ?? null,
       price: s?.price !== null && s?.price !== undefined ? Number(s.price) : null,
       duration_minutes:
         s?.duration_minutes !== null &&
@@ -78,6 +78,11 @@ export default async function ServicosPage() {
         ? { name: s.professional.name }
         : s?.professionals?.name
         ? { name: s.professionals.name }
+        : null,
+      professionals: s?.professionals?.name
+        ? { name: s.professionals.name }
+        : s?.professional?.name
+        ? { name: s.professional.name }
         : null,
       category: s?.category?.name ? { name: s.category.name } : null,
       tenant: s?.tenant?.name ? { name: s.tenant.name } : { name: tenantName },

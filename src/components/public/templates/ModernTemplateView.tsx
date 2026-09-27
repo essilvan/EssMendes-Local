@@ -383,7 +383,7 @@ export function ModernTemplateView({
                   key={service.id}
                   onClick={() =>
                     setSelectedDetailItem({
-                      title: service.name,
+                      title: service?.name ?? "",
                       description: service.description,
                       price: service.price,
                       duration_minutes: service.duration_minutes,
@@ -396,7 +396,7 @@ export function ModernTemplateView({
                   <div className="space-y-3">
                     <div className="flex items-start justify-between gap-3">
                       <h3 className="text-base sm:text-lg font-bold text-neutral-950 dark:text-white tracking-tight leading-snug group-hover:text-neutral-600 dark:group-hover:text-neutral-300 transition-colors">
-                        {service.name}
+                        {service?.name ?? ""}
                       </h3>
                       {/* Badge de Preço */}
                       <span className="bg-amber-500/10 text-amber-500 text-xs px-2.5 py-1 rounded-full font-medium shrink-0">

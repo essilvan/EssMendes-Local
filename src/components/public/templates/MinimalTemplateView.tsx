@@ -169,7 +169,7 @@ export function MinimalTemplateView({
               const serviceWhatsappUrl = generateWhatsAppUrl(
                 rawPhone,
                 tenant.name,
-                `Olá! Gostaria de agendar o serviço: ${service.name}.`
+                `Olá! Gostaria de agendar o serviço: ${service?.name ?? ""}.`
               );
 
               // Só exibir o badge de tempo se houver valor preenchido E (for nicho de agendamento OU o lojista definiu explicitamente com show_duration)
@@ -180,7 +180,7 @@ export function MinimalTemplateView({
                   key={service.id}
                   onClick={() =>
                     setSelectedDetailItem({
-                      title: service.name,
+                      title: service?.name ?? "",
                       description: service.description,
                       price: service.price,
                       duration_minutes: service.duration_minutes,
@@ -193,7 +193,7 @@ export function MinimalTemplateView({
                   <div className="space-y-1.5 max-w-xl">
                     <div className="flex items-baseline gap-3">
                       <h3 className="text-base sm:text-lg font-semibold text-neutral-900 dark:text-white group-hover:text-neutral-600 dark:group-hover:text-neutral-300 transition-colors">
-                        {service.name}
+                        {service?.name ?? ""}
                       </h3>
                       {/* Badge de Tempo (Renderização condicional) */}
                       {shouldShowDuration && (

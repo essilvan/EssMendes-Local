@@ -323,7 +323,7 @@ export function ServicesManager({ initialServices, tenant }: ServicesManagerProp
 
                   {/* Título & Descrição */}
                   <h3 className="mt-3 text-base font-bold text-slate-900 leading-snug">
-                    {service?.name || "Serviço sem nome"}
+                    {service?.name ?? ''}
                   </h3>
                   {service?.description ? (
                     <p className="mt-1 text-xs text-slate-500 line-clamp-2">
@@ -340,17 +340,17 @@ export function ServicesManager({ initialServices, tenant }: ServicesManagerProp
                     <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
                       {(service?.professional || service?.professionals) && (
                         <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 font-medium text-slate-700">
-                          {service.professional?.name ? service.professional.name : (service.professionals?.name || "Não atribuído")}
+                          {service?.professional?.name ?? service?.professionals?.name ?? 'Não atribuído'}
                         </span>
                       )}
                       {service?.category && (
                         <span className="inline-flex items-center rounded bg-slate-100 px-1.5 py-0.5 text-slate-600">
-                          {service.category?.name || "Geral"}
+                          {service?.category?.name ?? 'Geral'}
                         </span>
                       )}
                       {service?.tenant && (
                         <span className="text-[10px] text-slate-400">
-                          • {service.tenant?.name || "Empresa"}
+                          • {service?.tenant?.name ?? 'Empresa'}
                         </span>
                       )}
                     </div>
@@ -460,7 +460,7 @@ export function ServicesManager({ initialServices, tenant }: ServicesManagerProp
                   type="text"
                   required
                   disabled={isPending}
-                  defaultValue={editingService?.name || ""}
+                  defaultValue={editingService?.name ?? ""}
                   placeholder="Ex: Corte Masculino Degradê"
                   className="mt-1.5 block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600 disabled:bg-slate-100 disabled:cursor-not-allowed"
                 />

@@ -150,11 +150,11 @@ export function PublicServicesView({
                   key={service.id}
                   onClick={() =>
                     setSelectedDetailItem({
-                      title: service.name,
-                      description: service.description,
-                      price: service.price,
-                      duration_minutes: service.duration_minutes,
-                      show_duration: service.show_duration,
+                      title: service?.name ?? "",
+                      description: service?.description,
+                      price: service?.price,
+                      duration_minutes: service?.duration_minutes,
+                      show_duration: service?.show_duration,
                       isService: true,
                     })
                   }
@@ -164,7 +164,7 @@ export function PublicServicesView({
                   <div className="space-y-1.5">
                     <div className="flex items-start justify-between gap-3">
                       <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                        {service.name}
+                        {service?.name ?? ""}
                       </h3>
                       {/* Preço em destaque tipográfico legível */}
                       <span className="font-extrabold text-sm sm:text-base text-neutral-900 dark:text-white shrink-0">
@@ -199,7 +199,7 @@ export function PublicServicesView({
                         <a
                           href={generateWhatsAppUrl(
                             profile.phone_whatsapp,
-                            `👋 Olá! Gostaria de um orçamento/agendamento para o serviço: *${service.name}*.`
+                            `👋 Olá! Gostaria de um orçamento/agendamento para o serviço: *${service?.name ?? ""}*.`
                           )}
                           target="_blank"
                           rel="noopener noreferrer"

@@ -151,7 +151,7 @@ export function ConversionDashboard({
             {services.map((service) => {
               const hasPrice = service.price !== null && Number(service.price) > 0;
               const phone = profile?.phone_whatsapp || profile?.phone;
-              const whatsappOrderText = `👋 Olá! Gostaria de um orçamento/agendamento para o serviço: *${service.name}*.`;
+              const whatsappOrderText = `👋 Olá! Gostaria de um orçamento/agendamento para o serviço: *${service?.name ?? ""}*.`;
 
               // Só exibir o badge de tempo se houver valor preenchido E (for nicho de agendamento OU o lojista definiu explicitamente com show_duration)
               const shouldShowDuration = service.duration_minutes && (isTimeBasedNiche || service.show_duration);
@@ -161,7 +161,7 @@ export function ConversionDashboard({
                   key={service.id}
                   onClick={() =>
                     setSelectedItem({
-                      title: service.name,
+                      title: service?.name ?? "",
                       description: service.description,
                       price: service.price,
                       duration_minutes: service.duration_minutes,
@@ -174,7 +174,7 @@ export function ConversionDashboard({
                   <div className="space-y-1.5">
                     <div className="flex items-start justify-between gap-3">
                       <h4 className={`text-base font-bold ${currentTheme.textPrimary} tracking-tight group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors`}>
-                        {service.name}
+                        {service?.name ?? ""}
                       </h4>
                       {/* Preço em destaque tipográfico legível */}
                       <span className="font-extrabold text-sm sm:text-base text-neutral-900 dark:text-white shrink-0">
