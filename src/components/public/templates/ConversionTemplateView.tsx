@@ -345,7 +345,7 @@ export function ConversionTemplateView({
                   <div className="space-y-2">
                     {/* Linha com Nome, Linha Pontilhada e Preço */}
                     <div className="flex items-baseline justify-between gap-2">
-                      <h3 className="font-bold text-base sm:text-lg text-neutral-900 dark:text-white tracking-tight group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                      <h3 className="text-lg md:text-xl font-bold text-neutral-900 dark:text-white group-hover:text-emerald-600 transition-colors">
                         {service?.name ?? ""}
                       </h3>
                       <div className="flex-1 mx-3 border-b-2 border-dotted border-neutral-300 dark:border-neutral-700 min-w-4 self-center" />
@@ -358,7 +358,7 @@ export function ConversionTemplateView({
                     </div>
 
                     {service.description && (
-                      <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed line-clamp-2">
+                      <p className="text-sm text-neutral-600 dark:text-neutral-300 mt-1 line-clamp-2 leading-relaxed">
                         {service.description}
                       </p>
                     )}

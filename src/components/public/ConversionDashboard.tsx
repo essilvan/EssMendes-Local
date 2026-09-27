@@ -173,9 +173,9 @@ export function ConversionDashboard({
                 >
                   <div className="space-y-1.5">
                     <div className="flex items-start justify-between gap-3">
-                      <h4 className={`text-base font-bold ${currentTheme.textPrimary} tracking-tight group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors`}>
+                      <h3 className="text-lg md:text-xl font-bold text-neutral-900 dark:text-white group-hover:text-emerald-600 transition-colors">
                         {service?.name ?? ""}
-                      </h4>
+                      </h3>
                       {/* Preço em destaque tipográfico legível */}
                       <span className="font-extrabold text-sm sm:text-base text-neutral-900 dark:text-white shrink-0">
                         {hasPrice ? formatCurrency(Number(service.price)) : "Sob Consulta"}
@@ -183,7 +183,7 @@ export function ConversionDashboard({
                     </div>
 
                     {service.description && (
-                      <p className={`text-xs ${currentTheme.textMuted} line-clamp-2 leading-relaxed`}>
+                      <p className="text-sm text-neutral-600 dark:text-neutral-300 mt-1 line-clamp-2 leading-relaxed">
                         {service.description}
                       </p>
                     )}

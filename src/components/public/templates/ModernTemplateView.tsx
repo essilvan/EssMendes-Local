@@ -395,7 +395,7 @@ export function ModernTemplateView({
                 >
                   <div className="space-y-3">
                     <div className="flex items-start justify-between gap-3">
-                      <h3 className="text-base sm:text-lg font-bold text-neutral-950 dark:text-white tracking-tight leading-snug group-hover:text-neutral-600 dark:group-hover:text-neutral-300 transition-colors">
+                      <h3 className="text-lg md:text-xl font-bold text-neutral-900 dark:text-white group-hover:text-emerald-600 transition-colors">
                         {service?.name ?? ""}
                       </h3>
                       {/* Badge de Preço */}
@@ -405,7 +405,7 @@ export function ModernTemplateView({
                     </div>
 
                     {service.description && (
-                      <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 line-clamp-2 leading-relaxed">
+                      <p className="text-sm text-neutral-600 dark:text-neutral-300 mt-1 line-clamp-2 leading-relaxed">
                         {service.description}
                       </p>
                     )}
