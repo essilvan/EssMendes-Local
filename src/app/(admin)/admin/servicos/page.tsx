@@ -55,23 +55,41 @@ export default async function ServicosPage() {
     console.error("[ServicosPage] Erro ao buscar serviços:", servicesRes.error);
   }
 
-  const services: ServiceItem[] = (servicesRes.data || []).map((s: any) => ({
-    id: s.id,
-    name: s.name,
-    description: s.description,
-    price: s.price !== null && s.price !== undefined ? Number(s.price) : null,
-    duration_minutes: s.duration_minutes !== null && s.duration_minutes !== undefined && Number(s.duration_minutes) > 0 ? Number(s.duration_minutes) : null,
-    show_duration: Boolean(s.show_duration),
-    is_active: Boolean(s.is_active),
-    created_at: s.created_at,
-  }));
+  const tenant = tenantRes?.data || tenantContext.tenant;
+  const tenantName = tenant?.name || tenantContext.tenant?.name || "Meu Negócio";
+
+  const services: ServiceItem[] = (servicesRes?.data || [])
+    .filter(Boolean)
+    .map((s: any) => ({
+      id: s?.id || "",
+      name: s?.name || "Serviço sem nome",
+      description: s?.description || null,
+      price: s?.price !== null && s?.price !== undefined ? Number(s.price) : null,
+      duration_minutes:
+        s?.duration_minutes !== null &&
+        s?.duration_minutes !== undefined &&
+        Number(s.duration_minutes) > 0
+          ? Number(s.duration_minutes)
+          : null,
+      show_duration: Boolean(s?.show_duration),
+      is_active: Boolean(s?.is_active),
+      created_at: s?.created_at || new Date().toISOString(),
+      professional: s?.professional?.name
+        ? { name: s.professional.name }
+        : s?.professionals?.name
+        ? { name: s.professionals.name }
+        : null,
+      category: s?.category?.name ? { name: s.category.name } : null,
+      tenant: s?.tenant?.name ? { name: s.tenant.name } : { name: tenantName },
+    }));
 
   const tenantInfo = {
+    name: tenantName,
     ...(tenantContext.tenant || {}),
-    category: profileRes.data?.business_category || null,
-    segment: tenantRes.data?.theme_niche || (tenantRes.data?.theme_settings as any)?.niche || null,
-    template: profileRes.data?.template_id || (tenantRes.data?.theme_settings as any)?.template || null,
-    theme_niche: tenantRes.data?.theme_niche || null,
+    category: profileRes?.data?.business_category || null,
+    segment: tenantRes?.data?.theme_niche || (tenantRes?.data?.theme_settings as any)?.niche || null,
+    template: profileRes?.data?.template_id || (tenantRes?.data?.theme_settings as any)?.template || null,
+    theme_niche: tenantRes?.data?.theme_niche || null,
   };
 
   return (
@@ -87,7 +105,7 @@ export default async function ServicosPage() {
           Tabela & Catálogo de Serviços
         </h1>
         <p className="mt-1 text-sm text-slate-600">
-          Organize seus procedimentos, durações e preços oferecidos aos seus clientes.
+          Organize seus procedimentos, durações e preços oferecidos aos seus clientes de {tenantName}.
         </p>
       </div>
 

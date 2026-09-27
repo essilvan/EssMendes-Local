@@ -21,7 +21,7 @@ import { cn } from "@/utils/cn";
 
 export interface AdminPixBillingTenant {
   id: string;
-  name: string;
+  name?: string | null;
   slug?: string;
   phone?: string | null;
   contact_email?: string | null;
@@ -90,13 +90,13 @@ export function AdminPixBillingModal({
         },
         body: JSON.stringify({
           tenantId: targetTenant.id,
-          tenantName: targetTenant.name,
+          tenantName: targetTenant.name || "Empresa",
           email: targetTenant.contact_email,
           method: "pix",
           offerType: "setup",
           type: "setup",
           amount: setupAmount,
-          description: `Taxa de Implantação e Otimização - ${targetTenant.name}`,
+          description: `Taxa de Implantação e Otimização - ${targetTenant.name || "Empresa"}`,
         }),
       });
 
@@ -245,7 +245,7 @@ export function AdminPixBillingModal({
     const slug = tenant.slug || tenant.id;
     const invoiceUrl = `https://app.essmendes.com.br/fatura/${slug}`;
     const text = [
-      `Olá! Segue o link para ativação da vitrine oficial da *${tenant.name}*:`,
+      `Olá! Segue o link para ativação da vitrine oficial da *${tenant?.name || "Empresa"}*:`,
       ``,
       `👉 ${invoiceUrl}`,
       ``,
@@ -278,7 +278,7 @@ export function AdminPixBillingModal({
             <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
               <span>⚡ Cobrança de Setup</span>
               <span className="text-sm font-semibold text-slate-500">
-                — {tenant.name}
+                — {tenant?.name || "Empresa"}
               </span>
             </h2>
             <p className="text-xs text-slate-500">
@@ -339,7 +339,7 @@ export function AdminPixBillingModal({
               </h3>
               <p className="text-xs font-semibold text-emerald-800 max-w-md mx-auto">
                 A taxa de setup de <strong>R$ {formattedAmount}</strong> da empresa{" "}
-                <strong>{tenant.name}</strong> foi validada e quitada automaticamente no sistema.
+                <strong>{tenant?.name || "Empresa"}</strong> foi validada e quitada automaticamente no sistema.
               </p>
             </div>
             <div className="inline-flex items-center gap-2 rounded-xl bg-white border border-emerald-200 px-4 py-2 text-xs font-bold text-emerald-900 shadow-xs">

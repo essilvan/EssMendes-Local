@@ -33,11 +33,16 @@ export interface ServiceItem {
   show_duration?: boolean;
   is_active: boolean;
   created_at: string;
+  professional?: { name?: string | null } | null;
+  professionals?: { name?: string | null } | null;
+  category?: { name?: string | null } | null;
+  tenant?: { name?: string | null } | null;
 }
 
 interface ServicesManagerProps {
   initialServices: ServiceItem[];
   tenant?: {
+    name?: string | null;
     category?: string | null;
     segment?: string | null;
     template?: string | null;
@@ -48,6 +53,7 @@ interface ServicesManagerProps {
 
 export function ServicesManager({ initialServices, tenant }: ServicesManagerProps) {
   const router = useRouter();
+  const tenantName = tenant?.name || "Meu Negócio";
   const [services, setServices] = useState<ServiceItem[]>(initialServices);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingService, setEditingService] = useState<ServiceItem | null>(null);
@@ -317,9 +323,9 @@ export function ServicesManager({ initialServices, tenant }: ServicesManagerProp
 
                   {/* Título & Descrição */}
                   <h3 className="mt-3 text-base font-bold text-slate-900 leading-snug">
-                    {service.name}
+                    {service?.name || "Serviço sem nome"}
                   </h3>
-                  {service.description ? (
+                  {service?.description ? (
                     <p className="mt-1 text-xs text-slate-500 line-clamp-2">
                       {service.description}
                     </p>
@@ -328,6 +334,27 @@ export function ServicesManager({ initialServices, tenant }: ServicesManagerProp
                       Sem descrição detalhada.
                     </p>
                   )}
+
+                  {/* Informações de Profissional, Categoria ou Tenant vinculados se existirem */}
+                  {(service?.professional || service?.professionals || service?.category || service?.tenant) && (
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
+                      {(service?.professional || service?.professionals) && (
+                        <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 font-medium text-slate-700">
+                          {service.professional?.name ? service.professional.name : (service.professionals?.name || "Não atribuído")}
+                        </span>
+                      )}
+                      {service?.category && (
+                        <span className="inline-flex items-center rounded bg-slate-100 px-1.5 py-0.5 text-slate-600">
+                          {service.category?.name || "Geral"}
+                        </span>
+                      )}
+                      {service?.tenant && (
+                        <span className="text-[10px] text-slate-400">
+                          • {service.tenant?.name || "Empresa"}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Detalhes de Preço e Duração */}
@@ -335,14 +362,14 @@ export function ServicesManager({ initialServices, tenant }: ServicesManagerProp
                   <div className={`flex items-center text-xs ${shouldShowDuration ? "justify-between" : "justify-start"}`}>
                     {/* Badge de Preço */}
                     <span className="bg-amber-500/10 text-amber-500 text-xs px-2.5 py-1 rounded-full font-medium">
-                      {service.price ? `R$ ${Number(service.price).toFixed(2)}` : 'Sob Consulta / Orçamento'}
+                      {service?.price ? `R$ ${Number(service.price).toFixed(2)}` : 'Sob Consulta / Orçamento'}
                     </span>
 
                     {/* Badge de Tempo (Renderização condicional) */}
                     {shouldShowDuration && (
                       <span className="text-xs text-neutral-400 flex items-center gap-1">
                         <ClockIcon className="w-3.5 h-3.5"/>
-                        {service.duration_minutes} min
+                        {service?.duration_minutes} min
                       </span>
                     )}
                   </div>
@@ -360,7 +387,7 @@ export function ServicesManager({ initialServices, tenant }: ServicesManagerProp
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleDelete(service.id, service.name)}
+                      onClick={() => handleDelete(service?.id || "", service?.name || "este serviço")}
                       disabled={isPending}
                       className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 transition"
                     >

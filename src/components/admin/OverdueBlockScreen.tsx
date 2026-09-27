@@ -17,7 +17,7 @@ import Link from "next/link";
 interface OverdueBlockScreenProps {
   tenant: {
     id: string;
-    name: string;
+    name?: string | null;
     slug?: string;
     setup_fee_paid?: boolean | null;
     setup_fee_amount?: number | null;
@@ -29,6 +29,7 @@ export function OverdueBlockScreen({
   tenant,
   userEmail = "",
 }: OverdueBlockScreenProps) {
+  const tenantName = tenant?.name || "Meu Negócio";
   const isSetupPending = tenant.setup_fee_paid === false;
   const setupAmount =
     tenant.setup_fee_amount !== null && tenant.setup_fee_amount !== undefined
@@ -63,14 +64,14 @@ export function OverdueBlockScreen({
           <div className="space-y-2">
             <MercadoPagoSubscribeButton
               tenantId={tenant.id}
-              tenantName={tenant.name}
+              tenantName={tenantName}
               userEmail={userEmail}
-              payerName={tenant.name}
+              payerName={tenantName}
               type="setup"
               offerType="setup"
               amount={setupAmount}
               customAmount={setupAmount}
-              description={`Taxa de Implantação e Setup - ${tenant.name}`}
+              description={`Taxa de Implantação e Setup - ${tenantName}`}
               pixButtonText={`⚡ Pagar Setup via Pix Instantâneo (R$ ${setupAmount.toFixed(2).replace(".", ",")})`}
               pixOnly={true}
             />
@@ -121,7 +122,7 @@ export function OverdueBlockScreen({
           </h1>
           <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-md mx-auto">
             Identificamos uma pendência financeira na assinatura mensal do estabelecimento{" "}
-            <strong className="text-slate-900">{tenant.name}</strong>. Para sua segurança e continuidade dos serviços, o acesso ao painel foi suspenso temporariamente.
+            <strong className="text-slate-900">{tenantName}</strong>. Para sua segurança e continuidade dos serviços, o acesso ao painel foi suspenso temporariamente.
           </p>
         </div>
 
@@ -144,9 +145,9 @@ export function OverdueBlockScreen({
         <div>
           <MercadoPagoSubscribeButton
             tenantId={tenant.id}
-            tenantName={tenant.name}
+            tenantName={tenantName}
             userEmail={userEmail}
-            payerName={tenant.name}
+            payerName={tenantName}
             offerType="monthly_renewal"
             label="Regularizar e Pagar Agora (R$ 97,00) via Pix ou Cartão"
           />
