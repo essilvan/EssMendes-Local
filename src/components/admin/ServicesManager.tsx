@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   createServiceAction,
@@ -71,11 +71,10 @@ export function ServicesManager({ initialServices, tenant }: ServicesManagerProp
   const [isPending, startTransition] = useTransition();
   const [pendingItemId, setPendingItemId] = useState<string | null>(null);
 
-  // Sincroniza initialServices caso o Server Component recarregue
-  // (caso props mudem via router.refresh)
-  if (initialServices !== services && !isPending && pendingItemId === null && !isModalOpen) {
-    // Apenas se houver alteração externa
-  }
+  // Sincroniza initialServices caso o Server Component recarregue (ex: via router.refresh)
+  useEffect(() => {
+    setServices(initialServices);
+  }, [initialServices]);
 
   // Abre modal para novo serviço
   const handleOpenCreateModal = () => {
@@ -118,6 +117,58 @@ export function ServicesManager({ initialServices, tenant }: ServicesManagerProp
         // Exibe erro dentro do modal sem fechar
         setModalError(result.error);
       } else {
+        if (editingService) {
+          const rawPrice = formData.get("price")?.toString().trim();
+          const parsedPrice = rawPrice && rawPrice !== "" ? Number(rawPrice.replace(",", ".")) : null;
+          const rawDuration = formData.get("durationMinutes")?.toString().trim();
+          const parsedDuration = rawDuration && rawDuration !== "" && Number(rawDuration) > 0 ? Number(rawDuration) : null;
+
+          const updatedService: ServiceItem = {
+            ...editingService,
+            ...(result.data || {}),
+            name: (result.data?.name ?? formData.get("name")?.toString().trim()) || editingService.name,
+            description: result.data ? (result.data.description ?? null) : (formData.get("description")?.toString().trim() || null),
+            price: result.data?.price !== undefined && result.data?.price !== null
+              ? Number(result.data.price)
+              : parsedPrice,
+            duration_minutes: result.data?.duration_minutes !== undefined && result.data?.duration_minutes !== null
+              ? (Number(result.data.duration_minutes) > 0 ? Number(result.data.duration_minutes) : null)
+              : parsedDuration,
+            show_duration: result.data?.show_duration !== undefined
+              ? Boolean(result.data.show_duration)
+              : (formData.get("showDuration") === "true" || formData.get("showDuration") === "on"),
+            is_active: result.data?.is_active !== undefined
+              ? Boolean(result.data.is_active)
+              : (formData.get("isActive") === "true" || formData.get("isActive") === "on"),
+          };
+
+          setServices((prev) =>
+            prev.map((s) => (s.id === updatedService.id ? { ...s, ...updatedService } : s))
+          );
+        } else if (result.data) {
+          const rawPrice = formData.get("price")?.toString().trim();
+          const parsedPrice = rawPrice && rawPrice !== "" ? Number(rawPrice.replace(",", ".")) : null;
+          const rawDuration = formData.get("durationMinutes")?.toString().trim();
+          const parsedDuration = rawDuration && rawDuration !== "" && Number(rawDuration) > 0 ? Number(rawDuration) : null;
+
+          const newService: ServiceItem = {
+            ...result.data,
+            id: result.data.id,
+            name: result.data.name || formData.get("name")?.toString().trim() || "Serviço",
+            description: result.data.description ?? (formData.get("description")?.toString().trim() || null),
+            price: result.data.price !== null && result.data.price !== undefined ? Number(result.data.price) : parsedPrice,
+            duration_minutes:
+              result.data.duration_minutes !== null && result.data.duration_minutes !== undefined && Number(result.data.duration_minutes) > 0
+                ? Number(result.data.duration_minutes)
+                : parsedDuration,
+            show_duration: result.data.show_duration !== undefined ? Boolean(result.data.show_duration) : (formData.get("showDuration") === "true" || formData.get("showDuration") === "on"),
+            is_active: result.data.is_active !== undefined ? Boolean(result.data.is_active) : (formData.get("isActive") === "true" || formData.get("isActive") === "on"),
+            created_at: result.data.created_at || new Date().toISOString(),
+            tenant: { name: tenantName },
+          };
+          setServices((prev) => [newService, ...prev]);
+        }
+
         setFeedback({
           type: "success",
           message: result.message || "Operação realizada com sucesso!",

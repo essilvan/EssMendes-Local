@@ -10,6 +10,7 @@ export interface ServiceActionState {
   success?: boolean;
   error?: string;
   message?: string;
+  data?: any;
 }
 
 /**
@@ -81,7 +82,7 @@ export async function createServiceAction(
     .from("services")
     .insert(insertPayload)
     .select()
-    .maybeSingle();
+    .single();
 
   if (insertRes.error && insertRes.error.message.includes("show_duration")) {
     delete insertPayload.show_duration;
@@ -89,7 +90,7 @@ export async function createServiceAction(
       .from("services")
       .insert(insertPayload)
       .select()
-      .maybeSingle();
+      .single();
   }
 
   if (insertRes.error && insertRes.error.message.includes("duration_minutes") && insertRes.error.message.includes("not-null")) {
@@ -98,7 +99,7 @@ export async function createServiceAction(
       .from("services")
       .insert(insertPayload)
       .select()
-      .maybeSingle();
+      .single();
   }
 
   if (insertRes.error && insertRes.error.message.includes("price") && insertRes.error.message.includes("not-null")) {
@@ -107,7 +108,7 @@ export async function createServiceAction(
       .from("services")
       .insert(insertPayload)
       .select()
-      .maybeSingle();
+      .single();
   }
 
   const { data, error } = insertRes;
@@ -127,6 +128,7 @@ export async function createServiceAction(
   return {
     success: true,
     message: `Serviço "${data?.name ?? name ?? 'Serviço'}" cadastrado com sucesso!`,
+    data,
   };
 }
 
@@ -190,7 +192,7 @@ export async function updateServiceAction(
     .eq("id", id)
     .eq("tenant_id", tenantContext.tenantId)
     .select()
-    .maybeSingle();
+    .single();
 
   if (updateRes.error && updateRes.error.message.includes("show_duration")) {
     delete updatePayload.show_duration;
@@ -200,7 +202,7 @@ export async function updateServiceAction(
       .eq("id", id)
       .eq("tenant_id", tenantContext.tenantId)
       .select()
-      .maybeSingle();
+      .single();
   }
 
   if (updateRes.error && updateRes.error.message.includes("duration_minutes") && updateRes.error.message.includes("not-null")) {
@@ -211,7 +213,7 @@ export async function updateServiceAction(
       .eq("id", id)
       .eq("tenant_id", tenantContext.tenantId)
       .select()
-      .maybeSingle();
+      .single();
   }
 
   if (updateRes.error && updateRes.error.message.includes("price") && updateRes.error.message.includes("not-null")) {
@@ -222,7 +224,7 @@ export async function updateServiceAction(
       .eq("id", id)
       .eq("tenant_id", tenantContext.tenantId)
       .select()
-      .maybeSingle();
+      .single();
   }
 
   const { data, error } = updateRes;
@@ -242,6 +244,7 @@ export async function updateServiceAction(
   return {
     success: true,
     message: `Serviço "${data?.name ?? name ?? 'Serviço'}" atualizado com sucesso!`,
+    data,
   };
 }
 
