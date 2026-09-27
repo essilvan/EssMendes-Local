@@ -6,6 +6,7 @@ import { getUnifiedEstablishmentPhotos } from "@/utils/establishment-photos";
 import { PublicHeroSplit } from "../PublicHeroSplit";
 import { TrustMetricsBar } from "../TrustMetricsBar";
 import { ConversionDashboard } from "../ConversionDashboard";
+import { PublicProfessionalsSection } from "../PublicProfessionalsSection";
 import { PublicProductsSection } from "../PublicProductsSection";
 import { AboutBusinessSection } from "../AboutBusinessSection";
 import { PlacePhotoGallery } from "../PlacePhotoGallery";
@@ -18,6 +19,7 @@ export function PremiumTemplateView({
   tenant,
   profile,
   services,
+  professionals = [],
   portfolioItems,
   reviews = [],
   posts = [],
@@ -40,12 +42,15 @@ export function PremiumTemplateView({
   const effectiveHeroImage = customHeroImage || photosData.heroImage;
   const effectiveGalleryPhotos = (customGalleryPhotos && customGalleryPhotos.length > 0) ? customGalleryPhotos : photosData.galleryPhotos;
   const allEstablishmentPhotos = photosData.allPhotos;
+  const coverImage = (tenant as any).cover_url || tenant.cover_image_url || profile?.cover_image_url || effectiveHeroImage;
 
   return (
     <div className="space-y-16 md:space-y-24 py-6 sm:py-10">
-      {/* 1. Hero Section Universal Split Screen Nobre */}
+      {/* 1. Hero Section Universal com Efeito Glassmorphism e Foto de Capa */}
       <PublicHeroSplit
         tenantName={tenant.name}
+        logoUrl={profile?.logo_url || (tenant as any).logo_url}
+        coverUrl={coverImage}
         description={profile?.description}
         address={profile?.address}
         phoneWhatsapp={rawPhone}
@@ -58,6 +63,9 @@ export function PremiumTemplateView({
         reviewCount={realReviewCount}
         reviews={reviews.filter((r) => r.is_visible !== false)}
         googleMapsUrl={profile?.google_maps_url}
+        isOpenNow={isOpenNow}
+        statusBadgeText={statusBadgeText}
+        brandColor={brandColor}
         theme={theme}
         onOpenBooking={() => onOpenBooking()}
       />
@@ -78,8 +86,20 @@ export function PremiumTemplateView({
         portfolioItems={portfolioItems}
         posts={posts}
         theme={theme}
+        brandColor={brandColor}
         onOpenBookingModal={onOpenBooking}
       />
+
+      {/* 3.5 Secção da Equipe / Profissionais com Agendamento Direto */}
+      {professionals && professionals.length > 0 && (
+        <PublicProfessionalsSection
+          professionals={professionals}
+          tenantName={tenant.name}
+          brandColor={brandColor}
+          theme={theme}
+          onSelectProfessional={(profId) => onOpenBooking(undefined, profId)}
+        />
+      )}
 
       {/* 4. Vitrine de Produtos Físicos & Peças Nobre */}
       {products.length > 0 && (

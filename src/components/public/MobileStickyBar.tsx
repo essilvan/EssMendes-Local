@@ -1,10 +1,9 @@
 "use client";
 
 import React from "react";
-import { MessageCircle, Calendar, Phone, MapPin, Clock } from "lucide-react";
+import { MessageCircle, Calendar, MapPin, Phone } from "lucide-react";
 import { generateWhatsAppUrl, sanitizePhoneNumber } from "@/utils/phone";
 import { recordAnalyticsEvent } from "@/actions/analytics";
-import { getBusinessStatus } from "@/utils/opening-hours";
 import type { NicheThemeConfig } from "@/config/tenant-themes";
 
 interface MobileStickyBarProps {
@@ -35,12 +34,6 @@ export function MobileStickyBar({
   longitude,
   placeId,
   googleMapsUrl,
-  openingHours,
-  isOpenNow,
-  statusBadgeText,
-  statusDetailText,
-  theme,
-  activeTemplate,
   brandColor,
   onOpenBooking,
 }: MobileStickyBarProps) {
@@ -59,20 +52,6 @@ export function MobileStickyBar({
           address || tenantName
         )}`);
 
-  const status = openingHours
-    ? getBusinessStatus(openingHours)
-    : {
-        isOpen: isOpenNow ?? false,
-        badgeText: statusBadgeText || (isOpenNow ? "Aberto agora" : "Fechado no momento"),
-        subText: statusDetailText || (isOpenNow ? "Atendimento Normal" : "Consulte horários"),
-        label: statusBadgeText || (isOpenNow ? "Aberto agora" : "Fechado no momento"),
-        subLabel: statusDetailText || (isOpenNow ? "Atendimento Normal" : "Consulte horários"),
-      };
-
-  const handlePhoneClick = () => {
-    recordAnalyticsEvent(tenantId, "click_phone", "mobile");
-  };
-
   const handleWhatsAppClick = () => {
     recordAnalyticsEvent(tenantId, "click_whatsapp", "mobile");
   };
@@ -87,96 +66,47 @@ export function MobileStickyBar({
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden border-t border-neutral-200/80 dark:border-white/10 bg-white/90 dark:bg-neutral-950/90 backdrop-blur-xl px-3.5 py-2.5 shadow-[0_-8px_30px_rgba(0,0,0,0.12)]">
-      {/* Card de Status Dinâmico de Horários do Google Maps */}
-      <div
-        className={`text-[11px] font-semibold py-1 px-3 mb-2 rounded-xl flex items-center justify-between gap-2 border ${
-          status.isOpen
-            ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20"
-            : "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20"
-        }`}
-      >
-        <span className="flex items-center gap-1.5 font-bold shrink-0">
-          <span
-            className={`h-2 w-2 rounded-full ${
-              status.isOpen ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
-            }`}
-          />
-          <span>{status.badgeText || status.label}</span>
-        </span>
-        <span className="text-neutral-500 dark:text-neutral-400 truncate text-[10px] font-medium">{status.subText || status.subLabel}</span>
-      </div>
+    <div className="fixed bottom-0 left-0 right-0 p-3 bg-white/95 dark:bg-neutral-900/95 backdrop-blur border-t border-neutral-200 dark:border-neutral-800 z-40 md:hidden shadow-[0_-8px_30px_rgba(0,0,0,0.12)]">
+      <div className="flex items-center gap-2 max-w-lg mx-auto">
+        {/* Botão de Atalho Rápido: Localização */}
+        <a
+          href={locationUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={handleLocationClick}
+          className="flex items-center justify-center h-11 w-11 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 shrink-0 shadow-xs active:scale-95 transition-all"
+          title="Ver localização no mapa"
+        >
+          <MapPin className="h-5 w-5" />
+        </a>
 
-      {activeTemplate === "conversion" ? (
-        <div className="w-full max-w-lg mx-auto">
+        {/* Botão de Atalho Rápido: WhatsApp */}
+        {phoneWhatsapp && (
           <a
             href={whatsappUrl}
             target="_blank"
             rel="noopener noreferrer"
             onClick={handleWhatsAppClick}
-            className="w-full flex items-center justify-center gap-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 py-3.5 sm:py-4 px-5 text-sm sm:text-base font-bold text-white shadow-xl shadow-emerald-600/30 transition-all duration-300 active:scale-[0.98]"
+            className="flex items-center justify-center h-11 w-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shrink-0 shadow-xs active:scale-95 transition-all"
+            title="Conversar diretamente no WhatsApp"
           >
-            <MessageCircle className="h-5 w-5 fill-white text-emerald-600 shrink-0" />
-            <span>💬 Pedir pelo WhatsApp</span>
+            <MessageCircle className="h-5 w-5" />
           </a>
-        </div>
-      ) : (
-        <div className="flex items-center gap-2 max-w-lg mx-auto">
-          {/* Botão Ligar */}
-          {cleanPhone && (
-            <a
-              href={`tel:+55${cleanPhone}`}
-              onClick={handlePhoneClick}
-              className="flex flex-col items-center justify-center gap-0.5 rounded-xl border border-neutral-200/80 dark:border-white/10 bg-neutral-100 dark:bg-white/5 py-2 px-2.5 text-[10px] font-semibold text-neutral-700 dark:text-neutral-300 active:scale-95 transition-all shrink-0"
-              title="Ligar para o estabelecimento"
-            >
-              <Phone className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
-              <span>Ligar</span>
-            </a>
-          )}
+        )}
 
-          {/* Botão WhatsApp */}
-          {phoneWhatsapp && (
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={handleWhatsAppClick}
-              className="flex flex-col items-center justify-center gap-0.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 py-2 px-3 text-[10px] font-bold text-white shadow-xs active:scale-95 transition-all shrink-0"
-              title="Conversar no WhatsApp"
-            >
-              <MessageCircle className="h-4 w-4" />
-              <span>WhatsApp</span>
-            </a>
-          )}
-
-          {/* Botão Localização */}
-          <a
-            href={locationUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={handleLocationClick}
-            className="flex flex-col items-center justify-center gap-0.5 rounded-xl border border-neutral-200/80 dark:border-white/10 bg-neutral-100 dark:bg-white/5 py-2 px-2.5 text-[10px] font-semibold text-neutral-700 dark:text-neutral-300 active:scale-95 transition-all shrink-0"
-            title="Ver no mapa / como chegar"
-          >
-            <MapPin className="h-4 w-4 text-neutral-600 dark:text-neutral-400" />
-            <span>Mapa</span>
-          </a>
-
-          {/* Botão Principal: Agendar Horário */}
-          <button
-            type="button"
-            onClick={handleBookingClick}
-            className="flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2.5 px-3 text-xs font-bold text-white shadow-md active:scale-95 transition-all duration-200 cursor-pointer"
-            style={{
-              backgroundColor: brandColor || "var(--brand-primary, #0d9488)",
-            }}
-          >
-            <Calendar className="h-4 w-4" />
-            <span>Agendar</span>
-          </button>
-        </div>
-      )}
+        {/* Botão Largo com cor de destaque: Agendar Horário Online */}
+        <button
+          type="button"
+          onClick={handleBookingClick}
+          className="flex-1 h-11 flex items-center justify-center gap-2 rounded-xl px-4 text-xs sm:text-sm font-extrabold text-white shadow-md active:scale-98 transition-all duration-200 cursor-pointer"
+          style={{
+            backgroundColor: brandColor || "var(--brand-primary, #0d9488)",
+          }}
+        >
+          <Calendar className="h-4 w-4 shrink-0" />
+          <span>Agendar Horário Online</span>
+        </button>
+      </div>
     </div>
   );
 }

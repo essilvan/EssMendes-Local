@@ -39,6 +39,7 @@ interface PublicBookingFlowProps {
   services: Service[];
   professionals?: TenantProfessional[];
   selectedServiceId?: string | null;
+  selectedProfessionalId?: string | null;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -53,6 +54,7 @@ export function PublicBookingFlow({
   services,
   professionals = [],
   selectedServiceId,
+  selectedProfessionalId,
   isOpen,
   onClose,
 }: PublicBookingFlowProps) {
@@ -156,6 +158,14 @@ export function PublicBookingFlow({
       setSelectedService(services[0]);
     }
   }, [selectedServiceId, services, selectedService]);
+
+  // Sync professional selection when modal opens
+  useEffect(() => {
+    if (selectedProfessionalId) {
+      const match = activeProfessionals.find((p) => p.id === selectedProfessionalId);
+      if (match) setSelectedProfessional(match);
+    }
+  }, [selectedProfessionalId, activeProfessionals]);
 
   // Busca reativa dos agendamentos existentes no Supabase ao alterar selectedDate ou selectedProfessional
   useEffect(() => {

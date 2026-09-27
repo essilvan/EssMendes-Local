@@ -24,6 +24,7 @@ import { generateWhatsAppUrl, sanitizePhoneNumber, formatBrazilianPhone } from "
 import { getContrastTextColor } from "@/utils/color";
 import { getUnifiedEstablishmentPhotos } from "@/utils/establishment-photos";
 import { PublicProductsSection } from "../PublicProductsSection";
+import { PublicProfessionalsSection } from "../PublicProfessionalsSection";
 import { PlacePhotoGallery } from "../PlacePhotoGallery";
 import { MapLocationCard } from "../MapLocationCard";
 import { GoogleReviewsCard } from "../GoogleReviewsCard";
@@ -33,6 +34,7 @@ export function ModernTemplateView({
   tenant,
   profile,
   services,
+  professionals = [],
   portfolioItems,
   reviews = [],
   posts = [],
@@ -450,6 +452,17 @@ export function ModernTemplateView({
             themeNiche={tenant.theme_niche || tenant.category}
           />
         </section>
+      )}
+
+      {/* 2.5 EQUIPE / PROFISSIONAIS */}
+      {professionals && professionals.length > 0 && (
+        <PublicProfessionalsSection
+          professionals={professionals}
+          tenantName={tenant.name}
+          brandColor={brandColor}
+          theme={theme}
+          onSelectProfessional={(profId) => onOpenBooking(undefined, profId)}
+        />
       )}
 
       {/* 3. PRODUTOS EM GRID MODULAR (SE HOUVER) */}

@@ -589,7 +589,14 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
           place_id: (tenant as any)?.place_id || (tenant as any)?.google_place_id || typedProfile?.place_id || typedProfile?.google_place_id || null,
           google_place_id: (tenant as any)?.google_place_id || (tenant as any)?.place_id || typedProfile?.google_place_id || null,
           address: typedProfile?.address || (tenant as any)?.address || null,
+          cover_url:
+            (tenant as any).cover_url ||
+            tenant.cover_image_url ||
+            typedProfile?.cover_image_url ||
+            typedProfile?.hero_image_url ||
+            (cleanPlacePhotos.length > 0 ? cleanPlacePhotos[0] : null),
           cover_image_url:
+            (tenant as any).cover_url ||
             tenant.cover_image_url ||
             typedProfile?.cover_image_url ||
             typedProfile?.hero_image_url ||

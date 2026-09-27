@@ -28,6 +28,7 @@ import type {
   TenantReview,
   TenantPost,
   TenantProduct,
+  TenantProfessional,
   BusinessAttributes as BusinessAttributesType,
 } from "@/types";
 import type { NicheThemeConfig } from "@/config/tenant-themes";
@@ -35,6 +36,7 @@ import { generateWhatsAppUrl, sanitizePhoneNumber, formatBrazilianPhone } from "
 import { getContrastTextColor } from "@/utils/color";
 import { getUnifiedEstablishmentPhotos } from "@/utils/establishment-photos";
 import { PublicProductsSection } from "../PublicProductsSection";
+import { PublicProfessionalsSection } from "../PublicProfessionalsSection";
 import { GoogleReviewsCard } from "../GoogleReviewsCard";
 import { MapLocationCard } from "../MapLocationCard";
 import { BusinessAttributes } from "../BusinessAttributes";
@@ -70,6 +72,7 @@ export interface TemplateViewProps {
   };
   profile: TenantProfile | null;
   services: Service[];
+  professionals?: TenantProfessional[];
   portfolioItems: PortfolioItem[];
   reviews?: TenantReview[];
   posts?: TenantPost[];
@@ -79,7 +82,7 @@ export interface TemplateViewProps {
   statusDetailText?: string;
   brandColor: string;
   theme: NicheThemeConfig;
-  onOpenBooking: (serviceId?: string) => void;
+  onOpenBooking: (serviceId?: string, professionalId?: string) => void;
   heroImage?: string;
   galleryPhotos?: string[];
 }
@@ -88,6 +91,7 @@ export function ConversionTemplateView({
   tenant,
   profile,
   services,
+  professionals = [],
   portfolioItems,
   reviews = [],
   posts = [],
@@ -413,6 +417,17 @@ export function ConversionTemplateView({
             themeNiche={tenant.theme_niche || tenant.category}
           />
         </section>
+      )}
+
+      {/* 3.5 EQUIPE / PROFISSIONAIS */}
+      {professionals && professionals.length > 0 && (
+        <PublicProfessionalsSection
+          professionals={professionals}
+          tenantName={tenant.name}
+          brandColor={brandColor}
+          theme={theme}
+          onSelectProfessional={(profId) => onOpenBooking(undefined, profId)}
+        />
       )}
 
       {/* 4. PRODUTOS FÍSICOS (SE HOUVER) */}

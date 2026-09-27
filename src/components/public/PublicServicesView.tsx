@@ -37,6 +37,7 @@ interface PublicServicesViewProps {
   professionals?: TenantProfessional[];
   isBookingOpen?: boolean;
   theme?: NicheThemeConfig;
+  brandColor?: string;
   onOpenBooking?: (serviceId?: string) => void;
   onCloseBooking?: () => void;
 }
@@ -48,6 +49,7 @@ export function PublicServicesView({
   professionals = [],
   isBookingOpen: externalIsOpen,
   theme,
+  brandColor,
   onOpenBooking: externalOnOpen,
   onCloseBooking: externalOnClose,
 }: PublicServicesViewProps) {
@@ -156,97 +158,81 @@ export function PublicServicesView({
                       isService: true,
                     })
                   }
-                  className="group flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-slate-50/50 p-4 sm:p-5 hover:border-slate-300 hover:bg-slate-50/90 transition shadow-2xs cursor-pointer"
+                  className="group rounded-xl border border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4 sm:p-5 transition-all duration-200 hover:shadow-md hover:border-neutral-300 dark:hover:border-neutral-700 flex flex-col justify-between gap-3.5 cursor-pointer"
                 >
                   {/* Informações do Serviço */}
-                  <div className="space-y-1 sm:max-w-[62%]">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-base font-bold text-slate-900 group-hover:text-slate-700 transition">
+                  <div className="space-y-1.5">
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
                         {service.name}
                       </h3>
+                      {/* Preço em destaque tipográfico legível */}
+                      <span className="font-extrabold text-sm sm:text-base text-neutral-900 dark:text-white shrink-0">
+                        {service.price && Number(service.price) > 0
+                          ? formatCurrency(Number(service.price))
+                          : "Sob Consulta"}
+                      </span>
                     </div>
 
                     {service.description && (
-                      <p className="text-xs text-slate-600 leading-relaxed font-normal line-clamp-2">
+                      <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed font-normal line-clamp-2">
                         {service.description}
                       </p>
                     )}
 
-                    <div className="pt-1 flex items-center gap-1 text-[11px] font-semibold text-emerald-600 group-hover:underline">
+                    <div className="pt-0.5 flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 group-hover:underline">
                       <Eye className="h-3 w-3" />
                       <span>Ver detalhes</span>
                     </div>
-
-                    {/* Badge de Tempo (Renderização condicional) */}
-                    {shouldShowDuration && (
-                      <div className="flex items-center gap-3 pt-1 text-xs text-neutral-400">
-                        <span className="text-xs text-neutral-400 flex items-center gap-1">
-                          <ClockIcon className="w-3.5 h-3.5" />
-                          <span>{service.duration_minutes} min</span>
-                        </span>
-                      </div>
-                    )}
                   </div>
 
-                  {/* Preço e Botões de Conversão */}
-                  <div className="flex sm:flex-col items-center sm:items-end justify-between gap-3 border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-200">
-                    {/* Badge de Preço */}
-                    <span className="bg-amber-500/10 text-amber-500 text-xs px-2.5 py-1 rounded-full font-medium">
-                      {service.price ? `R$ ${Number(service.price).toFixed(2)}` : 'Sob Consulta / Orçamento'}
-                    </span>
+                  {/* Divisória subtil e Botões de Conversão */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-neutral-100 dark:border-neutral-800">
+                    {/* Duração (ícone de relógio + minutos) */}
+                    <div className="flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400 font-medium">
+                      <ClockIcon className="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500" />
+                      <span>{service.duration_minutes ? `${service.duration_minutes} min` : "Sob agendamento"}</span>
+                    </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    {profile?.phone_whatsapp && (
-                      <a
-                        href={generateWhatsAppUrl(
-                          profile.phone_whatsapp,
-                          `👋 Olá! Gostaria de um orçamento/agendamento para o serviço: *${service.name}*.`
-                        )}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                    <div className="flex items-center gap-2">
+                      {profile?.phone_whatsapp && (
+                        <a
+                          href={generateWhatsAppUrl(
+                            profile.phone_whatsapp,
+                            `👋 Olá! Gostaria de um orçamento/agendamento para o serviço: *${service.name}*.`
+                          )}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleWhatsAppClick();
+                          }}
+                          className="inline-flex items-center gap-1 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 px-2.5 py-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-300 transition"
+                          title="Solicitar orçamento via WhatsApp"
+                        >
+                          <MessageCircle className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                          <span className="hidden sm:inline">WhatsApp</span>
+                        </a>
+                      )}
+
+                      {/* Botão explícito de Agendar */}
+                      <button
+                        type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleWhatsAppClick();
+                          handleOpenBooking(service.id);
                         }}
-                        className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition shadow-2xs ${
-                          service.price === null || Number(service.price) <= 0
-                            ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                            : "border border-slate-200 bg-white text-slate-700 hover:text-emerald-700 hover:border-emerald-200"
-                        }`}
-                        title="Solicitar orçamento via WhatsApp"
+                        className="inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition hover:opacity-90 active:scale-95 cursor-pointer"
+                        style={{
+                          backgroundColor: brandColor || "var(--brand-primary, #0d9488)",
+                        }}
                       >
-                        <MessageCircle className="h-4 w-4" />
-                        <span>
-                          {service.price === null || Number(service.price) <= 0
-                            ? "💬 Solicitar Orçamento via WhatsApp"
-                            : "WhatsApp"}
-                        </span>
-                      </a>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenBooking(service.id);
-                      }}
-                      className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition hover:opacity-90 active:scale-95 shadow-xs cursor-pointer ${
-                        service.price !== null && Number(service.price) > 0
-                          ? "text-white"
-                          : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-                      }`}
-                      style={
-                        service.price !== null && Number(service.price) > 0
-                          ? { backgroundColor: "var(--primary-color, #0d9488)" }
-                          : undefined
-                      }
-                    >
-                      <Calendar className="h-3.5 w-3.5" />
-                      <span>📅 Agendar Horário</span>
-                    </button>
+                        <Calendar className="h-3.5 w-3.5" />
+                        <span>Agendar</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
             );
           })}
           </div>

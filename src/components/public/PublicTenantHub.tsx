@@ -141,6 +141,9 @@ export function PublicTenantHub({
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(
     null
   );
+  const [selectedProfessionalId, setSelectedProfessionalId] = useState<string | null>(
+    null
+  );
 
   const activeTemplate =
     (tenant.theme_settings?.template_id as
@@ -170,16 +173,18 @@ export function PublicTenantHub({
   const realReviewCount =
     profile?.google_reviews_count ?? profile?.review_count ?? tenant.google_reviews_count ?? visibleReviews.length;
 
-  const handleOpenBooking = (serviceId?: string) => {
+  const handleOpenBooking = (serviceId?: string, professionalId?: string) => {
     setSelectedServiceId(
       serviceId || (services.length > 0 ? services[0].id : null)
     );
+    setSelectedProfessionalId(professionalId || null);
     setIsBookingOpen(true);
   };
 
   const handleCloseBooking = () => {
     setIsBookingOpen(false);
     setSelectedServiceId(null);
+    setSelectedProfessionalId(null);
   };
 
   const isAuto = effectiveNiche === "auto" || effectiveNiche === "automotivo" || effectiveNiche === "barbearia";
@@ -277,6 +282,7 @@ export function PublicTenantHub({
             tenant={tenant}
             profile={profile}
             services={services}
+            professionals={professionals}
             portfolioItems={portfolioItems}
             reviews={visibleReviews}
             posts={posts}
@@ -297,6 +303,7 @@ export function PublicTenantHub({
             tenant={tenant}
             profile={profile}
             services={services}
+            professionals={professionals}
             portfolioItems={portfolioItems}
             reviews={visibleReviews}
             posts={posts}
@@ -317,6 +324,7 @@ export function PublicTenantHub({
             tenant={tenant}
             profile={profile}
             services={services}
+            professionals={professionals}
             portfolioItems={portfolioItems}
             reviews={visibleReviews}
             posts={posts}
@@ -340,6 +348,7 @@ export function PublicTenantHub({
             tenant={tenant}
             profile={profile}
             services={services}
+            professionals={professionals}
             portfolioItems={portfolioItems}
             reviews={visibleReviews}
             posts={posts}
@@ -405,6 +414,7 @@ export function PublicTenantHub({
         services={services}
         professionals={professionals}
         selectedServiceId={selectedServiceId}
+        selectedProfessionalId={selectedProfessionalId}
         isOpen={isBookingOpen}
         onClose={handleCloseBooking}
       />
