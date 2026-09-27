@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import type { Metadata } from "next";
 import { PublicTenantHub } from "@/components/public/PublicTenantHub";
 import { sanitizePhoneNumber } from "@/utils/phone";
@@ -17,25 +18,57 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 /**
+ * Resolução resiliente do slug ou subdomínio do tenant
+ */
+async function resolveTenantSlug(slugParam: string): Promise<string> {
+  let cleanSlug = typeof slugParam === "string" ? decodeURIComponent(slugParam).trim() : "";
+  if (!cleanSlug) {
+    try {
+      const headerList = await headers();
+      const rawHost = headerList.get("x-forwarded-host") || headerList.get("host") || "";
+      const host = rawHost.toLowerCase().split(":")[0];
+      if (host.endsWith(".localhost")) {
+        cleanSlug = host.replace(".localhost", "").trim();
+      } else if (host.endsWith(".essmendes.com.br")) {
+        cleanSlug = host.replace(".essmendes.com.br", "").trim();
+      }
+    } catch {
+      // Ignora se headers não estiver disponível
+    }
+  }
+  return cleanSlug;
+}
+
+/**
  * 1. Geração Dinâmica de Metadados SEO Local Avançado
  */
 export async function generateMetadata({
   params,
 }: PublicPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const cleanSlug = typeof slug === "string" ? slug.trim() : slug;
+  const cleanSlug = await resolveTenantSlug(slug);
   const supabase = await createClient();
 
-  const { data: tenant } = await supabase
+  // Busca flexível por slug ou custom_domain com select(*) seguro
+  let { data: tenant } = await supabase
     .from("tenants")
-    .select("id, name, slug, city, cover_image_url")
-    .eq("slug", cleanSlug)
+    .select("*")
+    .or(`slug.eq.${cleanSlug},custom_domain.eq.${cleanSlug}`)
     .maybeSingle();
 
   if (!tenant) {
+    const directRes = await supabase
+      .from("tenants")
+      .select("*")
+      .eq("slug", cleanSlug)
+      .maybeSingle();
+    tenant = directRes.data;
+  }
+
+  if (!tenant) {
     return {
-      title: "Estabelecimento Não Encontrado | EssMendes Local",
-      description: "A página solicitada não foi encontrada.",
+      title: "EssMendes Local | Agendamentos",
+      description: "Plataforma de presença digital e agendamento de serviços locais.",
     };
   }
 
@@ -63,8 +96,17 @@ export async function generateMetadata({
   const services = servicesRes.data || [];
   const rawPosts = rawPostsRes.data || [];
 
-  const postTags: string[] = rawPosts.flatMap((p) => p.tags || []);
+  const displayName = (tenant as any)?.business_name || profile?.name || tenant.name || "Estabelecimento";
+  const title = `${displayName} | EssMendes Local`;
+  const description =
+    (tenant as any)?.description ||
+    profile?.description ||
+    profile?.editorial_summary ||
+    (services.length > 0
+      ? `Conheça os serviços e produtos de ${displayName}: ${services.slice(0, 4).map((s: any) => s.name).filter(Boolean).join(", ")}.`
+      : `Agende seu horário com ${displayName}`);
 
+  const postTags: string[] = rawPosts.flatMap((p) => p.tags || []);
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.essmendes.com.br";
   const canonicalUrl = `${baseUrl}/${tenant.slug}`;
 
@@ -83,14 +125,7 @@ export async function generateMetadata({
     }
   }
 
-  const tenantCity = tenant.city || extractNeighborhoodAndCity(profile?.address) || "Sua Região";
-  const title = `${tenant.name} - Serviços e Produtos em ${tenantCity}`;
-
-  const serviceNames = services.slice(0, 4).map((s: any) => s.name).filter(Boolean);
-  const description =
-    serviceNames.length > 0
-      ? `Conheça os serviços e produtos de ${tenant.name}: ${serviceNames.join(", ")}.`
-      : `Conheça os serviços e produtos de ${tenant.name}.`;
+  const tenantCity = (tenant as any)?.city || extractNeighborhoodAndCity(profile?.address) || "Sua Região";
 
   const ogImages = ogImage
     ? [
@@ -98,13 +133,14 @@ export async function generateMetadata({
           url: ogImage,
           width: 1200,
           height: 630,
-          alt: `Capa e presença digital de ${tenant.name}`,
+          alt: `Capa e presença digital de ${displayName}`,
         },
       ]
     : [];
 
   const dynamicKeywords = Array.from(
     new Set([
+      displayName,
       tenant.name,
       profile?.name || tenant.name,
       profile?.business_category || "",
@@ -159,15 +195,24 @@ export async function generateMetadata({
  */
 export default async function PublicTenantPage({ params }: PublicPageProps) {
   const { slug } = await params;
-  const cleanSlug = typeof slug === "string" ? slug.trim() : slug;
+  const cleanSlug = await resolveTenantSlug(slug);
   const supabase = await createClient();
 
-  // 2.1 Busca o tenant pelo slug selecionando todas as colunas
-  const { data: tenant } = await supabase
+  // 2.1 Busca o tenant pelo slug ou custom_domain selecionando todas as colunas
+  let { data: tenant } = await supabase
     .from("tenants")
     .select("*")
-    .eq("slug", cleanSlug)
+    .or(`slug.eq.${cleanSlug},custom_domain.eq.${cleanSlug}`)
     .maybeSingle();
+
+  if (!tenant) {
+    const directRes = await supabase
+      .from("tenants")
+      .select("*")
+      .eq("slug", cleanSlug)
+      .maybeSingle();
+    tenant = directRes.data;
+  }
 
   console.log("Dados do Tenant carregados:", { slug: cleanSlug, theme_niche: tenant?.theme_niche });
 
