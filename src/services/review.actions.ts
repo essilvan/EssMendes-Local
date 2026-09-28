@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getAuthenticatedTenant } from "@/lib/supabase/tenant";
 import { revalidatePath } from "next/cache";
 import type { TenantReview } from "@/types";
@@ -102,28 +103,18 @@ export async function deleteTenantReviewAction(
   const trimmedId = reviewId ? reviewId.trim() : "";
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmedId);
 
-  const supabase = await createClient();
+  // Usa createAdminClient para persistência com Service Role garantida sem bloqueio de RLS
+  const db = createAdminClient();
 
   try {
-    let deletedCount = 0;
-    let targetTenantId = tenantId;
+    let delData: any[] | null = null;
+    let delError: any = null;
 
-    // 1. Tentar deletar por ID se for UUID válido
+    // 1. Tentar deletar por ID se for UUID válido com .select()
     if (isUuid) {
-      // Localiza o registro antes para obter o tenant_id real
-      const { data: reviewRow } = await supabase
+      const deleteQuery = db
         .from("tenant_reviews")
-        .select("id, tenant_id, author_name")
-        .eq("id", trimmedId)
-        .maybeSingle();
-
-      if (reviewRow?.tenant_id) {
-        targetTenantId = reviewRow.tenant_id;
-      }
-
-      const deleteQuery = supabase
-        .from("tenant_reviews")
-        .delete({ count: "exact" })
+        .delete()
         .eq("id", trimmedId);
 
       // Se não for super admin, restringe ao tenant autenticado
@@ -131,53 +122,57 @@ export async function deleteTenantReviewAction(
         deleteQuery.eq("tenant_id", tenantId);
       }
 
-      const { error: delError, count } = await deleteQuery;
-      if (delError) {
-        console.error("[deleteTenantReviewAction] Erro ao deletar do Supabase por ID:", delError);
-        return { error: delError.message };
-      }
-      deletedCount = count ?? 0;
+      const res = await deleteQuery.select();
+      delData = res.data;
+      delError = res.error;
     }
 
-    // 2. Se não deletou por ID (ex: id inválido/timestamp ou count === 0), executa fallback por author_name
+    // 2. Se não deletou por ID (ex: id inválido ou count 0) e author_name foi informado, executa fallback
     const targetAuthor = authorName || (!isUuid && trimmedId ? trimmedId : null);
-    if (deletedCount === 0 && targetAuthor) {
+    if ((!delData || delData.length === 0) && targetAuthor && !delError) {
       console.log(`[deleteTenantReviewAction] Executando fallback de exclusão por author_name: "${targetAuthor}"`);
-      const authorDeleteQuery = supabase
+      const authorDeleteQuery = db
         .from("tenant_reviews")
-        .delete({ count: "exact" })
+        .delete()
         .ilike("author_name", targetAuthor);
 
       if (!tenantContext.isSuperAdmin) {
         authorDeleteQuery.eq("tenant_id", tenantId);
       }
 
-      const { error: authError, count: authCount } = await authorDeleteQuery;
-      if (authError) {
-        console.error("[deleteTenantReviewAction] Erro ao deletar do Supabase por autor:", authError);
+      const res = await authorDeleteQuery.select();
+      if (res.error) {
+        delError = res.error;
       } else {
-        deletedCount = authCount ?? 0;
+        delData = res.data;
       }
     }
 
-    console.log(`[deleteTenantReviewAction] Concluído. Registros deletados do Supabase: ${deletedCount}`);
+    if (delError) {
+      console.error("[deleteTenantReviewAction] Erro no Supabase:", delError);
+      return { error: `Erro ao excluir avaliação: ${delError.message}` };
+    }
+
+    // Verificação explícita: se nenhum registro foi deletado, dispara erro em vez de falso sucesso
+    if (!delData || delData.length === 0) {
+      console.warn("[deleteTenantReviewAction] Nenhuma avaliação deletada para o ID/autor:", { trimmedId, targetAuthor });
+      return { error: "Avaliação não encontrada ou sem permissão para exclusão." };
+    }
 
     // 3. Obter o slug do tenant de forma resiliente
     let tenantSlug = tenantContext.tenant?.slug;
-    if (!tenantSlug || targetTenantId !== tenantId) {
-      const { data: tenantData } = await supabase
+    if (!tenantSlug) {
+      const { data: tenantData } = await db
         .from("tenants")
         .select("slug")
-        .eq("id", targetTenantId)
+        .eq("id", tenantId)
         .maybeSingle();
-      if (tenantData?.slug) {
-        tenantSlug = tenantData.slug;
-      }
+      tenantSlug = tenantData?.slug;
     }
 
     // 4. Revalidação de Cache imediata (Admin e Vitrine Pública)
-    revalidatePath("/admin/perfil");
     revalidatePath("/admin/avaliacoes");
+    revalidatePath("/admin/perfil");
     revalidatePath("/admin/dashboard");
 
     if (tenantSlug) {
@@ -188,7 +183,11 @@ export async function deleteTenantReviewAction(
     revalidatePath("/[slug]", "page");
     revalidatePath("/[slug]", "layout");
 
-    return { success: true, message: "Avaliação removida com sucesso." };
+    return {
+      success: true,
+      message: "Avaliação removida com sucesso.",
+      data: delData[0] as TenantReview,
+    };
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Erro inesperado";
     return { error: msg };
@@ -212,49 +211,49 @@ export async function toggleTenantReviewVisibilityAction(
     return { error: "Identificador de avaliação inválido para atualização." };
   }
 
-  const supabase = await createClient();
+  // Usa createAdminClient para persistência com Service Role garantida sem bloqueio de RLS
+  const db = createAdminClient();
 
   try {
-    // 1. Obter registro para capturar o tenant_id real
-    const { data: reviewRow } = await supabase
+    const updateQuery = db
       .from("tenant_reviews")
-      .select("id, tenant_id")
-      .eq("id", trimmedId)
-      .maybeSingle();
-
-    const targetTenantId = reviewRow?.tenant_id || tenantId;
-
-    const updateQuery = supabase
-      .from("tenant_reviews")
-      .update({ is_visible: isVisible, updated_at: new Date().toISOString() })
+      .update({
+        is_visible: isVisible,
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", trimmedId);
 
     if (!tenantContext.isSuperAdmin) {
-      updateQuery.eq("tenant_id", targetTenantId);
+      updateQuery.eq("tenant_id", tenantId);
     }
 
-    const { error: updateError } = await updateQuery;
-    if (updateError) {
-      console.error("[toggleTenantReviewVisibilityAction] Erro no Supabase:", updateError);
-      return { error: updateError.message };
+    const { data, error } = await updateQuery.select();
+
+    if (error) {
+      console.error("[toggleTenantReviewVisibilityAction] Erro no Supabase:", error);
+      return { error: `Erro ao alterar visibilidade: ${error.message}` };
+    }
+
+    // Verificação explícita: se nenhum registro foi atualizado, dispara erro em vez de falso sucesso
+    if (!data || data.length === 0) {
+      console.warn("[toggleTenantReviewVisibilityAction] Nenhuma avaliação atualizada para o ID:", trimmedId);
+      return { error: "Avaliação não encontrada ou sem permissão para alteração." };
     }
 
     // 2. Obter o slug do tenant de forma resiliente
     let tenantSlug = tenantContext.tenant?.slug;
-    if (!tenantSlug || targetTenantId !== tenantId) {
-      const { data: tenantData } = await supabase
+    if (!tenantSlug) {
+      const { data: tenantData } = await db
         .from("tenants")
         .select("slug")
-        .eq("id", targetTenantId)
+        .eq("id", tenantId)
         .maybeSingle();
-      if (tenantData?.slug) {
-        tenantSlug = tenantData.slug;
-      }
+      tenantSlug = tenantData?.slug;
     }
 
     // 3. Revalidação de Cache imediata (Admin e Vitrine Pública)
-    revalidatePath("/admin/perfil");
     revalidatePath("/admin/avaliacoes");
+    revalidatePath("/admin/perfil");
     revalidatePath("/admin/dashboard");
 
     if (tenantSlug) {
@@ -270,6 +269,7 @@ export async function toggleTenantReviewVisibilityAction(
       message: isVisible
         ? "Avaliação agora está visível na vitrine pública!"
         : "Avaliação ocultada da vitrine pública com sucesso.",
+      data: data[0] as TenantReview,
     };
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Erro inesperado";

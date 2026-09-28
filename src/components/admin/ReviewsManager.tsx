@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useState, useEffect, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   addTenantReviewAction,
   deleteTenantReviewAction,
@@ -47,7 +48,14 @@ export function ReviewsManager({
   googleRating,
   googleReviewsCount,
 }: ReviewsManagerProps) {
+  const router = useRouter();
   const [reviews, setReviews] = useState<TenantReview[]>(initialReviews);
+
+  // Sincroniza initialReviews caso o Server Component recarregue (ex: via router.refresh)
+  useEffect(() => {
+    setReviews(initialReviews);
+  }, [initialReviews]);
+
   const [isAdding, setIsAdding] = useState(false);
   const [authorName, setAuthorName] = useState("");
   const [rating, setRating] = useState(5);
@@ -191,6 +199,7 @@ export function ReviewsManager({
           type: "success",
           message: "Avaliação removida com sucesso.",
         });
+        router.refresh();
       }
       setDeletingId(null);
     });
@@ -221,6 +230,7 @@ export function ReviewsManager({
             ? "Avaliação agora está visível na vitrine pública!"
             : "Avaliação ocultada da vitrine pública com sucesso.",
         });
+        router.refresh();
       }
       setTogglingVisibilityId(null);
     });
