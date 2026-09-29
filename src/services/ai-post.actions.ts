@@ -167,12 +167,12 @@ Retorne ESTRITAMENTE um objeto JSON válido (sem tags markdown de código e sem 
   "ctaLabel": "Agendar Horário Online"
 }`;
 
-    // 8. Chamada segura usando SDK GoogleGenerativeAI com modelo estável e fallback
+    // 8. Chamada direta via fetch com fallback (gemini-2.5-flash -> gemini-2.0-flash -> gemini-1.5-flash-latest)
     try {
       const generatedText = await generateContentWithGemini(prompt, {
         apiKey,
         temperature: 0.8,
-        maxOutputTokens: 1000,
+        maxOutputTokens: 1200,
       });
 
       let cleanJsonStr = generatedText

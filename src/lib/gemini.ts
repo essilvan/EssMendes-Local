@@ -1,5 +1,3 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
 export interface GenerateGeminiOptions {
   apiKey?: string;
   temperature?: number;
@@ -7,11 +5,8 @@ export interface GenerateGeminiOptions {
 }
 
 /**
- * Invoca a API do Google Generative AI (Gemini) utilizando o SDK oficial.
- * Remove prefixos incorretos e implementa fallback entre modelos suportados:
- * 1. gemini-1.5-flash (padrão)
- * 2. gemini-2.0-flash (fallback)
- * 3. gemini-1.5-pro (fallback avançado)
+ * Invoca a API do Google Generative AI (Gemini) diretamente via fetch sem dependência do SDK.
+ * Modelos em ordem de preferência: gemini-2.5-flash -> gemini-2.0-flash -> gemini-1.5-flash-latest
  */
 export async function generateContentWithGemini(
   promptText: string,
@@ -20,52 +15,58 @@ export async function generateContentWithGemini(
   const apiKey = options?.apiKey || process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
-    throw new Error("Chave GEMINI_API_KEY ausente nas variáveis de ambiente.");
+    throw new Error("GEMINI_API_KEY não encontrada nas variáveis de ambiente.");
   }
 
-  const genAI = new GoogleGenerativeAI(apiKey);
+  // Modelos em ordem de preferência
+  const candidateModels = [
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-1.5-flash-latest",
+  ];
+  let generatedText = "";
+  let lastError: any = null;
 
-  // Lista ordenada de modelos para tentativa e fallback automático
-  const candidateModels = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"];
-  let lastError: Error | null = null;
-
-  for (const modelCandidate of candidateModels) {
+  for (const modelName of candidateModels) {
     try {
-      // Garante remoção de qualquer prefixo "models/"
-      const cleanModelName = modelCandidate.replace(/^models\//, "");
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
-      const model = genAI.getGenerativeModel({
-        model: cleanModelName,
-        generationConfig: {
-          temperature: options?.temperature ?? 0.8,
-          maxOutputTokens: options?.maxOutputTokens ?? 1000,
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [{ text: promptText }],
+            },
+          ],
+          generationConfig: {
+            temperature: options?.temperature ?? 0.8,
+            maxOutputTokens: options?.maxOutputTokens ?? 1200,
+          },
+        }),
       });
 
-      // Envio do payload com a string de texto simples conforme padrão do SDK
-      const result = await model.generateContent(promptText);
-      const response = await result.response;
-      const text = response.text();
+      const data = await response.json();
 
-      if (text && text.trim().length > 0) {
-        return text.trim();
+      if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+        generatedText = data.candidates[0].content.parts[0].text;
+        break; // Sucesso, sai do loop
+      } else {
+        lastError = data?.error?.message || "Resposta inválida da API do Gemini";
+        console.warn(`[gemini] Falha com modelo ${modelName}:`, lastError);
       }
     } catch (err: any) {
-      lastError = err instanceof Error ? err : new Error(String(err));
-      console.warn(`[gemini] Falha com modelo ${modelCandidate}:`, lastError.message);
-
-      // Se o erro indicar que o modelo não foi encontrado ou não é suportado, prossegue para o próximo da lista
-      const isModelError =
-        lastError.message.includes("is not found") ||
-        lastError.message.includes("not supported") ||
-        lastError.message.includes("404");
-
-      if (!isModelError && candidateModels.indexOf(modelCandidate) === 0) {
-        // Tenta o próximo modelo mesmo assim por tolerância a falhas temporárias
-        continue;
-      }
+      lastError = err?.message || String(err);
+      console.warn(`[gemini] Erro de rede com modelo ${modelName}:`, lastError);
     }
   }
 
-  throw lastError || new Error("Não foi possível gerar conteúdo com os modelos Gemini disponíveis.");
+  if (!generatedText) {
+    throw new Error(`Falha ao gerar post com a IA: ${lastError}`);
+  }
+
+  return generatedText.trim();
 }
