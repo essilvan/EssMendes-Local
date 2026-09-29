@@ -76,6 +76,7 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
   };
 
   const handleGenerateAiPost = async () => {
+    if (isGeneratingAi || isPending) return;
     setIsGeneratingAi(true);
     setFeedback(null);
     try {
@@ -88,9 +89,10 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
         setCtaType(res.data.ctaType);
         setCtaLabel(res.data.ctaLabel);
         setIsAdding(true);
+        const pillarInfo = res.data.pillar ? ` [${res.data.pillar}]` : "";
         setFeedback({
           type: "success",
-          message: "✨ Publicação semanal gerada com IA! Os campos foram preenchidos abaixo. Revise e clique em Publicar.",
+          message: `✨ Publicação semanal gerada com IA${pillarInfo}! Os campos foram preenchidos abaixo. Revise e clique em "Postar Agora".`,
         });
       } else {
         setFeedback({
@@ -110,6 +112,7 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
 
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (isPending || isGeneratingAi) return;
     setFeedback(null);
 
     const formData = new FormData();
@@ -230,14 +233,24 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
-          {/* Botão de Criação com IA com Estilo Padronizado */}
+          {/* Botão de Criação com IA com Estilo Padronizado e Proteção contra Duplo Clique */}
           <button
             type="button"
             onClick={handleGenerateAiPost}
-            disabled={isGeneratingAi}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-medium rounded-lg shadow-sm transition-all text-sm disabled:opacity-50"
+            disabled={isGeneratingAi || isPending}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-medium rounded-lg shadow-sm transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isGeneratingAi ? "⏳ Criando Post..." : "✨ Criar Post Semanal com IA"}
+            {isGeneratingAi ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Criando Post com IA...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4" />
+                <span>Criar Post Semanal com IA</span>
+              </>
+            )}
           </button>
 
           <button
@@ -282,10 +295,20 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
             <button
               type="button"
               onClick={handleGenerateAiPost}
-              disabled={isGeneratingAi}
-              className="text-xs font-bold text-purple-700 hover:text-purple-900 underline flex items-center gap-1"
+              disabled={isGeneratingAi || isPending}
+              className="text-xs font-bold text-purple-700 hover:text-purple-900 underline flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isGeneratingAi ? "⏳ Gerando com IA..." : "✨ Gerar Post Automático com IA"}
+              {isGeneratingAi ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span>Gerando com IA...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-3.5 w-3.5" />
+                  <span>Gerar Post Automático com IA</span>
+                </>
+              )}
             </button>
           </div>
 
@@ -385,10 +408,20 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
             <button
               type="button"
               onClick={handleGenerateAiPost}
-              disabled={isGeneratingAi}
-              className="flex items-center gap-2 px-3.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-medium rounded-lg shadow-sm transition-all text-xs disabled:opacity-50 self-start sm:self-auto"
+              disabled={isGeneratingAi || isPending}
+              className="flex items-center gap-2 px-3.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-medium rounded-lg shadow-sm transition-all text-xs disabled:opacity-50 disabled:cursor-not-allowed self-start sm:self-auto"
             >
-              {isGeneratingAi ? "⏳ Criando Post..." : "✨ Preencher Campos com IA"}
+              {isGeneratingAi ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span>Criando Post...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-3.5 w-3.5" />
+                  <span>Preencher Campos com IA</span>
+                </>
+              )}
             </button>
           </div>
 
@@ -534,18 +567,18 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
 
             <button
               type="submit"
-              disabled={isPending}
-              className="inline-flex items-center gap-2 rounded-xl bg-teal-800 px-5 py-2.5 text-xs sm:text-sm font-bold text-white shadow-sm hover:bg-teal-900 disabled:opacity-60 transition"
+              disabled={isPending || isGeneratingAi}
+              className="inline-flex items-center gap-2 rounded-xl bg-teal-800 px-5 py-2.5 text-xs sm:text-sm font-bold text-white shadow-sm hover:bg-teal-900 disabled:opacity-60 disabled:cursor-not-allowed transition"
             >
               {isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Publicando no site & SEO...</span>
+                  <span>Postando no site & SEO...</span>
                 </>
               ) : (
                 <>
                   <Plus className="h-4 w-4" />
-                  <span>Publicar Agora</span>
+                  <span>Postar Agora</span>
                 </>
               )}
             </button>
@@ -574,10 +607,20 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
               <button
                 type="button"
                 onClick={handleGenerateAiPost}
-                disabled={isGeneratingAi}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-medium rounded-lg shadow-sm transition-all text-xs disabled:opacity-50"
+                disabled={isGeneratingAi || isPending}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-medium rounded-lg shadow-sm transition-all text-xs disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isGeneratingAi ? "⏳ Criando Post..." : "✨ Criar Primeiro Post com IA"}
+                {isGeneratingAi ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Criando Post com IA...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    <span>Criar Primeiro Post com IA</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
