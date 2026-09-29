@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getAuthenticatedTenant } from "@/lib/supabase/tenant";
 import { CONTENT_PILLARS, type ContentPillar } from "@/lib/constants/pillars";
+import { generateContentWithGemini } from "@/lib/gemini";
 
 export type { ContentPillar };
 
@@ -166,44 +167,15 @@ Retorne ESTRITAMENTE um objeto JSON válido (sem tags markdown de código e sem 
   "ctaLabel": "Agendar Horário Online"
 }`;
 
-    // 8. Chamada segura com modelo estável "gemini-1.5-flash" e try/catch
+    // 8. Chamada segura usando SDK GoogleGenerativeAI com modelo estável e fallback
     try {
-      const model = "gemini-1.5-flash";
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-
-      const response = await fetch(geminiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.85,
-            maxOutputTokens: 800,
-          },
-        }),
+      const generatedText = await generateContentWithGemini(prompt, {
+        apiKey,
+        temperature: 0.8,
+        maxOutputTokens: 1000,
       });
 
-      if (!response.ok) {
-        const errorJson = await response.json().catch(() => ({}));
-        const apiError =
-          errorJson?.error?.message ||
-          `Erro na API Gemini (${response.status}: ${response.statusText})`;
-        return {
-          success: false,
-          error: apiError,
-        };
-      }
-
-      const json = await response.json();
-      const candidateText = json.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!candidateText) {
-        return {
-          success: false,
-          error: "A IA não retornou conteúdo para a publicação.",
-        };
-      }
-
-      let cleanJsonStr = candidateText
+      let cleanJsonStr = generatedText
         .replace(/```json/gi, "")
         .replace(/```/g, "")
         .trim();
