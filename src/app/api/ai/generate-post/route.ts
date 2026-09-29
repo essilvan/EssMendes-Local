@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { generateLocalSeoPost } from "@/services/ai-post.actions";
-import { generateContentWithGemini } from "@/lib/gemini";
+import { generateContentWithGemini, extractValidJson } from "@/lib/gemini";
 
 export const dynamic = "force-dynamic";
 
@@ -22,8 +22,10 @@ export async function POST(request: Request) {
     // Se enviado promptText diretamente:
     if (body?.promptText) {
       const generatedText = await generateContentWithGemini(body.promptText);
+      const postData = extractValidJson(generatedText);
       return NextResponse.json({
         success: true,
+        post: postData,
         generatedText,
         text: generatedText,
       });
@@ -31,7 +33,21 @@ export async function POST(request: Request) {
 
     // Fluxo padrão de geração de post estruturado para SEO local
     const result = await generateLocalSeoPost(body);
-    return NextResponse.json(result);
+    const postData = result.data
+      ? {
+          title: result.data.title,
+          content: result.data.content,
+          keywords: result.data.tags,
+          meta_description: result.data.metaDescription,
+          cta_type: result.data.ctaType,
+          cta_label: result.data.ctaLabel,
+        }
+      : undefined;
+
+    return NextResponse.json({
+      ...result,
+      post: postData,
+    });
   } catch (err: any) {
     const errorMsg =
       err instanceof Error ? err.message : String(err || "Erro inesperado ao gerar post com IA.");

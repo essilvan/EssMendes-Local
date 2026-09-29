@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getAuthenticatedTenant } from "@/lib/supabase/tenant";
 import { CONTENT_PILLARS, type ContentPillar } from "@/lib/constants/pillars";
-import { generateContentWithGemini } from "@/lib/gemini";
+import { generateContentWithGemini, extractValidJson } from "@/lib/gemini";
 
 export type { ContentPillar };
 
@@ -136,7 +136,9 @@ export async function generateLocalSeoPost(
     const slug = tenantContext.tenant?.slug || "meu-negocio";
 
     // 7. Prompt refinado para SEO Local
-    const prompt = `Você é um especialista em SEO Local e Copywriting.
+    const prompt = `Responda EXCLUSIVAMENTE com um único objeto JSON válido, sem texto introdutório, sem formatação markdown (sem \`\`\`json), contendo as chaves: title, content, keywords, meta_description.
+
+Você é um especialista em SEO Local e Copywriting.
 Nicho da Empresa: ${businessCategory} (${businessName})
 Cidade/Região: ${targetCity}
 Principais Serviços Oferecidos: ${services.join(", ")}
@@ -156,57 +158,47 @@ DIRETRIZES DE CRIAÇÃO:
 - Gere palavras-chave de cauda longa (long-tail) específicas e não genéricas (ex: "melhor [serviço] em ${targetCity}", "onde fazer [procedimento] ${targetCity}").
 - Resumo para meta descrição do Google de até 155 caracteres.
 
-INSTRUÇÕES OBRIGATÓRIAS:
-Retorne ESTRITAMENTE um objeto JSON válido (sem tags markdown de código e sem texto antes ou depois) com a seguinte estrutura:
+ESTRUTURA DO OBJETO JSON:
 {
   "title": "Título chamativo e inédito com emoji",
   "content": "Texto dividido em 2 a 3 parágrafos dinâmicos de 130 a 190 palavras com chamada final persuasiva",
-  "tags": "termo cauda longa 1, termo cauda longa 2, termo cauda longa 3, termo cauda longa 4, termo cauda longa 5",
-  "metaDescription": "Resumo de até 155 caracteres otimizado para o Google Snippet",
-  "ctaType": "booking",
-  "ctaLabel": "Agendar Horário Online"
-}`;
+  "keywords": "termo cauda longa 1, termo cauda longa 2, termo cauda longa 3, termo cauda longa 4, termo cauda longa 5",
+  "meta_description": "Resumo de até 155 caracteres otimizado para o Google Snippet"
+}
 
-    // 8. Chamada direta via fetch com fallback (gemini-2.5-flash -> gemini-2.0-flash -> gemini-1.5-flash-latest)
+Responda EXCLUSIVAMENTE com um único objeto JSON válido, sem texto introdutório, sem formatação markdown (sem \`\`\`json), contendo as chaves: title, content, keywords, meta_description.`;
+
+    // 8. Chamada direta via fetch com responseMimeType e higienização defensiva de JSON
     try {
       const generatedText = await generateContentWithGemini(prompt, {
         apiKey,
-        temperature: 0.8,
-        maxOutputTokens: 1200,
+        temperature: 0.7,
+        maxOutputTokens: 1500,
+        responseMimeType: "application/json",
       });
 
-      let cleanJsonStr = generatedText
-        .replace(/```json/gi, "")
-        .replace(/```/g, "")
-        .trim();
-      const firstBrace = cleanJsonStr.indexOf("{");
-      const lastBrace = cleanJsonStr.lastIndexOf("}");
-      if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-        cleanJsonStr = cleanJsonStr.substring(firstBrace, lastBrace + 1);
-      }
+      const postData = extractValidJson(generatedText);
 
-      const parsed = JSON.parse(cleanJsonStr);
-      if (!parsed.title || !parsed.content) {
-        return {
-          success: false,
-          error: "A resposta da IA não contém os campos esperados (título e conteúdo).",
-        };
-      }
+      const parsedTitle = postData.title || "Novidade Especial da Semana";
+      const parsedContent = postData.content || "";
+      const rawKeywords = postData.keywords || postData.tags || "";
+      const parsedTags =
+        typeof rawKeywords === "string"
+          ? rawKeywords
+          : Array.isArray(rawKeywords)
+          ? rawKeywords.join(", ")
+          : "";
+      const parsedMetaDesc = postData.meta_description || postData.metaDescription || "";
 
       return {
         success: true,
         data: {
-          title: parsed.title,
-          content: parsed.content,
-          tags:
-            typeof parsed.tags === "string"
-              ? parsed.tags
-              : Array.isArray(parsed.tags)
-              ? parsed.tags.join(", ")
-              : "",
-          metaDescription: parsed.metaDescription || "",
-          ctaType: parsed.ctaType || "booking",
-          ctaLabel: parsed.ctaLabel || "Agendar Horário Online",
+          title: parsedTitle,
+          content: parsedContent,
+          tags: parsedTags,
+          metaDescription: parsedMetaDesc,
+          ctaType: postData.ctaType || postData.cta_type || "booking",
+          ctaLabel: postData.ctaLabel || postData.cta_label || "Agendar Horário Online",
           source: "gemini",
           pillar: selectedPillar.name,
         },

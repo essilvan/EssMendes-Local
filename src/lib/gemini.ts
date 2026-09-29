@@ -2,11 +2,48 @@ export interface GenerateGeminiOptions {
   apiKey?: string;
   temperature?: number;
   maxOutputTokens?: number;
+  responseMimeType?: string;
+}
+
+/**
+ * Função de higienização defensiva antes do JSON.parse()
+ * Remove cercas de markdown (```json), isola o objeto JSON entre chaves {}
+ * e fornece fallback estruturado se o JSON estiver truncado ou malformado.
+ */
+export function extractValidJson(raw: string) {
+  let clean = raw.trim();
+
+  // Remove cercas de código markdown se vierem incluídas
+  if (clean.startsWith("```json")) {
+    clean = clean.replace(/^```json\s*/i, "").replace(/\s*```$/, "");
+  } else if (clean.startsWith("```")) {
+    clean = clean.replace(/^```\s*/, "").replace(/\s*```$/, "");
+  }
+
+  // Isola do primeiro '{' até ao último '}'
+  const firstBrace = clean.indexOf("{");
+  const lastBrace = clean.lastIndexOf("}");
+
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    clean = clean.substring(firstBrace, lastBrace + 1);
+  }
+
+  try {
+    return JSON.parse(clean);
+  } catch (err) {
+    console.warn("Falha no JSON.parse direto, a usar fallback estruturado:", clean);
+    return {
+      title: clean.split("\n")[0].replace(/[#*"]/g, "").trim(),
+      content: clean.replace(/[{}"\\]/g, "").trim(),
+      keywords: "serviço especializado, atendimento, novidades",
+      meta_description: clean.slice(0, 150).replace(/[#*"\n]/g, " ").trim(),
+    };
+  }
 }
 
 /**
  * Invoca a API do Google Generative AI (Gemini) descobrindo em tempo real os modelos suportados
- * via ListModels (v1beta/models) para evitar erros 404 de modelo inexistente.
+ * via ListModels (v1beta/models) e forçando responseMimeType: application/json.
  */
 export async function generateContentWithGemini(
   promptText: string,
@@ -58,7 +95,7 @@ export async function generateContentWithGemini(
   let generatedText = "";
   let lastError: any = null;
 
-  // 2. Chamar o modelo descoberto (com fallback nos demais modelos disponíveis se necessário)
+  // 2. Chamar o modelo descoberto forçando resposta como JSON puro
   for (const modelToCall of candidateModels) {
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelToCall}:generateContent?key=${apiKey}`;
@@ -69,8 +106,9 @@ export async function generateContentWithGemini(
         body: JSON.stringify({
           contents: [{ parts: [{ text: promptText }] }],
           generationConfig: {
-            temperature: options?.temperature ?? 0.8,
-            maxOutputTokens: options?.maxOutputTokens ?? 1200,
+            temperature: options?.temperature ?? 0.7,
+            maxOutputTokens: options?.maxOutputTokens ?? 1500,
+            responseMimeType: options?.responseMimeType ?? "application/json",
           },
         }),
       });
