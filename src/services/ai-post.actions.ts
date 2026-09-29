@@ -53,7 +53,7 @@ export async function generateLocalSeoPost(
     if (!apiKey) {
       return {
         success: false,
-        error: "Chave GEMINI_API_KEY ausente nas variáveis de ambiente.",
+        error: "GEMINI_API_KEY não configurada no servidor.",
       };
     }
 
