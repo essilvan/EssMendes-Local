@@ -21,6 +21,7 @@ import { ConversionTemplateView } from "./templates/ConversionTemplateView";
 import { MinimalTemplateView } from "./templates/MinimalTemplateView";
 import { ModernTemplateView } from "./templates/ModernTemplateView";
 import { PremiumTemplateView } from "./templates/PremiumTemplateView";
+import { WhatsAppFloatingButton } from "./WhatsAppFloatingButton";
 import { getUnifiedEstablishmentPhotos } from "@/utils/establishment-photos";
 import type { BusinessAttributes as BusinessAttributesType } from "@/types";
 
@@ -401,6 +402,13 @@ export function PublicTenantHub({
         activeTemplate={activeTemplate}
         brandColor={brandColor}
         onOpenBooking={() => handleOpenBooking()}
+      />
+
+      {/* 12. Botão Flutuante de WhatsApp (CRO Quick Action) */}
+      <WhatsAppFloatingButton
+        tenantId={tenant.id}
+        tenantName={tenant.name}
+        phoneWhatsapp={profile?.phone_whatsapp || profile?.phone}
       />
 
       {/* Modal / Drawer Global de Agendamento em 4 Passos */}

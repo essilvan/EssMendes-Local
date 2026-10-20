@@ -63,7 +63,8 @@ export function PublicHeroSplit({
   const currentTheme = theme || NICHE_THEMES.retail_default;
   const displayAddress = address || "Atendimento Presencial";
   const cleanDescription = sanitizeDescription(description, address);
-  const whatsappUrl = generateWhatsAppUrl(phoneWhatsapp || "", tenantName);
+  const heroWaMessage = `Olá, vi a vitrine de vocês e gostaria de agendar um atendimento/orçamento em ${tenantName}.`;
+  const whatsappUrl = generateWhatsAppUrl(phoneWhatsapp || "", heroWaMessage);
 
   const fallbackImage = getNicheFallbackImage(currentTheme?.id, businessCategory);
   const coverImage =
@@ -132,18 +133,12 @@ export function PublicHeroSplit({
               {tenantName}
             </h1>
 
-            {cleanDescription && (
-              <p className="text-xs sm:text-sm text-neutral-200/95 line-clamp-2 leading-relaxed drop-shadow-xs">
-                {cleanDescription}
-              </p>
-            )}
-
-            <div className="flex flex-wrap items-center gap-2 pt-1">
-              {/* Distintivo visual do Google com Estrela Dourada */}
+            {/* Sinais de Confiança: Nota média e avaliações do Google diretamente abaixo do título */}
+            <div className="flex flex-wrap items-center gap-2 pt-0.5 pb-1">
               <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white/10 hover:bg-white/15 border border-white/20 text-xs font-semibold text-amber-300 backdrop-blur-md shadow-xs transition-colors">
                 <span className="text-amber-400">⭐</span>
                 <span className="font-bold text-white">{displayRating}</span>
-                <span className="text-neutral-300">({displayReviewsCount})</span>
+                <span className="text-neutral-300">({displayReviewsCount} avaliações)</span>
                 <span className="text-neutral-400 font-medium">• Google</span>
               </div>
 
@@ -172,6 +167,12 @@ export function PublicHeroSplit({
                 </span>
               )}
             </div>
+
+            {cleanDescription && (
+              <p className="text-xs sm:text-sm text-neutral-200/95 line-clamp-2 leading-relaxed drop-shadow-xs">
+                {cleanDescription}
+              </p>
+            )}
           </div>
         </div>
 
@@ -198,10 +199,10 @@ export function PublicHeroSplit({
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 px-4 py-2.5 text-xs sm:text-sm font-bold text-white transition-all shadow-lg shadow-emerald-950/40 hover:shadow-emerald-500/25 hover:-translate-y-0.5 active:scale-95"
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 px-5 py-2.5 text-xs sm:text-sm font-extrabold text-white transition-all shadow-lg shadow-emerald-950/40 hover:shadow-emerald-500/25 hover:-translate-y-0.5 active:scale-95"
             >
-              <MessageCircle className="h-4 w-4 shrink-0" />
-              <span>WhatsApp Direto</span>
+              <MessageCircle className="h-4 w-4 shrink-0 fill-white" />
+              <span>Falar no WhatsApp</span>
             </a>
           )}
 

@@ -199,7 +199,7 @@ export function PublicServicesView({
                         <a
                           href={generateWhatsAppUrl(
                             profile.phone_whatsapp,
-                            `👋 Olá! Gostaria de um orçamento/agendamento para o serviço: *${service?.name ?? ""}*.`
+                            `Olá, vi a vitrine de vocês e gostaria de pedir um orçamento para o serviço: *${service?.name ?? ""}*.`
                           )}
                           target="_blank"
                           rel="noopener noreferrer"
@@ -207,11 +207,11 @@ export function PublicServicesView({
                             e.stopPropagation();
                             handleWhatsAppClick();
                           }}
-                          className="inline-flex items-center gap-1 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 px-2.5 py-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-300 transition"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 px-2.5 py-1.5 text-xs font-semibold text-emerald-800 dark:text-emerald-300 transition shadow-2xs"
                           title="Solicitar orçamento via WhatsApp"
                         >
-                          <MessageCircle className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                          <span className="hidden sm:inline">WhatsApp</span>
+                          <MessageCircle className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          <span>Pedir Orçamento</span>
                         </a>
                       )}
 

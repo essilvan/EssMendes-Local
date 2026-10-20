@@ -69,7 +69,9 @@ export function ItemDetailModal({
   const isOutOfStock = typeof item.stock_quantity === "number" && item.stock_quantity === 0;
   const whatsappText = isOutOfStock
     ? `👋 Olá! Vi no site o item *${item.title}*, mas consta como esgotado. Gostaria de consultar encomenda ou previsão de reposição.`
-    : `Olá! Gostaria de mais informações sobre: ${item.title}`;
+    : item.isService
+    ? `Olá, vi a vitrine de vocês e gostaria de pedir um orçamento para o serviço: *${item.title}*.`
+    : `Olá, vi a vitrine de vocês e gostaria de mais informações sobre o produto: *${item.title}*.`;
   const whatsappUrl = cleanPhone
     ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(whatsappText)}`
     : null;

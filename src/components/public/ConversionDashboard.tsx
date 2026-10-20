@@ -151,7 +151,7 @@ export function ConversionDashboard({
             {services.map((service) => {
               const hasPrice = service.price !== null && Number(service.price) > 0;
               const phone = profile?.phone_whatsapp || profile?.phone;
-              const whatsappOrderText = `👋 Olá! Gostaria de um orçamento/agendamento para o serviço: *${service?.name ?? ""}*.`;
+              const whatsappOrderText = `Olá, vi a vitrine de vocês e gostaria de pedir um orçamento para o serviço: *${service?.name ?? ""}*.`;
 
               // Só exibir o badge de tempo se houver valor preenchido E (for nicho de agendamento OU o lojista definiu explicitamente com show_duration)
               const shouldShowDuration = service.duration_minutes && (isTimeBasedNiche || service.show_duration);
@@ -210,11 +210,11 @@ export function ConversionDashboard({
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
-                          className="inline-flex items-center gap-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:border-emerald-300 dark:hover:border-emerald-700 px-3 py-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-300 hover:text-emerald-700 dark:hover:text-emerald-400 transition"
-                          title="Tirar dúvidas no WhatsApp"
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 px-3 py-1.5 text-xs font-semibold text-emerald-800 dark:text-emerald-300 transition shadow-2xs"
+                          title="Tirar dúvidas ou pedir orçamento no WhatsApp"
                         >
-                          <MessageCircle className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                          <span className="hidden sm:inline">WhatsApp</span>
+                          <MessageCircle className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          <span>Pedir Orçamento</span>
                         </a>
                       )}
 

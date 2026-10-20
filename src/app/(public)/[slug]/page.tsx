@@ -457,26 +457,123 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://local.essmendes.com.br";
   const canonicalUrl = `${baseUrl}/${tenant.slug}`;
   const cleanPhone = profile?.phone_whatsapp || profile?.phone ? sanitizePhoneNumber(profile.phone_whatsapp || profile.phone) : null;
+/**
+ * Detecta dinamicamente a subclasse mais precisa de LocalBusiness do Schema.org
+ */
+function detectLocalBusinessSchemaType(
+  niche?: string | null,
+  category?: string | null,
+  googleTypes?: string[] | null
+): string {
+  const combined = `${niche || ""} ${category || ""} ${(googleTypes || []).join(" ")}`.toLowerCase();
+
+  // Automotivo & Oficinas
+  if (
+    combined.includes("auto") ||
+    combined.includes("mecanic") ||
+    combined.includes("oficina") ||
+    combined.includes("funilaria") ||
+    combined.includes("embreag") ||
+    combined.includes("repair") ||
+    combined.includes("car")
+  ) {
+    return "AutoRepair";
+  }
+
+  // Cabelo / Barbearia / Estética / Beleza
+  if (
+    combined.includes("barbea") ||
+    combined.includes("barber") ||
+    combined.includes("salao") ||
+    combined.includes("cabel") ||
+    combined.includes("estetica") ||
+    combined.includes("beleza") ||
+    combined.includes("beauty") ||
+    combined.includes("spa") ||
+    combined.includes("manicure")
+  ) {
+    return "BeautySalon";
+  }
+
+  // Odontologia
+  if (combined.includes("dentis") || combined.includes("odonto") || combined.includes("dental")) {
+    return "Dentist";
+  }
+
+  // Saúde / Medicina / Clínica
+  if (
+    combined.includes("medic") ||
+    combined.includes("clinica") ||
+    combined.includes("saude") ||
+    combined.includes("terapia") ||
+    combined.includes("fisioterap") ||
+    combined.includes("health")
+  ) {
+    return "MedicalClinic";
+  }
+
+  // Gastronomia & Alimentação
+  if (
+    combined.includes("restauran") ||
+    combined.includes("gastronom") ||
+    combined.includes("pizz") ||
+    combined.includes("hamburg") ||
+    combined.includes("comida") ||
+    combined.includes("food") ||
+    combined.includes("cafe")
+  ) {
+    return "Restaurant";
+  }
+
+  // Fallback seguro conforme Schema.org
+  return "LocalBusiness";
+}
+
   const internationalPhone = cleanPhone ? `+55${cleanPhone}` : undefined;
   
   // Cálculo dinâmico do horário de funcionamento real do estabelecimento
   const businessStatus = getBusinessStatus(cleanOpeningHours);
 
-  // 2.10 Schema.org JSON-LD Padronizado com LocalBusiness e OfferCatalog Universal
-  const schemaAddress = (tenant as any).address || typedProfile?.address || "";
-  const schemaCity = tenant.city || extractNeighborhoodAndCity(typedProfile?.address) || "";
-  const schemaState = (tenant as any).state || "SP";
-  const schemaPhone = tenant.phone || typedProfile?.phone_whatsapp || typedProfile?.phone || "";
+  // 2.10 Schema.org JSON-LD Padronizado com @graph e Niche Detection
+  const schemaAddress = (tenant as any)?.address || typedProfile?.address || "";
+  const schemaCity = tenant?.city || extractNeighborhoodAndCity(typedProfile?.address) || "";
+  const schemaState = (tenant as any)?.state || "SP";
+  const schemaPhone = tenant?.phone || typedProfile?.phone_whatsapp || typedProfile?.phone || "";
   const schemaImage =
-    (tenant as any).cover_url ||
-    tenant.cover_image_url ||
-    (tenant as any).logo_url ||
+    (tenant as any)?.cover_url ||
+    tenant?.cover_image_url ||
+    (tenant as any)?.logo_url ||
     typedProfile?.cover_image_url ||
     typedProfile?.logo_url ||
     (cleanPlacePhotos.length > 0 ? cleanPlacePhotos[0] : undefined);
-  const schemaLat = (tenant as any).latitude ?? typedProfile?.latitude ?? null;
-  const schemaLng = (tenant as any).longitude ?? typedProfile?.longitude ?? null;
-  const schemaType = (tenant as any).schema_type || "AutoRepair";
+  const schemaLat = (tenant as any)?.latitude ?? typedProfile?.latitude ?? null;
+  const schemaLng = (tenant as any)?.longitude ?? typedProfile?.longitude ?? null;
+  
+  const schemaType = detectLocalBusinessSchemaType(
+    tenant?.theme_niche || (tenant?.theme_settings as any)?.niche,
+    typedProfile?.business_category || (tenant as any)?.category,
+    (tenant as any)?.google_types
+  );
+
+  // Cálculo de avaliações visíveis reais para aggregateRating (Zero Mock Data)
+  const visibleReviews = reviews.filter((r) => r.is_visible !== false);
+  const totalReviewsCount =
+    typedProfile?.google_reviews_count ??
+    typedProfile?.review_count ??
+    tenant?.google_reviews_count ??
+    visibleReviews.length;
+  const averageRatingValue =
+    visibleReviews.length > 0
+      ? (
+          visibleReviews.reduce((sum, r) => sum + (Number(r.rating) || 5), 0) /
+          visibleReviews.length
+        ).toFixed(1)
+      : (
+          typedProfile?.google_rating ??
+          typedProfile?.rating ??
+          tenant?.google_rating ??
+          5.0
+        ).toFixed(1);
 
   const offerCatalogItems = [
     ...activeServices.map((s) => {
@@ -491,7 +588,7 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
         "itemOffered": {
           "@type": "Service",
           "name": s.name,
-          "description": s.description || `Serviço prestado por ${tenant.name}`,
+          "description": s.description || `Serviço prestado por ${tenant?.name || "estabelecimento"}`,
         },
         ...(hasNumericPrice
           ? {
@@ -523,7 +620,7 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
         "itemOffered": {
           "@type": "Product",
           "name": p.name,
-          "description": p.description || `Item/produto disponível em ${tenant.name}`,
+          "description": p.description || `Item/produto disponível em ${tenant?.name || "estabelecimento"}`,
           ...(p.image_url ? { "image": p.image_url } : {}),
         },
         "availability":
@@ -546,35 +643,6 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
     }),
   ];
 
-  const standardizedSchemaJsonLd: Record<string, any> = {
-    "@context": "https://schema.org",
-    "@type": schemaType,
-    name: tenant.name,
-    image: schemaImage,
-    telephone: schemaPhone,
-    address: {
-      "@type": "PostalAddress",
-      streetAddress: schemaAddress,
-      addressLocality: schemaCity,
-      addressRegion: schemaState,
-      addressCountry: "BR",
-    },
-    geo: {
-      "@type": "GeoCoordinates",
-      latitude: schemaLat,
-      longitude: schemaLng,
-    },
-    ...(offerCatalogItems.length > 0
-      ? {
-          hasOfferCatalog: {
-            "@type": "OfferCatalog",
-            name: "Serviços e Produtos",
-            itemListElement: offerCatalogItems,
-          },
-        }
-      : {}),
-  };
-
   // Schemas Estruturados para Artigos e Posts de SEO Local (Schema.org BlogPosting)
   const articleJsonLdList = posts.map((post) => ({
     "@context": "https://schema.org",
@@ -587,18 +655,85 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
     dateModified: post.updated_at || post.published_at,
     author: {
       "@type": "Organization",
-      name: typedProfile?.name || tenant.name,
+      name: typedProfile?.name || tenant?.name,
     },
     publisher: {
       "@type": "Organization",
-      name: typedProfile?.name || tenant.name,
+      name: typedProfile?.name || tenant?.name,
     },
     keywords: post.tags && post.tags.length > 0 ? post.tags.join(", ") : undefined,
     mainEntityOfPage: `${canonicalUrl}#novidades`,
   }));
 
-  const templateId = tenant.theme_settings?.template_id || typedProfile?.template_id || "premium";
-  const primaryColor = tenant.theme_settings?.primary_color || typedProfile?.primary_color || "#e11d48";
+  // Schema.org JSON-LD Unificado com @graph (LocalBusiness, WebSite e Artigos)
+  const schemaJsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": schemaType,
+        "@id": `${canonicalUrl}#business`,
+        name: tenant?.name || typedProfile?.name || "Estabelecimento",
+        url: canonicalUrl,
+        description:
+          typedProfile?.editorial_summary ||
+          typedProfile?.description ||
+          `Vitrine e serviços de ${tenant?.name || "estabelecimento local"}.`,
+        telephone:
+          internationalPhone ||
+          (schemaPhone ? `+55${sanitizePhoneNumber(schemaPhone)}` : undefined),
+        priceRange: "$$",
+        image: schemaImage || undefined,
+        address: schemaAddress
+          ? {
+              "@type": "PostalAddress",
+              streetAddress: schemaAddress,
+              addressLocality: schemaCity || undefined,
+              addressRegion: schemaState || "SP",
+              addressCountry: "BR",
+            }
+          : undefined,
+        ...(schemaLat && schemaLng
+          ? {
+              geo: {
+                "@type": "GeoCoordinates",
+                latitude: Number(schemaLat),
+                longitude: Number(schemaLng),
+              },
+            }
+          : {}),
+        ...(Number(totalReviewsCount) > 0
+          ? {
+              aggregateRating: {
+                "@type": "AggregateRating",
+                ratingValue: String(averageRatingValue),
+                reviewCount: String(totalReviewsCount),
+                bestRating: "5",
+                worstRating: "1",
+              },
+            }
+          : {}),
+        ...(offerCatalogItems.length > 0
+          ? {
+              hasOfferCatalog: {
+                "@type": "OfferCatalog",
+                name: "Serviços e Produtos",
+                itemListElement: offerCatalogItems,
+              },
+            }
+          : {}),
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${baseUrl}/#website`,
+        url: baseUrl,
+        name: "EssMendes Local",
+      },
+      ...articleJsonLdList,
+    ],
+  };
+
+  const templateId = tenant?.theme_settings?.template_id || typedProfile?.template_id || "premium";
+  const primaryColor = tenant?.theme_settings?.primary_color || typedProfile?.primary_color || "#e11d48";
 
   const templateClasses: Record<string, string> = {
     premium: "template-premium font-serif-headings",
@@ -613,23 +748,13 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
       className={`w-full max-w-full overflow-x-hidden ${selectedTemplateClass}`}
       style={{ "--brand-primary": primaryColor } as React.CSSProperties}
     >
-      {/* Injeção JSON-LD Estruturado para SEO Local (LocalBusiness + OfferCatalog) */}
+      {/* Injeção JSON-LD Estruturado com @graph para SEO Local (Rich Snippets Google) */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(standardizedSchemaJsonLd),
+          __html: JSON.stringify(schemaJsonLd),
         }}
       />
-
-      {/* Injeção JSON-LD para Artigos e Posts de SEO Local (se houver) */}
-      {articleJsonLdList.length > 0 && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify(articleJsonLdList),
-          }}
-        />
-      )}
 
       {/* Renderização do Local Business Hub */}
       <PublicTenantHub
