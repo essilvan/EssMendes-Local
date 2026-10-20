@@ -151,8 +151,8 @@ export function PublicHeader({
       </div>
 
       {/* 2. Navbar Suspensa com Logo, Âncoras e Botão de Agendamento */}
-      <nav className="sticky top-0 z-30 border-b border-neutral-200/80 dark:border-white/10 bg-white/90 dark:bg-neutral-950/90 backdrop-blur-md shadow-xs w-full">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 py-3.5 flex items-center justify-between gap-3 sm:gap-4">
+      <nav className="sticky top-0 z-30 border-b border-neutral-200/80 dark:border-white/10 bg-white/85 dark:bg-neutral-950/85 backdrop-blur-xl shadow-xs w-full transition-colors">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 py-3 flex items-center justify-between gap-3 sm:gap-4">
           
           {/* Logo & Nome da Empresa */}
           <Link
@@ -165,18 +165,18 @@ export function PublicHeader({
                 <img
                   src={logoUrl}
                   alt={`Logotipo de ${tenantName}`}
-                  className="h-9 w-9 rounded-xl object-cover shrink-0 border border-neutral-200/60 dark:border-white/10"
+                  className="h-9 w-9 rounded-xl object-cover shrink-0 border border-neutral-200/60 dark:border-white/10 shadow-2xs group-hover:scale-105 transition-transform"
                 />
               ) : (
                 <div
-                  className="relative flex h-9 w-9 items-center justify-center rounded-xl text-white font-extrabold text-xs shadow-sm shrink-0 overflow-hidden"
+                  className="relative flex h-9 w-9 items-center justify-center rounded-xl text-white font-extrabold text-xs shadow-sm shrink-0 overflow-hidden group-hover:scale-105 transition-transform"
                   style={{ backgroundColor: "var(--brand-primary, #0d9488)" }}
                 >
                   <span>{tenantName.substring(0, 2).toUpperCase()}</span>
                 </div>
               )}
 
-              <span className="font-bold text-sm sm:text-base tracking-tight truncate text-neutral-900 dark:text-white group-hover:text-neutral-600 dark:group-hover:text-neutral-300 transition">
+              <span className="font-extrabold text-sm sm:text-base tracking-tight truncate text-neutral-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
                 {tenantName}
               </span>
               <ShieldCheck
@@ -185,35 +185,35 @@ export function PublicHeader({
             </div>
           </Link>
 
-          {/* Links de Ancoragem Desktop */}
-          <div className="hidden md:flex items-center gap-7 text-xs font-semibold text-neutral-600 dark:text-neutral-400 shrink-0">
+          {/* Links de Ancoragem Desktop com Hover Pill Suave */}
+          <div className="hidden md:flex items-center gap-2 text-xs font-semibold text-neutral-600 dark:text-neutral-400 shrink-0">
             <a
               href="#servicos"
-              className="hover:text-neutral-950 dark:hover:text-white transition py-1"
+              className="px-3 py-1.5 rounded-xl hover:text-neutral-950 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/5 transition-all"
             >
               Serviços
             </a>
             <a
               href="#sobre"
-              className="hover:text-neutral-950 dark:hover:text-white transition py-1"
+              className="px-3 py-1.5 rounded-xl hover:text-neutral-950 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/5 transition-all"
             >
               Sobre
             </a>
             <a
               href="#fotos"
-              className="hover:text-neutral-950 dark:hover:text-white transition py-1"
+              className="px-3 py-1.5 rounded-xl hover:text-neutral-950 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/5 transition-all"
             >
               Ambiente
             </a>
             <a
               href="#avaliacoes"
-              className="hover:text-neutral-950 dark:hover:text-white transition py-1"
+              className="px-3 py-1.5 rounded-xl hover:text-neutral-950 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/5 transition-all"
             >
               Avaliações
             </a>
             <a
               href="#contato"
-              className="hover:text-neutral-950 dark:hover:text-white transition py-1"
+              className="px-3 py-1.5 rounded-xl hover:text-neutral-950 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/5 transition-all"
             >
               Horários & Contato
             </a>
@@ -224,7 +224,7 @@ export function PublicHeader({
             <button
               type="button"
               onClick={onOpenBooking}
-              className="hidden md:inline-flex items-center gap-2 rounded-2xl px-5 py-2.5 text-xs font-bold text-white shadow-sm transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+              className="hidden md:inline-flex items-center gap-2 rounded-2xl px-5 py-2.5 text-xs font-extrabold text-white shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer animate-shimmer"
               style={{
                 backgroundColor: "var(--brand-primary, #0d9488)",
               }}

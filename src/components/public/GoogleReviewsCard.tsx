@@ -114,12 +114,17 @@ export function GoogleReviewsCard({
             return (
               <div
                 key={review.id || idx}
-                className={`flex flex-col justify-between rounded-2xl border border-neutral-200/80 dark:border-white/10 ${
-                  currentTheme.isDark ? "bg-neutral-900/80 hover:bg-neutral-900" : "bg-white/95 hover:bg-white"
-                } p-5 sm:p-6 transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 space-y-4`}
+                className={`group relative overflow-hidden flex flex-col justify-between rounded-3xl border border-neutral-200/70 dark:border-white/10 ${
+                  currentTheme.isDark ? "bg-neutral-900/90 hover:bg-neutral-900" : "bg-white/95 hover:bg-white"
+                } p-6 transition-all duration-300 shadow-xs hover:shadow-xl hover:shadow-black/5 hover:-translate-y-1 space-y-4`}
               >
+                {/* Aspas decorativas subtis no fundo do card */}
+                <span className="absolute -bottom-3 -right-2 text-6xl font-serif text-neutral-200/50 dark:text-white/5 select-none pointer-events-none transition-transform duration-300 group-hover:scale-110">
+                  &ldquo;
+                </span>
+
                 {/* Topo do Comentário: Avatar, Nome e Tempo */}
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start justify-between gap-2 relative z-10">
                   <div className="flex items-center gap-3">
                     {authorPhoto ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -127,7 +132,7 @@ export function GoogleReviewsCard({
                         src={authorPhoto}
                         alt={authorName}
                         referrerPolicy="no-referrer"
-                        className="h-10 w-10 shrink-0 rounded-full object-cover shadow-2xs"
+                        className="h-10 w-10 shrink-0 rounded-full object-cover shadow-2xs border border-white/20"
                         onError={(e) => {
                           e.currentTarget.style.display = "none";
                           const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
@@ -136,7 +141,7 @@ export function GoogleReviewsCard({
                       />
                     ) : null}
                     <div
-                      className="h-10 w-10 shrink-0 items-center justify-center rounded-full text-white font-bold text-xs shadow-2xs"
+                      className="h-10 w-10 shrink-0 items-center justify-center rounded-full text-white font-bold text-xs shadow-2xs border border-white/20"
                       style={{
                         backgroundColor: avatarBg,
                         display: authorPhoto ? "none" : "flex",
@@ -163,27 +168,28 @@ export function GoogleReviewsCard({
                     </div>
                   </div>
 
-                  {/* Estrelas */}
-                  <div className="flex items-center gap-0.5 text-amber-500">
+                  {/* Estrelas Douradas */}
+                  <div className="flex items-center gap-0.5 text-amber-500 bg-amber-500/10 dark:bg-amber-500/15 px-2 py-0.5 rounded-full border border-amber-500/20">
                     {[...Array(reviewRating)].map((_, i) => (
-                      <Star key={i} className="h-3.5 w-3.5 fill-current" />
+                      <Star key={i} className="h-3 w-3 fill-current" />
                     ))}
                   </div>
                 </div>
 
                 {/* Texto do Depoimento */}
                 {reviewText && (
-                  <p className={`text-xs sm:text-sm ${currentTheme.textMuted} leading-relaxed italic`}>
+                  <p className={`text-xs sm:text-sm ${currentTheme.textMuted} leading-relaxed italic relative z-10`}>
                     &ldquo;{reviewText}&rdquo;
                   </p>
                 )}
 
                 {/* Tag de Cliente */}
-                <div className="pt-2 border-t border-neutral-100 dark:border-white/5">
-                  <span className={`inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400`}>
+                <div className="pt-2 border-t border-neutral-100 dark:border-white/5 relative z-10 flex items-center justify-between">
+                  <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400`}>
                     <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
                     <span>Avaliação Verificada</span>
                   </span>
+                  <span className="text-[10px] text-neutral-400 font-medium">via Google</span>
                 </div>
               </div>
             );

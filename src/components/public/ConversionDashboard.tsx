@@ -169,34 +169,34 @@ export function ConversionDashboard({
                       isService: true,
                     })
                   }
-                  className="group rounded-xl border border-neutral-200/90 dark:border-neutral-800 bg-white dark:bg-neutral-900/90 p-4 sm:p-5 transition-all duration-200 hover:shadow-md hover:border-neutral-300 dark:hover:border-neutral-700 flex flex-col justify-between gap-3.5 cursor-pointer"
+                  className="group relative rounded-2xl border border-neutral-200/80 dark:border-white/10 bg-white dark:bg-neutral-900/90 p-5 transition-all duration-300 hover:shadow-xl hover:shadow-black/5 hover:-translate-y-0.5 hover:border-neutral-300 dark:hover:border-white/20 flex flex-col justify-between gap-4 cursor-pointer"
                 >
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     <div className="flex items-start justify-between gap-3">
-                      <h3 className="text-lg md:text-xl font-bold text-neutral-900 dark:text-white group-hover:text-emerald-600 transition-colors">
+                      <h3 className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
                         {service?.name ?? ""}
                       </h3>
-                      {/* Preço em destaque tipográfico legível */}
-                      <span className="font-extrabold text-sm sm:text-base text-neutral-900 dark:text-white shrink-0">
+                      {/* Preço em destaque com badge estilizado */}
+                      <span className="font-extrabold text-xs sm:text-sm text-neutral-900 dark:text-white shrink-0 px-3 py-1 rounded-xl bg-neutral-100 dark:bg-white/5 border border-neutral-200/80 dark:border-white/10 shadow-2xs">
                         {hasPrice ? formatCurrency(Number(service.price)) : "Sob Consulta"}
                       </span>
                     </div>
 
                     {service.description && (
-                      <p className="text-sm text-neutral-600 dark:text-neutral-300 mt-1 line-clamp-2 leading-relaxed">
+                      <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-300 line-clamp-2 leading-relaxed">
                         {service.description}
                       </p>
                     )}
 
-                    <div className="pt-0.5 flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 group-hover:underline">
-                      <Eye className="h-3 w-3" />
-                      <span>Ver detalhes</span>
+                    <div className="pt-1 flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 group-hover:underline">
+                      <Eye className="h-3.5 w-3.5" />
+                      <span>Ver detalhes do serviço</span>
                     </div>
                   </div>
 
-                  {/* Divisória subtil */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-neutral-100 dark:border-neutral-800">
-                    {/* Duração (ícone de relógio + minutos) */}
+                  {/* Divisória com gradiente sutil */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-3.5 border-t border-neutral-100 dark:border-neutral-800">
+                    {/* Duração estimada com ícone */}
                     <div className="flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400 font-medium">
                       <ClockIcon className="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500" />
                       <span>{service.duration_minutes ? `${service.duration_minutes} min` : "Sob agendamento"}</span>
@@ -210,7 +210,7 @@ export function ConversionDashboard({
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
-                          className="inline-flex items-center gap-1 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 px-2.5 py-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-300 transition"
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:border-emerald-300 dark:hover:border-emerald-700 px-3 py-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-300 hover:text-emerald-700 dark:hover:text-emerald-400 transition"
                           title="Tirar dúvidas no WhatsApp"
                         >
                           <MessageCircle className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
@@ -218,14 +218,14 @@ export function ConversionDashboard({
                         </a>
                       )}
 
-                      {/* Botão explícito de Agendar que abre o fluxo pré-selecionando o serviço */}
+                      {/* Botão explícito de Agendar com hover e elevação */}
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           onOpenBookingModal(service.id);
                         }}
-                        className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition hover:opacity-90 active:scale-95 cursor-pointer"
+                        className="inline-flex items-center gap-1.5 rounded-xl px-4 py-1.5 text-xs font-extrabold text-white shadow-sm hover:shadow-md transition-all hover:scale-[1.02] active:scale-95 cursor-pointer"
                         style={{
                           backgroundColor: brandColor || "var(--brand-primary, #0d9488)",
                         }}

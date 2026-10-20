@@ -21,11 +21,13 @@ Bem-vindo ao repositório **EssMendes Local**, uma plataforma multi-tenant de al
 EssMendes-Local/
 ├── .agents/
 │   └── skills/                 # Skills especializadas do Antigravity
+│       ├── frontend-design/    # Diretrizes estéticas, tipografia e design de alto padrão
 │       ├── google-places-sync/ # Sincronização e parsing Google Places API (New)
 │       ├── supabase-tenant-rls/# Migrações SQL, multi-tenancy e RLS
 │       ├── local-seo-schema/   # SEO local, Schema.org e metadados dinâmicos
 │       ├── server-actions-workflow/ # Padrão de Server Actions e Zod
 │       └── project-qa-suite/   # Validação estática e scripts de teste
+├── skills/                     # Pasta visível com todas as skills em formato Markdown (.md)
 ├── src/
 │   ├── app/
 │   │   ├── (admin)/            # Painel administrativo multi-tenant
@@ -69,6 +71,7 @@ node scripts/test_complete_suite.mjs
 
 ## 🧰 5. Skills Disponíveis no Projeto
 
+- [Frontend Design & Aesthetics](file:///C:/Projetos/EssMendes-Local/.agents/skills/frontend-design/SKILL.md)
 - [Google Places Sync](file:///C:/Projetos/EssMendes-Local/.agents/skills/google-places-sync/SKILL.md)
 - [Supabase Tenant & RLS](file:///C:/Projetos/EssMendes-Local/.agents/skills/supabase-tenant-rls/SKILL.md)
 - [Local SEO & Schema.org](file:///C:/Projetos/EssMendes-Local/.agents/skills/local-seo-schema/SKILL.md)

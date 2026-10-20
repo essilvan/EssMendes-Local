@@ -3,17 +3,105 @@
 @layer base {
   :root {
     --background: #f8fafc;
-    --foreground: #0f172a;
+    --foreground: #090d16;
     --primary: #0f766e;
     --primary-foreground: #ffffff;
     --card: #ffffff;
-    --card-foreground: #0f172a;
+    --card-foreground: #090d16;
     --border: #e2e8f0;
+    --brand-primary: #0f766e;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   body {
     background-color: var(--background);
     color: var(--foreground);
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11", "rlig" 1, "calt" 1;
   }
 }
+
+/* 🎨 Classes de Template e Identidade Visual (frontend-design skill) */
+.template-premium {
+  --heading-font-family: ui-serif, "Playfair Display", Georgia, Cambria, "Times New Roman", serif;
+}
+
+.template-premium h1,
+.template-premium h2,
+.template-premium .font-serif-headings {
+  font-family: var(--heading-font-family);
+  letter-spacing: -0.02em;
+}
+
+.template-modern {
+  --bento-glow: rgba(var(--brand-primary), 0.15);
+}
+
+.template-minimal {
+  letter-spacing: -0.01em;
+}
+
+.font-mono-accents {
+  font-feature-settings: "tnum" 1, "zero" 1;
+}
+
+/* 💎 Efeitos Glassmorphism & Iluminação de Superfície */
+.glass-panel-light {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.glass-panel-dark {
+  background: rgba(15, 17, 23, 0.82);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* ✨ Micro-animações e Interações Vivas */
+@keyframes subtle-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.animate-shimmer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.15) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: subtle-shimmer 3.5s infinite ease-in-out;
+}
+
+/* Transições suaves para cards e elevação */
+.hover-elevate {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+}
+
+.hover-elevate:hover {
+  transform: translateY(-3px);
+}
+

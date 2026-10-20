@@ -39,25 +39,28 @@ export function TrustMetricsBar({ theme }: TrustMetricsBarProps) {
   ];
 
   return (
-    <section className={`rounded-3xl ${currentTheme.bgCard} border border-neutral-200/80 dark:border-white/10 p-6 sm:p-8 space-y-4 shadow-xl shadow-black/5`}>
+    <section className={`relative overflow-hidden rounded-3xl ${currentTheme.bgCard} border border-neutral-200/80 dark:border-white/10 p-6 sm:p-8 space-y-4 shadow-xl shadow-black/5 before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-neutral-300 dark:before:via-white/20 before:to-transparent`}>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
         {pillars.map((item) => {
           const Icon = item.icon;
           return (
             <div
               key={item.title}
-              className={`flex items-start gap-3.5 p-4 rounded-2xl border border-neutral-200/80 dark:border-white/10 ${
-                currentTheme.isDark ? 'bg-neutral-900/80' : 'bg-white/95'
-              } backdrop-blur-md shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5`}
+              className={`group flex items-start gap-4 p-4.5 rounded-2xl border border-neutral-200/70 dark:border-white/10 ${
+                currentTheme.isDark ? 'bg-neutral-900/80 hover:bg-neutral-900' : 'bg-white/90 hover:bg-white'
+              } backdrop-blur-md shadow-xs hover:shadow-lg transition-all duration-300 hover:-translate-y-1`}
             >
               <div
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white shadow-2xs mt-0.5"
-                style={{ backgroundColor: "var(--brand-primary, #0d9488)" }}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-white shadow-md transition-transform duration-300 group-hover:scale-110 mt-0.5"
+                style={{
+                  backgroundColor: "var(--brand-primary, #0d9488)",
+                  boxShadow: "0 6px 16px -4px rgba(0,0,0,0.25)",
+                }}
               >
                 <Icon className="h-5 w-5" />
               </div>
               <div className="space-y-1">
-                <h3 className={`text-xs sm:text-sm font-bold ${currentTheme.textPrimary} leading-snug`}>
+                <h3 className={`text-xs sm:text-sm font-extrabold ${currentTheme.textPrimary} leading-snug tracking-tight`}>
                   {item.title}
                 </h3>
                 <p className={`text-xs ${currentTheme.textMuted} leading-relaxed font-normal`}>
