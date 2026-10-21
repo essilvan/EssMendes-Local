@@ -524,13 +524,26 @@ export async function syncGooglePlaceData(
             longitude = place.location.longitude;
           }
 
-          // 2.4 Extração de até 10 Fotos Oficiais em Alta Resolução
+          // 2.4 Extração de até 10 Fotos Oficiais em Alta Resolução e Persistência Multi-Tenant no Supabase Storage
           if (place.photos && Array.isArray(place.photos)) {
             const maxPhotos = place.photos.slice(0, 10);
-            for (const photo of maxPhotos) {
+            for (let i = 0; i < maxPhotos.length; i++) {
+              const photo = maxPhotos[i];
               if (photo.name) {
                 const photoMediaUrl = `https://places.googleapis.com/v1/${photo.name}/media?maxHeightPx=1000&maxWidthPx=1600&key=${apiKey}`;
-                placePhotos.push(photoMediaUrl);
+                try {
+                  const { downloadAndPersistGoogleImage } = await import("@/services/tenant-storage.service");
+                  const persisted = await downloadAndPersistGoogleImage({
+                    url: photoMediaUrl,
+                    tenantId,
+                    photoType: `photo_${i + 1}`,
+                    niche: businessCategory,
+                    category: businessCategory,
+                  });
+                  placePhotos.push(persisted.newUrl);
+                } catch {
+                  placePhotos.push(photoMediaUrl);
+                }
               }
             }
           }

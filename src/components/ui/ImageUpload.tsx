@@ -23,6 +23,8 @@ interface ImageUploadProps {
   aspectRatio?: "square" | "video" | "banner" | "auto";
   disabled?: boolean;
   withCamera?: boolean;
+  tenantId?: string;
+  photoType?: string;
 }
 
 export function ImageUpload({
@@ -35,6 +37,8 @@ export function ImageUpload({
   aspectRatio = "auto",
   disabled = false,
   withCamera = true,
+  tenantId,
+  photoType,
 }: ImageUploadProps) {
   const [currentUrl, setCurrentUrl] = useState<string>(value || "");
   const [isUploading, setIsUploading] = useState<boolean>(false);
@@ -48,14 +52,14 @@ export function ImageUpload({
   const handleFileSelect = async (file: File) => {
     if (!file) return;
 
-    // Validação básica de tipo e tamanho (máx 5MB)
+    // Validação básica de tipo e tamanho (máx 10MB)
     if (!file.type.startsWith("image/")) {
       setErrorMsg("O arquivo selecionado deve ser uma imagem (PNG, JPG, WebP).");
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      setErrorMsg("A imagem deve ter no máximo 5MB.");
+    if (file.size > 10 * 1024 * 1024) {
+      setErrorMsg("A imagem deve ter no máximo 10MB.");
       return;
     }
 
@@ -63,20 +67,53 @@ export function ImageUpload({
     setIsUploading(true);
 
     try {
-      const supabase = createClient();
-      const cleanFileName = file.name.replace(/[^\w.-]/g, "_");
-      const filePath = `uploads/${folder}/${Date.now()}_${Math.random().toString(36).substring(2, 8)}_${cleanFileName}`;
+      // 1. Tenta upload via Server Action isolada por tenant
+      try {
+        const { uploadTenantPhotoAction } = await import("@/services/tenant-storage.actions");
+        const formData = new FormData();
+        formData.append("file", file);
+        if (tenantId) formData.append("tenantId", tenantId);
+        formData.append("photoType", photoType || folder || "photo");
+        if (name) formData.append("targetColumn", name);
 
-      const { data, error } = await supabase.storage
-        .from("tenant-media")
+        const serverActionRes = await uploadTenantPhotoAction(formData);
+        if (serverActionRes.success && serverActionRes.publicUrl) {
+          setCurrentUrl(serverActionRes.publicUrl);
+          if (onChange) onChange(serverActionRes.publicUrl);
+          return;
+        }
+      } catch (actionErr) {
+        console.warn("[ImageUpload] Aviso ao executar Server Action de upload, usando fallback client:", actionErr);
+      }
+
+      // 2. Fallback de upload direto via client com caminho estritamente padronizado
+      const supabase = createClient();
+      const randomHash = Math.random().toString(36).substring(2, 8);
+      const safeType = (photoType || folder || "photo").toLowerCase().replace(/[^a-z0-9_-]/g, "_");
+      const safeTenant = (tenantId || "general").trim();
+      const filePath = `${safeTenant}/${safeType}-${Date.now()}-${randomHash}.jpg`;
+
+      let targetBucket = "establishment-photos";
+      let { error } = await supabase.storage
+        .from(targetBucket)
         .upload(filePath, file, {
           cacheControl: "3600",
           upsert: true,
         });
 
+      if (error && error.message?.includes("not found")) {
+        targetBucket = "tenant-media";
+        const fb = await supabase.storage
+          .from(targetBucket)
+          .upload(filePath, file, {
+            cacheControl: "3600",
+            upsert: true,
+          });
+        error = fb.error;
+      }
+
       if (error) {
         console.warn("[ImageUpload] Erro no bucket, tentando upload:", error.message);
-        // Se o bucket não existir ainda, orientamos amigavelmente
         setErrorMsg(
           error.message.includes("not found") || error.message.includes("bucket")
             ? "Bucket de armazenamento em configuração. Você também pode colar o link direto abaixo."
@@ -89,7 +126,7 @@ export function ImageUpload({
       // Obtém a URL pública
       const {
         data: { publicUrl },
-      } = supabase.storage.from("tenant-media").getPublicUrl(filePath);
+      } = supabase.storage.from(targetBucket).getPublicUrl(filePath);
 
       setCurrentUrl(publicUrl);
       if (onChange) onChange(publicUrl);

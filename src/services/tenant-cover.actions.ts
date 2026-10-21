@@ -66,15 +66,23 @@ export async function uploadTenantCoverAction(formData: FormData): Promise<Cover
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    const ext = file.name && file.name.includes(".")
-      ? file.name.split(".").pop()?.toLowerCase() || "jpg"
-      : "jpg";
-    const cleanExt = ["jpg", "jpeg", "png", "webp"].includes(ext)
-      ? ext === "jpeg"
-        ? "jpg"
-        : ext
-      : "jpg";
-    const filePath = `covers/${tenantId}-${Date.now()}.${cleanExt}`;
+    const { uploadTenantStorageBuffer, ESTABLISHMENT_PHOTOS_BUCKET } = await import(
+      "@/services/tenant-storage.service"
+    );
+
+    const uploadRes = await uploadTenantStorageBuffer({
+      tenantId,
+      buffer,
+      photoType: "cover",
+      contentType: file.type || "image/jpeg",
+      bucket: ESTABLISHMENT_PHOTOS_BUCKET,
+    });
+
+    if (!uploadRes.success || !uploadRes.publicUrl) {
+      return { success: false, error: uploadRes.error || "Erro no upload da foto de capa." };
+    }
+
+    const publicUrl = uploadRes.publicUrl;
 
     const supabaseAdmin = getSupabaseAdmin();
     if (!supabaseAdmin) {
@@ -82,44 +90,6 @@ export async function uploadTenantCoverAction(formData: FormData): Promise<Cover
         success: false,
         error: "Configurações do Supabase ausentes no servidor (NEXT_PUBLIC_SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY).",
       };
-    }
-
-    // 1. Enviar para o bucket 'tenants' (com fallback para 'tenant-media' se o bucket não existir)
-    let targetBucket = "tenants";
-    let { error: uploadError } = await supabaseAdmin.storage
-      .from(targetBucket)
-      .upload(filePath, buffer, {
-        contentType: file.type || "image/jpeg",
-        upsert: true,
-      });
-
-    if (uploadError && uploadError.message?.toLowerCase().includes("not found")) {
-      console.warn(`[uploadTenantCoverAction] Bucket '${targetBucket}' não encontrado. Tentando 'tenant-media'...`);
-      const fallbackUpload = await supabaseAdmin.storage
-        .from("tenant-media")
-        .upload(filePath, buffer, {
-          contentType: file.type || "image/jpeg",
-          upsert: true,
-        });
-
-      if (!fallbackUpload.error) {
-        targetBucket = "tenant-media";
-        uploadError = null;
-      }
-    }
-
-    if (uploadError) {
-      console.error("[uploadTenantCoverAction] Erro storage:", uploadError);
-      return { success: false, error: `Erro no upload: ${uploadError.message}` };
-    }
-
-    // 2. Obter URL pública
-    const {
-      data: { publicUrl },
-    } = supabaseAdmin.storage.from(targetBucket).getPublicUrl(filePath);
-
-    if (!publicUrl) {
-      return { success: false, error: "Não foi possível gerar a URL pública da foto de capa." };
     }
 
     const now = new Date().toISOString();
