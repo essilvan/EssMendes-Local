@@ -91,20 +91,25 @@ export function MinimalTemplateView({
           <span
             className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono uppercase tracking-wider ${
               isOpenNow
-                ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-950"
-                : "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700"
+                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700"
             }`}
           >
-            <span
-              className={`h-1.5 w-1.5 rounded-full ${
-                isOpenNow ? "bg-emerald-400" : "bg-neutral-400"
-              }`}
-            />
+            <span className="relative flex h-2 w-2">
+              {isOpenNow && (
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
+              )}
+              <span
+                className={`relative inline-flex rounded-full h-2 w-2 ${
+                  isOpenNow ? "bg-emerald-400" : "bg-zinc-400"
+                }`}
+              />
+            </span>
             <span>{statusBadgeText || (isOpenNow ? "Aberto Agora" : "Fechado")}</span>
           </span>
         </div>
 
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-neutral-950 dark:text-white leading-[1.08]">
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-zinc-950 dark:text-zinc-50 leading-[1.08]">
           {tenant.name}
         </h1>
 
@@ -216,9 +221,9 @@ export function MinimalTemplateView({
 
                   <div className="flex items-center gap-5 shrink-0 sm:self-center">
                     <div className="text-right">
-                      {/* Badge de Preço */}
-                      <span className="bg-amber-500/10 text-amber-500 text-xs px-2.5 py-1 rounded-full font-medium">
-                        {service.price ? `R$ ${Number(service.price).toFixed(2)}` : 'Sob Consulta / Orçamento'}
+                      {/* Badge de Preço com fundo neutro suave e texto nítido */}
+                      <span className="font-extrabold text-xs text-zinc-900 dark:text-zinc-100 px-3 py-1 rounded-lg bg-zinc-100/90 dark:bg-zinc-800/80 border border-zinc-200/70 dark:border-zinc-700/60 shadow-2xs font-mono shrink-0">
+                        {service.price ? `R$ ${Number(service.price).toFixed(2)}` : 'Sob Consulta'}
                       </span>
                     </div>
 
@@ -228,7 +233,7 @@ export function MinimalTemplateView({
                         e.stopPropagation();
                         onOpenBooking(service.id);
                       }}
-                      className="text-xs font-medium px-4 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 hover:border-neutral-900 dark:hover:border-white text-neutral-900 dark:text-white hover:bg-neutral-950 hover:text-white dark:hover:bg-white dark:hover:text-neutral-950 transition-colors duration-200 cursor-pointer"
+                      className="text-xs font-semibold px-4 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 hover:border-zinc-900 dark:hover:border-white text-zinc-900 dark:text-white hover:bg-zinc-950 hover:text-white dark:hover:bg-white dark:hover:text-zinc-950 transition-all duration-200 active:scale-[0.98] cursor-pointer"
                     >
                       Agendar
                     </button>

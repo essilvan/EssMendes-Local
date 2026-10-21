@@ -96,6 +96,27 @@ export function ModernTemplateView({
         <div className="md:col-span-2 rounded-3xl border border-neutral-200/80 dark:border-white/10 bg-white/95 dark:bg-neutral-900/80 backdrop-blur-md p-7 sm:p-9 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between space-y-6">
           <div className="space-y-5">
             <div className="flex flex-wrap items-center gap-2.5">
+              {/* Badge dinâmico de status com ponto pulsante verde suave */}
+              <div
+                className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold border backdrop-blur-md shadow-xs transition-all ${
+                  isOpenNow
+                    ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+                    : "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400"
+                }`}
+              >
+                <span className="relative flex h-2.5 w-2.5">
+                  {isOpenNow && (
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
+                  )}
+                  <span
+                    className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
+                      isOpenNow ? "bg-emerald-500 shadow-[0_0_8px_rgba(52,211,153,0.8)]" : "bg-amber-400"
+                    }`}
+                  />
+                </span>
+                <span>{statusBadgeText || (isOpenNow ? "Aberto Agora" : "Fechado no momento")}</span>
+              </div>
+
               <span
                 className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider px-3.5 py-1 rounded-full shadow-2xs"
                 style={{ backgroundColor: brandColor, color: contrastText }}
@@ -104,17 +125,17 @@ export function ModernTemplateView({
                 <span>{profile?.business_category || tenant.category || "Especialidades"}</span>
               </span>
 
-              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-600 dark:text-neutral-400 bg-neutral-100 dark:bg-white/5 border border-neutral-200/60 dark:border-white/10 px-3 py-1 rounded-full">
-                <MapPin className="h-3.5 w-3.5 text-neutral-400" />
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-white/5 border border-zinc-200/60 dark:border-white/10 px-3 py-1 rounded-full">
+                <MapPin className="h-3.5 w-3.5 text-zinc-400" />
                 <span className="truncate max-w-[220px]">{profile?.address || "Atendimento Presencial"}</span>
               </span>
             </div>
 
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-neutral-950 dark:text-white tracking-tight leading-[1.12]">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-zinc-950 dark:text-zinc-50 tracking-tight leading-[1.12]">
               {tenant.name}
             </h1>
 
-            <p className="text-sm sm:text-base text-neutral-600 dark:text-neutral-300 leading-relaxed max-w-2xl font-normal">
+            <p className="text-sm sm:text-base text-zinc-600 dark:text-zinc-300 leading-relaxed max-w-2xl font-normal">
               {profile?.editorial_summary || profile?.description || "Qualidade superior, atendimento de excelência e estrutura moderna pensada no seu conforto."}
             </p>
 
@@ -341,7 +362,7 @@ export function ModernTemplateView({
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-4 text-sm font-bold shadow-lg shadow-emerald-600/25 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-4 text-sm font-bold shadow-lg shadow-emerald-500/20 transition-all duration-200 active:scale-[0.98]"
             >
               <MessageCircle className="h-4 w-4 fill-white text-emerald-600" />
               <span>WhatsApp</span>
@@ -354,19 +375,19 @@ export function ModernTemplateView({
       {/* 2. CATÁLOGO DE SERVIÇOS EM BENTO CARDS */}
       {services.length > 0 && (
         <section className="space-y-8">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-neutral-200/80 dark:border-white/10 pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-zinc-200/80 dark:border-white/10 pb-4">
             <div className="space-y-1">
-              <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                 <span>Catálogo & Cardápio</span>
               </span>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-neutral-950 dark:text-white tracking-tight">
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-zinc-950 dark:text-zinc-50 tracking-tight">
                 Serviços & Especialidades
               </h2>
             </div>
             <button
               type="button"
               onClick={() => onOpenBooking()}
-              className="text-xs font-bold text-neutral-800 dark:text-neutral-200 hover:text-neutral-950 dark:hover:text-white flex items-center gap-1.5 transition cursor-pointer self-start sm:self-auto"
+              className="text-xs font-bold text-zinc-800 dark:text-zinc-200 hover:text-zinc-950 dark:hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer self-start sm:self-auto"
             >
               <span>Ver todos & Agendar</span>
               <ArrowRight className="h-3.5 w-3.5" />
@@ -391,21 +412,21 @@ export function ModernTemplateView({
                       isService: true,
                     })
                   }
-                  className="rounded-3xl border border-neutral-200/80 dark:border-white/10 bg-white/95 dark:bg-neutral-900/80 backdrop-blur-md p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between space-y-5 group cursor-pointer"
+                  className="rounded-3xl border border-zinc-200/80 dark:border-white/10 bg-white/95 dark:bg-zinc-900/80 backdrop-blur-md p-6 shadow-sm hover:shadow-xl hover:shadow-zinc-200/50 dark:hover:shadow-zinc-950/50 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between space-y-5 group cursor-pointer"
                 >
                   <div className="space-y-3">
                     <div className="flex items-start justify-between gap-3">
-                      <h3 className="text-lg md:text-xl font-bold text-neutral-900 dark:text-white group-hover:text-emerald-600 transition-colors">
+                      <h3 className="text-lg md:text-xl font-bold text-zinc-900 dark:text-zinc-50 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
                         {service?.name ?? ""}
                       </h3>
-                      {/* Badge de Preço */}
-                      <span className="bg-amber-500/10 text-amber-500 text-xs px-2.5 py-1 rounded-full font-medium shrink-0">
-                        {service.price ? `R$ ${Number(service.price).toFixed(2)}` : 'Sob Consulta / Orçamento'}
+                      {/* Badge de Preço com fundo neutro suave e texto nítido */}
+                      <span className="font-extrabold text-xs text-zinc-900 dark:text-zinc-100 px-3 py-1 rounded-lg bg-zinc-100/90 dark:bg-zinc-800/80 border border-zinc-200/70 dark:border-zinc-700/60 shadow-2xs font-mono shrink-0">
+                        {service.price ? `R$ ${Number(service.price).toFixed(2)}` : 'Sob Consulta'}
                       </span>
                     </div>
 
                     {service.description && (
-                      <p className="text-sm text-neutral-600 dark:text-neutral-300 mt-1 line-clamp-2 leading-relaxed">
+                      <p className="text-sm text-zinc-600 dark:text-zinc-300 mt-1 line-clamp-2 leading-relaxed">
                         {service.description}
                       </p>
                     )}
@@ -416,10 +437,10 @@ export function ModernTemplateView({
                     </div>
                   </div>
 
-                  <div className={`flex items-center ${shouldShowDuration ? "justify-between" : "justify-end"} pt-4 border-t border-neutral-100 dark:border-white/10`}>
+                  <div className={`flex items-center ${shouldShowDuration ? "justify-between" : "justify-end"} pt-4 border-t border-zinc-100 dark:border-white/10`}>
                     {/* Badge de Tempo (Renderização condicional) */}
                     {shouldShowDuration && (
-                      <span className="text-xs text-neutral-400 flex items-center gap-1">
+                      <span className="text-xs text-zinc-400 dark:text-zinc-500 flex items-center gap-1 font-medium">
                         <ClockIcon className="w-3.5 h-3.5"/>
                         {service.duration_minutes} min
                       </span>
@@ -431,7 +452,7 @@ export function ModernTemplateView({
                         e.stopPropagation();
                         onOpenBooking(service.id);
                       }}
-                      className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-xs"
+                      className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-xs"
                       style={{ backgroundColor: brandColor, color: contrastText }}
                     >
                       <span>Agendar</span>

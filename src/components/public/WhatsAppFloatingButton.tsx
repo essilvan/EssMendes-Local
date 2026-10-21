@@ -44,7 +44,7 @@ export function WhatsAppFloatingButton({
         target="_blank"
         rel="noopener noreferrer"
         onClick={handleClick}
-        className="group relative flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_10px_25px_-5px_rgba(16,185,129,0.5)] transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer ring-4 ring-emerald-500/20"
+        className="group relative flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 transition-all duration-200 hover:scale-105 active:scale-[0.98] cursor-pointer ring-4 ring-emerald-500/20"
         title={`Falar com ${tenantName} no WhatsApp`}
         aria-label="Abrir conversa no WhatsApp"
       >

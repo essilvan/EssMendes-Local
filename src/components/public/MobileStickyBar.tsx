@@ -66,7 +66,7 @@ export function MobileStickyBar({
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 p-3 bg-white/95 dark:bg-neutral-900/95 backdrop-blur border-t border-neutral-200 dark:border-neutral-800 z-40 md:hidden shadow-[0_-8px_30px_rgba(0,0,0,0.12)]">
+    <div className="fixed bottom-0 left-0 right-0 p-3 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md border-t border-zinc-200/50 dark:border-white/10 z-40 md:hidden shadow-[0_-8px_30px_rgba(0,0,0,0.08)]">
       <div className="flex items-center gap-2 max-w-lg mx-auto">
         {/* Botão de Atalho Rápido: Localização */}
         <a
@@ -74,7 +74,7 @@ export function MobileStickyBar({
           target="_blank"
           rel="noopener noreferrer"
           onClick={handleLocationClick}
-          className="flex items-center justify-center h-11 w-11 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 shrink-0 shadow-xs active:scale-95 transition-all"
+          className="flex items-center justify-center h-11 w-11 rounded-xl border border-zinc-200/80 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 shrink-0 shadow-xs active:scale-[0.98] transition-all duration-200"
           title="Ver localização no mapa"
         >
           <MapPin className="h-5 w-5" />
@@ -87,7 +87,7 @@ export function MobileStickyBar({
             target="_blank"
             rel="noopener noreferrer"
             onClick={handleWhatsAppClick}
-            className="flex items-center justify-center h-11 w-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shrink-0 shadow-xs active:scale-95 transition-all"
+            className="flex items-center justify-center h-11 w-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shrink-0 shadow-lg shadow-emerald-500/20 active:scale-[0.98] transition-all duration-200"
             title="Conversar diretamente no WhatsApp"
           >
             <MessageCircle className="h-5 w-5" />
@@ -98,7 +98,7 @@ export function MobileStickyBar({
         <button
           type="button"
           onClick={handleBookingClick}
-          className="flex-1 h-11 flex items-center justify-center gap-2 rounded-xl px-4 text-xs sm:text-sm font-extrabold text-white shadow-md active:scale-98 transition-all duration-200 cursor-pointer"
+          className="flex-1 h-11 flex items-center justify-center gap-2 rounded-xl px-4 text-xs sm:text-sm font-extrabold text-white shadow-md active:scale-[0.98] transition-all duration-200 cursor-pointer"
           style={{
             backgroundColor: brandColor || "var(--brand-primary, #0d9488)",
           }}

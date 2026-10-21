@@ -34,10 +34,10 @@ export function WhatsAppButton({
       target="_blank"
       rel="noopener noreferrer"
       onClick={handleClick}
-      className={`inline-flex items-center justify-center gap-2.5 rounded-xl font-bold transition shadow-sm ${
+      className={`inline-flex items-center justify-center gap-2.5 font-bold transition-all duration-200 active:scale-[0.98] shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 ${
         size === "large"
-          ? "w-full py-4 px-6 text-base bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20 shadow-lg"
-          : "px-4 py-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+          ? "w-full py-4 px-6 text-base bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl"
+          : "px-4 py-2.5 text-xs bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl"
       } ${className}`}
     >
       <MessageCircle className={size === "large" ? "h-5 w-5" : "h-4 w-4"} />

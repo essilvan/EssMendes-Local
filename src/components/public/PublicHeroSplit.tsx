@@ -129,31 +129,33 @@ export function PublicHeroSplit({
 
           {/* Textos, Nome do Negócio e Badges */}
           <div className="space-y-2 flex-1 min-w-0">
-            <h1 className="font-extrabold text-2xl md:text-3xl tracking-tight text-white drop-shadow-md truncate">
+            <h1 className="tracking-tight font-extrabold text-2xl sm:text-3xl lg:text-4xl text-white drop-shadow-md truncate">
               {tenantName}
             </h1>
 
             {/* Sinais de Confiança: Nota média e avaliações do Google diretamente abaixo do título */}
             <div className="flex flex-wrap items-center gap-2 pt-0.5 pb-1">
-              <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white/10 hover:bg-white/15 border border-white/20 text-xs font-semibold text-amber-300 backdrop-blur-md shadow-xs transition-colors">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 hover:bg-white/15 border border-white/20 text-xs font-semibold text-amber-300 backdrop-blur-md shadow-xs transition-colors">
                 <span className="text-amber-400">⭐</span>
                 <span className="font-bold text-white">{displayRating}</span>
-                <span className="text-neutral-300">({displayReviewsCount} avaliações)</span>
-                <span className="text-neutral-400 font-medium">• Google</span>
+                <span className="text-zinc-300">({displayReviewsCount} avaliações)</span>
+                <span className="text-zinc-400 font-medium">• Google</span>
               </div>
 
-              {/* Indicador visual dinâmico com ponto pulsante: "Aberto Agora" */}
+              {/* Indicador visual dinâmico com ponto pulsante verde suave: "Aberto Agora" */}
               <div
-                className={`inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-black/60 border border-white/20 text-xs font-semibold backdrop-blur-md shadow-xs ${
-                  isOpen ? "text-emerald-300" : "text-amber-300"
+                className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold border backdrop-blur-md shadow-xs transition-all ${
+                  isOpen
+                    ? "bg-emerald-950/70 border-emerald-500/30 text-emerald-400"
+                    : "bg-amber-950/70 border-amber-500/30 text-amber-400"
                 }`}
               >
-                <span className="relative flex h-2 w-2">
+                <span className="relative flex h-2.5 w-2.5">
                   {isOpen && (
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
                   )}
                   <span
-                    className={`relative inline-flex rounded-full h-2 w-2 ${
+                    className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
                       isOpen ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" : "bg-amber-400"
                     }`}
                   />
@@ -162,14 +164,14 @@ export function PublicHeroSplit({
               </div>
 
               {businessCategory && (
-                <span className="hidden md:inline-flex items-center px-3.5 py-1 rounded-full bg-white/10 border border-white/15 text-xs text-neutral-200 backdrop-blur-md">
+                <span className="hidden md:inline-flex items-center px-3 py-1 rounded-full bg-white/10 border border-white/15 text-xs text-zinc-200 backdrop-blur-md">
                   {businessCategory}
                 </span>
               )}
             </div>
 
             {cleanDescription && (
-              <p className="text-xs sm:text-sm text-neutral-200/95 line-clamp-2 leading-relaxed drop-shadow-xs">
+              <p className="text-xs sm:text-sm text-zinc-200/95 line-clamp-2 leading-relaxed drop-shadow-xs">
                 {cleanDescription}
               </p>
             )}
@@ -186,31 +188,31 @@ export function PublicHeroSplit({
             href={mapsUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 rounded-2xl border border-white/25 bg-white/10 hover:bg-white/20 backdrop-blur-md px-4 py-2.5 text-xs sm:text-sm font-bold text-white transition-all shadow-md hover:-translate-y-0.5 active:scale-95"
+            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 rounded-2xl border border-white/25 bg-white/10 hover:bg-white/20 backdrop-blur-md px-4 py-2.5 text-xs sm:text-sm font-bold text-white transition-all duration-200 shadow-md hover:-translate-y-0.5 active:scale-[0.98]"
             title="Ver localização e traçar rota no Maps"
           >
             <MapPin className="h-4 w-4 text-cyan-300 shrink-0" />
             <span>Localização</span>
           </a>
 
-          {/* Botão WhatsApp Direto */}
+          {/* Botão WhatsApp Direto com feedback tátil e sombra suave */}
           {phoneWhatsapp && (
             <a
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 px-5 py-2.5 text-xs sm:text-sm font-extrabold text-white transition-all shadow-lg shadow-emerald-950/40 hover:shadow-emerald-500/25 hover:-translate-y-0.5 active:scale-95"
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 px-5 py-2.5 text-xs sm:text-sm font-extrabold text-white transition-all duration-200 active:scale-[0.98] shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 hover:-translate-y-0.5"
             >
               <MessageCircle className="h-4 w-4 shrink-0 fill-white" />
               <span>Falar no WhatsApp</span>
             </a>
           )}
 
-          {/* Botão Agendar Horário Online com micro-shimmer e hover responsivo */}
+          {/* Botão Agendar Horário Online com micro-shimmer e feedback tátil */}
           <button
             type="button"
             onClick={onOpenBooking}
-            className="w-full sm:w-auto sm:ml-auto inline-flex items-center justify-center gap-2.5 rounded-2xl px-6 py-2.5 text-xs sm:text-sm font-extrabold text-white shadow-xl transition-all duration-300 hover:scale-[1.03] hover:-translate-y-0.5 active:scale-95 cursor-pointer animate-shimmer"
+            className="w-full sm:w-auto sm:ml-auto inline-flex items-center justify-center gap-2.5 rounded-2xl px-6 py-2.5 text-xs sm:text-sm font-extrabold text-white shadow-xl transition-all duration-200 hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer animate-shimmer"
             style={{
               backgroundColor: brandColor || "var(--brand-primary, #0d9488)",
               boxShadow: `0 10px 25px -5px ${brandColor ? `${brandColor}66` : "rgba(13,148,136,0.4)"}`,

@@ -37,7 +37,7 @@ export function PublicHero({
 
       <div className="relative mx-auto max-w-3xl text-center flex flex-col items-center space-y-6">
         
-        {/* Badge de Confiança */}
+        {/* Badge de Confiança com Ponto Pulsante Suave */}
         <div
           className="inline-flex items-center gap-2 rounded-full px-3.5 py-1 text-xs font-extrabold shadow-xs"
           style={{
@@ -45,12 +45,15 @@ export function PublicHero({
             color: "var(--primary-color, #0d9488)",
           }}
         >
-          <Sparkles className="h-3.5 w-3.5 fill-current" />
-          <span>{businessCategory ? `Destaque em ${businessCategory}` : "Atendimento Profissional na Região"}</span>
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+          </span>
+          <span>{businessCategory ? `Destaque em ${businessCategory}` : "Atendimento Profissional • Aberto Agora"}</span>
         </div>
 
         {/* Título de Alto Impacto com Palavra em Destaque */}
-        <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 leading-tight">
+        <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-zinc-950 dark:text-zinc-50 leading-tight">
           Sua melhor experiência em{" "}
           <span style={{ color: "var(--primary-color, #0d9488)" }}>
             {businessCategory || "serviços especializados"}
@@ -114,7 +117,7 @@ export function PublicHero({
           <button
             type="button"
             onClick={onOpenBooking}
-            className="flex-1 min-w-[170px] inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-xs sm:text-sm font-extrabold text-white shadow-md transition hover:opacity-95 active:scale-95"
+            className="flex-1 min-w-[170px] inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-xs sm:text-sm font-extrabold text-white shadow-md transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
             style={{ backgroundColor: "var(--primary-color, #0d9488)" }}
           >
             <Calendar className="h-4 w-4" />
@@ -124,9 +127,9 @@ export function PublicHero({
 
           <a
             href="#servicos"
-            className="flex-1 min-w-[150px] inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3.5 text-xs sm:text-sm font-bold text-slate-800 shadow-2xs hover:bg-slate-50 hover:border-slate-400 transition"
+            className="flex-1 min-w-[150px] inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-5 py-3.5 text-xs sm:text-sm font-bold text-zinc-800 dark:text-zinc-100 shadow-2xs hover:bg-zinc-50 dark:hover:bg-zinc-700/60 transition-all duration-200 active:scale-[0.98]"
           >
-            <Scissors className="h-4 w-4 text-slate-500" />
+            <Scissors className="h-4 w-4 text-zinc-500 dark:text-zinc-400" />
             <span>Ver Serviços</span>
           </a>
         </div>

@@ -240,9 +240,9 @@ export function ItemDetailModal({
               rel="noopener noreferrer"
               className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl ${
                 isOutOfStock
-                  ? "bg-amber-600 hover:bg-amber-500 text-white shadow-amber-600/20"
-                  : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20"
-              } text-xs sm:text-sm font-bold shadow-md transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]`}
+                  ? "bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-600/20"
+                  : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30"
+              } text-xs sm:text-sm font-bold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]`}
             >
               <MessageCircle className="h-4 w-4 fill-white" />
               <span>

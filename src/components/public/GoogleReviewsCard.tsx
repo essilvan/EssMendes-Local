@@ -42,14 +42,14 @@ export function GoogleReviewsCard({
   return (
     <div
       id="avaliacoes"
-      className={`rounded-3xl ${currentTheme.bgCard} border border-neutral-200/80 dark:border-white/10 p-6 sm:p-8 md:p-10 space-y-7 shadow-xl shadow-black/5`}
+      className={`rounded-3xl ${currentTheme.bgCard} border border-zinc-200/80 dark:border-white/10 p-6 sm:p-8 md:p-10 space-y-7 shadow-xl shadow-black/5`}
     >
       {/* Header do Google Business Profile */}
-      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200/80 dark:border-white/10 pb-6`}>
+      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-200/80 dark:border-white/10 pb-6`}>
         <div className="space-y-2">
           {/* Badge Google + Selo Verificado */}
           <div className="flex items-center gap-2.5">
-            <div className="flex items-center gap-1.5 rounded-xl border border-neutral-200/80 dark:border-white/10 bg-neutral-100 dark:bg-white/5 px-3 py-1 text-xs font-bold text-neutral-800 dark:text-neutral-200 shadow-2xs">
+            <div className="flex items-center gap-1.5 rounded-xl border border-zinc-200/80 dark:border-white/10 bg-zinc-100 dark:bg-white/5 px-3 py-1 text-xs font-bold text-zinc-800 dark:text-zinc-200 shadow-2xs">
               {/* Google G Icon */}
               <svg className="h-4 w-4" viewBox="0 0 24 24">
                 <path
@@ -85,7 +85,7 @@ export function GoogleReviewsCard({
         </div>
 
         {/* Resumo de Nota Geral */}
-        <div className={`flex items-center gap-3.5 ${currentTheme.isDark ? 'bg-neutral-900/90' : 'bg-neutral-50'} border border-neutral-200/80 dark:border-white/10 rounded-2xl p-4 shadow-sm`}>
+        <div className={`flex items-center gap-3.5 ${currentTheme.isDark ? 'bg-zinc-900/90' : 'bg-zinc-50'} border border-zinc-200/80 dark:border-white/10 rounded-2xl p-4 shadow-sm`}>
           <span className={`text-3xl sm:text-4xl font-extrabold ${currentTheme.textPrimary} tracking-tight`}>{displayRating}</span>
           <div>
             <div className="flex items-center gap-0.5 text-amber-500">
@@ -114,9 +114,9 @@ export function GoogleReviewsCard({
             return (
               <div
                 key={review.id || idx}
-                className={`group relative overflow-hidden flex flex-col justify-between rounded-3xl border border-neutral-200/70 dark:border-white/10 ${
-                  currentTheme.isDark ? "bg-neutral-900/90 hover:bg-neutral-900" : "bg-white/95 hover:bg-white"
-                } p-6 transition-all duration-300 shadow-xs hover:shadow-xl hover:shadow-black/5 hover:-translate-y-1 space-y-4`}
+                className={`group relative overflow-hidden flex flex-col justify-between rounded-3xl border border-zinc-200/80 dark:border-white/10 ${
+                  currentTheme.isDark ? "bg-zinc-900/90 hover:bg-zinc-900" : "bg-white/95 hover:bg-white"
+                } p-6 transition-all duration-300 shadow-xs hover:shadow-xl hover:shadow-zinc-200/50 dark:hover:shadow-zinc-950/50 hover:-translate-y-1 space-y-4`}
               >
                 {/* Aspas decorativas subtis no fundo do card */}
                 <span className="absolute -bottom-3 -right-2 text-6xl font-serif text-neutral-200/50 dark:text-white/5 select-none pointer-events-none transition-transform duration-300 group-hover:scale-110">

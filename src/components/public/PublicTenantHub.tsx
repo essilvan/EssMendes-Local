@@ -250,24 +250,24 @@ export function PublicTenantHub({
           onOpenBooking={() => handleOpenBooking()}
         />
       ) : (
-        <nav className="w-full border-b border-neutral-200/80 dark:border-white/10 bg-white/90 dark:bg-neutral-950/90 backdrop-blur-md sticky top-0 z-40 px-4 sm:px-6 py-4">
+        <nav className="w-full sticky top-0 backdrop-blur-md bg-white/80 dark:bg-zinc-900/80 border-b border-zinc-200/50 z-40 px-4 sm:px-6 py-3.5 transition-colors">
           <div className="max-w-4xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-3">
               {profile?.logo_url && (
                 <img
                   src={profile.logo_url}
                   alt={tenant.name}
-                  className="h-8 w-8 rounded-xl object-contain border border-neutral-200/60 dark:border-white/10"
+                  className="h-8 w-8 rounded-xl object-contain border border-zinc-200/60 dark:border-white/10 shadow-xs"
                 />
               )}
-              <span className="font-extrabold text-sm sm:text-base tracking-tight text-neutral-900 dark:text-white font-mono uppercase">
+              <span className="font-extrabold text-sm sm:text-base tracking-tight text-zinc-900 dark:text-zinc-50 font-mono uppercase">
                 {tenant.name}
               </span>
             </div>
             <button
               type="button"
               onClick={() => handleOpenBooking()}
-              className="text-xs font-bold px-4 py-2 rounded-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-sm"
+              className="text-xs font-bold px-4 py-2 rounded-xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-xs"
               style={{ backgroundColor: brandColor, color: getContrastTextColor(brandColor) }}
             >
               Agendar Horário

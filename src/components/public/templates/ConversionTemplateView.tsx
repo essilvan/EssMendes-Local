@@ -177,17 +177,17 @@ export function ConversionTemplateView({
         />
 
         <div className="relative z-10 max-w-3xl mx-auto text-center space-y-6 sm:space-y-7">
-          {/* Badge superior: "⚡ Atendimento Rápido • Aberto Agora" (estilo cápsula verde/escuro) */}
-          <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold tracking-wide border border-emerald-500/30 bg-emerald-950/80 backdrop-blur-md text-emerald-400 shadow-inner">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+          {/* Badge superior: "⚡ Atendimento Rápido • Aberto Agora" (com ponto pulsante suave) */}
+          <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold tracking-wide border border-emerald-500/30 bg-emerald-950/80 backdrop-blur-md text-emerald-400 shadow-xs">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
             </span>
-            <span>⚡ Atendimento Rápido • Aberto Agora</span>
+            <span>⚡ {statusBadgeText || (isOpenNow ? "Aberto Agora" : "Fechado no momento")}</span>
           </div>
 
-          {/* Título do negócio em caixa alta, branco e negrito (tracking-tight font-bold text-3xl md:text-5xl) */}
-          <h1 className="uppercase tracking-tight font-bold text-3xl sm:text-5xl lg:text-6xl text-white leading-[1.1] sm:leading-[1.08] drop-shadow-md">
+          {/* Título do negócio em caixa alta, branco e negrito (tracking-tight font-extrabold text-3xl md:text-5xl) */}
+          <h1 className="uppercase tracking-tight font-extrabold text-3xl sm:text-5xl lg:text-6xl text-white leading-[1.1] sm:leading-[1.08] drop-shadow-md">
             {tenant.name}
           </h1>
 
@@ -213,16 +213,16 @@ export function ConversionTemplateView({
             </span>
           </div>
 
-          {/* Dois botões de ação lado a lado */}
+          {/* Dois botões de ação lado a lado com efeito tátil */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 pt-2 max-w-lg mx-auto w-full">
             {/* 1. "💬 Falar no WhatsApp Agora" (verde chamativo, destaque primário) */}
             <a
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-base sm:text-lg px-8 py-4 shadow-xl shadow-emerald-500/30 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+              className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-base sm:text-lg px-8 py-4 shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 transition-all duration-200 active:scale-[0.98]"
             >
-              <MessageCircle className="h-5 w-5 fill-white text-emerald-500 shrink-0" />
+              <MessageCircle className="h-5 w-5 fill-white text-emerald-600 shrink-0" />
               <span>💬 Falar no WhatsApp Agora</span>
             </a>
 
@@ -230,9 +230,9 @@ export function ConversionTemplateView({
             {cleanPhone && (
               <a
                 href={`tel:+55${cleanPhone}`}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-neutral-900/90 hover:bg-neutral-800 text-white font-semibold text-base px-7 py-4 border border-neutral-700/80 backdrop-blur-md shadow-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-900/90 hover:bg-zinc-800 text-white font-semibold text-base px-7 py-4 border border-zinc-700/80 backdrop-blur-md shadow-lg transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
               >
-                <Phone className="h-4 w-4 text-neutral-300 shrink-0" />
+                <Phone className="h-4 w-4 text-zinc-300 shrink-0" />
                 <span>📞 Ligar Agora</span>
               </a>
             )}
@@ -340,25 +340,25 @@ export function ConversionTemplateView({
                       isService: true,
                     })
                   }
-                  className="rounded-2xl border border-neutral-200/80 dark:border-white/10 bg-white/95 dark:bg-neutral-900/80 backdrop-blur-md p-5 sm:p-6 shadow-xs hover:shadow-md transition-all duration-300 flex flex-col justify-between group cursor-pointer"
+                  className="rounded-2xl border border-zinc-200/80 dark:border-white/10 bg-white/95 dark:bg-zinc-900/80 backdrop-blur-md p-5 sm:p-6 shadow-xs hover:shadow-xl hover:shadow-zinc-200/50 dark:hover:shadow-zinc-950/50 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group cursor-pointer"
                 >
                   <div className="space-y-2">
                     {/* Linha com Nome, Linha Pontilhada e Preço */}
                     <div className="flex items-baseline justify-between gap-2">
-                      <h3 className="text-lg md:text-xl font-bold text-neutral-900 dark:text-white group-hover:text-emerald-600 transition-colors">
+                      <h3 className="text-lg md:text-xl font-bold text-zinc-900 dark:text-zinc-50 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
                         {service?.name ?? ""}
                       </h3>
-                      <div className="flex-1 mx-3 border-b-2 border-dotted border-neutral-300 dark:border-neutral-700 min-w-4 self-center" />
+                      <div className="flex-1 mx-3 border-b-2 border-dotted border-zinc-300 dark:border-zinc-700 min-w-4 self-center" />
                       <div className="shrink-0 text-right">
-                        {/* Badge de Preço */}
-                        <span className="bg-amber-500/10 text-amber-500 text-xs px-2.5 py-1 rounded-full font-medium">
-                          {service.price ? `R$ ${Number(service.price).toFixed(2)}` : 'Sob Consulta / Orçamento'}
+                        {/* Badge de Preço com fundo neutro suave e texto nítido */}
+                        <span className="font-extrabold text-xs text-zinc-900 dark:text-zinc-100 px-3 py-1 rounded-lg bg-zinc-100/90 dark:bg-zinc-800/80 border border-zinc-200/70 dark:border-zinc-700/60 shadow-2xs font-mono shrink-0">
+                          {service.price ? `R$ ${Number(service.price).toFixed(2)}` : 'Sob Consulta'}
                         </span>
                       </div>
                     </div>
 
                     {service.description && (
-                      <p className="text-sm text-neutral-600 dark:text-neutral-300 mt-1 line-clamp-2 leading-relaxed">
+                      <p className="text-sm text-zinc-600 dark:text-zinc-300 mt-1 line-clamp-2 leading-relaxed">
                         {service.description}
                       </p>
                     )}
@@ -370,15 +370,15 @@ export function ConversionTemplateView({
 
                     {/* Badge de Tempo (Renderização condicional) */}
                     {shouldShowDuration && (
-                      <div className="flex items-center gap-1.5 text-xs text-neutral-400 dark:text-neutral-500 font-medium pt-1">
+                      <div className="flex items-center gap-1.5 text-xs text-zinc-400 dark:text-zinc-500 font-medium pt-1">
                         <ClockIcon className="w-3.5 h-3.5" />
                         <span>Duração: {service.duration_minutes} min</span>
                       </div>
                     )}
                   </div>
 
-                  {/* Ações do Serviço / Item */}
-                  <div className="mt-4 pt-3 border-t border-neutral-100 dark:border-white/5 flex items-center justify-between gap-3">
+                  {/* Ações do Serviço com raios concêntricos e efeito tátil */}
+                  <div className="mt-4 pt-3 border-t border-zinc-100 dark:border-white/5 flex items-center justify-between gap-3">
                     <a
                       href={serviceWhatsappUrl}
                       target="_blank"
@@ -396,7 +396,7 @@ export function ConversionTemplateView({
                         e.stopPropagation();
                         onOpenBooking(service.id);
                       }}
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition cursor-pointer"
+                      className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 transition-all duration-200 active:scale-[0.98] cursor-pointer"
                     >
                       <Calendar className="h-3.5 w-3.5" />
                       <span>Agendar Horário</span>
