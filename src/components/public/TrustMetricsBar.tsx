@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Award, Clock, ShieldCheck, MessageSquare, Dog, Cat, Bone, PawPrint } from "lucide-react";
+import { Award, Clock, ShieldCheck, MessageSquare, Dog, Cat, Bone, PawPrint, Cake, Cookie, Cherry, Sparkles } from "lucide-react";
 import type { NicheThemeConfig } from "@/config/tenant-themes";
 import { NICHE_THEMES } from "@/config/tenant-themes";
 
@@ -15,6 +15,7 @@ interface TrustMetricsBarProps {
 export function TrustMetricsBar({ theme }: TrustMetricsBarProps) {
   const currentTheme = theme || NICHE_THEMES.retail_default;
   const isPetShop = currentTheme?.id === "petshop";
+  const isConfectionery = currentTheme?.id === "confeitaria" || currentTheme?.id === "bakery" || currentTheme?.id === "confectionery";
 
   const pillars = isPetShop
     ? [
@@ -41,6 +42,33 @@ export function TrustMetricsBar({ theme }: TrustMetricsBarProps) {
           title: "Amor & Respeito Animal",
           description: "Profissionais certificados e apaixonados por bichinhos.",
           animationClass: "animate-paw-pulse",
+        },
+      ]
+    : isConfectionery
+    ? [
+        {
+          icon: Cake,
+          title: "Receitas Artesanais",
+          description: "Massas frescas, recheios nobres e sabor inigualável.",
+          animationClass: "animate-sweet-float",
+        },
+        {
+          icon: Cookie,
+          title: "Ingredientes Nobres",
+          description: "Chocolates puros, frutas frescas e baunilha natural.",
+          animationClass: "animate-sparkle-twinkle",
+        },
+        {
+          icon: Cherry,
+          title: "Design Personalizado",
+          description: "Bolos e doces customizados para sua festa ou celebração.",
+          animationClass: "animate-sweet-float",
+        },
+        {
+          icon: Sparkles,
+          title: "Frescor & Pontualidade",
+          description: "Produção sob encomenda entregue no ponto perfeito.",
+          animationClass: "animate-sparkle-twinkle",
         },
       ]
     : [

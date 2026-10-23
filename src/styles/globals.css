@@ -167,4 +167,55 @@
   display: inline-block;
 }
 
+/* Microanimações sutis do tema Confeitaria & Bolos */
+@keyframes sweet-float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(3deg);
+  }
+}
+
+.animate-sweet-float {
+  animation: sweet-float 3.8s ease-in-out infinite;
+  display: inline-block;
+}
+
+@keyframes sprinkle-fall {
+  0% {
+    transform: translateY(-6px) rotate(0deg);
+    opacity: 0.15;
+  }
+  50% {
+    transform: translateY(2px) rotate(12deg);
+    opacity: 0.25;
+  }
+  100% {
+    transform: translateY(10px) rotate(22deg);
+    opacity: 0.15;
+  }
+}
+
+.animate-sprinkle-fall {
+  animation: sprinkle-fall 4.5s ease-in-out infinite alternate;
+  display: inline-block;
+}
+
+@keyframes sparkle-twinkle {
+  0%, 100% {
+    transform: scale(0.92) rotate(0deg);
+    opacity: 0.15;
+  }
+  50% {
+    transform: scale(1.1) rotate(15deg);
+    opacity: 0.26;
+  }
+}
+
+.animate-sparkle-twinkle {
+  animation: sparkle-twinkle 3s ease-in-out infinite;
+  display: inline-block;
+}
+
 

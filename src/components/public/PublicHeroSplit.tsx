@@ -11,6 +11,10 @@ import {
   Cat,
   Bone,
   PawPrint,
+  Cake,
+  Cookie,
+  Cherry,
+  Sparkles,
 } from "lucide-react";
 import type { TenantReview } from "@/types";
 import { generateWhatsAppUrl } from "@/utils/phone";
@@ -66,6 +70,7 @@ export function PublicHeroSplit({
 }: PublicHeroSplitProps) {
   const currentTheme = theme || NICHE_THEMES.retail_default;
   const isPetShop = currentTheme?.id === "petshop";
+  const isConfectionery = currentTheme?.id === "confeitaria" || currentTheme?.id === "bakery" || currentTheme?.id === "confectionery";
   const displayAddress = address || "Atendimento Presencial";
   const cleanDescription = sanitizeDescription(description, address);
   const heroWaMessage = `Olá, vi a vitrine de vocês e gostaria de agendar um atendimento/orçamento em ${tenantName}.`;
@@ -110,7 +115,7 @@ export function PublicHeroSplit({
       {/* Brilho ambiente dinâmico sutil no fundo */}
       <div
         className="pointer-events-none absolute -bottom-10 -left-10 h-72 w-72 rounded-full blur-3xl opacity-25"
-        style={{ backgroundColor: brandColor || (isPetShop ? "#ea580c" : "var(--brand-primary, #0d9488)") }}
+        style={{ backgroundColor: brandColor || (isConfectionery ? "#f43f5e" : isPetShop ? "#ea580c" : "var(--brand-primary, #0d9488)") }}
       />
 
       {/* 2. Cartão de Alta Densidade com Efeito Glassmorphism Nobre */}
@@ -127,6 +132,8 @@ export function PublicHeroSplit({
               />
             ) : isPetShop ? (
               <Dog className="h-10 w-10 text-amber-400 animate-tail-wag" />
+            ) : isConfectionery ? (
+              <Cake className="h-10 w-10 text-rose-400 animate-sweet-float" />
             ) : (
               <span className="text-2xl sm:text-3xl font-black text-white uppercase select-none">
                 {tenantName.charAt(0)}
@@ -178,6 +185,14 @@ export function PublicHeroSplit({
                 </div>
               )}
 
+              {/* Badge exclusivo do nicho Confeitaria & Bolos */}
+              {isConfectionery && (
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/25 border border-rose-400/40 text-xs font-bold text-rose-200 backdrop-blur-md shadow-xs">
+                  <Cake className="h-3.5 w-3.5 text-rose-300 animate-sweet-float" />
+                  <span>Confeitaria & Bolos Artesanais</span>
+                </div>
+              )}
+
               {businessCategory && !isPetShop && (
                 <span className="hidden md:inline-flex items-center px-3 py-1 rounded-full bg-white/10 border border-white/15 text-xs text-zinc-200 backdrop-blur-md">
                   {businessCategory}
@@ -209,6 +224,28 @@ export function PublicHeroSplit({
                 <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/15 border border-amber-400/30 px-2.5 py-1 text-[11px] font-bold text-amber-200">
                   <PawPrint className="h-3.5 w-3.5 text-amber-300 animate-paw-pulse" />
                   Cuidado Dedicado
+                </span>
+              </div>
+            )}
+
+            {/* Ícones Temáticos da Lucide com Microanimações Exclusivas na Confeitaria */}
+            {isConfectionery && (
+              <div className="flex flex-wrap items-center gap-2 pt-1.5">
+                <span className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/15 border border-rose-400/30 px-2.5 py-1 text-[11px] font-bold text-rose-200">
+                  <Cake className="h-3.5 w-3.5 text-rose-300 animate-sweet-float" />
+                  Bolos Decorados
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/15 border border-rose-400/30 px-2.5 py-1 text-[11px] font-bold text-rose-200">
+                  <Cookie className="h-3.5 w-3.5 text-amber-300 animate-sparkle-twinkle" />
+                  Doces Gourmet
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/15 border border-rose-400/30 px-2.5 py-1 text-[11px] font-bold text-rose-200">
+                  <Cherry className="h-3.5 w-3.5 text-rose-300 animate-sweet-float" />
+                  Sobremesas Finas
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/15 border border-rose-400/30 px-2.5 py-1 text-[11px] font-bold text-rose-200">
+                  <Sparkles className="h-3.5 w-3.5 text-amber-300 animate-sparkle-twinkle" />
+                  Sob Encomenda
                 </span>
               </div>
             )}
@@ -255,12 +292,14 @@ export function PublicHeroSplit({
               boxShadow: `0 10px 25px -5px ${brandColor ? `${brandColor}66` : "rgba(13,148,136,0.4)"}`,
             }}
           >
-            {isPetShop ? (
+            {isConfectionery ? (
+              <Cake className="h-4 w-4 shrink-0 text-rose-200 animate-sweet-float" />
+            ) : isPetShop ? (
               <Dog className="h-4 w-4 shrink-0 text-amber-200 animate-tail-wag" />
             ) : (
               <Calendar className="h-4 w-4 shrink-0" />
             )}
-            <span>{isPetShop ? "Agendar Cuidados do Pet" : "Agendar Horário Online"}</span>
+            <span>{isConfectionery ? "Fazer Encomenda / Orçamento" : isPetShop ? "Agendar Cuidados do Pet" : "Agendar Horário Online"}</span>
             <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
           </button>
         </div>

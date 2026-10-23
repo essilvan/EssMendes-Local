@@ -24,6 +24,10 @@ import {
   Cat,
   Bone,
   PawPrint,
+  Cake,
+  Cookie,
+  Cherry,
+  Sparkles,
 } from "lucide-react";
 import type {
   Service,
@@ -234,6 +238,27 @@ export function ConversionTemplateView({
               <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/20 border border-amber-400/40 px-3 py-1 text-xs font-bold text-amber-200 backdrop-blur-md">
                 <PawPrint className="h-3.5 w-3.5 text-amber-300 animate-paw-pulse" />
                 Cuidado Dedicado
+              </span>
+            </div>
+          )}
+
+          {(theme?.id === "confeitaria" || theme?.id === "bakery" || theme?.id === "confectionery") && (
+            <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+              <span className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/20 border border-rose-400/40 px-3 py-1 text-xs font-bold text-rose-200 backdrop-blur-md">
+                <Cake className="h-3.5 w-3.5 text-rose-300 animate-sweet-float" />
+                Bolos Decorados
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/20 border border-rose-400/40 px-3 py-1 text-xs font-bold text-rose-200 backdrop-blur-md">
+                <Cookie className="h-3.5 w-3.5 text-amber-300 animate-sparkle-twinkle" />
+                Doces Gourmet
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/20 border border-rose-400/40 px-3 py-1 text-xs font-bold text-rose-200 backdrop-blur-md">
+                <Cherry className="h-3.5 w-3.5 text-rose-300 animate-sweet-float" />
+                Sobremesas Finas
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/20 border border-rose-400/40 px-3 py-1 text-xs font-bold text-rose-200 backdrop-blur-md">
+                <Sparkles className="h-3.5 w-3.5 text-amber-300 animate-sparkle-twinkle" />
+                Sob Encomenda
               </span>
             </div>
           )}

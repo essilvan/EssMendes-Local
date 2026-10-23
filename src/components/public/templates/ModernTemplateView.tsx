@@ -22,6 +22,9 @@ import {
   Cat,
   Bone,
   PawPrint,
+  Cake,
+  Cookie,
+  Cherry,
 } from "lucide-react";
 import type { TemplateViewProps } from "./ConversionTemplateView";
 import { generateWhatsAppUrl, sanitizePhoneNumber, formatBrazilianPhone } from "@/utils/phone";
@@ -160,6 +163,27 @@ export function ModernTemplateView({
                 <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/10 border border-amber-300/40 px-3 py-1 text-xs font-bold text-amber-800 dark:text-amber-300">
                   <PawPrint className="h-3.5 w-3.5 text-amber-700 animate-paw-pulse" />
                   Cuidado Carinhoso
+                </span>
+              </div>
+            )}
+
+            {(theme?.id === "confeitaria" || theme?.id === "bakery" || theme?.id === "confectionery") && (
+              <div className="flex flex-wrap items-center gap-2 pt-1 pb-2">
+                <span className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/10 border border-rose-300/40 px-3 py-1 text-xs font-bold text-rose-800 dark:text-rose-300">
+                  <Cake className="h-3.5 w-3.5 text-rose-600 animate-sweet-float" />
+                  Bolos Decorados
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/10 border border-rose-300/40 px-3 py-1 text-xs font-bold text-rose-800 dark:text-rose-300">
+                  <Cookie className="h-3.5 w-3.5 text-amber-700 animate-sparkle-twinkle" />
+                  Doces Gourmet
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/10 border border-rose-300/40 px-3 py-1 text-xs font-bold text-rose-800 dark:text-rose-300">
+                  <Cherry className="h-3.5 w-3.5 text-rose-600 animate-sweet-float" />
+                  Sobremesas Finas
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/10 border border-rose-300/40 px-3 py-1 text-xs font-bold text-rose-800 dark:text-rose-300">
+                  <Sparkles className="h-3.5 w-3.5 text-amber-500 animate-sparkle-twinkle" />
+                  Sob Encomenda
                 </span>
               </div>
             )}

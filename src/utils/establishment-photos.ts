@@ -60,6 +60,15 @@ export const NICHE_FALLBACK_IMAGES = {
       "https://images.unsplash.com/photo-1587300003388-59208cc962cb?q=80&w=1000&auto=format&fit=crop",
     ],
   },
+  confeitaria: {
+    hero: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?q=80&w=1200&auto=format&fit=crop",
+    gallery: [
+      "https://images.unsplash.com/photo-1588195538326-c5b1e9f80a1b?q=80&w=1000&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1557308536-ee471ef2c390?q=80&w=1000&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?q=80&w=1000&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=1000&auto=format&fit=crop",
+    ],
+  },
 };
 
 /**
@@ -75,6 +84,15 @@ export function getNicheFallbackImage(
 
   if (effectiveNiche === "petshop" || effectiveNiche === "pet") {
     return NICHE_FALLBACK_IMAGES.petshop.hero;
+  }
+  if (
+    effectiveNiche === "confeitaria" ||
+    effectiveNiche === "bakery" ||
+    effectiveNiche === "confectionery" ||
+    effectiveNiche === "bolos" ||
+    effectiveNiche === "doceria"
+  ) {
+    return NICHE_FALLBACK_IMAGES.confeitaria.hero;
   }
   if (effectiveNiche === "gastronomia" || effectiveNiche === "food") {
     return NICHE_FALLBACK_IMAGES.gastronomia.hero;

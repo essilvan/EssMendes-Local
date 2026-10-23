@@ -11,12 +11,17 @@ import {
   Wrench,
   Utensils,
   Briefcase,
+  Cake,
+  Cookie,
+  Cherry,
+  Coffee,
   type LucideIcon,
 } from "lucide-react";
 
 export type ThemeId =
   | "default"
   | "petshop"
+  | "confeitaria"
   | "automotivo"
   | "gastronomia"
   | "barbearia"
@@ -75,6 +80,10 @@ export interface ThemeConfig {
       bone: LucideIcon;
       pawPrint: LucideIcon;
       footprints: LucideIcon;
+      cake?: LucideIcon;
+      cookie?: LucideIcon;
+      cherry?: LucideIcon;
+      coffee?: LucideIcon;
     };
   };
   hero: {
@@ -91,6 +100,93 @@ export interface ThemeConfig {
 }
 
 export const THEMES: Record<ThemeId, ThemeConfig> = {
+  confeitaria: {
+    id: "confeitaria",
+    name: "Confeitaria & Bolos",
+    tagline: "Doce, Artesanal & Irresistível",
+    description: "Paleta apetitosa em tons de rosa doce (#f43f5e), calda de caramelo/chocolate (#881337) e baunilha suave (#fffdf9), com botões arredondados, ícones de Bolo, Cookie, Cereja e microanimações de confeitos e faíscas.",
+    isDark: false,
+    palette: {
+      primary: "#f43f5e",        // Rosa doce apetitoso
+      primaryHover: "#e11d48",
+      secondary: "#ec4899",      // Pink suave
+      accent: "#fde68a",         // Dourado baunilha
+      background: "#fffdf9",     // Fundo creme suave / baunilha
+      surface: "#ffffff",
+      surfaceMuted: "#fff1f2",   // Rosa clarinho
+      textPrimary: "#4c0519",    // Calda de framboesa/chocolate profunda
+      textMuted: "#9f1239",      // Rose escuro suave
+      border: "#fecdd3",         // Borda rosa glacê suave
+      badgeBg: "bg-rose-100",
+      badgeText: "text-rose-900",
+      gradientHero: "from-rose-500/15 via-pink-500/10 to-transparent",
+    },
+    classes: {
+      root: "bg-[#fffdf9] text-rose-950 selection:bg-rose-500 selection:text-white",
+      card: "bg-white/95 border border-rose-200/90 text-rose-950 shadow-md shadow-rose-950/5 backdrop-blur-sm",
+      textPrimary: "text-rose-950",
+      textMuted: "text-rose-800/80",
+      border: "border-rose-200/80",
+      badge: "bg-rose-100/90 text-rose-900 border border-rose-300/60 shadow-2xs",
+      ctaButton: "bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 hover:from-rose-600 hover:to-pink-600 text-white font-extrabold shadow-md shadow-rose-500/25 rounded-full hover:scale-[1.02] active:scale-[0.98] transition-all",
+      heroGlow: "rgba(244, 63, 94, 0.22)",
+    },
+    icons: {
+      hero: Cake,
+      services: Sparkles,
+      products: Cookie,
+      reviews: Star,
+      contact: Heart,
+      themeIcons: {
+        dog: Dog,
+        cat: Cat,
+        bone: Bone,
+        pawPrint: PawPrint,
+        footprints: PawPrint,
+        cake: Cake,
+        cookie: Cookie,
+        cherry: Cherry,
+        coffee: Coffee,
+      },
+    },
+    hero: {
+      badgeText: "🎂 Bolos Artesanais & Doces Finos • Feitos com Amor",
+      tagline: "Doces Artesanais, Bolos de Festa & Momentos Inesquecíveis",
+      subheadline: "Bolos personalizados, docinhos gourmet, tortas artesanais e sobremesas feitas com ingredientes nobres e carinho para suas melhores comemorações.",
+      highlights: [
+        {
+          icon: Cake,
+          title: "Bolos Artísticos & Festas",
+          desc: "Design exclusivo e massas molhadinhas",
+          animationClass: "animate-sweet-float",
+        },
+        {
+          icon: Cookie,
+          title: "Doces Gourmet & Brigadeiros",
+          desc: "Ingredientes selecionados e ponto perfeito",
+          animationClass: "animate-sparkle-twinkle",
+        },
+        {
+          icon: Cherry,
+          title: "Tortas & Sobremesas Finas",
+          desc: "Recheios frescos e frutas nobres",
+          animationClass: "animate-sweet-float",
+        },
+        {
+          icon: Sparkles,
+          title: "Encomendas Personalizadas",
+          desc: "Feito sob medida para o seu evento",
+          animationClass: "animate-sparkle-twinkle",
+        },
+      ],
+    },
+    animations: {
+      tailWagClass: "",
+      pawFloatClass: "animate-sweet-float",
+      pawPulseClass: "animate-sparkle-twinkle",
+    },
+  },
+
   petshop: {
     id: "petshop",
     name: "Pet Shop & Veterinária",
@@ -632,11 +728,34 @@ export function getTheme(
   if (normalizedKey === "petshop" || normalizedKey === "pet") {
     return THEMES.petshop;
   }
+  if (
+    normalizedKey === "confeitaria" ||
+    normalizedKey === "bakery" ||
+    normalizedKey === "confectionery" ||
+    normalizedKey === "bolos" ||
+    normalizedKey === "doceria"
+  ) {
+    return THEMES.confeitaria;
+  }
   if (normalizedKey in THEMES) {
     return THEMES[normalizedKey as ThemeId];
   }
 
   const text = `${category || ""} ${(googleTypes || []).join(" ")}`.toLowerCase();
+
+  if (
+    text.includes("confeit") ||
+    text.includes("bolo") ||
+    text.includes("torta") ||
+    text.includes("doceria") ||
+    text.includes("doces") ||
+    text.includes("bakery") ||
+    text.includes("cupcake") ||
+    text.includes("brigadeiro") ||
+    text.includes("sobremesa")
+  ) {
+    return THEMES.confeitaria;
+  }
 
   if (
     text.includes("pet") ||
@@ -704,6 +823,17 @@ export function isPetShopTheme(themeKey?: string | null): boolean {
   return key === "petshop" || key === "pet";
 }
 
+export function isConfectioneryTheme(themeKey?: string | null): boolean {
+  const key = (themeKey || "").toLowerCase().trim();
+  return (
+    key === "confeitaria" ||
+    key === "bakery" ||
+    key === "confectionery" ||
+    key === "bolos" ||
+    key === "doceria"
+  );
+}
+
 export interface AdminThemeOption {
   id: ThemeId;
   name: string;
@@ -715,12 +845,19 @@ export interface AdminThemeOption {
 
 export const ADMIN_THEME_OPTIONS: AdminThemeOption[] = [
   {
+    id: "confeitaria",
+    name: "Confeitaria & Bolos",
+    icon: "🎂",
+    desc: "Tons de rosa doce, calda de caramelo/chocolate e baunilha (#fffdf9), com ícones (Bolo, Cookie, Cereja) e granulados",
+    previewColors: ["#f43f5e", "#fde68a", "#fffdf9"],
+    isNew: true,
+  },
+  {
     id: "petshop",
     name: "Pet Shop & Veterinária",
     icon: "🐾",
     desc: "Tons quentes de âmbar e laranja suave, ícones temáticos (Cão, Gato, Osso, Patinhas) e microanimações",
     previewColors: ["#ea580c", "#f59e0b", "#fffbf5"],
-    isNew: true,
   },
   {
     id: "default",

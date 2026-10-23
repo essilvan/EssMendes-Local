@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { PetShopBackground } from "./PetShopBackground";
+import { ConfectioneryBackground } from "./ConfectioneryBackground";
 import type {
   Service,
   TenantProfile,
@@ -122,6 +123,20 @@ export function getThemeClasses(themeNiche: string | null | undefined) {
         button: "bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white font-extrabold shadow-md shadow-orange-500/25",
         heroTagline: "Amor, Cuidado & Carinho para o Seu Melhor Amigo",
       };
+    case "confeitaria":
+    case "bakery":
+    case "confectionery":
+    case "bolos":
+    case "doceria":
+      return {
+        root: "bg-[#fffdf9] text-rose-950",
+        card: "bg-white/95 border-rose-200/90 text-rose-950 shadow-md shadow-rose-950/5 backdrop-blur-sm",
+        textMuted: "text-rose-800/80",
+        accentText: "text-rose-600",
+        badge: "bg-rose-100/90 text-rose-900 border-rose-300/60",
+        button: "bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 hover:from-rose-600 hover:to-pink-600 text-white font-extrabold shadow-md shadow-rose-500/25 rounded-full",
+        heroTagline: "Doces Artesanais, Bolos de Festa & Momentos Inesquecíveis",
+      };
     case "servicos":
     case "retail_default":
     default:
@@ -201,6 +216,12 @@ export function PublicTenantHub({
   };
 
   const isPetShop = effectiveNiche === "petshop" || effectiveNiche === "pet";
+  const isConfectionery =
+    effectiveNiche === "confeitaria" ||
+    effectiveNiche === "bakery" ||
+    effectiveNiche === "confectionery" ||
+    effectiveNiche === "bolos" ||
+    effectiveNiche === "doceria";
   const isAuto = effectiveNiche === "auto" || effectiveNiche === "automotivo" || effectiveNiche === "barbearia";
   const isFood = effectiveNiche === "food" || effectiveNiche === "gastronomia";
   const isHealth = effectiveNiche === "health_beauty" || effectiveNiche === "estetica_saude";
@@ -235,6 +256,8 @@ export function PublicTenantHub({
           ? "bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100"
           : isPetShop
           ? "bg-[#fffbf5] text-stone-900"
+          : isConfectionery
+          ? "bg-[#fffdf9] text-rose-950"
           : isAuto
           ? "bg-zinc-950 text-zinc-100"
           : isFood
@@ -246,6 +269,9 @@ export function PublicTenantHub({
     >
       {/* Elementos Decorativos de Fundo Exclusivos do Nicho Pet Shop */}
       {isPetShop && <PetShopBackground />}
+
+      {/* Elementos Decorativos de Fundo Exclusivos do Nicho Confeitaria & Bolos */}
+      {isConfectionery && <ConfectioneryBackground />}
 
       {/* Tracker de Analytics (Zero PII) */}
       <PublicPageTracker tenantId={tenant.id} />

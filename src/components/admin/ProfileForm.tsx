@@ -42,6 +42,9 @@ import {
   Cat,
   Bone,
   PawPrint,
+  Cake,
+  Cookie,
+  Cherry,
 } from "lucide-react";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 import { CoverImageUploader } from "@/components/admin/CoverImageUploader";
@@ -172,11 +175,17 @@ export const TEMPLATE_OPTIONS = [
 
 export const NICHE_OPTIONS = [
   {
+    id: "confeitaria",
+    name: "Confeitaria & Bolos",
+    icon: "🎂",
+    desc: "Tons de rosa doce, calda de chocolate e baunilha (#fffdf9), com confeitos e ícones temáticos",
+    isNew: true,
+  },
+  {
     id: "petshop",
     name: "Pet Shop & Veterinária",
     icon: "🐾",
     desc: "Tons quentes de âmbar, ícones temáticos (Cão, Gato, Osso, Patinhas) e microanimações",
-    isNew: true,
   },
   {
     id: "default",
@@ -211,6 +220,7 @@ export const NICHE_OPTIONS = [
 ];
 
 export const BRAND_COLOR_PRESETS = [
+  { name: "Rosa Doce / Confeitaria", hex: "#f43f5e" },
   { name: "Laranja Âmbar", hex: "#ea580c" },
   { name: "Âmbar Dourado", hex: "#f59e0b" },
   { name: "Dourado Mel", hex: "#d97706" },
@@ -363,6 +373,8 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
     setSelectedNiche(nicheId);
     if (nicheId === "petshop" && (primaryColor === "#0d9488" || primaryColor === "#2563eb" || !primaryColor)) {
       setPrimaryColor("#ea580c");
+    } else if (nicheId === "confeitaria" && (primaryColor === "#0d9488" || primaryColor === "#2563eb" || !primaryColor)) {
+      setPrimaryColor("#f43f5e");
     }
   };
 
@@ -1290,6 +1302,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                 {NICHE_OPTIONS.map((niche) => {
                   const isSelected = selectedNiche === niche.id;
                   const isPet = niche.id === "petshop";
+                  const isSweet = niche.id === "confeitaria";
                   return (
                     <button
                       key={niche.id}
@@ -1299,14 +1312,22 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                         isSelected
                           ? isPet
                             ? "border-amber-500 bg-amber-50/70 ring-2 ring-amber-500/30 shadow-md scale-[1.02]"
+                            : isSweet
+                            ? "border-rose-500 bg-rose-50/70 ring-2 ring-rose-500/30 shadow-md scale-[1.02]"
                             : "border-teal-600 bg-teal-50/40 ring-2 ring-teal-600/20 shadow-sm"
                           : isPet
                           ? "border-amber-200 bg-amber-50/20 hover:border-amber-300 hover:bg-amber-50/40"
+                          : isSweet
+                          ? "border-rose-200 bg-rose-50/20 hover:border-rose-300 hover:bg-rose-50/40"
                           : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
                       }`}
                     >
-                      {isPet && (
-                        <span className="absolute -top-2.5 right-2 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[9px] font-black px-2 py-0.5 shadow-xs uppercase tracking-wider">
+                      {niche.isNew && (
+                        <span className={`absolute -top-2.5 right-2 rounded-full text-white text-[9px] font-black px-2 py-0.5 shadow-xs uppercase tracking-wider ${
+                          isSweet
+                            ? "bg-gradient-to-r from-rose-500 to-pink-500"
+                            : "bg-gradient-to-r from-amber-500 to-orange-500"
+                        }`}>
                           Destaque
                         </span>
                       )}
@@ -1317,6 +1338,11 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                             <span className="relative flex items-center justify-center">
                               {niche.icon}
                               <Dog className="h-4 w-4 absolute -bottom-1 -right-1 text-amber-600 animate-tail-wag" />
+                            </span>
+                          ) : isSweet ? (
+                            <span className="relative flex items-center justify-center">
+                              {niche.icon}
+                              <Cake className="h-4 w-4 absolute -bottom-1 -right-1 text-rose-500 animate-sweet-float" />
                             </span>
                           ) : (
                             niche.icon
@@ -1335,6 +1361,8 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                           isSelected
                             ? isPet
                               ? "border-amber-600 bg-amber-600 text-white"
+                              : isSweet
+                              ? "border-rose-600 bg-rose-600 text-white"
                               : "border-teal-600 bg-teal-600 text-white"
                             : "border-slate-300 bg-white"
                         }`}
@@ -1387,6 +1415,53 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                       <div className="flex items-center gap-1 text-[11px] font-bold text-amber-900" title="Pegadinhas suaves decorativas">
                         <PawPrint className="h-4 w-4 text-amber-700 animate-paw-pulse" />
                         <span>Patinhas</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Banner Interativo de Destaque quando o tema Confeitaria & Bolos está ativo */}
+              {selectedNiche === "confeitaria" && (
+                <div className="rounded-2xl border border-rose-300/80 bg-gradient-to-r from-rose-50 via-pink-50/70 to-rose-50 p-4 shadow-xs space-y-2 mt-3 animate-fadeIn">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-rose-500 text-white shadow-xs">
+                        <Cake className="h-4 w-4 animate-sweet-float" />
+                      </div>
+                      <div>
+                        <h5 className="text-xs font-bold text-rose-950 flex items-center gap-1.5">
+                          <span>Tema Confeitaria & Bolos Ativado com Sucesso!</span>
+                          <span className="inline-flex items-center rounded-full bg-rose-200/80 px-2 py-0.5 text-[10px] font-extrabold text-rose-900">
+                            Doce & Apetitoso
+                          </span>
+                        </h5>
+                        <p className="text-[11px] text-rose-800/90">
+                          Paleta apetitosa em rosa doce (#f43f5e), calda de chocolate e baunilha (#fffdf9), botões arredondados e confeitos flutuantes na vitrine.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* 4 Ícones Lucide com Microanimações */}
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/80 border border-rose-200/80 shadow-2xs">
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-rose-900" title="Bolo de Festa Decorado">
+                        <Cake className="h-4 w-4 text-rose-600 animate-sweet-float" />
+                        <span>Bolo</span>
+                      </div>
+                      <span className="text-rose-300">•</span>
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-rose-900" title="Cookie & Doces Gourmet">
+                        <Cookie className="h-4 w-4 text-amber-700 animate-sparkle-twinkle" />
+                        <span>Cookie</span>
+                      </div>
+                      <span className="text-rose-300">•</span>
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-rose-900" title="Cereja / Frutas Nobres">
+                        <Cherry className="h-4 w-4 text-rose-600 animate-sweet-float" />
+                        <span>Cereja</span>
+                      </div>
+                      <span className="text-rose-300">•</span>
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-rose-900" title="Toque Especial / Brilho">
+                        <Sparkles className="h-4 w-4 text-amber-500 animate-sparkle-twinkle" />
+                        <span>Brilho</span>
                       </div>
                     </div>
                   </div>

@@ -9,6 +9,9 @@ export type ThemeNiche =
   | 'estetica_saude'
   | 'servicos'
   | 'petshop'
+  | 'confeitaria'
+  | 'bakery'
+  | 'confectionery'
   | 'default';
 
 export interface NicheThemeConfig {
@@ -310,6 +313,87 @@ export const NICHE_THEMES: Record<ThemeNiche, NicheThemeConfig> = {
       contact: '🐾',
     },
   },
+  confeitaria: {
+    id: 'confeitaria',
+    name: 'Confeitaria & Bolos',
+    icon: '🎂',
+    description: 'Paleta apetitosa em tons de rosa doce, calda de caramelo/chocolate e baunilha suave (#fffdf9)',
+    isDark: false,
+    bgPage: 'bg-[#fffdf9] text-rose-950',
+    bgCard: 'bg-white/95 border border-rose-200/90 text-rose-950 shadow-md shadow-rose-950/5 backdrop-blur-sm',
+    textPrimary: 'text-rose-950',
+    textMuted: 'text-rose-800/80',
+    accentColor: '#f43f5e',
+    accentBg: 'bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 hover:from-rose-600 hover:to-pink-600',
+    accentText: 'text-rose-600',
+    badgeBg: 'bg-rose-100/90 border border-rose-300/60',
+    badgeText: 'text-rose-900 font-bold',
+    borderClass: 'border-rose-200/80',
+    roundedClass: 'rounded-2xl',
+    ctaButtonClass: 'bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 hover:from-rose-600 hover:to-pink-600 text-white font-extrabold shadow-md shadow-rose-500/25 rounded-full hover:scale-[1.02] transition-all',
+    heroTagline: 'Doces Artesanais, Bolos de Festa & Momentos Inesquecíveis',
+    icons: {
+      hero: '🎂',
+      services: '✨',
+      products: '🍪',
+      reviews: '⭐',
+      contact: '💖',
+    },
+  },
+  bakery: {
+    id: 'bakery',
+    name: 'Confeitaria & Bolos',
+    icon: '🎂',
+    description: 'Paleta apetitosa em tons de rosa doce, calda de caramelo/chocolate e baunilha suave (#fffdf9)',
+    isDark: false,
+    bgPage: 'bg-[#fffdf9] text-rose-950',
+    bgCard: 'bg-white/95 border border-rose-200/90 text-rose-950 shadow-md shadow-rose-950/5 backdrop-blur-sm',
+    textPrimary: 'text-rose-950',
+    textMuted: 'text-rose-800/80',
+    accentColor: '#f43f5e',
+    accentBg: 'bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 hover:from-rose-600 hover:to-pink-600',
+    accentText: 'text-rose-600',
+    badgeBg: 'bg-rose-100/90 border border-rose-300/60',
+    badgeText: 'text-rose-900 font-bold',
+    borderClass: 'border-rose-200/80',
+    roundedClass: 'rounded-2xl',
+    ctaButtonClass: 'bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 hover:from-rose-600 hover:to-pink-600 text-white font-extrabold shadow-md shadow-rose-500/25 rounded-full hover:scale-[1.02] transition-all',
+    heroTagline: 'Doces Artesanais, Bolos de Festa & Momentos Inesquecíveis',
+    icons: {
+      hero: '🎂',
+      services: '✨',
+      products: '🍪',
+      reviews: '⭐',
+      contact: '💖',
+    },
+  },
+  confectionery: {
+    id: 'confectionery',
+    name: 'Confeitaria & Bolos',
+    icon: '🎂',
+    description: 'Paleta apetitosa em tons de rosa doce, calda de caramelo/chocolate e baunilha suave (#fffdf9)',
+    isDark: false,
+    bgPage: 'bg-[#fffdf9] text-rose-950',
+    bgCard: 'bg-white/95 border border-rose-200/90 text-rose-950 shadow-md shadow-rose-950/5 backdrop-blur-sm',
+    textPrimary: 'text-rose-950',
+    textMuted: 'text-rose-800/80',
+    accentColor: '#f43f5e',
+    accentBg: 'bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 hover:from-rose-600 hover:to-pink-600',
+    accentText: 'text-rose-600',
+    badgeBg: 'bg-rose-100/90 border border-rose-300/60',
+    badgeText: 'text-rose-900 font-bold',
+    borderClass: 'border-rose-200/80',
+    roundedClass: 'rounded-2xl',
+    ctaButtonClass: 'bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 hover:from-rose-600 hover:to-pink-600 text-white font-extrabold shadow-md shadow-rose-500/25 rounded-full hover:scale-[1.02] transition-all',
+    heroTagline: 'Doces Artesanais, Bolos de Festa & Momentos Inesquecíveis',
+    icons: {
+      hero: '🎂',
+      services: '✨',
+      products: '🍪',
+      reviews: '⭐',
+      contact: '💖',
+    },
+  },
   default: {
     id: 'default',
     name: 'Padrão / Serviços Gerais',
@@ -340,10 +424,27 @@ export const NICHE_THEMES: Record<ThemeNiche, NicheThemeConfig> = {
 };
 
 export function getTenantTheme(themeKey?: string | null, category?: string | null, googleTypes?: string[]): NicheThemeConfig {
-  if (themeKey && themeKey in NICHE_THEMES) {
-    return NICHE_THEMES[themeKey as ThemeNiche];
+  const normalizedKey = (themeKey || '').toLowerCase().trim();
+  if (normalizedKey in NICHE_THEMES) {
+    return NICHE_THEMES[normalizedKey as ThemeNiche];
+  }
+  if (normalizedKey === 'bakery' || normalizedKey === 'confectionery' || normalizedKey === 'bolos' || normalizedKey === 'doceria') {
+    return NICHE_THEMES.confeitaria;
   }
   const text = `${category || ''} ${(googleTypes || []).join(' ')}`.toLowerCase();
+  if (
+    text.includes('confeit') ||
+    text.includes('bolo') ||
+    text.includes('torta') ||
+    text.includes('doceria') ||
+    text.includes('doces') ||
+    text.includes('bakery') ||
+    text.includes('cupcake') ||
+    text.includes('brigadeiro') ||
+    text.includes('sobremesa')
+  ) {
+    return NICHE_THEMES.confeitaria;
+  }
   if (
     text.includes('pet') ||
     text.includes('veterin') ||
@@ -365,7 +466,7 @@ export function getTenantTheme(themeKey?: string | null, category?: string | nul
   if (text.includes('dent') || text.includes('saude') || text.includes('medic') || text.includes('clinica') || text.includes('estetica') || text.includes('beleza') || text.includes('salao') || text.includes('terapia') || text.includes('farmacia') || text.includes('fisio')) {
     return NICHE_THEMES.estetica_saude;
   }
-  if (text.includes('restaurante') || text.includes('food') || text.includes('bar') || text.includes('pizz') || text.includes('hamburg') || text.includes('cafe') || text.includes('lanche') || text.includes('padaria') || text.includes('confeitaria') || text.includes('delivery')) {
+  if (text.includes('restaurante') || text.includes('food') || text.includes('bar') || text.includes('pizz') || text.includes('hamburg') || text.includes('cafe') || text.includes('lanche') || text.includes('padaria') || text.includes('delivery')) {
     return NICHE_THEMES.gastronomia;
   }
   return NICHE_THEMES.servicos;
