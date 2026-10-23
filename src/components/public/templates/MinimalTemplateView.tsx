@@ -17,7 +17,7 @@ import {
   Dog,
   Cat,
   Bone,
-  Footprints,
+  PawPrint,
 } from "lucide-react";
 import type { TemplateViewProps } from "./ConversionTemplateView";
 import { generateWhatsAppUrl, sanitizePhoneNumber, formatBrazilianPhone } from "@/utils/phone";
@@ -144,7 +144,7 @@ export function MinimalTemplateView({
               Mimos & Nutrição
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500/10 border border-amber-300/40 px-2.5 py-1 text-xs font-medium text-amber-800 dark:text-amber-300 font-mono">
-              <Footprints className="h-3.5 w-3.5 text-amber-700 animate-paw-pulse" />
+              <PawPrint className="h-3.5 w-3.5 text-amber-700 animate-paw-pulse" />
               Cuidado Carinhoso
             </span>
           </div>

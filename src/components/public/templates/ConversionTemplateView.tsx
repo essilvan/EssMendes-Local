@@ -23,7 +23,7 @@ import {
   Dog,
   Cat,
   Bone,
-  Footprints,
+  PawPrint,
 } from "lucide-react";
 import type {
   Service,
@@ -232,7 +232,7 @@ export function ConversionTemplateView({
                 Mimos Pet
               </span>
               <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/20 border border-amber-400/40 px-3 py-1 text-xs font-bold text-amber-200 backdrop-blur-md">
-                <Footprints className="h-3.5 w-3.5 text-amber-300 animate-paw-pulse" />
+                <PawPrint className="h-3.5 w-3.5 text-amber-300 animate-paw-pulse" />
                 Cuidado Dedicado
               </span>
             </div>

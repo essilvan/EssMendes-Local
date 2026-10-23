@@ -2,7 +2,7 @@ import {
   Dog,
   Cat,
   Bone,
-  Footprints,
+  PawPrint,
   Heart,
   Sparkles,
   ShieldCheck,
@@ -73,6 +73,7 @@ export interface ThemeConfig {
       dog: LucideIcon;
       cat: LucideIcon;
       bone: LucideIcon;
+      pawPrint: LucideIcon;
       footprints: LucideIcon;
     };
   };
@@ -94,7 +95,7 @@ export const THEMES: Record<ThemeId, ThemeConfig> = {
     id: "petshop",
     name: "Pet Shop & Veterinária",
     tagline: "Aconchegante, Lúdico & Dedicado",
-    description: "Paleta quente em tons de âmbar e laranja suave, fundo claro aconchegante, ícones temáticos da Lucide (Dog, Cat, Bone, Footprints) e microanimações de patinhas e rabo abanando.",
+    description: "Paleta quente em tons de âmbar e laranja suave, fundo claro aconchegante, ícones temáticos da Lucide (Dog, Cat, Bone, PawPrint) e microanimações de patinhas e rabo abanando.",
     isDark: false,
     palette: {
       primary: "#ea580c",        // Laranja âmbar vibrante e quente
@@ -126,12 +127,13 @@ export const THEMES: Record<ThemeId, ThemeConfig> = {
       services: Scissors,
       products: Bone,
       reviews: Star,
-      contact: Footprints,
+      contact: PawPrint,
       themeIcons: {
         dog: Dog,
         cat: Cat,
         bone: Bone,
-        footprints: Footprints,
+        pawPrint: PawPrint,
+        footprints: PawPrint,
       },
     },
     hero: {
@@ -158,7 +160,7 @@ export const THEMES: Record<ThemeId, ThemeConfig> = {
           animationClass: "animate-tail-wag",
         },
         {
-          icon: Footprints,
+          icon: PawPrint,
           title: "Acompanhamento Carinhoso",
           desc: "Profissionais apaixonados por animais",
           animationClass: "animate-paw-pulse",
@@ -213,7 +215,8 @@ export const THEMES: Record<ThemeId, ThemeConfig> = {
         dog: Dog,
         cat: Cat,
         bone: Bone,
-        footprints: Footprints,
+        pawPrint: PawPrint,
+        footprints: PawPrint,
       },
     },
     hero: {
@@ -286,7 +289,8 @@ export const THEMES: Record<ThemeId, ThemeConfig> = {
         dog: Dog,
         cat: Cat,
         bone: Bone,
-        footprints: Footprints,
+        pawPrint: PawPrint,
+        footprints: PawPrint,
       },
     },
     hero: {
@@ -359,7 +363,8 @@ export const THEMES: Record<ThemeId, ThemeConfig> = {
         dog: Dog,
         cat: Cat,
         bone: Bone,
-        footprints: Footprints,
+        pawPrint: PawPrint,
+        footprints: PawPrint,
       },
     },
     hero: {
@@ -432,7 +437,8 @@ export const THEMES: Record<ThemeId, ThemeConfig> = {
         dog: Dog,
         cat: Cat,
         bone: Bone,
-        footprints: Footprints,
+        pawPrint: PawPrint,
+        footprints: PawPrint,
       },
     },
     hero: {
@@ -505,7 +511,8 @@ export const THEMES: Record<ThemeId, ThemeConfig> = {
         dog: Dog,
         cat: Cat,
         bone: Bone,
-        footprints: Footprints,
+        pawPrint: PawPrint,
+        footprints: PawPrint,
       },
     },
     hero: {
@@ -578,7 +585,8 @@ export const THEMES: Record<ThemeId, ThemeConfig> = {
         dog: Dog,
         cat: Cat,
         bone: Bone,
-        footprints: Footprints,
+        pawPrint: PawPrint,
+        footprints: PawPrint,
       },
     },
     hero: {

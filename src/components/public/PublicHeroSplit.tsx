@@ -10,7 +10,7 @@ import {
   Dog,
   Cat,
   Bone,
-  Footprints,
+  PawPrint,
 } from "lucide-react";
 import type { TenantReview } from "@/types";
 import { generateWhatsAppUrl } from "@/utils/phone";
@@ -207,7 +207,7 @@ export function PublicHeroSplit({
                   Mimos Pet
                 </span>
                 <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/15 border border-amber-400/30 px-2.5 py-1 text-[11px] font-bold text-amber-200">
-                  <Footprints className="h-3.5 w-3.5 text-amber-300 animate-paw-pulse" />
+                  <PawPrint className="h-3.5 w-3.5 text-amber-300 animate-paw-pulse" />
                   Cuidado Dedicado
                 </span>
               </div>

@@ -24,7 +24,7 @@ assert(themesFile.includes('export const THEMES'), 'Configuração centralizada 
 assert(themesFile.includes('petshop:'), 'Tema petshop definido em THEMES');
 assert(themesFile.includes('#ea580c') || themesFile.includes('#f59e0b'), 'Paleta do Pet Shop inclui tons quentes/âmbar');
 assert(themesFile.includes('#fffbf5'), 'Paleta do Pet Shop inclui fundo claro aconchegante (#fffbf5)');
-assert(themesFile.includes('Dog') && themesFile.includes('Cat') && themesFile.includes('Bone') && themesFile.includes('Footprints'), 'Ícones da Lucide (Dog, Cat, Bone, Footprints) importados e configurados');
+assert(themesFile.includes('Dog') && themesFile.includes('Cat') && themesFile.includes('Bone') && themesFile.includes('PawPrint'), 'Ícones da Lucide (Dog, Cat, Bone, PawPrint) importados e configurados');
 assert(themesFile.includes('animate-tail-wag'), 'Microanimação de balanço de rabo configurada');
 assert(themesFile.includes('animate-paw-float') || themesFile.includes('animate-paw-pulse'), 'Microanimação de patinhas configurada');
 
@@ -39,18 +39,24 @@ const profileFormFile = fs.readFileSync('src/components/admin/ProfileForm.tsx', 
 assert(profileFormFile.includes('id: "petshop"'), 'Opção de nicho petshop disponível no ProfileForm');
 assert(profileFormFile.includes('id: "default"'), 'Opção de nicho default disponível no ProfileForm');
 assert(profileFormFile.includes('handleNicheChange'), 'Handler de seleção de nicho configurado no ProfileForm');
-assert(profileFormFile.includes('Dog') && profileFormFile.includes('Cat') && profileFormFile.includes('Bone') && profileFormFile.includes('Footprints'), 'Ícones da Lucide renderizados no preview do tema Pet Shop');
+assert(profileFormFile.includes('Dog') && profileFormFile.includes('Cat') && profileFormFile.includes('Bone') && profileFormFile.includes('PawPrint'), 'Ícones da Lucide renderizados no preview do tema Pet Shop');
 
-// 4. Teste da Vitrine Pública (PublicTenantHub & PublicHeroSplit)
+// 4. Teste da Vitrine Pública (PublicTenantHub & PetShopBackground)
 const hubFile = fs.readFileSync('src/components/public/PublicTenantHub.tsx', 'utf8');
 assert(hubFile.includes('isPetShop'), 'PublicTenantHub detecta isPetShop');
 assert(hubFile.includes('bg-[#fffbf5]'), 'PublicTenantHub aplica fundo claro aconchegante para Pet Shop');
-assert(hubFile.includes('animate-paw-float') || hubFile.includes('animate-paw-pulse'), 'PublicTenantHub renderiza patinhas decorativas com microanimação');
+assert(hubFile.includes('PetShopBackground'), 'PublicTenantHub renderiza o componente temático PetShopBackground');
+
+const bgFile = fs.readFileSync('src/components/public/PetShopBackground.tsx', 'utf8');
+assert(bgFile.includes('PetPawSvg'), 'PetShopBackground possui SVG autêntico de patinha de pet');
+assert(bgFile.includes('PawPrint'), 'PetShopBackground utiliza PawPrint da Lucide');
+assert(bgFile.includes('Bone') && bgFile.includes('Dog') && bgFile.includes('Cat'), 'PetShopBackground possui variedade temática com Bone, Dog e Cat');
+assert(bgFile.includes('opacity-15') || bgFile.includes('opacity-20') || bgFile.includes('opacity-25'), 'PetShopBackground utiliza opacidades suaves (15% a 25%)');
 
 const heroSplitFile = fs.readFileSync('src/components/public/PublicHeroSplit.tsx', 'utf8');
 assert(heroSplitFile.includes('isPetShop'), 'PublicHeroSplit detecta isPetShop');
 assert(heroSplitFile.includes('animate-tail-wag'), 'PublicHeroSplit possui animação tail-wag');
-assert(heroSplitFile.includes('Dog') && heroSplitFile.includes('Cat') && heroSplitFile.includes('Bone') && heroSplitFile.includes('Footprints'), 'PublicHeroSplit renderiza ícones Dog, Cat, Bone e Footprints');
+assert(heroSplitFile.includes('Dog') && heroSplitFile.includes('Cat') && heroSplitFile.includes('Bone') && heroSplitFile.includes('PawPrint'), 'PublicHeroSplit renderiza ícones Dog, Cat, Bone e PawPrint');
 
 console.log('\n====================================================');
 console.log(`📊 RESULTADO DOS TESTES DE TEMA: ${totalPassed} PASSOU | ${totalFailed} FALHOU`);

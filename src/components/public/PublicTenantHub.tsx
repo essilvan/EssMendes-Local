@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Footprints } from "lucide-react";
+import { PetShopBackground } from "./PetShopBackground";
 import type {
   Service,
   TenantProfile,
@@ -245,28 +245,7 @@ export function PublicTenantHub({
       } selection:bg-neutral-900 selection:text-white`}
     >
       {/* Elementos Decorativos de Fundo Exclusivos do Nicho Pet Shop */}
-      {isPetShop && (
-        <div className="pointer-events-none fixed inset-0 overflow-hidden z-0 select-none">
-          {/* Brilhos atmosféricos em tons quentes e aconchegantes de âmbar e laranja */}
-          <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-amber-200/35 blur-3xl" />
-          <div className="absolute top-[40%] -left-32 w-80 h-80 rounded-full bg-orange-200/25 blur-3xl" />
-          <div className="absolute -bottom-32 right-1/4 w-96 h-96 rounded-full bg-amber-100/40 blur-3xl" />
-
-          {/* Patinhas decorativas sutis com microanimações CSS suaves */}
-          <div className="absolute top-24 left-[5%] rotate-[-22deg] opacity-[0.06] text-amber-900 animate-paw-pulse">
-            <Footprints className="w-16 h-16" />
-          </div>
-          <div className="absolute top-[38%] right-[4%] rotate-[18deg] opacity-[0.05] text-amber-900 animate-paw-float">
-            <Footprints className="w-20 h-20" />
-          </div>
-          <div className="absolute top-[68%] left-[3%] rotate-[15deg] opacity-[0.06] text-amber-900 animate-paw-pulse">
-            <Footprints className="w-14 h-14" />
-          </div>
-          <div className="absolute bottom-28 right-[7%] rotate-[-30deg] opacity-[0.05] text-amber-900 animate-paw-float">
-            <Footprints className="w-18 h-18" />
-          </div>
-        </div>
-      )}
+      {isPetShop && <PetShopBackground />}
 
       {/* Tracker de Analytics (Zero PII) */}
       <PublicPageTracker tenantId={tenant.id} />

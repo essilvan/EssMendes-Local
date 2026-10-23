@@ -41,7 +41,7 @@ import {
   Dog,
   Cat,
   Bone,
-  Footprints,
+  PawPrint,
 } from "lucide-react";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 import { CoverImageUploader } from "@/components/admin/CoverImageUploader";
@@ -1385,7 +1385,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                       </div>
                       <span className="text-amber-300">•</span>
                       <div className="flex items-center gap-1 text-[11px] font-bold text-amber-900" title="Pegadinhas suaves decorativas">
-                        <Footprints className="h-4 w-4 text-amber-700 animate-paw-pulse" />
+                        <PawPrint className="h-4 w-4 text-amber-700 animate-paw-pulse" />
                         <span>Patinhas</span>
                       </div>
                     </div>

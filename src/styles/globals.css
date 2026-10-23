@@ -153,17 +153,17 @@
 
 @keyframes paw-pulse {
   0%, 100% {
-    opacity: 0.25;
-    transform: scale(0.95);
+    opacity: 0.16;
+    transform: scale(0.96);
   }
   50% {
-    opacity: 0.65;
-    transform: scale(1.06);
+    opacity: 0.25;
+    transform: scale(1.04);
   }
 }
 
 .animate-paw-pulse {
-  animation: paw-pulse 3s ease-in-out infinite;
+  animation: paw-pulse 3.5s ease-in-out infinite;
   display: inline-block;
 }
 

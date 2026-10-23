@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Award, Clock, ShieldCheck, MessageSquare, Dog, Cat, Bone, Footprints } from "lucide-react";
+import { Award, Clock, ShieldCheck, MessageSquare, Dog, Cat, Bone, PawPrint } from "lucide-react";
 import type { NicheThemeConfig } from "@/config/tenant-themes";
 import { NICHE_THEMES } from "@/config/tenant-themes";
 
@@ -37,7 +37,7 @@ export function TrustMetricsBar({ theme }: TrustMetricsBarProps) {
           animationClass: "animate-tail-wag",
         },
         {
-          icon: Footprints,
+          icon: PawPrint,
           title: "Amor & Respeito Animal",
           description: "Profissionais certificados e apaixonados por bichinhos.",
           animationClass: "animate-paw-pulse",

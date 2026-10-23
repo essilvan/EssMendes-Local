@@ -12,7 +12,7 @@ import {
   Dog,
   Cat,
   Bone,
-  Footprints,
+  PawPrint,
 } from "lucide-react";
 import { sanitizeDescription } from "@/utils/address";
 
@@ -207,7 +207,7 @@ export function PublicHero({
             className="flex-1 min-w-[150px] inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-5 py-3.5 text-xs sm:text-sm font-bold text-zinc-800 dark:text-zinc-100 shadow-2xs hover:bg-zinc-50 dark:hover:bg-zinc-700/60 transition-all duration-200 active:scale-[0.98]"
           >
             {isPetShop ? (
-              <Footprints className="h-4 w-4 text-amber-600 animate-paw-pulse" />
+              <PawPrint className="h-4 w-4 text-amber-600 animate-paw-pulse" />
             ) : (
               <Scissors className="h-4 w-4 text-zinc-500 dark:text-zinc-400" />
             )}
