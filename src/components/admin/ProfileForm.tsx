@@ -27,6 +27,9 @@ import {
   Trash2,
   Plus,
   Crown,
+  LayoutGrid,
+  Feather,
+  Target,
   Scissors,
   DollarSign,
   Clock,
@@ -141,35 +144,39 @@ const ATTRIBUTE_CATEGORIES = [
 export const TEMPLATE_OPTIONS = [
   {
     id: "premium",
-    title: "PREMIUM",
-    icon: "🌟",
-    tagline: "Elegante & Espaçoso",
-    description: "Sofisticado, espaçoso e elegante. Perfeito para clínicas, estética e gastronomia refinada.",
-    badges: ["Espaçamento Nobre", "Tipografia Refinada", "Contrastes Elegantes"],
+    title: "Vitrine Elegance",
+    tagline: "Elegance",
+    icon: Crown,
+    description: "Sofisticação, autoridade e posicionamento de alto valor",
+    badges: ["Layout Imersivo", "Tipografia Nobre", "Alto Padrão"],
+    idealFor: "Clínicas, estética, confeitarias finas e alta gastronomia.",
   },
   {
     id: "modern",
-    title: "MODERN",
-    icon: "⚡",
+    title: "Modern Bento Grid",
     tagline: "Bento Grid",
-    description: "Bento grid, cantos arredondados e estética tech contemporânea.",
-    badges: ["Bento Layout", "Cantos Arredondados", "Visual Tech"],
+    icon: LayoutGrid,
+    description: "Visual dinâmico, modular e contemporâneo",
+    badges: ["Blocos Bento Box", "Navegação Visual", "Versatilidade"],
+    idealFor: "Pet shops completos, barbearias e lojas modernas.",
   },
   {
     id: "minimal",
-    title: "MINIMAL",
-    icon: "📄",
-    tagline: "Ultrarrápido",
-    description: "Ultrarrápido, tipografia limpa e foco direto na informação.",
-    badges: ["Carregamento Instantâneo", "Tipografia Limpa", "Design Essencial"],
+    title: "Clean Express",
+    tagline: "Clean Express",
+    icon: Feather,
+    description: "Leveza máxima, leitura direta e carregamento instantâneo",
+    badges: ["Ultra Rápido", "Sem Distrações", "Leitura Fácil"],
+    idealFor: "Oficinas, autopeças, serviços de reparo e catálogos diretos.",
   },
   {
     id: "conversion",
-    title: "CONVERSION",
-    icon: "🎯",
-    tagline: "Foco em Vendas",
-    description: "Foco total em chamadas para WhatsApp, botões evidentes e agendamento rápido.",
-    badges: ["Botões Evidentes", "WhatsApp Direto", "Agendamento Rápido"],
+    title: "Foco em Conversão",
+    tagline: "Conversão",
+    icon: Target,
+    description: "Gatilhos rápidos, chamadas diretas e vendas no WhatsApp",
+    badges: ["WhatsApp em 1 Toque", "Sticky CTA", "Prova Social"],
+    idealFor: "Agendamentos, encomendas de bolos, orçamentos e delivery local.",
   },
 ];
 
@@ -1203,6 +1210,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {TEMPLATE_OPTIONS.map((tmpl) => {
                 const isSelected = selectedTemplate === tmpl.id;
+                const Icon = tmpl.icon;
                 return (
                   <div
                     key={tmpl.id}
@@ -1217,15 +1225,21 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                       {/* Top Header do Card */}
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3">
-                          <span className="text-2xl p-2 rounded-xl bg-slate-100/90 shadow-2xs">
-                            {tmpl.icon}
+                          <span
+                            className={`p-2.5 rounded-xl transition shadow-2xs flex items-center justify-center shrink-0 ${
+                              isSelected
+                                ? "bg-teal-600 text-white"
+                                : "bg-slate-100 text-slate-700"
+                            }`}
+                          >
+                            <Icon className="h-5 w-5" />
                           </span>
                           <div>
                             <div className="flex items-center gap-2">
                               <h5 className="text-sm font-extrabold tracking-tight text-slate-900">
                                 {tmpl.title}
                               </h5>
-                              <span className="rounded-md bg-slate-100 border border-slate-200 px-1.5 py-0.5 text-[10px] font-bold text-slate-600">
+                              <span className="rounded-md bg-slate-100 border border-slate-200 px-1.5 py-0.5 text-[10px] font-bold text-slate-600 uppercase">
                                 {tmpl.tagline}
                               </span>
                             </div>
@@ -1244,21 +1258,27 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                         </div>
                       </div>
 
-                      {/* Descrição Exata Requisitada */}
+                      {/* Descrição / Subtítulo */}
                       <p className="text-xs text-slate-600 leading-relaxed">
                         {tmpl.description}
                       </p>
 
                       {/* Badges de Atributos */}
-                      <div className="flex flex-wrap gap-1.5 pt-1">
+                      <div className="flex flex-wrap gap-1.5 pt-0.5">
                         {tmpl.badges.map((b) => (
                           <span
                             key={b}
-                            className="text-[10px] font-medium text-slate-500 bg-slate-100/80 rounded-md px-2 py-0.5"
+                            className="text-[10px] font-medium text-slate-600 bg-slate-100/80 border border-slate-200/60 rounded-md px-2 py-0.5"
                           >
                             {b}
                           </span>
                         ))}
+                      </div>
+
+                      {/* Linha sutil: Ideal para */}
+                      <div className="pt-2.5 border-t border-slate-100 flex items-start gap-1.5 text-[11px] leading-relaxed">
+                        <span className="font-bold text-slate-700 shrink-0">Ideal para:</span>
+                        <span className="text-slate-600">{tmpl.idealFor}</span>
                       </div>
                     </div>
 
