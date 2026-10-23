@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { Footprints } from "lucide-react";
 import type {
   Service,
   TenantProfile,
@@ -110,6 +111,17 @@ export function getThemeClasses(themeNiche: string | null | undefined) {
         button: "bg-gradient-to-r from-amber-600 to-amber-700 text-white font-bold",
         heroTagline: "Corte Tradicional, Estilo & Atendimento de Primeira",
       };
+    case "petshop":
+    case "pet":
+      return {
+        root: "bg-[#fffbf5] text-stone-900",
+        card: "bg-white/95 border-amber-200/90 text-stone-900 shadow-md shadow-amber-950/5 backdrop-blur-sm",
+        textMuted: "text-stone-600",
+        accentText: "text-amber-800",
+        badge: "bg-amber-100/90 text-amber-900 border-amber-300/60",
+        button: "bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white font-extrabold shadow-md shadow-orange-500/25",
+        heroTagline: "Amor, Cuidado & Carinho para o Seu Melhor Amigo",
+      };
     case "servicos":
     case "retail_default":
     default:
@@ -188,6 +200,7 @@ export function PublicTenantHub({
     setSelectedProfessionalId(null);
   };
 
+  const isPetShop = effectiveNiche === "petshop" || effectiveNiche === "pet";
   const isAuto = effectiveNiche === "auto" || effectiveNiche === "automotivo" || effectiveNiche === "barbearia";
   const isFood = effectiveNiche === "food" || effectiveNiche === "gastronomia";
   const isHealth = effectiveNiche === "health_beauty" || effectiveNiche === "estetica_saude";
@@ -220,6 +233,8 @@ export function PublicTenantHub({
       className={`min-h-screen w-full max-w-full overflow-x-hidden transition-colors duration-200 relative ${selectedTemplateClass} ${
         activeTemplate === "minimal"
           ? "bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100"
+          : isPetShop
+          ? "bg-[#fffbf5] text-stone-900"
           : isAuto
           ? "bg-zinc-950 text-zinc-100"
           : isFood
@@ -229,6 +244,30 @@ export function PublicTenantHub({
           : "bg-neutral-50/50 text-neutral-900"
       } selection:bg-neutral-900 selection:text-white`}
     >
+      {/* Elementos Decorativos de Fundo Exclusivos do Nicho Pet Shop */}
+      {isPetShop && (
+        <div className="pointer-events-none fixed inset-0 overflow-hidden z-0 select-none">
+          {/* Brilhos atmosféricos em tons quentes e aconchegantes de âmbar e laranja */}
+          <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-amber-200/35 blur-3xl" />
+          <div className="absolute top-[40%] -left-32 w-80 h-80 rounded-full bg-orange-200/25 blur-3xl" />
+          <div className="absolute -bottom-32 right-1/4 w-96 h-96 rounded-full bg-amber-100/40 blur-3xl" />
+
+          {/* Patinhas decorativas sutis com microanimações CSS suaves */}
+          <div className="absolute top-24 left-[5%] rotate-[-22deg] opacity-[0.06] text-amber-900 animate-paw-pulse">
+            <Footprints className="w-16 h-16" />
+          </div>
+          <div className="absolute top-[38%] right-[4%] rotate-[18deg] opacity-[0.05] text-amber-900 animate-paw-float">
+            <Footprints className="w-20 h-20" />
+          </div>
+          <div className="absolute top-[68%] left-[3%] rotate-[15deg] opacity-[0.06] text-amber-900 animate-paw-pulse">
+            <Footprints className="w-14 h-14" />
+          </div>
+          <div className="absolute bottom-28 right-[7%] rotate-[-30deg] opacity-[0.05] text-amber-900 animate-paw-float">
+            <Footprints className="w-18 h-18" />
+          </div>
+        </div>
+      )}
+
       {/* Tracker de Analytics (Zero PII) */}
       <PublicPageTracker tenantId={tenant.id} />
 

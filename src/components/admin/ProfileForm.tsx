@@ -38,6 +38,10 @@ import {
   Heart,
   Wifi,
   Check,
+  Dog,
+  Cat,
+  Bone,
+  Footprints,
 } from "lucide-react";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 import { CoverImageUploader } from "@/components/admin/CoverImageUploader";
@@ -168,6 +172,19 @@ export const TEMPLATE_OPTIONS = [
 
 export const NICHE_OPTIONS = [
   {
+    id: "petshop",
+    name: "Pet Shop & Veterinária",
+    icon: "🐾",
+    desc: "Tons quentes de âmbar, ícones temáticos (Cão, Gato, Osso, Patinhas) e microanimações",
+    isNew: true,
+  },
+  {
+    id: "default",
+    name: "Padrão / Serviços Gerais",
+    icon: "💼",
+    desc: "Comércio, consultoria e serviços especializados",
+  },
+  {
     id: "gastronomia",
     name: "Gastronomia",
     icon: "🍽️",
@@ -191,20 +208,16 @@ export const NICHE_OPTIONS = [
     icon: "🌿",
     desc: "Clínicas, consultórios, salões e estética",
   },
-  {
-    id: "servicos",
-    name: "Serviços Gerais",
-    icon: "💼",
-    desc: "Comércio, consultoria e serviços especializados",
-  },
 ];
 
 export const BRAND_COLOR_PRESETS = [
-  { name: "Vinho", hex: "#881337" },
-  { name: "Grafite", hex: "#1e293b" },
-  { name: "Dourado", hex: "#d97706" },
+  { name: "Laranja Âmbar", hex: "#ea580c" },
+  { name: "Âmbar Dourado", hex: "#f59e0b" },
+  { name: "Dourado Mel", hex: "#d97706" },
   { name: "Esmeralda", hex: "#059669" },
   { name: "Azul Real", hex: "#2563eb" },
+  { name: "Grafite", hex: "#1e293b" },
+  { name: "Vinho", hex: "#881337" },
 ];
 
 interface ProfileFormProps {
@@ -344,6 +357,13 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
 
   const handleColorChange = (newColor: string) => {
     setPrimaryColor(newColor);
+  };
+
+  const handleNicheChange = (nicheId: string) => {
+    setSelectedNiche(nicheId);
+    if (nicheId === "petshop" && (primaryColor === "#0d9488" || primaryColor === "#2563eb" || !primaryColor)) {
+      setPrimaryColor("#ea580c");
+    }
   };
 
   // Sincronização automática com o Google Meu Negócio
@@ -578,6 +598,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
             try {
               const supabase = createClient();
               await supabase.from("tenants").update({
+                theme_niche: selectedNiche,
                 theme_settings: {
                   template_id: selectedTemplate,
                   niche: selectedNiche,
@@ -1257,26 +1278,49 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
 
             {/* B.1: Nicho do Negócio */}
             <div className="space-y-3">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
-                Nicho de Atuação (5 Opções)
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
+                  Tema da Vitrine por Nicho
+                </label>
+                <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
+                  Tema Selecionado: {NICHE_OPTIONS.find((n) => n.id === selectedNiche)?.name || "Padrão"}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                 {NICHE_OPTIONS.map((niche) => {
                   const isSelected = selectedNiche === niche.id;
+                  const isPet = niche.id === "petshop";
                   return (
                     <button
                       key={niche.id}
                       type="button"
-                      onClick={() => setSelectedNiche(niche.id)}
+                      onClick={() => handleNicheChange(niche.id)}
                       className={`group relative flex flex-col items-center justify-between p-4 rounded-2xl border-2 text-center transition cursor-pointer ${
                         isSelected
-                          ? "border-teal-600 bg-teal-50/40 ring-2 ring-teal-600/20 shadow-sm"
+                          ? isPet
+                            ? "border-amber-500 bg-amber-50/70 ring-2 ring-amber-500/30 shadow-md scale-[1.02]"
+                            : "border-teal-600 bg-teal-50/40 ring-2 ring-teal-600/20 shadow-sm"
+                          : isPet
+                          ? "border-amber-200 bg-amber-50/20 hover:border-amber-300 hover:bg-amber-50/40"
                           : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
                       }`}
                     >
+                      {isPet && (
+                        <span className="absolute -top-2.5 right-2 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[9px] font-black px-2 py-0.5 shadow-xs uppercase tracking-wider">
+                          Destaque
+                        </span>
+                      )}
+
                       <div className="flex flex-col items-center gap-2">
-                        <span className="text-3xl p-2 rounded-xl bg-slate-100 group-hover:scale-105 transition-transform">
-                          {niche.icon}
+                        <span className="text-3xl p-2 rounded-xl bg-slate-100 group-hover:scale-105 transition-transform flex items-center justify-center">
+                          {isPet ? (
+                            <span className="relative flex items-center justify-center">
+                              {niche.icon}
+                              <Dog className="h-4 w-4 absolute -bottom-1 -right-1 text-amber-600 animate-tail-wag" />
+                            </span>
+                          ) : (
+                            niche.icon
+                          )}
                         </span>
                         <span className="text-xs font-bold text-slate-900">
                           {niche.name}
@@ -1289,7 +1333,9 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                       <div
                         className={`mt-3 h-4 w-4 rounded-full border-2 flex items-center justify-center transition ${
                           isSelected
-                            ? "border-teal-600 bg-teal-600 text-white"
+                            ? isPet
+                              ? "border-amber-600 bg-amber-600 text-white"
+                              : "border-teal-600 bg-teal-600 text-white"
                             : "border-slate-300 bg-white"
                         }`}
                       >
@@ -1299,6 +1345,53 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                   );
                 })}
               </div>
+
+              {/* Banner Interativo de Destaque quando o tema Pet Shop está ativo */}
+              {selectedNiche === "petshop" && (
+                <div className="rounded-2xl border border-amber-300/80 bg-gradient-to-r from-amber-50 via-orange-50/70 to-amber-50 p-4 shadow-xs space-y-2 mt-3 animate-fadeIn">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500 text-white shadow-xs">
+                        <Dog className="h-4 w-4 animate-tail-wag" />
+                      </div>
+                      <div>
+                        <h5 className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
+                          <span>Tema Pet Shop Ativado com Sucesso!</span>
+                          <span className="inline-flex items-center rounded-full bg-amber-200/80 px-2 py-0.5 text-[10px] font-extrabold text-amber-900">
+                            Aconchegante & Lúdico
+                          </span>
+                        </h5>
+                        <p className="text-[11px] text-amber-800/90">
+                          Paleta quente em tons de âmbar e laranja suave, fundo claro aconchegante, ícones temáticos da Lucide e microanimações sutis na vitrine pública.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* 4 Ícones Lucide com Microanimações */}
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/80 border border-amber-200/80 shadow-2xs">
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-amber-900" title="Balanço estilo rabo abanando">
+                        <Dog className="h-4 w-4 text-amber-600 animate-tail-wag" />
+                        <span>Cão</span>
+                      </div>
+                      <span className="text-amber-300">•</span>
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-amber-900" title="Patinha flutuante">
+                        <Cat className="h-4 w-4 text-amber-700 animate-paw-float" />
+                        <span>Gato</span>
+                      </div>
+                      <span className="text-amber-300">•</span>
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-amber-900" title="Petisco / Mimo">
+                        <Bone className="h-4 w-4 text-amber-600 animate-tail-wag" />
+                        <span>Osso</span>
+                      </div>
+                      <span className="text-amber-300">•</span>
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-amber-900" title="Pegadinhas suaves decorativas">
+                        <Footprints className="h-4 w-4 text-amber-700 animate-paw-pulse" />
+                        <span>Patinhas</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* B.2: Seletor de Cor Principal */}

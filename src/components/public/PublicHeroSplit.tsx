@@ -7,6 +7,10 @@ import {
   MapPin,
   ArrowRight,
   Star,
+  Dog,
+  Cat,
+  Bone,
+  Footprints,
 } from "lucide-react";
 import type { TenantReview } from "@/types";
 import { generateWhatsAppUrl } from "@/utils/phone";
@@ -61,6 +65,7 @@ export function PublicHeroSplit({
   onOpenBooking,
 }: PublicHeroSplitProps) {
   const currentTheme = theme || NICHE_THEMES.retail_default;
+  const isPetShop = currentTheme?.id === "petshop";
   const displayAddress = address || "Atendimento Presencial";
   const cleanDescription = sanitizeDescription(description, address);
   const heroWaMessage = `Olá, vi a vitrine de vocês e gostaria de agendar um atendimento/orçamento em ${tenantName}.`;
@@ -105,7 +110,7 @@ export function PublicHeroSplit({
       {/* Brilho ambiente dinâmico sutil no fundo */}
       <div
         className="pointer-events-none absolute -bottom-10 -left-10 h-72 w-72 rounded-full blur-3xl opacity-25"
-        style={{ backgroundColor: brandColor || "var(--brand-primary, #0d9488)" }}
+        style={{ backgroundColor: brandColor || (isPetShop ? "#ea580c" : "var(--brand-primary, #0d9488)") }}
       />
 
       {/* 2. Cartão de Alta Densidade com Efeito Glassmorphism Nobre */}
@@ -120,6 +125,8 @@ export function PublicHeroSplit({
                 className="w-full h-full object-cover"
                 referrerPolicy="no-referrer"
               />
+            ) : isPetShop ? (
+              <Dog className="h-10 w-10 text-amber-400 animate-tail-wag" />
             ) : (
               <span className="text-2xl sm:text-3xl font-black text-white uppercase select-none">
                 {tenantName.charAt(0)}
@@ -163,7 +170,15 @@ export function PublicHeroSplit({
                 <span>{statusBadgeText || (isOpen ? "Aberto Agora" : "Fechado no momento")}</span>
               </div>
 
-              {businessCategory && (
+              {/* Badge exclusivo do nicho Pet Shop */}
+              {isPetShop && (
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/25 border border-amber-400/40 text-xs font-bold text-amber-200 backdrop-blur-md shadow-xs">
+                  <Dog className="h-3.5 w-3.5 text-amber-300 animate-tail-wag" />
+                  <span>Pet Shop & Bem-Estar</span>
+                </div>
+              )}
+
+              {businessCategory && !isPetShop && (
                 <span className="hidden md:inline-flex items-center px-3 py-1 rounded-full bg-white/10 border border-white/15 text-xs text-zinc-200 backdrop-blur-md">
                   {businessCategory}
                 </span>
@@ -174,6 +189,28 @@ export function PublicHeroSplit({
               <p className="text-xs sm:text-sm text-zinc-200/95 line-clamp-2 leading-relaxed drop-shadow-xs">
                 {cleanDescription}
               </p>
+            )}
+
+            {/* Ícones Temáticos da Lucide com Microanimações Exclusivas no Pet Shop */}
+            {isPetShop && (
+              <div className="flex flex-wrap items-center gap-2 pt-1.5">
+                <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/15 border border-amber-400/30 px-2.5 py-1 text-[11px] font-bold text-amber-200">
+                  <Dog className="h-3.5 w-3.5 text-amber-300 animate-tail-wag" />
+                  Banho & Tosa
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/15 border border-amber-400/30 px-2.5 py-1 text-[11px] font-bold text-amber-200">
+                  <Cat className="h-3.5 w-3.5 text-amber-300 animate-paw-float" />
+                  Espaço Felino
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/15 border border-amber-400/30 px-2.5 py-1 text-[11px] font-bold text-amber-200">
+                  <Bone className="h-3.5 w-3.5 text-amber-300 animate-tail-wag" />
+                  Mimos Pet
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/15 border border-amber-400/30 px-2.5 py-1 text-[11px] font-bold text-amber-200">
+                  <Footprints className="h-3.5 w-3.5 text-amber-300 animate-paw-pulse" />
+                  Cuidado Dedicado
+                </span>
+              </div>
             )}
           </div>
         </div>
@@ -218,8 +255,12 @@ export function PublicHeroSplit({
               boxShadow: `0 10px 25px -5px ${brandColor ? `${brandColor}66` : "rgba(13,148,136,0.4)"}`,
             }}
           >
-            <Calendar className="h-4 w-4 shrink-0" />
-            <span>Agendar Horário Online</span>
+            {isPetShop ? (
+              <Dog className="h-4 w-4 shrink-0 text-amber-200 animate-tail-wag" />
+            ) : (
+              <Calendar className="h-4 w-4 shrink-0" />
+            )}
+            <span>{isPetShop ? "Agendar Cuidados do Pet" : "Agendar Horário Online"}</span>
             <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
           </button>
         </div>

@@ -467,6 +467,21 @@ function detectLocalBusinessSchemaType(
 ): string {
   const combined = `${niche || ""} ${category || ""} ${(googleTypes || []).join(" ")}`.toLowerCase();
 
+  // Pet Shop & Veterinária
+  if (
+    combined.includes("pet") ||
+    combined.includes("veterin") ||
+    combined.includes("canil") ||
+    combined.includes("animal") ||
+    combined.includes("cachorro") ||
+    combined.includes("gato")
+  ) {
+    if (combined.includes("veterin") || combined.includes("clinica")) {
+      return "VeterinaryCare";
+    }
+    return "PetStore";
+  }
+
   // Automotivo & Oficinas
   if (
     combined.includes("auto") ||

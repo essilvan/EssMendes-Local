@@ -51,6 +51,15 @@ export const NICHE_FALLBACK_IMAGES = {
       "https://images.unsplash.com/photo-1497366754035-f200968a6e72?q=80&w=1000&auto=format&fit=crop",
     ],
   },
+  petshop: {
+    hero: "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?q=80&w=1200&auto=format&fit=crop",
+    gallery: [
+      "https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=1000&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=1000&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1576201836106-db1758fd1c97?q=80&w=1000&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1587300003388-59208cc962cb?q=80&w=1000&auto=format&fit=crop",
+    ],
+  },
 };
 
 /**
@@ -64,6 +73,9 @@ export function getNicheFallbackImage(
   const effectiveNiche =
     nicheKey || detectNicheTheme(category, googleTypes || undefined);
 
+  if (effectiveNiche === "petshop" || effectiveNiche === "pet") {
+    return NICHE_FALLBACK_IMAGES.petshop.hero;
+  }
   if (effectiveNiche === "gastronomia" || effectiveNiche === "food") {
     return NICHE_FALLBACK_IMAGES.gastronomia.hero;
   }

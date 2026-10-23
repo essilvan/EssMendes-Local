@@ -105,3 +105,66 @@
   transform: translateY(-3px);
 }
 
+/* 🐾 Microanimações Temáticas: Tema Pet Shop */
+@keyframes tail-wag {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  20% {
+    transform: rotate(14deg);
+  }
+  40% {
+    transform: rotate(-12deg);
+  }
+  60% {
+    transform: rotate(10deg);
+  }
+  80% {
+    transform: rotate(-6deg);
+  }
+}
+
+.animate-tail-wag {
+  transform-origin: bottom center;
+  animation: tail-wag 1.6s ease-in-out infinite;
+  display: inline-block;
+}
+
+.group:hover .group-hover-tail-wag,
+.animate-tail-wag-hover:hover {
+  transform-origin: bottom center;
+  animation: tail-wag 0.8s ease-in-out infinite;
+  display: inline-block;
+}
+
+@keyframes paw-float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-5px) rotate(4deg);
+  }
+}
+
+.animate-paw-float {
+  animation: paw-float 3.5s ease-in-out infinite;
+  display: inline-block;
+}
+
+@keyframes paw-pulse {
+  0%, 100% {
+    opacity: 0.25;
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 0.65;
+    transform: scale(1.06);
+  }
+}
+
+.animate-paw-pulse {
+  animation: paw-pulse 3s ease-in-out infinite;
+  display: inline-block;
+}
+
+

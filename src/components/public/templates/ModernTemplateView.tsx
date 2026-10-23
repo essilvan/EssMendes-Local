@@ -18,6 +18,10 @@ import {
   CheckCircle2,
   Camera,
   Eye,
+  Dog,
+  Cat,
+  Bone,
+  Footprints,
 } from "lucide-react";
 import type { TemplateViewProps } from "./ConversionTemplateView";
 import { generateWhatsAppUrl, sanitizePhoneNumber, formatBrazilianPhone } from "@/utils/phone";
@@ -138,6 +142,27 @@ export function ModernTemplateView({
             <p className="text-sm sm:text-base text-zinc-600 dark:text-zinc-300 leading-relaxed max-w-2xl font-normal">
               {profile?.editorial_summary || profile?.description || "Qualidade superior, atendimento de excelência e estrutura moderna pensada no seu conforto."}
             </p>
+
+            {theme?.id === "petshop" && (
+              <div className="flex flex-wrap items-center gap-2 pt-1 pb-2">
+                <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/10 border border-amber-300/40 px-3 py-1 text-xs font-bold text-amber-800 dark:text-amber-300">
+                  <Dog className="h-3.5 w-3.5 text-amber-600 animate-tail-wag" />
+                  Banho & Tosa
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/10 border border-amber-300/40 px-3 py-1 text-xs font-bold text-amber-800 dark:text-amber-300">
+                  <Cat className="h-3.5 w-3.5 text-amber-700 animate-paw-float" />
+                  Espaço Felino
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/10 border border-amber-300/40 px-3 py-1 text-xs font-bold text-amber-800 dark:text-amber-300">
+                  <Bone className="h-3.5 w-3.5 text-amber-600 animate-tail-wag" />
+                  Mimos Pet
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/10 border border-amber-300/40 px-3 py-1 text-xs font-bold text-amber-800 dark:text-amber-300">
+                  <Footprints className="h-3.5 w-3.5 text-amber-700 animate-paw-pulse" />
+                  Cuidado Carinhoso
+                </span>
+              </div>
+            )}
 
             {/* Bloco Maior da Grid: Card nobre com a heroImage em alta resolução, cantos arredondados (rounded-3xl), sombra suave e badge sobreposto ("Conheça Nosso Espaço") */}
             <div className="relative h-64 sm:h-80 lg:h-96 w-full rounded-3xl overflow-hidden border border-neutral-200/80 dark:border-white/10 shadow-lg group">

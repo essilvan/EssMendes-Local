@@ -20,6 +20,10 @@ import {
   ChevronRight,
   Navigation,
   Eye,
+  Dog,
+  Cat,
+  Bone,
+  Footprints,
 } from "lucide-react";
 import type {
   Service,
@@ -212,6 +216,27 @@ export function ConversionTemplateView({
               ({realReviewCount} avaliações)
             </span>
           </div>
+
+          {theme?.id === "petshop" && (
+            <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+              <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/20 border border-amber-400/40 px-3 py-1 text-xs font-bold text-amber-200 backdrop-blur-md">
+                <Dog className="h-3.5 w-3.5 text-amber-300 animate-tail-wag" />
+                Banho & Tosa
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/20 border border-amber-400/40 px-3 py-1 text-xs font-bold text-amber-200 backdrop-blur-md">
+                <Cat className="h-3.5 w-3.5 text-amber-300 animate-paw-float" />
+                Espaço Felino
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/20 border border-amber-400/40 px-3 py-1 text-xs font-bold text-amber-200 backdrop-blur-md">
+                <Bone className="h-3.5 w-3.5 text-amber-300 animate-tail-wag" />
+                Mimos Pet
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/20 border border-amber-400/40 px-3 py-1 text-xs font-bold text-amber-200 backdrop-blur-md">
+                <Footprints className="h-3.5 w-3.5 text-amber-300 animate-paw-pulse" />
+                Cuidado Dedicado
+              </span>
+            </div>
+          )}
 
           {/* Dois botões de ação lado a lado com efeito tátil */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 pt-2 max-w-lg mx-auto w-full">

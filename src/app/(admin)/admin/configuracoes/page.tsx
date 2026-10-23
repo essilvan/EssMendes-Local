@@ -165,9 +165,9 @@ export default async function ConfiguracoesPage() {
       "#0d9488",
     themeNiche:
       safeTenant.theme_settings?.niche ||
-      safeProfile.template_id ||
       safeTenant.theme_niche ||
-      "servicos",
+      safeProfile.template_id ||
+      "default",
     themeSettings: safeTenant.theme_settings || null,
     googleMapsUrl: safeProfile.google_maps_url || "",
     rating: safeProfile.rating ? Number(safeProfile.rating) : 4.9,

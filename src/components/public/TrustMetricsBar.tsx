@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Award, Clock, ShieldCheck, MessageSquare } from "lucide-react";
+import { Award, Clock, ShieldCheck, MessageSquare, Dog, Cat, Bone, Footprints } from "lucide-react";
 import type { NicheThemeConfig } from "@/config/tenant-themes";
 import { NICHE_THEMES } from "@/config/tenant-themes";
 
@@ -14,29 +14,61 @@ interface TrustMetricsBarProps {
 
 export function TrustMetricsBar({ theme }: TrustMetricsBarProps) {
   const currentTheme = theme || NICHE_THEMES.retail_default;
+  const isPetShop = currentTheme?.id === "petshop";
 
-  const pillars = [
-    {
-      icon: Award,
-      title: "Atendimento de Excelência",
-      description: "Profissionais qualificados e compromisso com o cliente.",
-    },
-    {
-      icon: Clock,
-      title: "Sem Filas",
-      description: "Atendimento com horário marcado e pontualidade.",
-    },
-    {
-      icon: ShieldCheck,
-      title: "Qualidade Comprovada",
-      description: "Procedimentos e serviços de alto padrão.",
-    },
-    {
-      icon: MessageSquare,
-      title: "Transparência Total",
-      description: "Clareza nos serviços antes da execução.",
-    },
-  ];
+  const pillars = isPetShop
+    ? [
+        {
+          icon: Dog,
+          title: "Banho & Tosa Humanizada",
+          description: "Estética com carinho, paciência e sem traumas para o pet.",
+          animationClass: "animate-tail-wag",
+        },
+        {
+          icon: Cat,
+          title: "Espaço Cat-Friendly",
+          description: "Ambiente tranquilo e dedicado para o bem-estar de felinos.",
+          animationClass: "animate-paw-float",
+        },
+        {
+          icon: Bone,
+          title: "Mimos & Nutrição Pet",
+          description: "Petiscos selecionados, brinquedos seguros e mimos.",
+          animationClass: "animate-tail-wag",
+        },
+        {
+          icon: Footprints,
+          title: "Amor & Respeito Animal",
+          description: "Profissionais certificados e apaixonados por bichinhos.",
+          animationClass: "animate-paw-pulse",
+        },
+      ]
+    : [
+        {
+          icon: Award,
+          title: "Atendimento de Excelência",
+          description: "Profissionais qualificados e compromisso com o cliente.",
+          animationClass: "",
+        },
+        {
+          icon: Clock,
+          title: "Sem Filas",
+          description: "Atendimento com horário marcado e pontualidade.",
+          animationClass: "",
+        },
+        {
+          icon: ShieldCheck,
+          title: "Qualidade Comprovada",
+          description: "Procedimentos e serviços de alto padrão.",
+          animationClass: "",
+        },
+        {
+          icon: MessageSquare,
+          title: "Transparência Total",
+          description: "Clareza nos serviços antes da execução.",
+          animationClass: "",
+        },
+      ];
 
   return (
     <section className={`relative overflow-hidden rounded-3xl ${currentTheme.bgCard} border border-neutral-200/80 dark:border-white/10 p-6 sm:p-8 space-y-4 shadow-xl shadow-black/5 before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-neutral-300 dark:before:via-white/20 before:to-transparent`}>
@@ -57,7 +89,7 @@ export function TrustMetricsBar({ theme }: TrustMetricsBarProps) {
                   boxShadow: "0 6px 16px -4px rgba(0,0,0,0.25)",
                 }}
               >
-                <Icon className="h-5 w-5" />
+                <Icon className={`h-5 w-5 ${item.animationClass || ""}`} />
               </div>
               <div className="space-y-1">
                 <h3 className={`text-xs sm:text-sm font-extrabold ${currentTheme.textPrimary} leading-snug tracking-tight`}>

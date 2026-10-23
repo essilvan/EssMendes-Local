@@ -7,7 +7,9 @@ export type ThemeNiche =
   | 'automotivo'
   | 'barbearia'
   | 'estetica_saude'
-  | 'servicos';
+  | 'servicos'
+  | 'petshop'
+  | 'default';
 
 export interface NicheThemeConfig {
   id: ThemeNiche;
@@ -281,6 +283,60 @@ export const NICHE_THEMES: Record<ThemeNiche, NicheThemeConfig> = {
       contact: '📍',
     },
   },
+  petshop: {
+    id: 'petshop',
+    name: 'Pet Shop & Veterinária',
+    icon: '🐾',
+    description: 'Estilo acolhedor com tons quentes de âmbar, laranja suave e fundo claro aconchegante',
+    isDark: false,
+    bgPage: 'bg-[#fffbf5] text-stone-900',
+    bgCard: 'bg-white/95 border border-amber-200/90 text-stone-900 shadow-md shadow-amber-950/5 backdrop-blur-sm',
+    textPrimary: 'text-stone-900',
+    textMuted: 'text-stone-600',
+    accentColor: '#ea580c',
+    accentBg: 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600',
+    accentText: 'text-amber-800',
+    badgeBg: 'bg-amber-100/90 border border-amber-300/60',
+    badgeText: 'text-amber-900 font-bold',
+    borderClass: 'border-amber-200/80',
+    roundedClass: 'rounded-2xl',
+    ctaButtonClass: 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold shadow-md shadow-orange-500/25 hover:scale-[1.02] transition-all',
+    heroTagline: 'Amor, Cuidado & Carinho para o Seu Melhor Amigo',
+    icons: {
+      hero: '🐶',
+      services: '✂️',
+      products: '🦴',
+      reviews: '⭐',
+      contact: '🐾',
+    },
+  },
+  default: {
+    id: 'default',
+    name: 'Padrão / Serviços Gerais',
+    icon: '💼',
+    description: 'Estilo moderno corporativo focado em confiança, clareza e conversão',
+    isDark: false,
+    bgPage: 'bg-gray-50 text-gray-900',
+    bgCard: 'bg-white border border-gray-200 shadow-sm',
+    textPrimary: 'text-gray-900',
+    textMuted: 'text-gray-500',
+    accentColor: '#2563eb',
+    accentBg: 'bg-blue-600 hover:bg-blue-700',
+    accentText: 'text-blue-600',
+    badgeBg: 'bg-blue-50 border border-blue-200',
+    badgeText: 'text-blue-700',
+    borderClass: 'border-gray-200',
+    roundedClass: 'rounded-xl',
+    ctaButtonClass: 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-md hover:scale-[1.02] transition-all',
+    heroTagline: 'Qualidade, Variedade e Atendimento Direto',
+    icons: {
+      hero: '🚀',
+      services: '💼',
+      products: '🛍️',
+      reviews: '⭐',
+      contact: '📍',
+    },
+  },
 };
 
 export function getTenantTheme(themeKey?: string | null, category?: string | null, googleTypes?: string[]): NicheThemeConfig {
@@ -288,6 +344,18 @@ export function getTenantTheme(themeKey?: string | null, category?: string | nul
     return NICHE_THEMES[themeKey as ThemeNiche];
   }
   const text = `${category || ''} ${(googleTypes || []).join(' ')}`.toLowerCase();
+  if (
+    text.includes('pet') ||
+    text.includes('veterin') ||
+    text.includes('canil') ||
+    text.includes('banho e tosa') ||
+    text.includes('racoes') ||
+    text.includes('cachorro') ||
+    text.includes('gato') ||
+    text.includes('animal')
+  ) {
+    return NICHE_THEMES.petshop;
+  }
   if (text.includes('barber') || text.includes('barbearia') || text.includes('corte masculino')) {
     return NICHE_THEMES.barbearia;
   }
