@@ -15,6 +15,14 @@ import {
   Cookie,
   Cherry,
   Coffee,
+  CarFront,
+  Gauge,
+  Cog,
+  Disc,
+  UtensilsCrossed,
+  Flame,
+  Wine,
+  Soup,
   type LucideIcon,
 } from "lucide-react";
 
@@ -22,7 +30,9 @@ export type ThemeId =
   | "default"
   | "petshop"
   | "confeitaria"
+  | "automotive"
   | "automotivo"
+  | "restaurant"
   | "gastronomia"
   | "barbearia"
   | "estetica_saude"
@@ -84,6 +94,15 @@ export interface ThemeConfig {
       cookie?: LucideIcon;
       cherry?: LucideIcon;
       coffee?: LucideIcon;
+      carFront?: LucideIcon;
+      wrench?: LucideIcon;
+      gauge?: LucideIcon;
+      cog?: LucideIcon;
+      disc?: LucideIcon;
+      utensilsCrossed?: LucideIcon;
+      flame?: LucideIcon;
+      wine?: LucideIcon;
+      soup?: LucideIcon;
     };
   };
   hero: {
@@ -93,9 +112,16 @@ export interface ThemeConfig {
     highlights: ThemeHighlight[];
   };
   animations: {
-    tailWagClass: string;
-    pawFloatClass: string;
-    pawPulseClass: string;
+    tailWagClass?: string;
+    pawFloatClass?: string;
+    pawPulseClass?: string;
+    gearSpinClass?: string;
+    wrenchTiltClass?: string;
+    gaugePulseClass?: string;
+    flameFlickerClass?: string;
+    culinaryFloatClass?: string;
+    emberRiseClass?: string;
+    steamDriftClass?: string;
   };
 }
 
@@ -344,151 +370,379 @@ export const THEMES: Record<ThemeId, ThemeConfig> = {
     },
   },
 
-  automotivo: {
-    id: "automotivo",
+  automotive: {
+    id: "automotive",
     name: "Automotivo & Mecânica",
-    tagline: "Industrial, Alta Performance & Detalhes Âmbar",
-    description: "Estilo escuro moderno de alta intensidade visual com contraste âmbar e laranja, ideal para oficinas e estética veicular.",
+    tagline: "Precisão, Linhas Técnicas & Alta Performance",
+    description: "Fundo técnico/neutro (#0f172a) com acentos em azul automotivo (#2563eb), detalhes metálicos/grafite (#334155) e acento em laranja industrial (#f97316), ícones de CarFront, Wrench, Gauge, Cog e Disc, com engrenagens em rotação suave e ferramentas de precisão.",
     isDark: true,
     palette: {
-      primary: "#f97316",
-      primaryHover: "#ea580c",
-      secondary: "#f59e0b",
-      accent: "#fbbf24",
-      background: "#09090b",
-      surface: "#18181b",
-      surfaceMuted: "#27272a",
-      textPrimary: "#f4f4f5",
-      textMuted: "#a1a1aa",
-      border: "#27272a",
-      badgeBg: "bg-amber-500/10",
-      badgeText: "text-amber-400",
-      gradientHero: "from-amber-500/15 via-orange-600/10 to-transparent",
+      primary: "#2563eb",        // Azul automotivo técnico
+      primaryHover: "#1d4ed8",
+      secondary: "#f97316",      // Laranja industrial de apoio
+      accent: "#38bdf8",         // Azul metálico elétrico
+      background: "#0f172a",     // Fundo técnico grafite escuro metálico
+      surface: "#1e293b",        // Superfície técnica slate
+      surfaceMuted: "#334155",   // Detalhes metálicos suaves
+      textPrimary: "#f8fafc",    // Texto claro nítido
+      textMuted: "#94a3b8",      // Texto secundário grafite metálico
+      border: "#334155",         // Borda metálica
+      badgeBg: "bg-blue-950/60",
+      badgeText: "text-blue-400",
+      gradientHero: "from-blue-600/15 via-slate-800/20 to-transparent",
     },
     classes: {
-      root: "bg-zinc-950 text-zinc-100 dark selection:bg-orange-500 selection:text-white",
-      card: "bg-zinc-900/95 border border-zinc-800 text-zinc-100 shadow-xl shadow-black/50",
-      textPrimary: "text-zinc-100",
-      textMuted: "text-zinc-400",
-      border: "border-zinc-800",
-      badge: "bg-amber-500/10 text-amber-400 border border-amber-500/30",
-      ctaButton: "bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold shadow-lg shadow-orange-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all",
-      heroGlow: "rgba(249, 115, 22, 0.2)",
+      root: "bg-slate-900 text-slate-100 dark selection:bg-blue-600 selection:text-white",
+      card: "bg-slate-800/95 border border-slate-700/80 text-slate-100 shadow-xl shadow-slate-950/50 backdrop-blur-sm",
+      textPrimary: "text-slate-100",
+      textMuted: "text-slate-400",
+      border: "border-slate-700/80",
+      badge: "bg-blue-500/10 text-blue-400 border border-blue-500/30",
+      ctaButton: "bg-gradient-to-r from-blue-600 via-sky-600 to-blue-700 hover:from-blue-700 hover:to-sky-700 text-white font-extrabold shadow-lg shadow-blue-600/25 rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all",
+      heroGlow: "rgba(37, 99, 235, 0.22)",
     },
     icons: {
-      hero: Wrench,
+      hero: CarFront,
       services: Wrench,
-      products: Sparkles,
-      reviews: Star,
-      contact: ShieldCheck,
+      products: Cog,
+      reviews: Gauge,
+      contact: Disc,
       themeIcons: {
         dog: Dog,
         cat: Cat,
         bone: Bone,
         pawPrint: PawPrint,
         footprints: PawPrint,
+        carFront: CarFront,
+        wrench: Wrench,
+        gauge: Gauge,
+        cog: Cog,
+        disc: Disc,
       },
     },
     hero: {
-      badgeText: "⚡ Alta Performance & Confiança Mecânica",
-      tagline: "Serviço de Confiança e Agilidade Mecânica",
-      subheadline: "Equipamentos de diagnóstico avançados, peças de procedência e atendimento pontual para seu veículo.",
+      badgeText: "Oficinas & Autopeças | Linhas Técnicas",
+      tagline: "Serviço Técnico de Precisão, Diagnóstico Avançado & Segurança",
+      subheadline: "Equipamentos de diagnóstico eletrônico, ferramentas calibradas, mecânica preventiva e peças certificadas para máxima durabilidade do seu veículo.",
       highlights: [
         {
+          icon: CarFront,
+          title: "Linha Leve & Pesada",
+          desc: "Revisão geral e manutenção preventiva",
+          animationClass: "",
+        },
+        {
           icon: Wrench,
-          title: "Diagnóstico Preciso",
-          desc: "Tecnologia e ferramentas de ponta",
+          title: "Mecânica de Precisão",
+          desc: "Ferramentas calibradas e padrão técnico",
+          animationClass: "animate-wrench-tilt",
         },
         {
-          icon: ShieldCheck,
-          title: "Garantia de Serviço",
-          desc: "Peças com procedência certificada",
+          icon: Gauge,
+          title: "Diagnóstico Computadorizado",
+          desc: "Escaneamento e precisão eletrônica",
+          animationClass: "animate-gauge-needle",
         },
         {
-          icon: Star,
-          title: "Agilidade & Pontualidade",
-          desc: "Compromisso com o prazo de entrega",
+          icon: Cog,
+          title: "Engrenagens & Câmbio",
+          desc: "Transmissão, correias e motor em dia",
+          animationClass: "animate-gear-spin",
+        },
+        {
+          icon: Disc,
+          title: "Freios & Suspensão",
+          desc: "Discos ventilados e estabilidade total",
+          animationClass: "animate-disc-spin",
         },
       ],
     },
     animations: {
-      tailWagClass: "",
-      pawFloatClass: "",
-      pawPulseClass: "",
+      gearSpinClass: "animate-gear-spin",
+      wrenchTiltClass: "animate-wrench-tilt",
+      gaugePulseClass: "animate-gauge-needle",
+    },
+  },
+
+  automotivo: {
+    id: "automotive",
+    name: "Automotivo & Mecânica",
+    tagline: "Precisão, Linhas Técnicas & Alta Performance",
+    description: "Fundo técnico/neutro (#0f172a) com acentos em azul automotivo (#2563eb), detalhes metálicos/grafite (#334155) e acento em laranja industrial (#f97316), ícones de CarFront, Wrench, Gauge, Cog e Disc, com engrenagens em rotação suave e ferramentas de precisão.",
+    isDark: true,
+    palette: {
+      primary: "#2563eb",
+      primaryHover: "#1d4ed8",
+      secondary: "#f97316",
+      accent: "#38bdf8",
+      background: "#0f172a",
+      surface: "#1e293b",
+      surfaceMuted: "#334155",
+      textPrimary: "#f8fafc",
+      textMuted: "#94a3b8",
+      border: "#334155",
+      badgeBg: "bg-blue-950/60",
+      badgeText: "text-blue-400",
+      gradientHero: "from-blue-600/15 via-slate-800/20 to-transparent",
+    },
+    classes: {
+      root: "bg-slate-900 text-slate-100 dark selection:bg-blue-600 selection:text-white",
+      card: "bg-slate-800/95 border border-slate-700/80 text-slate-100 shadow-xl shadow-slate-950/50 backdrop-blur-sm",
+      textPrimary: "text-slate-100",
+      textMuted: "text-slate-400",
+      border: "border-slate-700/80",
+      badge: "bg-blue-500/10 text-blue-400 border border-blue-500/30",
+      ctaButton: "bg-gradient-to-r from-blue-600 via-sky-600 to-blue-700 hover:from-blue-700 hover:to-sky-700 text-white font-extrabold shadow-lg shadow-blue-600/25 rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all",
+      heroGlow: "rgba(37, 99, 235, 0.22)",
+    },
+    icons: {
+      hero: CarFront,
+      services: Wrench,
+      products: Cog,
+      reviews: Gauge,
+      contact: Disc,
+      themeIcons: {
+        dog: Dog,
+        cat: Cat,
+        bone: Bone,
+        pawPrint: PawPrint,
+        footprints: PawPrint,
+        carFront: CarFront,
+        wrench: Wrench,
+        gauge: Gauge,
+        cog: Cog,
+        disc: Disc,
+      },
+    },
+    hero: {
+      badgeText: "Oficinas & Autopeças | Linhas Técnicas",
+      tagline: "Serviço Técnico de Precisão, Diagnóstico Avançado & Segurança",
+      subheadline: "Equipamentos de diagnóstico eletrônico, ferramentas calibradas, mecânica preventiva e peças certificadas para máxima durabilidade do seu veículo.",
+      highlights: [
+        {
+          icon: CarFront,
+          title: "Linha Leve & Pesada",
+          desc: "Revisão geral e manutenção preventiva",
+          animationClass: "",
+        },
+        {
+          icon: Wrench,
+          title: "Mecânica de Precisão",
+          desc: "Ferramentas calibradas e padrão técnico",
+          animationClass: "animate-wrench-tilt",
+        },
+        {
+          icon: Gauge,
+          title: "Diagnóstico Computadorizado",
+          desc: "Escaneamento e precisão eletrônica",
+          animationClass: "animate-gauge-needle",
+        },
+        {
+          icon: Cog,
+          title: "Engrenagens & Câmbio",
+          desc: "Transmissão, correias e motor em dia",
+          animationClass: "animate-gear-spin",
+        },
+        {
+          icon: Disc,
+          title: "Freios & Suspensão",
+          desc: "Discos ventilados e estabilidade total",
+          animationClass: "animate-disc-spin",
+        },
+      ],
+    },
+    animations: {
+      gearSpinClass: "animate-gear-spin",
+      wrenchTiltClass: "animate-wrench-tilt",
+      gaugePulseClass: "animate-gauge-needle",
+    },
+  },
+
+  restaurant: {
+    id: "restaurant",
+    name: "Restaurantes & Gastronomia",
+    tagline: "Aconchegante, Apetitoso & Experiência Gastronômica",
+    description: "Fundo em linho/creme aconchegante (#FAF7F2), botões em vermelho brasa / âmbar quente (estilo apetitoso), cards estilo cardápio moderno, ícones de UtensilsCrossed, Flame, Wine, Soup e Coffee com faíscas gastronômicas e silhuetas nas margens.",
+    isDark: false,
+    palette: {
+      primary: "#dc2626",        // Vermelho brasa apetitoso
+      primaryHover: "#b91c1c",
+      secondary: "#ea580c",      // Âmbar quente
+      accent: "#f59e0b",         // Dourado tostado
+      background: "#FAF7F2",     // Linho / creme aconchegante
+      surface: "#ffffff",
+      surfaceMuted: "#fff7ed",   // Tom quente suave
+      textPrimary: "#292524",    // Marrom café profundo
+      textMuted: "#78716c",      // Stone neutro
+      border: "#fed7aa",         // Borda âmbar suave
+      badgeBg: "bg-orange-100",
+      badgeText: "text-orange-950",
+      gradientHero: "from-red-500/15 via-orange-500/10 to-transparent",
+    },
+    classes: {
+      root: "bg-[#FAF7F2] text-stone-900 selection:bg-red-600 selection:text-white",
+      card: "bg-white/95 border border-amber-200/90 text-stone-900 shadow-md shadow-stone-950/5 backdrop-blur-sm",
+      textPrimary: "text-stone-900",
+      textMuted: "text-stone-600",
+      border: "border-amber-200/80",
+      badge: "bg-orange-100/90 text-orange-950 border border-orange-300/60 shadow-2xs",
+      ctaButton: "bg-gradient-to-r from-red-600 via-orange-500 to-amber-600 hover:from-red-700 hover:to-orange-600 text-white font-extrabold shadow-md shadow-red-500/25 rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all",
+      heroGlow: "rgba(220, 38, 38, 0.22)",
+    },
+    icons: {
+      hero: UtensilsCrossed,
+      services: Flame,
+      products: Wine,
+      reviews: Soup,
+      contact: Coffee,
+      themeIcons: {
+        dog: Dog,
+        cat: Cat,
+        bone: Bone,
+        pawPrint: PawPrint,
+        footprints: PawPrint,
+        utensilsCrossed: UtensilsCrossed,
+        flame: Flame,
+        wine: Wine,
+        soup: Soup,
+        coffee: Coffee,
+      },
+    },
+    hero: {
+      badgeText: "Bares & Restaurantes | Apetite & Experiência",
+      tagline: "Sabores Memoráveis, Ingredientes Nobres & Momentos Especiais",
+      subheadline: "Receitas artesanais preparadas na brasa e fogo brando, ingredientes frescos selecionados, carta de vinhos harmonizada e sobremesas marcantes.",
+      highlights: [
+        {
+          icon: UtensilsCrossed,
+          title: "Menu Gastronômico",
+          desc: "Pratos assinados e sabor inesquecível",
+          animationClass: "animate-culinary-float",
+        },
+        {
+          icon: Flame,
+          title: "Brasa & Fogo Lento",
+          desc: "Ponto perfeito e aroma marcante",
+          animationClass: "animate-flame-flicker",
+        },
+        {
+          icon: Wine,
+          title: "Carta de Bebidas & Vinhos",
+          desc: "Harmonização selecionada pelo sommelier",
+          animationClass: "animate-culinary-float",
+        },
+        {
+          icon: Soup,
+          title: "Preparo Artesanal",
+          desc: "Ingredientes frescos e caldos nobres",
+          animationClass: "animate-steam-drift",
+        },
+        {
+          icon: Coffee,
+          title: "Cafeteria & Sobremesas",
+          desc: "Finalização perfeita para sua refeição",
+          animationClass: "animate-steam-drift",
+        },
+      ],
+    },
+    animations: {
+      flameFlickerClass: "animate-flame-flicker",
+      culinaryFloatClass: "animate-culinary-float",
+      emberRiseClass: "animate-ember-rise",
     },
   },
 
   gastronomia: {
-    id: "gastronomia",
-    name: "Gastronomia & Delivery",
-    tagline: "Apetitoso, Quente & Visual Marcante",
-    description: "Estilo escuro dinâmico com realce estimulante para restaurantes, cafeterias, hamburguerias e delivery.",
-    isDark: true,
+    id: "restaurant",
+    name: "Restaurantes & Gastronomia",
+    tagline: "Aconchegante, Apetitoso & Experiência Gastronômica",
+    description: "Fundo em linho/creme aconchegante (#FAF7F2), botões em vermelho brasa / âmbar quente (estilo apetitoso), cards estilo cardápio moderno, ícones de UtensilsCrossed, Flame, Wine, Soup e Coffee com faíscas gastronômicas e silhuetas nas margens.",
+    isDark: false,
     palette: {
       primary: "#dc2626",
       primaryHover: "#b91c1c",
       secondary: "#ea580c",
-      accent: "#f97316",
-      background: "#0c0a09",
-      surface: "#1c1917",
-      surfaceMuted: "#292524",
-      textPrimary: "#fafaf9",
-      textMuted: "#a8a29e",
-      border: "#292524",
-      badgeBg: "bg-red-950/60",
-      badgeText: "text-red-400",
-      gradientHero: "from-red-600/15 via-rose-600/10 to-transparent",
+      accent: "#f59e0b",
+      background: "#FAF7F2",
+      surface: "#ffffff",
+      surfaceMuted: "#fff7ed",
+      textPrimary: "#292524",
+      textMuted: "#78716c",
+      border: "#fed7aa",
+      badgeBg: "bg-orange-100",
+      badgeText: "text-orange-950",
+      gradientHero: "from-red-500/15 via-orange-500/10 to-transparent",
     },
     classes: {
-      root: "bg-stone-950 text-stone-100 dark selection:bg-red-600 selection:text-white",
-      card: "bg-stone-900 border border-stone-800 text-stone-100 shadow-xl shadow-stone-950/50",
-      textPrimary: "text-stone-100",
-      textMuted: "text-stone-400",
-      border: "border-stone-800",
-      badge: "bg-red-950/60 text-red-400 border border-red-800/40",
-      ctaButton: "bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-bold shadow-lg shadow-red-600/25 hover:scale-[1.02] active:scale-[0.98] transition-all",
-      heroGlow: "rgba(220, 38, 38, 0.2)",
+      root: "bg-[#FAF7F2] text-stone-900 selection:bg-red-600 selection:text-white",
+      card: "bg-white/95 border border-amber-200/90 text-stone-900 shadow-md shadow-stone-950/5 backdrop-blur-sm",
+      textPrimary: "text-stone-900",
+      textMuted: "text-stone-600",
+      border: "border-amber-200/80",
+      badge: "bg-orange-100/90 text-orange-950 border border-orange-300/60 shadow-2xs",
+      ctaButton: "bg-gradient-to-r from-red-600 via-orange-500 to-amber-600 hover:from-red-700 hover:to-orange-600 text-white font-extrabold shadow-md shadow-red-500/25 rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all",
+      heroGlow: "rgba(220, 38, 38, 0.22)",
     },
     icons: {
-      hero: Utensils,
-      services: Utensils,
-      products: Sparkles,
-      reviews: Star,
-      contact: Heart,
+      hero: UtensilsCrossed,
+      services: Flame,
+      products: Wine,
+      reviews: Soup,
+      contact: Coffee,
       themeIcons: {
         dog: Dog,
         cat: Cat,
         bone: Bone,
         pawPrint: PawPrint,
         footprints: PawPrint,
+        utensilsCrossed: UtensilsCrossed,
+        flame: Flame,
+        wine: Wine,
+        soup: Soup,
+        coffee: Coffee,
       },
     },
     hero: {
-      badgeText: "🔥 Sabor Incomparável & Ingredientes Frescos",
-      tagline: "Sabor Incomparável & Pedido Rápido",
-      subheadline: "Receitas artesanais preparadas com os melhores ingredientes. Atendimento presencial e delivery ágil.",
+      badgeText: "Bares & Restaurantes | Apetite & Experiência",
+      tagline: "Sabores Memoráveis, Ingredientes Nobres & Momentos Especiais",
+      subheadline: "Receitas artesanais preparadas na brasa e fogo brando, ingredientes frescos selecionados, carta de vinhos harmonizada e sobremesas marcantes.",
       highlights: [
         {
-          icon: Utensils,
-          title: "Receitas Especiais",
-          desc: "Preparo artesanal e sabor marcante",
+          icon: UtensilsCrossed,
+          title: "Menu Gastronômico",
+          desc: "Pratos assinados e sabor inesquecível",
+          animationClass: "animate-culinary-float",
         },
         {
-          icon: Sparkles,
-          title: "Ingredientes Selecionados",
-          desc: "Frescor e padrão de excelência",
+          icon: Flame,
+          title: "Brasa & Fogo Lento",
+          desc: "Ponto perfeito e aroma marcante",
+          animationClass: "animate-flame-flicker",
         },
         {
-          icon: Heart,
-          title: "Ambiente Acolhedor",
-          desc: "Ideal para família e amigos",
+          icon: Wine,
+          title: "Carta de Bebidas & Vinhos",
+          desc: "Harmonização selecionada pelo sommelier",
+          animationClass: "animate-culinary-float",
+        },
+        {
+          icon: Soup,
+          title: "Preparo Artesanal",
+          desc: "Ingredientes frescos e caldos nobres",
+          animationClass: "animate-steam-drift",
+        },
+        {
+          icon: Coffee,
+          title: "Cafeteria & Sobremesas",
+          desc: "Finalização perfeita para sua refeição",
+          animationClass: "animate-steam-drift",
         },
       ],
     },
     animations: {
-      tailWagClass: "",
-      pawFloatClass: "",
-      pawPulseClass: "",
+      flameFlickerClass: "animate-flame-flicker",
+      culinaryFloatClass: "animate-culinary-float",
+      emberRiseClass: "animate-ember-rise",
     },
   },
 
@@ -737,6 +991,21 @@ export function getTheme(
   ) {
     return THEMES.confeitaria;
   }
+  if (
+    normalizedKey === "automotive" ||
+    normalizedKey === "automotivo" ||
+    normalizedKey === "auto"
+  ) {
+    return THEMES.automotive;
+  }
+  if (
+    normalizedKey === "restaurant" ||
+    normalizedKey === "gastronomia" ||
+    normalizedKey === "food" ||
+    normalizedKey === "restaurante"
+  ) {
+    return THEMES.restaurant;
+  }
   if (normalizedKey in THEMES) {
     return THEMES[normalizedKey as ThemeId];
   }
@@ -784,7 +1053,7 @@ export function getTheme(
     text.includes("lavajato") ||
     text.includes("funilaria")
   ) {
-    return THEMES.automotivo;
+    return THEMES.automotive;
   }
   if (
     text.includes("dent") ||
@@ -809,10 +1078,9 @@ export function getTheme(
     text.includes("cafe") ||
     text.includes("lanche") ||
     text.includes("padaria") ||
-    text.includes("confeitaria") ||
     text.includes("delivery")
   ) {
-    return THEMES.gastronomia;
+    return THEMES.restaurant;
   }
 
   return THEMES.default;
@@ -834,6 +1102,22 @@ export function isConfectioneryTheme(themeKey?: string | null): boolean {
   );
 }
 
+export function isAutomotiveTheme(themeKey?: string | null): boolean {
+  const key = (themeKey || "").toLowerCase().trim();
+  return key === "automotive" || key === "automotivo" || key === "auto";
+}
+
+export function isRestaurantTheme(themeKey?: string | null): boolean {
+  const key = (themeKey || "").toLowerCase().trim();
+  return (
+    key === "restaurant" ||
+    key === "gastronomia" ||
+    key === "food" ||
+    key === "restaurante" ||
+    key === "culinaria"
+  );
+}
+
 export interface AdminThemeOption {
   id: ThemeId;
   name: string;
@@ -845,12 +1129,27 @@ export interface AdminThemeOption {
 
 export const ADMIN_THEME_OPTIONS: AdminThemeOption[] = [
   {
+    id: "automotive",
+    name: "Automotivo & Mecânica",
+    icon: "🚗",
+    desc: "Oficinas & Autopeças | Linhas Técnicas: Fundo técnico/neutro com acentos em azul automotivo (#2563eb), detalhes metálicos/grafite e engrenagens",
+    previewColors: ["#2563eb", "#f97316", "#0f172a"],
+    isNew: true,
+  },
+  {
+    id: "restaurant",
+    name: "Restaurantes & Gastronomia",
+    icon: "🍽️",
+    desc: "Bares & Restaurantes | Apetite & Experiência: Fundo em linho/creme aconchegante (#FAF7F2), botões em vermelho brasa e faíscas gastronômicas",
+    previewColors: ["#dc2626", "#ea580c", "#FAF7F2"],
+    isNew: true,
+  },
+  {
     id: "confeitaria",
     name: "Confeitaria & Bolos",
     icon: "🎂",
     desc: "Tons de rosa doce, calda de caramelo/chocolate e baunilha (#fffdf9), com ícones (Bolo, Cookie, Cereja) e granulados",
     previewColors: ["#f43f5e", "#fde68a", "#fffdf9"],
-    isNew: true,
   },
   {
     id: "petshop",
@@ -867,18 +1166,18 @@ export const ADMIN_THEME_OPTIONS: AdminThemeOption[] = [
     previewColors: ["#2563eb", "#64748b", "#f8fafc"],
   },
   {
-    id: "gastronomia",
-    name: "Gastronomia & Delivery",
-    icon: "🍽️",
-    desc: "Estilo escuro com realce vermelho estimulante para restaurantes, bares e cafeterias",
-    previewColors: ["#dc2626", "#ea580c", "#0c0a09"],
+    id: "automotivo",
+    name: "Automotivo (Legado)",
+    icon: "🔧",
+    desc: "Tema de compatibilidade técnica automotiva",
+    previewColors: ["#2563eb", "#f97316", "#0f172a"],
   },
   {
-    id: "automotivo",
-    name: "Automotivo & Mecânica",
-    icon: "🚗",
-    desc: "Visual industrial e alta performance em tons escuros e âmbar para oficinas e estética veicular",
-    previewColors: ["#f97316", "#f59e0b", "#09090b"],
+    id: "gastronomia",
+    name: "Gastronomia (Legado)",
+    icon: "🍷",
+    desc: "Tema de compatibilidade gastronômica",
+    previewColors: ["#dc2626", "#ea580c", "#FAF7F2"],
   },
   {
     id: "barbearia",

@@ -1,7 +1,30 @@
 "use client";
 
 import React from "react";
-import { Award, Clock, ShieldCheck, MessageSquare, Dog, Cat, Bone, PawPrint, Cake, Cookie, Cherry, Sparkles } from "lucide-react";
+import {
+  Award,
+  Clock,
+  ShieldCheck,
+  MessageSquare,
+  Dog,
+  Cat,
+  Bone,
+  PawPrint,
+  Cake,
+  Cookie,
+  Cherry,
+  Sparkles,
+  CarFront,
+  Wrench,
+  Gauge,
+  Cog,
+  Disc,
+  UtensilsCrossed,
+  Flame,
+  Wine,
+  Soup,
+  Coffee,
+} from "lucide-react";
 import type { NicheThemeConfig } from "@/config/tenant-themes";
 import { NICHE_THEMES } from "@/config/tenant-themes";
 
@@ -16,6 +39,8 @@ export function TrustMetricsBar({ theme }: TrustMetricsBarProps) {
   const currentTheme = theme || NICHE_THEMES.retail_default;
   const isPetShop = currentTheme?.id === "petshop";
   const isConfectionery = currentTheme?.id === "confeitaria" || currentTheme?.id === "bakery" || currentTheme?.id === "confectionery";
+  const isAutomotive = currentTheme?.id === "automotive" || currentTheme?.id === "automotivo" || currentTheme?.id === "auto";
+  const isRestaurant = currentTheme?.id === "restaurant" || currentTheme?.id === "gastronomia" || currentTheme?.id === "food";
 
   const pillars = isPetShop
     ? [
@@ -69,6 +94,60 @@ export function TrustMetricsBar({ theme }: TrustMetricsBarProps) {
           title: "Frescor & Pontualidade",
           description: "Produção sob encomenda entregue no ponto perfeito.",
           animationClass: "animate-sparkle-twinkle",
+        },
+      ]
+    : isAutomotive
+    ? [
+        {
+          icon: CarFront,
+          title: "Linha Leve & Pesada",
+          description: "Revisão geral preventiva e atendimento com padrão técnico.",
+          animationClass: "",
+        },
+        {
+          icon: Wrench,
+          title: "Mecânica de Precisão",
+          description: "Ferramental calibrado e profissionais experientes.",
+          animationClass: "animate-wrench-tilt",
+        },
+        {
+          icon: Gauge,
+          title: "Diagnóstico Avançado",
+          description: "Escaneamento computadorizado e medição precisa em tempo real.",
+          animationClass: "animate-gauge-needle",
+        },
+        {
+          icon: Disc,
+          title: "Freios & Suspensão",
+          description: "Discos ventilados e peças certificadas com garantia total.",
+          animationClass: "animate-disc-spin",
+        },
+      ]
+    : isRestaurant
+    ? [
+        {
+          icon: UtensilsCrossed,
+          title: "Gastronomia Autoral",
+          description: "Receitas especiais com preparo minucioso e apresentação requintada.",
+          animationClass: "animate-culinary-float",
+        },
+        {
+          icon: Flame,
+          title: "Brasa & Fogo Lento",
+          description: "Carnes e pratos preparados no ponto exato para realçar o sabor.",
+          animationClass: "animate-flame-flicker",
+        },
+        {
+          icon: Wine,
+          title: "Harmonização & Vinhos",
+          description: "Rótulos selecionados para acompanhar a melhor experiência.",
+          animationClass: "animate-culinary-float",
+        },
+        {
+          icon: Soup,
+          title: "Ingredientes Frescos",
+          description: "Insumos selecionados e receitas aromáticas preparadas com paixão.",
+          animationClass: "animate-steam-drift",
         },
       ]
     : [

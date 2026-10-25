@@ -15,6 +15,10 @@ import {
   Cookie,
   Cherry,
   Sparkles,
+  CarFront,
+  Wrench,
+  UtensilsCrossed,
+  Flame,
 } from "lucide-react";
 import type { TenantReview } from "@/types";
 import { generateWhatsAppUrl } from "@/utils/phone";
@@ -71,6 +75,8 @@ export function PublicHeroSplit({
   const currentTheme = theme || NICHE_THEMES.retail_default;
   const isPetShop = currentTheme?.id === "petshop";
   const isConfectionery = currentTheme?.id === "confeitaria" || currentTheme?.id === "bakery" || currentTheme?.id === "confectionery";
+  const isAutomotive = currentTheme?.id === "automotive" || currentTheme?.id === "automotivo" || currentTheme?.id === "auto";
+  const isRestaurant = currentTheme?.id === "restaurant" || currentTheme?.id === "gastronomia" || currentTheme?.id === "food";
   const displayAddress = address || "Atendimento Presencial";
   const cleanDescription = sanitizeDescription(description, address);
   const heroWaMessage = `Olá, vi a vitrine de vocês e gostaria de agendar um atendimento/orçamento em ${tenantName}.`;
@@ -115,7 +121,7 @@ export function PublicHeroSplit({
       {/* Brilho ambiente dinâmico sutil no fundo */}
       <div
         className="pointer-events-none absolute -bottom-10 -left-10 h-72 w-72 rounded-full blur-3xl opacity-25"
-        style={{ backgroundColor: brandColor || (isConfectionery ? "#f43f5e" : isPetShop ? "#ea580c" : "var(--brand-primary, #0d9488)") }}
+        style={{ backgroundColor: brandColor || (isConfectionery ? "#f43f5e" : isPetShop ? "#ea580c" : isRestaurant ? "#dc2626" : isAutomotive ? "#2563eb" : "var(--brand-primary, #0d9488)") }}
       />
 
       {/* 2. Cartão de Alta Densidade com Efeito Glassmorphism Nobre */}
@@ -134,6 +140,10 @@ export function PublicHeroSplit({
               <Dog className="h-10 w-10 text-amber-400 animate-tail-wag" />
             ) : isConfectionery ? (
               <Cake className="h-10 w-10 text-rose-400 animate-sweet-float" />
+            ) : isAutomotive ? (
+              <CarFront className="h-10 w-10 text-blue-400" />
+            ) : isRestaurant ? (
+              <UtensilsCrossed className="h-10 w-10 text-red-400 animate-culinary-float" />
             ) : (
               <span className="text-2xl sm:text-3xl font-black text-white uppercase select-none">
                 {tenantName.charAt(0)}
@@ -296,10 +306,24 @@ export function PublicHeroSplit({
               <Cake className="h-4 w-4 shrink-0 text-rose-200 animate-sweet-float" />
             ) : isPetShop ? (
               <Dog className="h-4 w-4 shrink-0 text-amber-200 animate-tail-wag" />
+            ) : isAutomotive ? (
+              <Wrench className="h-4 w-4 shrink-0 text-blue-200 animate-wrench-tilt" />
+            ) : isRestaurant ? (
+              <UtensilsCrossed className="h-4 w-4 shrink-0 text-red-200 animate-culinary-float" />
             ) : (
               <Calendar className="h-4 w-4 shrink-0" />
             )}
-            <span>{isConfectionery ? "Fazer Encomenda / Orçamento" : isPetShop ? "Agendar Cuidados do Pet" : "Agendar Horário Online"}</span>
+            <span>
+              {isConfectionery
+                ? "Fazer Encomenda / Orçamento"
+                : isPetShop
+                ? "Agendar Cuidados do Pet"
+                : isAutomotive
+                ? "Agendar Revisão / Orçamento"
+                : isRestaurant
+                ? "Ver Cardápio & Reservar"
+                : "Agendar Horário Online"}
+            </span>
             <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
           </button>
         </div>

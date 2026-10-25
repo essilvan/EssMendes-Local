@@ -1,7 +1,9 @@
 export type ThemeNiche =
+  | 'automotive'
   | 'auto'
-  | 'health_beauty'
+  | 'restaurant'
   | 'food'
+  | 'health_beauty'
   | 'retail_default'
   | 'gastronomia'
   | 'automotivo'
@@ -178,58 +180,112 @@ export const NICHE_THEMES: Record<ThemeNiche, NicheThemeConfig> = {
       contact: '📍',
     },
   },
-  gastronomia: {
-    id: 'gastronomia',
-    name: 'Gastronomia & Delivery',
-    icon: '🍽️',
-    description: 'Estilo escuro dinâmico com realce estimulante para gastronomia e pedidos',
+  automotive: {
+    id: 'automotive',
+    name: 'Automotivo & Mecânica',
+    icon: '🚗',
+    description: 'Fundo técnico com detalhes metálicos/grafite e acentos em azul automotivo',
     isDark: true,
-    bgPage: 'bg-stone-950 text-stone-100',
-    bgCard: 'bg-stone-900 border border-stone-800 shadow-xl shadow-stone-950/50',
-    textPrimary: 'text-stone-100',
-    textMuted: 'text-stone-400',
-    accentColor: '#dc2626',
-    accentBg: 'bg-red-600 hover:bg-red-700',
-    accentText: 'text-red-500',
-    badgeBg: 'bg-red-950/60 border border-red-800/40',
-    badgeText: 'text-red-400',
-    borderClass: 'border-stone-800',
-    roundedClass: 'rounded-2xl',
-    ctaButtonClass: 'bg-gradient-to-r from-red-600 to-rose-600 text-white font-bold shadow-lg shadow-red-600/25 hover:scale-[1.02] transition-all',
-    heroTagline: 'Sabor Incomparável & Pedido Rápido',
+    bgPage: 'bg-[#0f172a] text-slate-100',
+    bgCard: 'bg-slate-800/95 border border-slate-700/80 shadow-xl shadow-black/50 backdrop-blur-sm',
+    textPrimary: 'text-slate-100',
+    textMuted: 'text-slate-400',
+    accentColor: '#2563eb',
+    accentBg: 'bg-gradient-to-r from-blue-600 to-sky-600 hover:from-blue-700 hover:to-sky-700',
+    accentText: 'text-blue-400',
+    badgeBg: 'bg-blue-500/10 border border-blue-500/30',
+    badgeText: 'text-blue-400 font-bold',
+    borderClass: 'border-slate-700/80',
+    roundedClass: 'rounded-xl',
+    ctaButtonClass: 'bg-gradient-to-r from-blue-600 via-sky-600 to-blue-700 hover:from-blue-700 hover:to-sky-700 text-white font-extrabold shadow-lg shadow-blue-600/25 rounded-xl hover:scale-[1.02] transition-all',
+    heroTagline: 'Serviço Técnico de Precisão, Diagnóstico Avançado & Segurança',
     icons: {
-      hero: '🔥',
-      services: '🍽️',
-      products: '🍕',
-      reviews: '⭐',
-      contact: '🛵',
+      hero: '🚗',
+      services: '🔧',
+      products: '⚙️',
+      reviews: '⏱️',
+      contact: '📍',
     },
   },
   automotivo: {
-    id: 'automotivo',
+    id: 'automotive',
     name: 'Automotivo & Mecânica',
     icon: '🚗',
-    description: 'Estilo de alta performance com detalhes âmbar e visual industrial',
+    description: 'Fundo técnico com detalhes metálicos/grafite e acentos em azul automotivo',
     isDark: true,
-    bgPage: 'bg-zinc-950 text-zinc-100',
-    bgCard: 'bg-zinc-900/90 border border-zinc-800 shadow-xl shadow-black/40',
-    textPrimary: 'text-zinc-100',
-    textMuted: 'text-zinc-400',
-    accentColor: '#f97316',
-    accentBg: 'bg-amber-500 hover:bg-amber-600',
-    accentText: 'text-amber-400',
-    badgeBg: 'bg-amber-500/10 border border-amber-500/30',
-    badgeText: 'text-amber-400',
-    borderClass: 'border-zinc-800',
+    bgPage: 'bg-[#0f172a] text-slate-100',
+    bgCard: 'bg-slate-800/95 border border-slate-700/80 shadow-xl shadow-black/50 backdrop-blur-sm',
+    textPrimary: 'text-slate-100',
+    textMuted: 'text-slate-400',
+    accentColor: '#2563eb',
+    accentBg: 'bg-gradient-to-r from-blue-600 to-sky-600 hover:from-blue-700 hover:to-sky-700',
+    accentText: 'text-blue-400',
+    badgeBg: 'bg-blue-500/10 border border-blue-500/30',
+    badgeText: 'text-blue-400 font-bold',
+    borderClass: 'border-slate-700/80',
     roundedClass: 'rounded-xl',
-    ctaButtonClass: 'bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold shadow-lg shadow-orange-500/20 hover:scale-[1.02] transition-all',
-    heroTagline: 'Serviço de Confiança e Agilidade Mecânica',
+    ctaButtonClass: 'bg-gradient-to-r from-blue-600 via-sky-600 to-blue-700 hover:from-blue-700 hover:to-sky-700 text-white font-extrabold shadow-lg shadow-blue-600/25 rounded-xl hover:scale-[1.02] transition-all',
+    heroTagline: 'Serviço Técnico de Precisão, Diagnóstico Avançado & Segurança',
     icons: {
-      hero: '⚡',
-      services: '🛠️',
+      hero: '🚗',
+      services: '🔧',
       products: '⚙️',
-      reviews: '⭐',
+      reviews: '⏱️',
       contact: '📍',
+    },
+  },
+  restaurant: {
+    id: 'restaurant',
+    name: 'Restaurantes & Gastronomia',
+    icon: '🍽️',
+    description: 'Fundo em linho/creme aconchegante (#FAF7F2), botões em vermelho brasa e cards cardápio moderno',
+    isDark: false,
+    bgPage: 'bg-[#FAF7F2] text-stone-900',
+    bgCard: 'bg-white/95 border border-amber-200/90 text-stone-900 shadow-md shadow-stone-950/5 backdrop-blur-sm',
+    textPrimary: 'text-stone-900',
+    textMuted: 'text-stone-600',
+    accentColor: '#dc2626',
+    accentBg: 'bg-gradient-to-r from-red-600 via-orange-500 to-amber-600 hover:from-red-700 hover:to-orange-600',
+    accentText: 'text-red-600',
+    badgeBg: 'bg-orange-100/90 border border-orange-300/60',
+    badgeText: 'text-orange-950 font-bold',
+    borderClass: 'border-amber-200/80',
+    roundedClass: 'rounded-2xl',
+    ctaButtonClass: 'bg-gradient-to-r from-red-600 via-orange-500 to-amber-600 hover:from-red-700 hover:to-orange-600 text-white font-extrabold shadow-md shadow-red-500/25 rounded-xl hover:scale-[1.02] transition-all',
+    heroTagline: 'Sabores Memoráveis, Ingredientes Nobres & Momentos Especiais',
+    icons: {
+      hero: '🍽️',
+      services: '🔥',
+      products: '🍷',
+      reviews: '🥣',
+      contact: '☕',
+    },
+  },
+  gastronomia: {
+    id: 'restaurant',
+    name: 'Restaurantes & Gastronomia',
+    icon: '🍽️',
+    description: 'Fundo em linho/creme aconchegante (#FAF7F2), botões em vermelho brasa e cards cardápio moderno',
+    isDark: false,
+    bgPage: 'bg-[#FAF7F2] text-stone-900',
+    bgCard: 'bg-white/95 border border-amber-200/90 text-stone-900 shadow-md shadow-stone-950/5 backdrop-blur-sm',
+    textPrimary: 'text-stone-900',
+    textMuted: 'text-stone-600',
+    accentColor: '#dc2626',
+    accentBg: 'bg-gradient-to-r from-red-600 via-orange-500 to-amber-600 hover:from-red-700 hover:to-orange-600',
+    accentText: 'text-red-600',
+    badgeBg: 'bg-orange-100/90 border border-orange-300/60',
+    badgeText: 'text-orange-950 font-bold',
+    borderClass: 'border-amber-200/80',
+    roundedClass: 'rounded-2xl',
+    ctaButtonClass: 'bg-gradient-to-r from-red-600 via-orange-500 to-amber-600 hover:from-red-700 hover:to-orange-600 text-white font-extrabold shadow-md shadow-red-500/25 rounded-xl hover:scale-[1.02] transition-all',
+    heroTagline: 'Sabores Memoráveis, Ingredientes Nobres & Momentos Especiais',
+    icons: {
+      hero: '🍽️',
+      services: '🔥',
+      products: '🍷',
+      reviews: '🥣',
+      contact: '☕',
     },
   },
   estetica_saude: {
@@ -431,6 +487,12 @@ export function getTenantTheme(themeKey?: string | null, category?: string | nul
   if (normalizedKey === 'bakery' || normalizedKey === 'confectionery' || normalizedKey === 'bolos' || normalizedKey === 'doceria') {
     return NICHE_THEMES.confeitaria;
   }
+  if (normalizedKey === 'automotive' || normalizedKey === 'automotivo' || normalizedKey === 'auto') {
+    return NICHE_THEMES.automotive;
+  }
+  if (normalizedKey === 'restaurant' || normalizedKey === 'gastronomia' || normalizedKey === 'food' || normalizedKey === 'restaurante') {
+    return NICHE_THEMES.restaurant;
+  }
   const text = `${category || ''} ${(googleTypes || []).join(' ')}`.toLowerCase();
   if (
     text.includes('confeit') ||
@@ -461,13 +523,13 @@ export function getTenantTheme(themeKey?: string | null, category?: string | nul
     return NICHE_THEMES.barbearia;
   }
   if (text.includes('car') || text.includes('auto') || text.includes('mecanic') || text.includes('oficina') || text.includes('pneu') || text.includes('guincho') || text.includes('veiculo') || text.includes('lavajato') || text.includes('funilaria')) {
-    return NICHE_THEMES.automotivo;
+    return NICHE_THEMES.automotive;
   }
   if (text.includes('dent') || text.includes('saude') || text.includes('medic') || text.includes('clinica') || text.includes('estetica') || text.includes('beleza') || text.includes('salao') || text.includes('terapia') || text.includes('farmacia') || text.includes('fisio')) {
     return NICHE_THEMES.estetica_saude;
   }
-  if (text.includes('restaurante') || text.includes('food') || text.includes('bar') || text.includes('pizz') || text.includes('hamburg') || text.includes('cafe') || text.includes('lanche') || text.includes('padaria') || text.includes('delivery')) {
-    return NICHE_THEMES.gastronomia;
+  if (text.includes('restauran') || text.includes('gastro') || text.includes('food') || text.includes('bar') || text.includes('pizz') || text.includes('hamburg') || text.includes('cafe') || text.includes('lanche') || text.includes('padaria') || text.includes('delivery')) {
+    return NICHE_THEMES.restaurant;
   }
   return NICHE_THEMES.servicos;
 }

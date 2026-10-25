@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import { PetShopBackground } from "./PetShopBackground";
 import { ConfectioneryBackground } from "./ConfectioneryBackground";
+import { AutomotiveBackground } from "./AutomotiveBackground";
+import { RestaurantBackground } from "./RestaurantBackground";
 import type {
   Service,
   TenantProfile,
@@ -69,16 +71,29 @@ interface PublicTenantHubProps {
 
 export function getThemeClasses(themeNiche: string | null | undefined) {
   switch (themeNiche) {
+    case "automotive":
     case "automotivo":
     case "auto":
       return {
-        root: "bg-zinc-950 text-zinc-100 dark",
-        card: "bg-zinc-900/95 border-zinc-800 text-zinc-100 shadow-xl shadow-black/50",
-        textMuted: "text-zinc-400",
-        accentText: "text-amber-400",
-        badge: "bg-amber-500/10 text-amber-400 border-amber-500/30",
-        button: "bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold",
-        heroTagline: "Serviço de Confiança e Agilidade Mecânica",
+        root: "bg-[#0f172a] text-slate-100 dark",
+        card: "bg-slate-800/95 border-slate-700/80 text-slate-100 shadow-xl shadow-black/50 backdrop-blur-sm",
+        textMuted: "text-slate-400",
+        accentText: "text-blue-400",
+        badge: "bg-blue-500/10 text-blue-400 border-blue-500/30",
+        button: "bg-gradient-to-r from-blue-600 via-sky-600 to-blue-700 text-white font-extrabold shadow-lg shadow-blue-600/25",
+        heroTagline: "Serviço Técnico de Precisão, Diagnóstico Avançado & Segurança",
+      };
+    case "restaurant":
+    case "gastronomia":
+    case "food":
+      return {
+        root: "bg-[#FAF7F2] text-stone-900",
+        card: "bg-white/95 border-amber-200/90 text-stone-900 shadow-md shadow-stone-950/5 backdrop-blur-sm",
+        textMuted: "text-stone-600",
+        accentText: "text-red-600",
+        badge: "bg-orange-100/90 text-orange-950 border-orange-300/60",
+        button: "bg-gradient-to-r from-red-600 via-orange-500 to-amber-600 text-white font-extrabold shadow-md shadow-red-500/25",
+        heroTagline: "Sabores Memoráveis, Ingredientes Nobres & Momentos Especiais",
       };
     case "estetica_saude":
     case "health_beauty":
@@ -90,17 +105,6 @@ export function getThemeClasses(themeNiche: string | null | undefined) {
         badge: "bg-teal-50 text-teal-800 border-teal-200",
         button: "bg-gradient-to-r from-teal-600 to-emerald-600 text-white font-semibold",
         heroTagline: "Cuidado Especializado & Bem-Estar",
-      };
-    case "gastronomia":
-    case "food":
-      return {
-        root: "bg-stone-950 text-stone-100 dark",
-        card: "bg-stone-900 border-stone-800 text-stone-100 shadow-xl",
-        textMuted: "text-stone-400",
-        accentText: "text-red-500",
-        badge: "bg-red-950/60 text-red-400 border-red-800/40",
-        button: "bg-gradient-to-r from-red-600 to-rose-600 text-white font-bold",
-        heroTagline: "Sabor Incomparável & Pedido Rápido",
       };
     case "barbearia":
       return {
@@ -222,8 +226,17 @@ export function PublicTenantHub({
     effectiveNiche === "confectionery" ||
     effectiveNiche === "bolos" ||
     effectiveNiche === "doceria";
-  const isAuto = effectiveNiche === "auto" || effectiveNiche === "automotivo" || effectiveNiche === "barbearia";
-  const isFood = effectiveNiche === "food" || effectiveNiche === "gastronomia";
+  const isAutomotive =
+    effectiveNiche === "automotive" ||
+    effectiveNiche === "automotivo" ||
+    effectiveNiche === "auto";
+  const isRestaurant =
+    effectiveNiche === "restaurant" ||
+    effectiveNiche === "gastronomia" ||
+    effectiveNiche === "food" ||
+    effectiveNiche === "restaurante";
+  const isAuto = isAutomotive || effectiveNiche === "barbearia";
+  const isFood = isRestaurant;
   const isHealth = effectiveNiche === "health_beauty" || effectiveNiche === "estetica_saude";
 
   const currentTheme = getTenantTheme(
@@ -258,6 +271,10 @@ export function PublicTenantHub({
           ? "bg-[#fffbf5] text-stone-900"
           : isConfectionery
           ? "bg-[#fffdf9] text-rose-950"
+          : isRestaurant
+          ? "bg-[#FAF7F2] text-stone-900"
+          : isAutomotive
+          ? "bg-[#0f172a] text-slate-100 dark"
           : isAuto
           ? "bg-zinc-950 text-zinc-100"
           : isFood
@@ -272,6 +289,12 @@ export function PublicTenantHub({
 
       {/* Elementos Decorativos de Fundo Exclusivos do Nicho Confeitaria & Bolos */}
       {isConfectionery && <ConfectioneryBackground />}
+
+      {/* Elementos Decorativos de Fundo Exclusivos do Nicho Automotivo & Mecânica */}
+      {isAutomotive && <AutomotiveBackground />}
+
+      {/* Elementos Decorativos de Fundo Exclusivos do Nicho Restaurantes & Gastronomia */}
+      {isRestaurant && <RestaurantBackground />}
 
       {/* Tracker de Analytics (Zero PII) */}
       <PublicPageTracker tenantId={tenant.id} />

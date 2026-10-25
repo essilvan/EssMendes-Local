@@ -48,6 +48,15 @@ import {
   Cake,
   Cookie,
   Cherry,
+  CarFront,
+  Wrench,
+  Gauge,
+  Cog,
+  Disc,
+  UtensilsCrossed,
+  Flame,
+  Wine,
+  Soup,
 } from "lucide-react";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 import { CoverImageUploader } from "@/components/admin/CoverImageUploader";
@@ -182,9 +191,26 @@ export const TEMPLATE_OPTIONS = [
 
 export const NICHE_OPTIONS = [
   {
+    id: "automotive",
+    name: "Automotivo & Mecânica",
+    icon: "🚗",
+    badgeText: "Oficinas & Autopeças | Linhas Técnicas",
+    desc: "Fundo técnico/neutro com acentos em azul automotivo, detalhes metálicos/grafite e engrenagens",
+    isNew: true,
+  },
+  {
+    id: "restaurant",
+    name: "Restaurantes & Gastronomia",
+    icon: "🍽️",
+    badgeText: "Bares & Restaurantes | Apetite & Experiência",
+    desc: "Fundo em linho/creme aconchegante (#FAF7F2), botões em vermelho brasa e cards cardápio moderno",
+    isNew: true,
+  },
+  {
     id: "confeitaria",
     name: "Confeitaria & Bolos",
     icon: "🎂",
+    badgeText: "Doces Artesanais & Bolos",
     desc: "Tons de rosa doce, calda de chocolate e baunilha (#fffdf9), com confeitos e ícones temáticos",
     isNew: true,
   },
@@ -192,49 +218,56 @@ export const NICHE_OPTIONS = [
     id: "petshop",
     name: "Pet Shop & Veterinária",
     icon: "🐾",
+    badgeText: "Cuidado Pet & Veterinária",
     desc: "Tons quentes de âmbar, ícones temáticos (Cão, Gato, Osso, Patinhas) e microanimações",
   },
   {
     id: "default",
     name: "Padrão / Serviços Gerais",
     icon: "💼",
+    badgeText: "Serviços & Negócios",
     desc: "Comércio, consultoria e serviços especializados",
   },
   {
-    id: "gastronomia",
-    name: "Gastronomia",
-    icon: "🍽️",
-    desc: "Restaurantes, bares, cafeterias e delivery",
+    id: "automotivo",
+    name: "Automotivo (Legado)",
+    icon: "🔧",
+    badgeText: "Oficinas & Autopeças",
+    desc: "Compatibilidade técnica para centros automotivos",
   },
   {
-    id: "automotivo",
-    name: "Automotivo",
-    icon: "🚗",
-    desc: "Oficinas, centros automotivos e estética veicular",
+    id: "gastronomia",
+    name: "Gastronomia (Legado)",
+    icon: "🍷",
+    badgeText: "Bares & Restaurantes",
+    desc: "Compatibilidade para restaurantes e delivery",
   },
   {
     id: "barbearia",
     name: "Barbearia",
     icon: "✂️",
+    badgeText: "Barbearia Clássica",
     desc: "Barbearias tradicionais e studios masculinos",
   },
   {
     id: "estetica_saude",
     name: "Saúde / Estética",
     icon: "🌿",
+    badgeText: "Saúde & Beleza",
     desc: "Clínicas, consultórios, salões e estética",
   },
 ];
 
 export const BRAND_COLOR_PRESETS = [
+  { name: "Azul Automotivo", hex: "#2563eb" },
+  { name: "Vermelho Brasa", hex: "#dc2626" },
   { name: "Rosa Doce / Confeitaria", hex: "#f43f5e" },
   { name: "Laranja Âmbar", hex: "#ea580c" },
   { name: "Âmbar Dourado", hex: "#f59e0b" },
   { name: "Dourado Mel", hex: "#d97706" },
   { name: "Esmeralda", hex: "#059669" },
-  { name: "Azul Real", hex: "#2563eb" },
-  { name: "Grafite", hex: "#1e293b" },
-  { name: "Vinho", hex: "#881337" },
+  { name: "Grafite Metálico", hex: "#1e293b" },
+  { name: "Vinho Nobre", hex: "#881337" },
 ];
 
 interface ProfileFormProps {
@@ -382,6 +415,10 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
       setPrimaryColor("#ea580c");
     } else if (nicheId === "confeitaria" && (primaryColor === "#0d9488" || primaryColor === "#2563eb" || !primaryColor)) {
       setPrimaryColor("#f43f5e");
+    } else if ((nicheId === "automotive" || nicheId === "automotivo") && (primaryColor === "#0d9488" || primaryColor === "#ea580c" || !primaryColor)) {
+      setPrimaryColor("#2563eb");
+    } else if ((nicheId === "restaurant" || nicheId === "gastronomia") && (primaryColor === "#0d9488" || primaryColor === "#2563eb" || !primaryColor)) {
+      setPrimaryColor("#dc2626");
     }
   };
 
@@ -1320,9 +1357,16 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                 {NICHE_OPTIONS.map((niche) => {
-                  const isSelected = selectedNiche === niche.id;
+                  const isSelected =
+                    selectedNiche === niche.id ||
+                    (selectedNiche === "automotive" && niche.id === "automotivo") ||
+                    (selectedNiche === "automotivo" && niche.id === "automotive") ||
+                    (selectedNiche === "restaurant" && niche.id === "gastronomia") ||
+                    (selectedNiche === "gastronomia" && niche.id === "restaurant");
                   const isPet = niche.id === "petshop";
                   const isSweet = niche.id === "confeitaria";
+                  const isAuto = niche.id === "automotive" || niche.id === "automotivo";
+                  const isRest = niche.id === "restaurant" || niche.id === "gastronomia";
                   return (
                     <button
                       key={niche.id}
@@ -1330,11 +1374,19 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                       onClick={() => handleNicheChange(niche.id)}
                       className={`group relative flex flex-col items-center justify-between p-4 rounded-2xl border-2 text-center transition cursor-pointer ${
                         isSelected
-                          ? isPet
+                          ? isAuto
+                            ? "border-blue-600 bg-blue-50/70 ring-2 ring-blue-500/30 shadow-md scale-[1.02]"
+                            : isRest
+                            ? "border-red-600 bg-orange-50/70 ring-2 ring-red-500/30 shadow-md scale-[1.02]"
+                            : isPet
                             ? "border-amber-500 bg-amber-50/70 ring-2 ring-amber-500/30 shadow-md scale-[1.02]"
                             : isSweet
                             ? "border-rose-500 bg-rose-50/70 ring-2 ring-rose-500/30 shadow-md scale-[1.02]"
                             : "border-teal-600 bg-teal-50/40 ring-2 ring-teal-600/20 shadow-sm"
+                          : isAuto
+                          ? "border-slate-200 bg-slate-50/50 hover:border-blue-300 hover:bg-blue-50/30"
+                          : isRest
+                          ? "border-amber-200/80 bg-[#FAF7F2]/80 hover:border-orange-300 hover:bg-[#FAF7F2]"
                           : isPet
                           ? "border-amber-200 bg-amber-50/20 hover:border-amber-300 hover:bg-amber-50/40"
                           : isSweet
@@ -1344,7 +1396,11 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                     >
                       {niche.isNew && (
                         <span className={`absolute -top-2.5 right-2 rounded-full text-white text-[9px] font-black px-2 py-0.5 shadow-xs uppercase tracking-wider ${
-                          isSweet
+                          isAuto
+                            ? "bg-gradient-to-r from-blue-600 to-sky-600"
+                            : isRest
+                            ? "bg-gradient-to-r from-red-600 to-orange-500"
+                            : isSweet
                             ? "bg-gradient-to-r from-rose-500 to-pink-500"
                             : "bg-gradient-to-r from-amber-500 to-orange-500"
                         }`}>
@@ -1354,7 +1410,17 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
 
                       <div className="flex flex-col items-center gap-2">
                         <span className="text-3xl p-2 rounded-xl bg-slate-100 group-hover:scale-105 transition-transform flex items-center justify-center">
-                          {isPet ? (
+                          {isAuto ? (
+                            <span className="relative flex items-center justify-center">
+                              {niche.icon}
+                              <Cog className="h-4 w-4 absolute -bottom-1 -right-1 text-blue-600 animate-gear-spin" />
+                            </span>
+                          ) : isRest ? (
+                            <span className="relative flex items-center justify-center">
+                              {niche.icon}
+                              <Flame className="h-4 w-4 absolute -bottom-1 -right-1 text-red-500 animate-flame-flicker" />
+                            </span>
+                          ) : isPet ? (
                             <span className="relative flex items-center justify-center">
                               {niche.icon}
                               <Dog className="h-4 w-4 absolute -bottom-1 -right-1 text-amber-600 animate-tail-wag" />
@@ -1379,7 +1445,11 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                       <div
                         className={`mt-3 h-4 w-4 rounded-full border-2 flex items-center justify-center transition ${
                           isSelected
-                            ? isPet
+                            ? isAuto
+                              ? "border-blue-600 bg-blue-600 text-white"
+                              : isRest
+                              ? "border-red-600 bg-red-600 text-white"
+                              : isPet
                               ? "border-amber-600 bg-amber-600 text-white"
                               : isSweet
                               ? "border-rose-600 bg-rose-600 text-white"
@@ -1393,6 +1463,110 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                   );
                 })}
               </div>
+
+              {/* Banner Interativo de Destaque quando o tema Automotivo & Mecânica está ativo */}
+              {(selectedNiche === "automotive" || selectedNiche === "automotivo") && (
+                <div className="rounded-2xl border border-blue-300/80 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-slate-100 p-4 shadow-md space-y-2 mt-3 animate-fadeIn">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 text-white shadow-xs">
+                        <CarFront className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <h5 className="text-xs font-bold text-white flex items-center gap-1.5">
+                          <span>Tema Automotivo & Mecânica Ativado com Sucesso!</span>
+                          <span className="inline-flex items-center rounded-full bg-blue-500/20 border border-blue-400/30 px-2 py-0.5 text-[10px] font-extrabold text-blue-300">
+                            Oficinas & Autopeças | Linhas Técnicas
+                          </span>
+                        </h5>
+                        <p className="text-[11px] text-slate-300/90">
+                          Fundo técnico/neutro com acentos em azul automotivo (#2563eb) e detalhes metálicos/grafite, ícones de CarFront, Wrench, Gauge, Cog e Disc, com engrenagens em rotação suave nas margens.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* 5 Ícones Lucide com Microanimações */}
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800/90 border border-slate-700 shadow-2xs">
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-slate-200" title="Veículo & Linhas Técnicas">
+                        <CarFront className="h-4 w-4 text-blue-400" />
+                        <span>Carro</span>
+                      </div>
+                      <span className="text-slate-600">•</span>
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-slate-200" title="Chave & Ferramentas">
+                        <Wrench className="h-4 w-4 text-orange-400 animate-wrench-tilt" />
+                        <span>Chave</span>
+                      </div>
+                      <span className="text-slate-600">•</span>
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-slate-200" title="Diagnóstico Computadorizado">
+                        <Gauge className="h-4 w-4 text-sky-400 animate-gauge-needle" />
+                        <span>Gauge</span>
+                      </div>
+                      <span className="text-slate-600">•</span>
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-slate-200" title="Engrenagem Industrial">
+                        <Cog className="h-4 w-4 text-blue-400 animate-gear-spin" />
+                        <span>Engrenagem</span>
+                      </div>
+                      <span className="text-slate-600">•</span>
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-slate-200" title="Disco de Freio">
+                        <Disc className="h-4 w-4 text-slate-300 animate-disc-spin" />
+                        <span>Disco</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Banner Interativo de Destaque quando o tema Restaurantes & Gastronomia está ativo */}
+              {(selectedNiche === "restaurant" || selectedNiche === "gastronomia") && (
+                <div className="rounded-2xl border border-orange-300/80 bg-gradient-to-r from-[#FAF7F2] via-orange-50/80 to-[#FAF7F2] p-4 shadow-xs space-y-2 mt-3 animate-fadeIn">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-600 text-white shadow-xs">
+                        <UtensilsCrossed className="h-4 w-4 animate-culinary-float" />
+                      </div>
+                      <div>
+                        <h5 className="text-xs font-bold text-stone-900 flex items-center gap-1.5">
+                          <span>Tema Restaurantes & Gastronomia Ativado com Sucesso!</span>
+                          <span className="inline-flex items-center rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-extrabold text-orange-950 border border-orange-200">
+                            Bares & Restaurantes | Apetite & Experiência
+                          </span>
+                        </h5>
+                        <p className="text-[11px] text-stone-700/90">
+                          Fundo em linho/creme aconchegante (#FAF7F2), botões em vermelho brasa / âmbar quente, cards estilo cardápio moderno, talheres cruzados, chamas sutis e faíscas gastronômicas.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* 5 Ícones Lucide com Microanimações */}
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/90 border border-amber-200/80 shadow-2xs">
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-stone-900" title="Talheres Cruzados">
+                        <UtensilsCrossed className="h-4 w-4 text-stone-800 animate-culinary-float" />
+                        <span>Talheres</span>
+                      </div>
+                      <span className="text-amber-300">•</span>
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-stone-900" title="Fogo de Brasa">
+                        <Flame className="h-4 w-4 text-red-600 animate-flame-flicker" />
+                        <span>Chama</span>
+                      </div>
+                      <span className="text-amber-300">•</span>
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-stone-900" title="Carta de Vinhos">
+                        <Wine className="h-4 w-4 text-red-800 animate-culinary-float" />
+                        <span>Vinho</span>
+                      </div>
+                      <span className="text-amber-300">•</span>
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-stone-900" title="Prato Quente / Sopa">
+                        <Soup className="h-4 w-4 text-orange-700 animate-steam-drift" />
+                        <span>Sopa</span>
+                      </div>
+                      <span className="text-amber-300">•</span>
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-stone-900" title="Cafeteria & Sobremesa">
+                        <Coffee className="h-4 w-4 text-stone-800 animate-steam-drift" />
+                        <span>Café</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Banner Interativo de Destaque quando o tema Pet Shop está ativo */}
               {selectedNiche === "petshop" && (
