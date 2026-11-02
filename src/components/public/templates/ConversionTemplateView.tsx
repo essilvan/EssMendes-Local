@@ -50,12 +50,24 @@ import { MapLocationCard } from "../MapLocationCard";
 import { BusinessAttributes } from "../BusinessAttributes";
 import { AboutBusinessSection } from "../AboutBusinessSection";
 import { ItemDetailModal, type ItemDetailData } from "../ItemDetailModal";
+import {
+  getHeroSubtitle,
+  getHeroPills,
+  getCtaButtonText,
+  getServiceIcon,
+} from "@/utils/showcase";
 
 export interface TemplateViewProps {
   tenant: {
     id: string;
     name: string;
     slug: string;
+    description?: string | null;
+    headline?: string | null;
+    cta_text?: string | null;
+    highlights?: any[] | null;
+    tags?: string[] | null;
+    services?: Service[];
     place_id?: string | null;
     google_place_id?: string | null;
     address?: string | null;
@@ -67,6 +79,7 @@ export interface TemplateViewProps {
       template?: string;
       niche?: string;
       primary_color?: string;
+      cta_text?: string;
       [key: string]: any;
     } | null;
     google_rating?: number | null;
@@ -123,6 +136,24 @@ export function ConversionTemplateView({
     rawPhone,
     tenant.name,
     `Olá! Gostaria de um atendimento imediato com ${tenant.name}.`
+  );
+
+  const heroSubtitle = getHeroSubtitle(
+    tenant,
+    profile,
+    theme?.id,
+    profile?.business_category || tenant.category
+  );
+  const heroPills = getHeroPills(
+    tenant,
+    services,
+    theme?.id,
+    profile?.business_category || tenant.category
+  );
+  const ctaButtonText = getCtaButtonText(
+    tenant,
+    theme?.id,
+    profile?.business_category || tenant.category
   );
 
   const photosData = getUnifiedEstablishmentPhotos(tenant, profile);
@@ -201,9 +232,7 @@ export function ConversionTemplateView({
 
           {/* Frase de impacto / descrição curta logo abaixo em tom dourado/off-white */}
           <p className="text-base sm:text-lg text-amber-100/90 dark:text-amber-100/90 font-medium max-w-2xl mx-auto leading-relaxed drop-shadow-sm">
-            {profile?.editorial_summary ||
-              profile?.description ||
-              "Atendimento prioritário com resposta rápida pelo WhatsApp. Solicite orçamentos, tire dúvidas ou faça seu pedido com total agilidade."}
+            {heroSubtitle}
           </p>
 
           {/* Prova social: Estrelas douradas (⭐⭐⭐⭐⭐), nota média (ex: 4.9) e contagem de avaliações entre parênteses */}
@@ -221,45 +250,21 @@ export function ConversionTemplateView({
             </span>
           </div>
 
-          {theme?.id === "petshop" && (
+          {/* Pills / Diferenciais Dinâmicos (Supabase) */}
+          {heroPills && heroPills.length > 0 && (
             <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-              <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/20 border border-amber-400/40 px-3 py-1 text-xs font-bold text-amber-200 backdrop-blur-md">
-                <Dog className="h-3.5 w-3.5 text-amber-300 animate-tail-wag" />
-                Banho & Tosa
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/20 border border-amber-400/40 px-3 py-1 text-xs font-bold text-amber-200 backdrop-blur-md">
-                <Cat className="h-3.5 w-3.5 text-amber-300 animate-paw-float" />
-                Espaço Felino
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/20 border border-amber-400/40 px-3 py-1 text-xs font-bold text-amber-200 backdrop-blur-md">
-                <Bone className="h-3.5 w-3.5 text-amber-300 animate-tail-wag" />
-                Mimos Pet
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/20 border border-amber-400/40 px-3 py-1 text-xs font-bold text-amber-200 backdrop-blur-md">
-                <PawPrint className="h-3.5 w-3.5 text-amber-300 animate-paw-pulse" />
-                Cuidado Dedicado
-              </span>
-            </div>
-          )}
-
-          {(theme?.id === "confeitaria" || theme?.id === "bakery" || theme?.id === "confectionery") && (
-            <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-              <span className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/20 border border-rose-400/40 px-3 py-1 text-xs font-bold text-rose-200 backdrop-blur-md">
-                <Cake className="h-3.5 w-3.5 text-rose-300 animate-sweet-float" />
-                Bolos Decorados
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/20 border border-rose-400/40 px-3 py-1 text-xs font-bold text-rose-200 backdrop-blur-md">
-                <Cookie className="h-3.5 w-3.5 text-amber-300 animate-sparkle-twinkle" />
-                Doces Gourmet
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/20 border border-rose-400/40 px-3 py-1 text-xs font-bold text-rose-200 backdrop-blur-md">
-                <Cherry className="h-3.5 w-3.5 text-rose-300 animate-sweet-float" />
-                Sobremesas Finas
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/20 border border-rose-400/40 px-3 py-1 text-xs font-bold text-rose-200 backdrop-blur-md">
-                <Sparkles className="h-3.5 w-3.5 text-amber-300 animate-sparkle-twinkle" />
-                Sob Encomenda
-              </span>
+              {heroPills.map((pill, idx) => {
+                const Icon = getServiceIcon(pill, theme?.id);
+                return (
+                  <span
+                    key={idx}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-white/10 border border-white/20 px-3 py-1 text-xs font-bold text-white backdrop-blur-md"
+                  >
+                    <Icon className="h-3.5 w-3.5 text-amber-300" />
+                    <span>{pill}</span>
+                  </span>
+                );
+              })}
             </div>
           )}
 
@@ -273,7 +278,7 @@ export function ConversionTemplateView({
               className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-base sm:text-lg px-8 py-4 shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 transition-all duration-200 active:scale-[0.98]"
             >
               <MessageCircle className="h-5 w-5 fill-white text-emerald-600 shrink-0" />
-              <span>💬 Falar no WhatsApp Agora</span>
+              <span>💬 {tenant?.cta_text || "Falar no WhatsApp Agora"}</span>
             </a>
 
             {/* 2. "📞 Ligar Agora" (secundário com fundo neutro/cinza escuro) */}

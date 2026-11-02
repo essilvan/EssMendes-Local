@@ -48,10 +48,13 @@ export function PremiumTemplateView({
     <div className="space-y-16 md:space-y-24 py-6 sm:py-10">
       {/* 1. Hero Section Universal com Efeito Glassmorphism e Foto de Capa */}
       <PublicHeroSplit
+        tenant={tenant}
+        services={services}
         tenantName={tenant.name}
         logoUrl={profile?.logo_url || (tenant as any).logo_url}
         coverUrl={coverImage}
-        description={profile?.description}
+        description={tenant?.description || profile?.description}
+        headline={tenant?.headline || profile?.editorial_summary}
         address={profile?.address}
         phoneWhatsapp={rawPhone}
         heroImageUrl={effectiveHeroImage}
@@ -67,15 +70,19 @@ export function PremiumTemplateView({
         statusBadgeText={statusBadgeText}
         brandColor={brandColor}
         theme={theme}
+        ctaText={tenant?.cta_text || (tenant?.theme_settings as any)?.cta_text}
         onOpenBooking={() => onOpenBooking()}
       />
 
-      {/* 2. Faixa de Pilares de Confiança Nobre (4 Blocos) */}
+      {/* 2. Faixa de Pilares de Confiança Nobre (4 Blocos Dinâmicos via Supabase) */}
       <TrustMetricsBar
         rating={realRating}
         reviewCount={realReviewCount}
         businessCategory={profile?.business_category}
         theme={theme}
+        services={services}
+        tenant={tenant}
+        onSelectService={(serviceId) => onOpenBooking(serviceId)}
       />
 
       {/* 3. Dashboard de Conversão Refinado (Catálogo de Serviços + Antes & Depois + Agendamento) */}

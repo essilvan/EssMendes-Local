@@ -31,6 +31,7 @@ interface PublicHeaderProps {
   statusBadgeText?: string;
   statusDetailText?: string;
   theme?: NicheThemeConfig;
+  ctaText?: string;
   onOpenBooking: () => void;
 }
 
@@ -47,6 +48,7 @@ export function PublicHeader({
   statusBadgeText,
   statusDetailText,
   theme,
+  ctaText,
   onOpenBooking,
 }: PublicHeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -236,7 +238,7 @@ export function PublicHeader({
               }}
             >
               <Calendar className="h-3.5 w-3.5" />
-              <span>Agendar Atendimento</span>
+              <span>{ctaText || "Agendar Atendimento"}</span>
             </button>
 
             {/* Toggle Menu Mobile */}

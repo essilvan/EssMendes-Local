@@ -27,6 +27,7 @@ import { ModernTemplateView } from "./templates/ModernTemplateView";
 import { PremiumTemplateView } from "./templates/PremiumTemplateView";
 import { WhatsAppFloatingButton } from "./WhatsAppFloatingButton";
 import { getUnifiedEstablishmentPhotos } from "@/utils/establishment-photos";
+import { getCtaButtonText } from "@/utils/showcase";
 import type { BusinessAttributes as BusinessAttributesType } from "@/types";
 
 interface PublicTenantHubProps {
@@ -34,6 +35,12 @@ interface PublicTenantHubProps {
     id: string;
     name: string;
     slug: string;
+    description?: string | null;
+    headline?: string | null;
+    cta_text?: string | null;
+    highlights?: any[] | null;
+    tags?: string[] | null;
+    services?: Service[];
     place_id?: string | null;
     google_place_id?: string | null;
     address?: string | null;
@@ -45,6 +52,7 @@ interface PublicTenantHubProps {
       template?: string;
       niche?: string;
       primary_color?: string;
+      cta_text?: string;
       [key: string]: any;
     } | null;
     google_rating?: number | null;
@@ -190,6 +198,11 @@ export function PublicTenantHub({
   const colorStyles = getThemeColorStyles(brandColor);
   const effectiveNiche =
     tenant.theme_settings?.niche || tenant.theme_niche || profile?.template_id;
+  const ctaButtonText = getCtaButtonText(
+    tenant,
+    effectiveNiche,
+    tenant.category || profile?.business_category
+  );
 
   const templateClasses: Record<string, string> = {
     premium: "template-premium font-serif-headings",
@@ -314,6 +327,7 @@ export function PublicTenantHub({
           statusBadgeText={statusBadgeText}
           statusDetailText={statusDetailText}
           theme={currentTheme}
+          ctaText={ctaButtonText}
           onOpenBooking={() => handleOpenBooking()}
         />
       ) : (
@@ -337,7 +351,7 @@ export function PublicTenantHub({
               className="text-xs font-bold px-4 py-2 rounded-xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-xs"
               style={{ backgroundColor: brandColor, color: getContrastTextColor(brandColor) }}
             >
-              Agendar Horário
+              {ctaButtonText}
             </button>
           </div>
         </nav>
@@ -468,6 +482,7 @@ export function PublicTenantHub({
         theme={currentTheme}
         activeTemplate={activeTemplate}
         brandColor={brandColor}
+        ctaText={ctaButtonText}
         onOpenBooking={() => handleOpenBooking()}
       />
 

@@ -36,6 +36,12 @@ import { PlacePhotoGallery } from "../PlacePhotoGallery";
 import { MapLocationCard } from "../MapLocationCard";
 import { GoogleReviewsCard } from "../GoogleReviewsCard";
 import { ItemDetailModal, type ItemDetailData } from "../ItemDetailModal";
+import {
+  getHeroSubtitle,
+  getHeroPills,
+  getCtaButtonText,
+  getServiceIcon,
+} from "@/utils/showcase";
 
 export function ModernTemplateView({
   tenant,
@@ -61,6 +67,24 @@ export function ModernTemplateView({
   const cleanPhone = sanitizePhoneNumber(rawPhone);
   const formattedPhone = formatBrazilianPhone(rawPhone);
   const whatsappUrl = generateWhatsAppUrl(rawPhone, tenant.name);
+
+  const heroSubtitle = getHeroSubtitle(
+    tenant,
+    profile,
+    theme?.id,
+    profile?.business_category || tenant.category
+  );
+  const heroPills = getHeroPills(
+    tenant,
+    services,
+    theme?.id,
+    profile?.business_category || tenant.category
+  );
+  const ctaButtonText = getCtaButtonText(
+    tenant,
+    theme?.id,
+    profile?.business_category || tenant.category
+  );
 
   const photosData = getUnifiedEstablishmentPhotos(tenant, profile);
   const effectiveHeroImage = customHeroImage || photosData.heroImage;
@@ -143,48 +167,24 @@ export function ModernTemplateView({
             </h1>
 
             <p className="text-sm sm:text-base text-zinc-600 dark:text-zinc-300 leading-relaxed max-w-2xl font-normal">
-              {profile?.editorial_summary || profile?.description || "Qualidade superior, atendimento de excelência e estrutura moderna pensada no seu conforto."}
+              {heroSubtitle}
             </p>
 
-            {theme?.id === "petshop" && (
+            {/* Pills / Diferenciais Dinâmicos (Supabase) */}
+            {heroPills && heroPills.length > 0 && (
               <div className="flex flex-wrap items-center gap-2 pt-1 pb-2">
-                <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/10 border border-amber-300/40 px-3 py-1 text-xs font-bold text-amber-800 dark:text-amber-300">
-                  <Dog className="h-3.5 w-3.5 text-amber-600 animate-tail-wag" />
-                  Banho & Tosa
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/10 border border-amber-300/40 px-3 py-1 text-xs font-bold text-amber-800 dark:text-amber-300">
-                  <Cat className="h-3.5 w-3.5 text-amber-700 animate-paw-float" />
-                  Espaço Felino
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/10 border border-amber-300/40 px-3 py-1 text-xs font-bold text-amber-800 dark:text-amber-300">
-                  <Bone className="h-3.5 w-3.5 text-amber-600 animate-tail-wag" />
-                  Mimos Pet
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/10 border border-amber-300/40 px-3 py-1 text-xs font-bold text-amber-800 dark:text-amber-300">
-                  <PawPrint className="h-3.5 w-3.5 text-amber-700 animate-paw-pulse" />
-                  Cuidado Carinhoso
-                </span>
-              </div>
-            )}
-
-            {(theme?.id === "confeitaria" || theme?.id === "bakery" || theme?.id === "confectionery") && (
-              <div className="flex flex-wrap items-center gap-2 pt-1 pb-2">
-                <span className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/10 border border-rose-300/40 px-3 py-1 text-xs font-bold text-rose-800 dark:text-rose-300">
-                  <Cake className="h-3.5 w-3.5 text-rose-600 animate-sweet-float" />
-                  Bolos Decorados
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/10 border border-rose-300/40 px-3 py-1 text-xs font-bold text-rose-800 dark:text-rose-300">
-                  <Cookie className="h-3.5 w-3.5 text-amber-700 animate-sparkle-twinkle" />
-                  Doces Gourmet
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/10 border border-rose-300/40 px-3 py-1 text-xs font-bold text-rose-800 dark:text-rose-300">
-                  <Cherry className="h-3.5 w-3.5 text-rose-600 animate-sweet-float" />
-                  Sobremesas Finas
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/10 border border-rose-300/40 px-3 py-1 text-xs font-bold text-rose-800 dark:text-rose-300">
-                  <Sparkles className="h-3.5 w-3.5 text-amber-500 animate-sparkle-twinkle" />
-                  Sob Encomenda
-                </span>
+                {heroPills.map((pill, idx) => {
+                  const Icon = getServiceIcon(pill, theme?.id);
+                  return (
+                    <span
+                      key={idx}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-zinc-100 dark:bg-white/5 border border-zinc-200/60 dark:border-white/10 px-3 py-1 text-xs font-bold text-zinc-800 dark:text-zinc-200"
+                    >
+                      <Icon className="h-3.5 w-3.5 text-amber-500" />
+                      <span>{pill}</span>
+                    </span>
+                  );
+                })}
               </div>
             )}
 
@@ -404,7 +404,7 @@ export function ModernTemplateView({
               style={{ backgroundColor: brandColor, color: contrastText }}
             >
               <Calendar className="h-4 w-4" />
-              <span>Agendar Horário</span>
+              <span>{ctaButtonText}</span>
             </button>
 
             <a

@@ -20,18 +20,25 @@ import {
   UtensilsCrossed,
   Flame,
 } from "lucide-react";
-import type { TenantReview } from "@/types";
+import type { TenantReview, Service } from "@/types";
 import { generateWhatsAppUrl } from "@/utils/phone";
 import { sanitizeDescription } from "@/utils/address";
 import { getNicheFallbackImage } from "@/utils/establishment-photos";
 import type { NicheThemeConfig } from "@/config/tenant-themes";
 import { NICHE_THEMES } from "@/config/tenant-themes";
+import {
+  getHeroSubtitle,
+  getHeroPills,
+  getCtaButtonText,
+  getServiceIcon,
+} from "@/utils/showcase";
 
 interface PublicHeroSplitProps {
   tenantName: string;
   logoUrl?: string | null;
   coverUrl?: string | null;
   description?: string | null;
+  headline?: string | null;
   address?: string | null;
   phoneWhatsapp?: string | null;
   heroImageUrl?: string | null;
@@ -47,6 +54,9 @@ interface PublicHeroSplitProps {
   statusBadgeText?: string;
   brandColor?: string;
   theme?: NicheThemeConfig;
+  tenant?: any;
+  services?: Service[];
+  ctaText?: string | null;
   onOpenBooking: () => void;
 }
 
@@ -55,6 +65,7 @@ export function PublicHeroSplit({
   logoUrl,
   coverUrl,
   description,
+  headline,
   address,
   phoneWhatsapp,
   heroImageUrl,
@@ -70,6 +81,9 @@ export function PublicHeroSplit({
   statusBadgeText,
   brandColor,
   theme,
+  tenant,
+  services = [],
+  ctaText,
   onOpenBooking,
 }: PublicHeroSplitProps) {
   const currentTheme = theme || NICHE_THEMES.retail_default;
@@ -79,6 +93,10 @@ export function PublicHeroSplit({
   const isRestaurant = currentTheme?.id === "restaurant" || currentTheme?.id === "gastronomia" || currentTheme?.id === "food";
   const displayAddress = address || "Atendimento Presencial";
   const cleanDescription = sanitizeDescription(description, address);
+  const heroSubtitle =
+    getHeroSubtitle(tenant, undefined, currentTheme?.id, businessCategory) || cleanDescription;
+  const heroPills = getHeroPills(tenant, services, currentTheme?.id, businessCategory);
+  const ctaLabel = ctaText || getCtaButtonText(tenant, currentTheme?.id, businessCategory);
   const heroWaMessage = `Olá, vi a vitrine de vocês e gostaria de agendar um atendimento/orçamento em ${tenantName}.`;
   const whatsappUrl = generateWhatsAppUrl(phoneWhatsapp || "", heroWaMessage);
 
@@ -210,53 +228,27 @@ export function PublicHeroSplit({
               )}
             </div>
 
-            {cleanDescription && (
+            {heroSubtitle && (
               <p className="text-xs sm:text-sm text-zinc-200/95 line-clamp-2 leading-relaxed drop-shadow-xs">
-                {cleanDescription}
+                {heroSubtitle}
               </p>
             )}
 
-            {/* Ícones Temáticos da Lucide com Microanimações Exclusivas no Pet Shop */}
-            {isPetShop && (
+            {/* Pills / Diferenciais Dinâmicos (Supabase) */}
+            {heroPills && heroPills.length > 0 && (
               <div className="flex flex-wrap items-center gap-2 pt-1.5">
-                <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/15 border border-amber-400/30 px-2.5 py-1 text-[11px] font-bold text-amber-200">
-                  <Dog className="h-3.5 w-3.5 text-amber-300 animate-tail-wag" />
-                  Banho & Tosa
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/15 border border-amber-400/30 px-2.5 py-1 text-[11px] font-bold text-amber-200">
-                  <Cat className="h-3.5 w-3.5 text-amber-300 animate-paw-float" />
-                  Espaço Felino
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/15 border border-amber-400/30 px-2.5 py-1 text-[11px] font-bold text-amber-200">
-                  <Bone className="h-3.5 w-3.5 text-amber-300 animate-tail-wag" />
-                  Mimos Pet
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/15 border border-amber-400/30 px-2.5 py-1 text-[11px] font-bold text-amber-200">
-                  <PawPrint className="h-3.5 w-3.5 text-amber-300 animate-paw-pulse" />
-                  Cuidado Dedicado
-                </span>
-              </div>
-            )}
-
-            {/* Ícones Temáticos da Lucide com Microanimações Exclusivas na Confeitaria */}
-            {isConfectionery && (
-              <div className="flex flex-wrap items-center gap-2 pt-1.5">
-                <span className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/15 border border-rose-400/30 px-2.5 py-1 text-[11px] font-bold text-rose-200">
-                  <Cake className="h-3.5 w-3.5 text-rose-300 animate-sweet-float" />
-                  Bolos Decorados
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/15 border border-rose-400/30 px-2.5 py-1 text-[11px] font-bold text-rose-200">
-                  <Cookie className="h-3.5 w-3.5 text-amber-300 animate-sparkle-twinkle" />
-                  Doces Gourmet
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/15 border border-rose-400/30 px-2.5 py-1 text-[11px] font-bold text-rose-200">
-                  <Cherry className="h-3.5 w-3.5 text-rose-300 animate-sweet-float" />
-                  Sobremesas Finas
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/15 border border-rose-400/30 px-2.5 py-1 text-[11px] font-bold text-rose-200">
-                  <Sparkles className="h-3.5 w-3.5 text-amber-300 animate-sparkle-twinkle" />
-                  Sob Encomenda
-                </span>
+                {heroPills.map((pill, idx) => {
+                  const Icon = getServiceIcon(pill, currentTheme?.id);
+                  return (
+                    <span
+                      key={idx}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-white/15 border border-white/20 px-2.5 py-1 text-[11px] font-bold text-zinc-100 backdrop-blur-md shadow-2xs"
+                    >
+                      <Icon className="h-3.5 w-3.5 text-amber-300" />
+                      <span>{pill}</span>
+                    </span>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -313,17 +305,7 @@ export function PublicHeroSplit({
             ) : (
               <Calendar className="h-4 w-4 shrink-0" />
             )}
-            <span>
-              {isConfectionery
-                ? "Fazer Encomenda / Orçamento"
-                : isPetShop
-                ? "Agendar Cuidados do Pet"
-                : isAutomotive
-                ? "Agendar Revisão / Orçamento"
-                : isRestaurant
-                ? "Ver Cardápio & Reservar"
-                : "Agendar Horário Online"}
-            </span>
+            <span>{ctaLabel}</span>
             <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
           </button>
         </div>

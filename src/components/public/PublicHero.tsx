@@ -10,41 +10,53 @@ import {
   ArrowRight,
   Scissors,
   Dog,
-  Cat,
-  Bone,
-  PawPrint,
-  Cake,
-  Cookie,
-  Cherry,
   CarFront,
+  UtensilsCrossed,
+  Cake,
   Wrench,
   Gauge,
-  Cog,
-  Disc,
-  UtensilsCrossed,
   Flame,
-  Wine,
-  Soup,
-  Coffee,
+  Cookie,
+  PawPrint,
 } from "lucide-react";
 import { sanitizeDescription } from "@/utils/address";
+import type { Service } from "@/types";
+import {
+  getHeroSubtitle,
+  getCtaButtonText,
+  getServiceIcon,
+  formatCurrency,
+} from "@/utils/showcase";
 
 interface PublicHeroProps {
   tenantName: string;
   description?: string | null;
+  headline?: string | null;
   businessCategory?: string | null;
   themeId?: string | null;
-  onOpenBooking: () => void;
+  services?: Service[];
+  tenant?: any;
+  ctaText?: string | null;
+  onOpenBooking: (serviceId?: string) => void;
 }
 
 export function PublicHero({
   tenantName,
   description,
+  headline,
   businessCategory,
   themeId,
+  services = [],
+  tenant,
+  ctaText,
   onOpenBooking,
 }: PublicHeroProps) {
   const cleanDescription = sanitizeDescription(description);
+  const heroSubtitle =
+    getHeroSubtitle(tenant, undefined, themeId, businessCategory) || cleanDescription;
+  const activeServicesList = (tenant?.services || services || []).filter(Boolean);
+  const ctaLabel = ctaText || getCtaButtonText(tenant, themeId, businessCategory);
+
   const isPetShop = themeId === "petshop" || (businessCategory || "").toLowerCase().includes("pet");
   const isConfectionery =
     themeId === "confeitaria" ||
@@ -185,201 +197,87 @@ export function PublicHero({
           )}
         </h1>
 
-        {/* Subtítulo / Descrição */}
+        {/* Subtítulo / Descrição Dinâmica */}
         <p className="text-xs sm:text-base text-slate-600 max-w-2xl leading-relaxed font-normal">
-          {cleanDescription ||
-            (isAutomotive
-              ? `Manutenção preventiva e corretiva, diagnóstico eletrônico, troca de óleo, freios e suspensão com peças de procedência e garantia no ${tenantName}.`
-              : isRestaurant
-              ? `Cardápio autoral com ingredientes frescos, opções saborosas para almoço, jantar e drinks especiais em um ambiente acolhedor no ${tenantName}.`
-              : isConfectionery
-              ? `Bolos decorados, tortas finas, docinhos gourmet e sobremesas feitas com ingredientes nobres e carinho para suas melhores comemorações no ${tenantName}.`
-              : isPetShop
-              ? `Banho e tosa humanizados, consultas veterinárias e mimos que seu pet merece com todo respeito e segurança no ${tenantName}.`
-              : `Conheça nossos serviços e agende seu horário online no ${tenantName}. Atendimento de excelência, pontualidade e satisfação garantida.`)}
+          {heroSubtitle}
         </p>
 
-        {/* Diferenciais com Ícones Temáticos */}
+        {/* Diferenciais Vinculados a Serviços Reais ou Categorias Contextuais */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full pt-2 text-left">
-          {isAutomotive ? (
-            <>
-              {/* Diferencial Automotivo 1 */}
-              <div className="flex items-center gap-3 rounded-2xl border border-blue-200/80 bg-white p-3.5 shadow-2xs hover:-translate-y-0.5 transition">
-                <div
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-2xs"
-                  style={{ backgroundColor: "var(--primary-color, #2563eb)" }}
-                >
-                  <Gauge className="h-4 w-4 animate-gauge-needle" />
-                </div>
-                <div>
-                  <p className="font-bold text-xs text-slate-900">Diagnóstico Computadorizado</p>
-                  <p className="text-[11px] text-slate-500">Scanners de última geração</p>
-                </div>
-              </div>
+          {activeServicesList && activeServicesList.length > 0 ? (
+            activeServicesList.slice(0, 3).map((service: Service) => {
+              const Icon = getServiceIcon(service.name, themeId || "");
+              const formattedPrice =
+                service.price !== null && Number(service.price) > 0
+                  ? formatCurrency(Number(service.price))
+                  : null;
+              const tagText =
+                formattedPrice ||
+                (service.duration_minutes ? `${service.duration_minutes} min` : null);
 
-              {/* Diferencial Automotivo 2 */}
-              <div className="flex items-center gap-3 rounded-2xl border border-blue-200/80 bg-white p-3.5 shadow-2xs hover:-translate-y-0.5 transition">
+              return (
                 <div
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-2xs"
-                  style={{ backgroundColor: "var(--primary-color, #2563eb)" }}
+                  key={service.id}
+                  onClick={() => onOpenBooking(service.id)}
+                  className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-2xs hover:-translate-y-0.5 transition cursor-pointer"
                 >
-                  <Wrench className="h-4 w-4 animate-wrench-tilt" />
+                  <div
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-2xs"
+                    style={{ backgroundColor: "var(--primary-color, #0d9488)" }}
+                  >
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-bold text-xs text-slate-900 truncate" title={service.name}>
+                        {service.name}
+                      </p>
+                      {tagText && (
+                        <span className="shrink-0 text-[10px] font-bold text-emerald-600 font-mono">
+                          {tagText}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-500 truncate">
+                      {service.description || "Serviço com padrão de excelência e pontualidade."}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-bold text-xs text-slate-900">Mecânica Especializada</p>
-                  <p className="text-[11px] text-slate-500">Peças genuínas e garantia</p>
-                </div>
-              </div>
+              );
+            })
+          ) : Array.isArray(tenant?.highlights) && tenant.highlights.length > 0 ? (
+            tenant.highlights.slice(0, 3).map((item: any, idx: number) => {
+              const title =
+                typeof item === "string"
+                  ? item
+                  : item?.title || item?.name || `Diferencial ${idx + 1}`;
+              const desc =
+                typeof item === "object"
+                  ? item?.desc || item?.description
+                  : "Atendimento diferenciado e de confiança.";
+              const Icon = getServiceIcon(title, themeId || "");
 
-              {/* Diferencial Automotivo 3 */}
-              <div className="flex items-center gap-3 rounded-2xl border border-blue-200/80 bg-white p-3.5 shadow-2xs hover:-translate-y-0.5 transition">
+              return (
                 <div
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-2xs"
-                  style={{ backgroundColor: "var(--primary-color, #2563eb)" }}
+                  key={idx}
+                  className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-2xs hover:-translate-y-0.5 transition"
                 >
-                  <Disc className="h-4 w-4 animate-disc-spin" />
+                  <div
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-2xs"
+                    style={{ backgroundColor: "var(--primary-color, #0d9488)" }}
+                  >
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-xs text-slate-900 truncate">{title}</p>
+                    <p className="text-[11px] text-slate-500 truncate">{desc}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-bold text-xs text-slate-900">Freios & Suspensão</p>
-                  <p className="text-[11px] text-slate-500">Segurança total na rodagem</p>
-                </div>
-              </div>
-            </>
-          ) : isRestaurant ? (
-            <>
-              {/* Diferencial Restaurante 1 */}
-              <div className="flex items-center gap-3 rounded-2xl border border-red-200/80 bg-white p-3.5 shadow-2xs hover:-translate-y-0.5 transition">
-                <div
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-2xs"
-                  style={{ backgroundColor: "var(--primary-color, #dc2626)" }}
-                >
-                  <UtensilsCrossed className="h-4 w-4 animate-culinary-float" />
-                </div>
-                <div>
-                  <p className="font-bold text-xs text-slate-900">Ingredientes Selecionados</p>
-                  <p className="text-[11px] text-slate-500">Frescor em cada receita</p>
-                </div>
-              </div>
-
-              {/* Diferencial Restaurante 2 */}
-              <div className="flex items-center gap-3 rounded-2xl border border-red-200/80 bg-white p-3.5 shadow-2xs hover:-translate-y-0.5 transition">
-                <div
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-2xs"
-                  style={{ backgroundColor: "var(--primary-color, #dc2626)" }}
-                >
-                  <Flame className="h-4 w-4 animate-flame-flicker text-amber-200" />
-                </div>
-                <div>
-                  <p className="font-bold text-xs text-slate-900">Cozinha & Brasa Viva</p>
-                  <p className="text-[11px] text-slate-500">Ponto e sabor inconfundíveis</p>
-                </div>
-              </div>
-
-              {/* Diferencial Restaurante 3 */}
-              <div className="flex items-center gap-3 rounded-2xl border border-red-200/80 bg-white p-3.5 shadow-2xs hover:-translate-y-0.5 transition">
-                <div
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-2xs"
-                  style={{ backgroundColor: "var(--primary-color, #dc2626)" }}
-                >
-                  <Wine className="h-4 w-4 animate-culinary-float" />
-                </div>
-                <div>
-                  <p className="font-bold text-xs text-slate-900">Drinks & Harmonização</p>
-                  <p className="text-[11px] text-slate-500">Carta completa de bebidas</p>
-                </div>
-              </div>
-            </>
-          ) : isConfectionery ? (
-            <>
-              {/* Diferencial Confeitaria 1 */}
-              <div className="flex items-center gap-3 rounded-2xl border border-rose-200/80 bg-white p-3.5 shadow-2xs hover:-translate-y-0.5 transition">
-                <div
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-2xs"
-                  style={{ backgroundColor: "var(--primary-color, #f43f5e)" }}
-                >
-                  <Cake className="h-4 w-4 animate-sweet-float" />
-                </div>
-                <div>
-                  <p className="font-bold text-xs text-slate-900">Bolos Personalizados</p>
-                  <p className="text-[11px] text-slate-500">Design exclusivo e recheios nobres</p>
-                </div>
-              </div>
-
-              {/* Diferencial Confeitaria 2 */}
-              <div className="flex items-center gap-3 rounded-2xl border border-rose-200/80 bg-white p-3.5 shadow-2xs hover:-translate-y-0.5 transition">
-                <div
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-2xs"
-                  style={{ backgroundColor: "var(--primary-color, #f43f5e)" }}
-                >
-                  <Cookie className="h-4 w-4 animate-sparkle-twinkle" />
-                </div>
-                <div>
-                  <p className="font-bold text-xs text-slate-900">Doces Gourmet</p>
-                  <p className="text-[11px] text-slate-500">Ingredientes frescos e chocolate puro</p>
-                </div>
-              </div>
-
-              {/* Diferencial Confeitaria 3 */}
-              <div className="flex items-center gap-3 rounded-2xl border border-rose-200/80 bg-white p-3.5 shadow-2xs hover:-translate-y-0.5 transition">
-                <div
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-2xs"
-                  style={{ backgroundColor: "var(--primary-color, #f43f5e)" }}
-                >
-                  <Cherry className="h-4 w-4 animate-sweet-float" />
-                </div>
-                <div>
-                  <p className="font-bold text-xs text-slate-900">Tortas & Sobremesas</p>
-                  <p className="text-[11px] text-slate-500">Frutas selecionadas e ponto perfeito</p>
-                </div>
-              </div>
-            </>
-          ) : isPetShop ? (
-            <>
-              {/* Diferencial Pet 1 */}
-              <div className="flex items-center gap-3 rounded-2xl border border-amber-200/80 bg-white p-3.5 shadow-2xs hover:-translate-y-0.5 transition">
-                <div
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-2xs"
-                  style={{ backgroundColor: "var(--primary-color, #ea580c)" }}
-                >
-                  <Dog className="h-4 w-4 animate-tail-wag" />
-                </div>
-                <div>
-                  <p className="font-bold text-xs text-slate-900">Banho & Tosa Humanizada</p>
-                  <p className="text-[11px] text-slate-500">Estética sem traumas nem estresse</p>
-                </div>
-              </div>
-
-              {/* Diferencial Pet 2 */}
-              <div className="flex items-center gap-3 rounded-2xl border border-amber-200/80 bg-white p-3.5 shadow-2xs hover:-translate-y-0.5 transition">
-                <div
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-2xs"
-                  style={{ backgroundColor: "var(--primary-color, #ea580c)" }}
-                >
-                  <Cat className="h-4 w-4 animate-paw-float" />
-                </div>
-                <div>
-                  <p className="font-bold text-xs text-slate-900">Espaço Cat-Friendly</p>
-                  <p className="text-[11px] text-slate-500">Ambiente tranquilo e dedicado</p>
-                </div>
-              </div>
-
-              {/* Diferencial Pet 3 */}
-              <div className="flex items-center gap-3 rounded-2xl border border-amber-200/80 bg-white p-3.5 shadow-2xs hover:-translate-y-0.5 transition">
-                <div
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-2xs"
-                  style={{ backgroundColor: "var(--primary-color, #ea580c)" }}
-                >
-                  <Bone className="h-4 w-4 animate-tail-wag" />
-                </div>
-                <div>
-                  <p className="font-bold text-xs text-slate-900">Mimos & Saúde Animal</p>
-                  <p className="text-[11px] text-slate-500">Produtos seguros e petiscos</p>
-                </div>
-              </div>
-            </>
+              );
+            })
           ) : (
             <>
-              {/* Diferencial 1 */}
+              {/* Diferencial Contextual 1 */}
               <div className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-2xs">
                 <div
                   className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-2xs"
@@ -388,12 +286,14 @@ export function PublicHero({
                   <Award className="h-4 w-4" />
                 </div>
                 <div>
-                  <p className="font-bold text-xs text-slate-900">Profissionais Qualificados</p>
+                  <p className="font-bold text-xs text-slate-900">
+                    {businessCategory ? `Especialidade em ${businessCategory}` : "Profissionais Qualificados"}
+                  </p>
                   <p className="text-[11px] text-slate-500">Atendimento dedicado e seguro</p>
                 </div>
               </div>
 
-              {/* Diferencial 2 */}
+              {/* Diferencial Contextual 2 */}
               <div className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-2xs">
                 <div
                   className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-2xs"
@@ -407,7 +307,7 @@ export function PublicHero({
                 </div>
               </div>
 
-              {/* Diferencial 3 */}
+              {/* Diferencial Contextual 3 */}
               <div className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-2xs">
                 <div
                   className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-2xs"
@@ -428,7 +328,7 @@ export function PublicHero({
         <div className="flex flex-wrap items-center justify-center gap-3 pt-2 w-full max-w-md">
           <button
             type="button"
-            onClick={onOpenBooking}
+            onClick={() => onOpenBooking()}
             className="flex-1 min-w-[170px] inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-xs sm:text-sm font-extrabold text-white shadow-md transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
             style={{
               backgroundColor: isAutomotive
@@ -453,17 +353,7 @@ export function PublicHero({
             ) : (
               <Calendar className="h-4 w-4" />
             )}
-            <span>
-              {isAutomotive
-                ? "Agendar Diagnóstico"
-                : isRestaurant
-                ? "Reservar Mesa / Pedir"
-                : isConfectionery
-                ? "Fazer Encomenda"
-                : isPetShop
-                ? "Agendar Cuidados do Pet"
-                : "Agendar Horário"}
-            </span>
+            <span>{ctaLabel}</span>
             <ArrowRight className="h-3.5 w-3.5" />
           </button>
 

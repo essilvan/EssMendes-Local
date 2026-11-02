@@ -775,6 +775,28 @@ function detectLocalBusinessSchemaType(
       <PublicTenantHub
         tenant={{
           ...tenant,
+          services: activeServices,
+          description:
+            (tenant as any)?.description ||
+            typedProfile?.description ||
+            typedProfile?.editorial_summary ||
+            null,
+          headline:
+            (tenant as any)?.headline ||
+            typedProfile?.editorial_summary ||
+            null,
+          cta_text:
+            (tenant as any)?.cta_text ||
+            (tenant?.theme_settings as any)?.cta_text ||
+            null,
+          highlights:
+            (tenant as any)?.highlights ||
+            (tenant?.theme_settings as any)?.highlights ||
+            null,
+          tags:
+            (tenant as any)?.tags ||
+            (tenant?.theme_settings as any)?.tags ||
+            null,
           category: profile?.business_category || (tenant as any)?.category || null,
           segment: tenant.theme_niche || (tenant.theme_settings as any)?.niche || null,
           template: profile?.template_id || (tenant.theme_settings as any)?.template || null,

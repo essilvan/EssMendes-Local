@@ -22,6 +22,7 @@ interface MobileStickyBarProps {
   theme?: NicheThemeConfig;
   activeTemplate?: string;
   brandColor?: string;
+  ctaText?: string;
   onOpenBooking: () => void;
 }
 
@@ -35,6 +36,7 @@ export function MobileStickyBar({
   placeId,
   googleMapsUrl,
   brandColor,
+  ctaText,
   onOpenBooking,
 }: MobileStickyBarProps) {
   const cleanPhone = phoneWhatsapp ? sanitizePhoneNumber(phoneWhatsapp) : "";
@@ -104,7 +106,7 @@ export function MobileStickyBar({
           }}
         >
           <Calendar className="h-4 w-4 shrink-0" />
-          <span>Agendar Horário Online</span>
+          <span>{ctaText || "Agendar Horário Online"}</span>
         </button>
       </div>
     </div>
