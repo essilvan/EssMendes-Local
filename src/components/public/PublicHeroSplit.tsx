@@ -31,6 +31,7 @@ import {
   getHeroPills,
   getCtaButtonText,
   getServiceIcon,
+  isAutomotiveNiche,
 } from "@/utils/showcase";
 
 interface PublicHeroSplitProps {
@@ -58,6 +59,7 @@ interface PublicHeroSplitProps {
   services?: Service[];
   ctaText?: string | null;
   onOpenBooking: () => void;
+  onOpenVehicleQuote?: () => void;
 }
 
 export function PublicHeroSplit({
@@ -85,11 +87,16 @@ export function PublicHeroSplit({
   services = [],
   ctaText,
   onOpenBooking,
+  onOpenVehicleQuote,
 }: PublicHeroSplitProps) {
   const currentTheme = theme || NICHE_THEMES.retail_default;
   const isPetShop = currentTheme?.id === "petshop";
   const isConfectionery = currentTheme?.id === "confeitaria" || currentTheme?.id === "bakery" || currentTheme?.id === "confectionery";
-  const isAutomotive = currentTheme?.id === "automotive" || currentTheme?.id === "automotivo" || currentTheme?.id === "auto";
+  const isAutomotive =
+    currentTheme?.id === "automotive" ||
+    currentTheme?.id === "automotivo" ||
+    currentTheme?.id === "auto" ||
+    isAutomotiveNiche(tenant, undefined, currentTheme?.id);
   const isRestaurant = currentTheme?.id === "restaurant" || currentTheme?.id === "gastronomia" || currentTheme?.id === "food";
   const displayAddress = address || "Atendimento Presencial";
   const cleanDescription = sanitizeDescription(description, address);
@@ -284,10 +291,22 @@ export function PublicHeroSplit({
             </a>
           )}
 
+          {/* Botão exclusivo de Orçamento por Placa (Nicho Automotivo) */}
+          {isAutomotive && onOpenVehicleQuote && (
+            <button
+              type="button"
+              onClick={onOpenVehicleQuote}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 via-sky-600 to-blue-700 hover:from-blue-500 hover:to-sky-500 px-5 py-2.5 text-xs sm:text-sm font-extrabold text-white shadow-xl shadow-blue-600/30 transition-all duration-200 hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer"
+            >
+              <CarFront className="h-4 w-4 shrink-0 text-blue-100" />
+              <span>Solicitar Orçamento do Veículo</span>
+            </button>
+          )}
+
           {/* Botão Agendar Horário Online com micro-shimmer e feedback tátil */}
           <button
             type="button"
-            onClick={onOpenBooking}
+            onClick={isAutomotive && onOpenVehicleQuote && !ctaText ? onOpenVehicleQuote : onOpenBooking}
             className="w-full sm:w-auto sm:ml-auto inline-flex items-center justify-center gap-2.5 rounded-2xl px-6 py-2.5 text-xs sm:text-sm font-extrabold text-white shadow-xl transition-all duration-200 hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer animate-shimmer"
             style={{
               backgroundColor: brandColor || "var(--brand-primary, #0d9488)",

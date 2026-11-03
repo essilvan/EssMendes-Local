@@ -26,8 +26,10 @@ import { MinimalTemplateView } from "./templates/MinimalTemplateView";
 import { ModernTemplateView } from "./templates/ModernTemplateView";
 import { PremiumTemplateView } from "./templates/PremiumTemplateView";
 import { WhatsAppFloatingButton } from "./WhatsAppFloatingButton";
+import { VehicleQuoteModal } from "./VehicleQuoteModal";
 import { getUnifiedEstablishmentPhotos } from "@/utils/establishment-photos";
-import { getCtaButtonText } from "@/utils/showcase";
+import { getCtaButtonText, isAutomotiveNiche } from "@/utils/showcase";
+import { CarFront, Wrench, Gauge, ShieldCheck } from "lucide-react";
 import type { BusinessAttributes as BusinessAttributesType } from "@/types";
 
 interface PublicTenantHubProps {
@@ -178,6 +180,7 @@ export function PublicTenantHub({
   statusDetailText,
 }: PublicTenantHubProps) {
   const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [isVehicleQuoteOpen, setIsVehicleQuoteOpen] = useState(false);
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(
     null
   );
@@ -242,7 +245,9 @@ export function PublicTenantHub({
   const isAutomotive =
     effectiveNiche === "automotive" ||
     effectiveNiche === "automotivo" ||
-    effectiveNiche === "auto";
+    effectiveNiche === "auto" ||
+    effectiveNiche === "mecanica" ||
+    isAutomotiveNiche(tenant, profile, effectiveNiche);
   const isRestaurant =
     effectiveNiche === "restaurant" ||
     effectiveNiche === "gastronomia" ||
@@ -359,6 +364,46 @@ export function PublicTenantHub({
 
       {/* Container Centralizado com Conteúdo Real Dinâmico por Template */}
       <main className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-14 md:py-16">
+        {/* Faixa de Triagem & Orçamento Inteligente por Placa (Exclusivo Nicho Automotivo / Mecânica) */}
+        {isAutomotive && (
+          <div className="mb-8 rounded-3xl border border-blue-500/30 bg-gradient-to-r from-slate-900/95 via-slate-800/95 to-slate-900/95 p-5 sm:p-6 shadow-xl shadow-black/40 backdrop-blur-md flex flex-col md:flex-row items-center justify-between gap-5">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-4">
+              {/* Mini Placa Mercosul Decorativa */}
+              <div className="rounded-xl border-2 border-slate-300 bg-white text-slate-950 overflow-hidden shadow-md shrink-0 min-w-[120px] text-center">
+                <div className="bg-[#003399] text-white text-[8px] font-extrabold tracking-widest uppercase py-0.5 px-2 flex items-center justify-between">
+                  <span>BR</span>
+                  <span>MERCOSUL</span>
+                </div>
+                <div className="px-2.5 py-1.5 font-mono text-sm font-black tracking-widest">
+                  ABC1D23
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-blue-400">
+                  <Gauge className="h-3.5 w-3.5" />
+                  <span>Triagem Técnica por Placa • Histórico Integrado</span>
+                </div>
+                <h2 className="text-base sm:text-lg font-extrabold text-white tracking-tight">
+                  Precisa de revisão, diagnóstico ou reparo mecânico?
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-300 max-w-xl">
+                  Informe a placa, modelo e o sintoma do veículo para registrar sua ficha e adiantar seu orçamento direto no WhatsApp da oficina.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsVehicleQuoteOpen(true)}
+              className="w-full md:w-auto shrink-0 inline-flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-blue-600 via-sky-600 to-blue-700 hover:from-blue-500 hover:to-sky-500 text-white font-extrabold text-xs sm:text-sm px-6 py-3.5 shadow-lg shadow-blue-600/30 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+            >
+              <CarFront className="h-4 w-4 shrink-0" />
+              <span>Solicitar Orçamento do Veículo</span>
+            </button>
+          </div>
+        )}
+
         {activeTemplate === "conversion" && (
           <ConversionTemplateView
             tenant={tenant}
@@ -377,6 +422,7 @@ export function PublicTenantHub({
             heroImage={effectiveHero}
             galleryPhotos={galleryPhotos}
             onOpenBooking={handleOpenBooking}
+            onOpenVehicleQuote={() => setIsVehicleQuoteOpen(true)}
           />
         )}
 
@@ -398,6 +444,7 @@ export function PublicTenantHub({
             heroImage={effectiveHero}
             galleryPhotos={galleryPhotos}
             onOpenBooking={handleOpenBooking}
+            onOpenVehicleQuote={() => setIsVehicleQuoteOpen(true)}
           />
         )}
 
@@ -419,6 +466,7 @@ export function PublicTenantHub({
             heroImage={effectiveHero}
             galleryPhotos={galleryPhotos}
             onOpenBooking={handleOpenBooking}
+            onOpenVehicleQuote={() => setIsVehicleQuoteOpen(true)}
           />
         )}
 
@@ -443,6 +491,7 @@ export function PublicTenantHub({
             heroImage={effectiveHero}
             galleryPhotos={galleryPhotos}
             onOpenBooking={handleOpenBooking}
+            onOpenVehicleQuote={() => setIsVehicleQuoteOpen(true)}
           />
         )}
       </main>
@@ -508,6 +557,18 @@ export function PublicTenantHub({
         isOpen={isBookingOpen}
         onClose={handleCloseBooking}
       />
+
+      {/* Modal de Solicitação de Orçamento por Placa (Nicho Automotivo) */}
+      {isAutomotive && (
+        <VehicleQuoteModal
+          isOpen={isVehicleQuoteOpen}
+          onClose={() => setIsVehicleQuoteOpen(false)}
+          tenantId={tenant.id}
+          tenantName={tenant.name}
+          phoneWhatsapp={profile?.phone_whatsapp || profile?.phone || tenant.phone}
+          brandColor={brandColor}
+        />
+      )}
     </div>
   );
 }

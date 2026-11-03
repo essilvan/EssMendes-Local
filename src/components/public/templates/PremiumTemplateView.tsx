@@ -32,6 +32,7 @@ export function PremiumTemplateView({
   heroImage: customHeroImage,
   galleryPhotos: customGalleryPhotos,
   onOpenBooking,
+  onOpenVehicleQuote,
 }: TemplateViewProps) {
   const realRating = profile?.google_rating ?? profile?.rating ?? tenant.google_rating ?? 5.0;
   const realReviewCount =
@@ -72,6 +73,7 @@ export function PremiumTemplateView({
         theme={theme}
         ctaText={tenant?.cta_text || (tenant?.theme_settings as any)?.cta_text}
         onOpenBooking={() => onOpenBooking()}
+        onOpenVehicleQuote={onOpenVehicleQuote}
       />
 
       {/* 2. Faixa de Pilares de Confiança Nobre (4 Blocos Dinâmicos via Supabase) */}

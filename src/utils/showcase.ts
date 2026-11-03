@@ -230,12 +230,31 @@ export function getServiceIcon(
 }
 
 /**
+ * Detecta se o estabelecimento pertence ao nicho Automotivo / Mecânica (`auto`, `mecanica`, `automotive`, `oficina`)
+ */
+export function isAutomotiveNiche(
+  tenant?: any,
+  profile?: TenantProfile | null,
+  niche?: string | null
+): boolean {
+  const combined = `${niche || ""} ${tenant?.theme_niche || ""} ${tenant?.theme_settings?.niche || ""} ${tenant?.category || ""} ${tenant?.segment || ""} ${tenant?.template || ""} ${profile?.business_category || ""} ${profile?.template_id || ""} ${(tenant?.google_types || []).join(" ")}`.toLowerCase();
+  return (
+    combined.includes("auto") ||
+    combined.includes("mecanic") ||
+    combined.includes("mecânic") ||
+    combined.includes("oficina") ||
+    combined.includes("funilaria") ||
+    combined.includes("car_repair")
+  );
+}
+
+/**
  * 4. Botão de CTA Dinâmico
  * Regras:
  * - Se tenant.cta_text estiver configurado, utiliza-o diretamente.
  * - Caso contrário, aplica a regra pelo nicho:
  *   * Veterinária/Pet: "Agendar Atendimento"
- *   * Automotivo: "Solicitar Orçamento"
+ *   * Automotivo: "Solicitar Orçamento do Veículo"
  *   * Barbearia/Estética: "Agendar Horário"
  *   * Confeitaria: "Fazer Encomenda / Orçamento"
  *   * Restaurante: "Reservar Mesa / Pedir"
@@ -265,8 +284,13 @@ export function getCtaButtonText(
   }
 
   // 2. Automotivo
-  if (combined.includes("auto") || combined.includes("mecanic") || combined.includes("oficina")) {
-    return "Solicitar Orçamento";
+  if (
+    combined.includes("auto") ||
+    combined.includes("mecanic") ||
+    combined.includes("mecânic") ||
+    combined.includes("oficina")
+  ) {
+    return "Solicitar Orçamento do Veículo";
   }
 
   // 3. Barbearia / Estética / Salão

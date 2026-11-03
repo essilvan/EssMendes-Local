@@ -43,6 +43,8 @@ export interface PlatformPixSettings {
 export interface TenantPermissions {
   dashboard: boolean;          // Dashboard
   appointments: boolean;       // Agendamentos
+  vehicle_quotes?: boolean;    // Orçamentos por Placa (Automotivo)
+  maintenance_schedules?: boolean; // Revisões Preventivas (Automotivo)
   professionals?: boolean;     // Profissionais / Equipe
   services: boolean;           // Serviços
   products: boolean;           // Vitrine Produtos
@@ -62,6 +64,8 @@ export interface TenantPermissions {
 export const DEFAULT_TENANT_PERMISSIONS: TenantPermissions = {
   dashboard: true,
   appointments: true,
+  vehicle_quotes: true,
+  maintenance_schedules: true,
   professionals: true,
   services: true,
   products: true,
@@ -384,4 +388,61 @@ export interface LocalScoreResult {
   statusLevel: "excelente" | "forte" | "moderada" | "critica";
   categories: PresenceScoreCategory[];
   totalOpportunities: number;
+}
+
+export type VehicleQuoteStatus =
+  | "pending"
+  | "quoted"
+  | "approved"
+  | "in_progress"
+  | "completed"
+  | "canceled";
+
+export interface VehicleQuotePart {
+  name: string;
+  quantity?: number;
+  unit_price?: number;
+}
+
+export interface VehicleQuote {
+  id: string;
+  tenant_id: string;
+  license_plate: string;
+  plate_display?: string | null;
+  vehicle_model?: string | null;
+  client_name: string;
+  client_phone: string;
+  complaint?: string | null;
+  category_tags?: string[] | null;
+  status: VehicleQuoteStatus | string;
+  parts_needed?: VehicleQuotePart[] | any;
+  labor_cost?: number | null;
+  parts_cost?: number | null;
+  total_cost?: number | null;
+  scheduled_for?: string | null;
+  mechanic_notes?: string | null;
+  created_at: string;
+}
+
+export type VehicleMaintenanceStatus =
+  | "scheduled"
+  | "notified"
+  | "completed"
+  | "overdue"
+  | "canceled";
+
+export interface VehicleMaintenanceSchedule {
+  id: string;
+  tenant_id: string;
+  license_plate: string;
+  client_name: string;
+  client_phone: string;
+  vehicle_model?: string | null;
+  service_type: string;
+  last_service_date?: string | null;
+  due_date: string;
+  due_km?: number | null;
+  status: VehicleMaintenanceStatus | string;
+  notes?: string | null;
+  created_at: string;
 }

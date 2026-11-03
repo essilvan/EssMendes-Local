@@ -22,6 +22,7 @@ import {
   Cookie,
   Cherry,
   Sparkles,
+  CarFront,
 } from "lucide-react";
 import type { TemplateViewProps } from "./ConversionTemplateView";
 import { generateWhatsAppUrl, sanitizePhoneNumber, formatBrazilianPhone } from "@/utils/phone";
@@ -35,6 +36,7 @@ import {
   getHeroPills,
   getCtaButtonText,
   getServiceIcon,
+  isAutomotiveNiche,
 } from "@/utils/showcase";
 
 export function MinimalTemplateView({
@@ -54,6 +56,7 @@ export function MinimalTemplateView({
   heroImage: customHeroImage,
   galleryPhotos: customGalleryPhotos,
   onOpenBooking,
+  onOpenVehicleQuote,
 }: TemplateViewProps) {
   const [selectedDetailItem, setSelectedDetailItem] = React.useState<ItemDetailData | null>(null);
   const contrastText = getContrastTextColor(brandColor);
@@ -464,6 +467,17 @@ export function MinimalTemplateView({
             <MessageCircle className="h-3.5 w-3.5" />
             <span>Falar no WhatsApp</span>
           </a>
+
+          {isAutomotiveNiche(tenant, profile, theme?.id) && onOpenVehicleQuote && (
+            <button
+              type="button"
+              onClick={onOpenVehicleQuote}
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold transition cursor-pointer shadow-xs"
+            >
+              <CarFront className="h-3.5 w-3.5" />
+              <span>Solicitar Orçamento do Veículo</span>
+            </button>
+          )}
 
           <button
             type="button"

@@ -47,6 +47,8 @@ export default async function AdminLayout({
   const permissions: TenantPermissions = {
     dashboard: tenant?.permissions?.dashboard ?? true,
     appointments: tenant?.permissions?.appointments ?? true,
+    vehicle_quotes: tenant?.permissions?.vehicle_quotes ?? tenant?.permissions?.appointments ?? true,
+    maintenance_schedules: tenant?.permissions?.maintenance_schedules ?? tenant?.permissions?.appointments ?? true,
     professionals: tenant?.permissions?.professionals ?? true,
     services: tenant?.permissions?.services ?? true,
     products: tenant?.permissions?.products ?? tenant?.permissions?.showcase ?? true,
@@ -71,6 +73,8 @@ export default async function AdminLayout({
     // 2. Mapeamento de rotas e suas respectivas permissões
     const permissionRouteMap: { prefix: string; key: keyof TenantPermissions }[] = [
       { prefix: "/admin/agendamentos", key: "appointments" },
+      { prefix: "/admin/orcamentos", key: "vehicle_quotes" },
+      { prefix: "/admin/revisoes", key: "maintenance_schedules" },
       { prefix: "/admin/profissionais", key: "professionals" },
       { prefix: "/admin/equipe", key: "professionals" },
       { prefix: "/admin/servicos", key: "services" },

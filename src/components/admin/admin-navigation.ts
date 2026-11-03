@@ -12,6 +12,8 @@ import {
   CreditCard,
   Settings,
   Building2,
+  CarFront,
+  Wrench,
 } from "lucide-react";
 import type { TenantPermissions } from "@/types";
 
@@ -51,6 +53,18 @@ export const ADMIN_NAV_MODULES: AdminNavItem[] = [
     href: "/admin/agendamentos",
     icon: CalendarCheck,
     key: "appointments",
+  },
+  {
+    name: "Orçamentos por Placa",
+    href: "/admin/orcamentos",
+    icon: CarFront,
+    key: "vehicle_quotes",
+  },
+  {
+    name: "Revisões Preventivas",
+    href: "/admin/revisoes",
+    icon: Wrench,
+    key: "maintenance_schedules",
   },
   {
     name: "Profissionais",

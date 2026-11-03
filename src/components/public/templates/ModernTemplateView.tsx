@@ -25,6 +25,7 @@ import {
   Cake,
   Cookie,
   Cherry,
+  CarFront,
 } from "lucide-react";
 import type { TemplateViewProps } from "./ConversionTemplateView";
 import { generateWhatsAppUrl, sanitizePhoneNumber, formatBrazilianPhone } from "@/utils/phone";
@@ -41,6 +42,7 @@ import {
   getHeroPills,
   getCtaButtonText,
   getServiceIcon,
+  isAutomotiveNiche,
 } from "@/utils/showcase";
 
 export function ModernTemplateView({
@@ -60,6 +62,7 @@ export function ModernTemplateView({
   heroImage: customHeroImage,
   galleryPhotos: customGalleryPhotos,
   onOpenBooking,
+  onOpenVehicleQuote,
 }: TemplateViewProps) {
   const [selectedDetailItem, setSelectedDetailItem] = React.useState<ItemDetailData | null>(null);
   const contrastText = getContrastTextColor(brandColor);
@@ -397,6 +400,17 @@ export function ModernTemplateView({
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto shrink-0">
+            {isAutomotiveNiche(tenant, profile, theme?.id) && onOpenVehicleQuote && (
+              <button
+                type="button"
+                onClick={onOpenVehicleQuote}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 via-sky-600 to-blue-700 hover:from-blue-500 hover:to-sky-500 text-white px-6 py-4 text-sm font-extrabold shadow-xl shadow-blue-600/30 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+              >
+                <CarFront className="h-4 w-4" />
+                <span>Solicitar Orçamento do Veículo</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={() => onOpenBooking()}
