@@ -400,7 +400,7 @@ export function ModernTemplateView({
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto shrink-0">
-            {isAutomotiveNiche(tenant, profile, theme?.id) && onOpenVehicleQuote && (
+            {isAutomotiveNiche(tenant, profile, theme?.id) && onOpenVehicleQuote ? (
               <button
                 type="button"
                 onClick={onOpenVehicleQuote}
@@ -409,17 +409,17 @@ export function ModernTemplateView({
                 <CarFront className="h-4 w-4" />
                 <span>Solicitar Orçamento do Veículo</span>
               </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onOpenBooking()}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl px-7 py-4 text-sm font-bold shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                style={{ backgroundColor: brandColor, color: contrastText }}
+              >
+                <Calendar className="h-4 w-4" />
+                <span>{ctaButtonText}</span>
+              </button>
             )}
-
-            <button
-              type="button"
-              onClick={() => onOpenBooking()}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl px-7 py-4 text-sm font-bold shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-              style={{ backgroundColor: brandColor, color: contrastText }}
-            >
-              <Calendar className="h-4 w-4" />
-              <span>{ctaButtonText}</span>
-            </button>
 
             <a
               href={whatsappUrl}

@@ -277,6 +277,19 @@ export async function updateVehicleQuoteAction(
 }
 
 /**
+ * 3.1 Ação Admin Rápida: Atualiza diretamente o status de um orçamento no Supabase
+ */
+export async function updateVehicleQuoteStatusAction(
+  quoteId: string,
+  status: string
+): Promise<ActionResult<VehicleQuote>> {
+  return updateVehicleQuoteAction({
+    id: quoteId,
+    status: status as UpdateVehicleQuoteInput["status"],
+  });
+}
+
+/**
  * 4. Ação Admin: Exclui um orçamento
  */
 export async function deleteVehicleQuoteAction(

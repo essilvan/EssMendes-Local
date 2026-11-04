@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   CarFront,
   Wrench,
@@ -26,10 +27,15 @@ import {
   Sparkles,
   ArrowRight,
   Gauge,
+  Play,
+  Send,
+  XCircle,
+  Check,
 } from "lucide-react";
 import {
   createAdminVehicleQuoteAction,
   updateVehicleQuoteAction,
+  updateVehicleQuoteStatusAction,
   deleteVehicleQuoteAction,
   createMaintenanceScheduleAction,
 } from "@/services/vehicle-quote.actions";
@@ -49,7 +55,17 @@ interface VehicleQuotesClientProps {
   initialSchedules: VehicleMaintenanceSchedule[];
   tenantName: string;
   initialPlateFilter?: string;
+  initialStatusFilter?: string;
 }
+
+const VALID_STATUS_FILTERS = new Set([
+  "all",
+  "pending",
+  "quoted",
+  "approved",
+  "in_progress",
+  "completed",
+]);
 
 const STATUS_CONFIG: Record<
   string,
@@ -81,7 +97,12 @@ const STATUS_CONFIG: Record<
     dotClass: "bg-emerald-500",
   },
   canceled: {
-    label: "Cancelado",
+    label: "Recusado / Cancelado",
+    badgeClass: "bg-slate-100 text-slate-600 border-slate-300",
+    dotClass: "bg-slate-400",
+  },
+  rejected: {
+    label: "Recusado / Cancelado",
     badgeClass: "bg-slate-100 text-slate-600 border-slate-300",
     dotClass: "bg-slate-400",
   },
@@ -92,15 +113,22 @@ export function VehicleQuotesClient({
   initialSchedules,
   tenantName,
   initialPlateFilter = "",
+  initialStatusFilter = "all",
 }: VehicleQuotesClientProps) {
+  const router = useRouter();
+  const [, startTransition] = useTransition();
   const [quotes, setQuotes] = useState<VehicleQuote[]>(initialQuotes);
   const [schedules, setSchedules] =
     useState<VehicleMaintenanceSchedule[]>(initialSchedules);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>(
+    VALID_STATUS_FILTERS.has(initialStatusFilter) ? initialStatusFilter : "all"
+  );
   const [plateSearch, setPlateSearch] = useState<string>(initialPlateFilter);
   const [inspectedPlate, setInspectedPlate] = useState<string | null>(
     initialPlateFilter ? normalizeLicensePlate(initialPlateFilter) : null
   );
+  const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
+  const [statusFeedback, setStatusFeedback] = useState<string | null>(null);
 
   // Modal Novo Orçamento Manual
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
@@ -304,6 +332,81 @@ export function VehicleQuotesClient({
   }, [schedules]);
 
   // Handlers
+  const handleSelectStatusFilter = (nextStatus: string) => {
+    setStatusFilter(nextStatus);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      if (nextStatus === "all") {
+        url.searchParams.delete("status");
+      } else {
+        url.searchParams.set("status", nextStatus);
+      }
+      window.history.replaceState({}, "", url.toString());
+    }
+  };
+
+  const handleQuickStatusChange = async (
+    q: VehicleQuote,
+    nextStatus: VehicleQuoteStatus,
+    openPreventiveModalOnComplete = false
+  ) => {
+    if (updatingStatusId === q.id) return;
+    const previousStatus = q.status;
+    setUpdatingStatusId(q.id);
+    setFormError(null);
+
+    // Atualização otimista imediata na lista sem recarregar a página
+    setQuotes((prev) =>
+      prev.map((item) =>
+        item.id === q.id ? { ...item, status: nextStatus } : item
+      )
+    );
+
+    const res = await updateVehicleQuoteStatusAction(q.id, nextStatus);
+    setUpdatingStatusId(null);
+
+    if (!res.success || !res.data) {
+      // Reverte em caso de erro
+      setQuotes((prev) =>
+        prev.map((item) =>
+          item.id === q.id ? { ...item, status: previousStatus } : item
+        )
+      );
+      setFormError(res.error || "Não foi possível atualizar o status do orçamento.");
+      return;
+    }
+
+    const updatedQuote = res.data;
+    setQuotes((prev) =>
+      prev.map((item) => (item.id === updatedQuote.id ? updatedQuote : item))
+    );
+
+    const statusLabel = STATUS_CONFIG[nextStatus]?.label || nextStatus;
+    const plateLabel =
+      updatedQuote.plate_display ||
+      formatLicensePlateDisplay(updatedQuote.license_plate);
+    setStatusFeedback(
+      `Status da placa ${plateLabel} atualizado para "${statusLabel}".`
+    );
+    setTimeout(() => setStatusFeedback(null), 3500);
+
+    // Se concluiu o serviço, já abre a programação de revisão preventiva
+    if (nextStatus === "completed" || openPreventiveModalOnComplete) {
+      setFormError(null);
+      setScheduleSuccessMsg(null);
+      setRevServiceType(
+        updatedQuote.complaint
+          ? `Revisão Preventiva (${updatedQuote.complaint.slice(0, 60)})`
+          : "Troca de Óleo e Filtros + Revisão Preventiva"
+      );
+      setSchedulingFromQuote(updatedQuote);
+    }
+
+    startTransition(() => {
+      router.refresh();
+    });
+  };
+
   const handleOpenEdit = (q: VehicleQuote) => {
     setFormError(null);
     setEditingQuote(q);
@@ -338,10 +441,28 @@ export function VehicleQuotesClient({
       return;
     }
 
+    const updatedQuote = res.data;
+    const becameCompleted =
+      editStatus === "completed" && editingQuote.status !== "completed";
+
     setQuotes((prev) =>
-      prev.map((item) => (item.id === res.data!.id ? res.data! : item))
+      prev.map((item) => (item.id === updatedQuote.id ? updatedQuote : item))
     );
     setEditingQuote(null);
+
+    if (becameCompleted) {
+      setScheduleSuccessMsg(null);
+      setRevServiceType(
+        updatedQuote.complaint
+          ? `Revisão Preventiva (${updatedQuote.complaint.slice(0, 60)})`
+          : "Troca de Óleo e Filtros + Revisão Preventiva"
+      );
+      setSchedulingFromQuote(updatedQuote);
+    }
+
+    startTransition(() => {
+      router.refresh();
+    });
   };
 
   const handleCreateQuote = async (e: React.FormEvent) => {
@@ -803,53 +924,76 @@ export function VehicleQuotesClient({
       </div>
 
       {/* Filtros por Status */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1">
-        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-600 mr-1">
-          <Filter className="h-3.5 w-3.5 text-blue-600" />
-          <span>Status:</span>
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-600 mr-1">
+            <Filter className="h-3.5 w-3.5 text-blue-600" />
+            <span>Status:</span>
+          </div>
+          {[
+            { id: "all", label: "Todos", count: quotes.length },
+            { id: "pending", label: "Pendentes", count: pendingCount },
+            {
+              id: "quoted",
+              label: "Orçamento Enviado",
+              count: quotes.filter((q) => q.status === "quoted").length,
+            },
+            {
+              id: "approved",
+              label: "Aprovados",
+              count: quotes.filter((q) => q.status === "approved").length,
+            },
+            {
+              id: "in_progress",
+              label: "Em Execução",
+              count: quotes.filter((q) => q.status === "in_progress").length,
+            },
+            { id: "completed", label: "Concluídos", count: completedCount },
+          ].map((tab) => {
+            const isActive = statusFilter === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                aria-pressed={isActive}
+                onClick={() => handleSelectStatusFilter(tab.id)}
+                className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition whitespace-nowrap cursor-pointer border ${
+                  isActive
+                    ? "bg-slate-900 text-white border-slate-900 shadow-2xs"
+                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                }`}
+              >
+                <span>{tab.label}</span>
+                <span
+                  className={`rounded-full px-1.5 py-0.5 text-[10px] font-extrabold ${
+                    isActive
+                      ? "bg-slate-700 text-white"
+                      : "bg-slate-100 text-slate-600"
+                  }`}
+                >
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
         </div>
-        {[
-          { id: "all", label: "Todos", count: quotes.length },
-          { id: "pending", label: "Pendentes", count: pendingCount },
-          {
-            id: "quoted",
-            label: "Orçamento Enviado",
-            count: quotes.filter((q) => q.status === "quoted").length,
-          },
-          {
-            id: "approved",
-            label: "Aprovados",
-            count: quotes.filter((q) => q.status === "approved").length,
-          },
-          {
-            id: "in_progress",
-            label: "Em Execução",
-            count: quotes.filter((q) => q.status === "in_progress").length,
-          },
-          { id: "completed", label: "Concluídos", count: completedCount },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setStatusFilter(tab.id)}
-            className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition whitespace-nowrap cursor-pointer border ${
-              statusFilter === tab.id
-                ? "bg-slate-900 text-white border-slate-900 shadow-2xs"
-                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-            }`}
-          >
-            <span>{tab.label}</span>
-            <span
-              className={`rounded-full px-1.5 py-0.5 text-[10px] font-extrabold ${
-                statusFilter === tab.id
-                  ? "bg-slate-700 text-white"
-                  : "bg-slate-100 text-slate-600"
-              }`}
+
+        {/* Feedback instantâneo de atualização de status */}
+        {statusFeedback && (
+          <div className="flex items-center justify-between gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-xs font-bold text-emerald-900 animate-in fade-in duration-150">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+              <span>{statusFeedback}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setStatusFeedback(null)}
+              className="text-emerald-700 hover:text-emerald-950 cursor-pointer"
             >
-              {tab.count}
-            </span>
-          </button>
-        ))}
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Lista de Solicitações de Orçamento */}
@@ -996,22 +1140,120 @@ export function VehicleQuotesClient({
                   </div>
                 </div>
 
-                {/* Barra de Ações do Orçamento */}
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                {/* Barra de Ações do Orçamento & Avanço Rápido de Status */}
+                <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3 pt-3 border-t border-slate-100">
+                  {/* Esquerda: Ações Rápidas de Avanço de Status + Seletor Direto */}
                   <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const clean = normalizeLicensePlate(q.license_plate);
-                        setInspectedPlate(clean);
-                        setPlateSearch(plateDisplay);
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                      }}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 transition cursor-pointer"
-                    >
-                      <History className="h-3.5 w-3.5 text-blue-600" />
-                      <span>Histórico da Placa</span>
-                    </button>
+                    {/* Botões de Ação Rápida por Etapa do Fluxo */}
+                    {q.status === "pending" && (
+                      <button
+                        type="button"
+                        disabled={updatingStatusId === q.id}
+                        onClick={() => handleQuickStatusChange(q, "quoted")}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 px-3.5 py-2 text-xs font-extrabold text-white shadow-2xs transition cursor-pointer disabled:opacity-50"
+                      >
+                        {updatingStatusId === q.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Send className="h-3.5 w-3.5" />
+                        )}
+                        <span>Marcar como Orçamento Enviado</span>
+                      </button>
+                    )}
+
+                    {q.status === "quoted" && (
+                      <>
+                        <button
+                          type="button"
+                          disabled={updatingStatusId === q.id}
+                          onClick={() => handleQuickStatusChange(q, "approved")}
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 px-3.5 py-2 text-xs font-extrabold text-white shadow-2xs transition cursor-pointer disabled:opacity-50"
+                        >
+                          {updatingStatusId === q.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Check className="h-3.5 w-3.5" />
+                          )}
+                          <span>Aprovar Serviço</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={updatingStatusId === q.id}
+                          onClick={() => handleQuickStatusChange(q, "canceled")}
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 px-3 py-2 text-xs font-bold text-red-700 transition cursor-pointer disabled:opacity-50"
+                        >
+                          <XCircle className="h-3.5 w-3.5" />
+                          <span>Recusar</span>
+                        </button>
+                      </>
+                    )}
+
+                    {q.status === "approved" && (
+                      <button
+                        type="button"
+                        disabled={updatingStatusId === q.id}
+                        onClick={() =>
+                          handleQuickStatusChange(q, "in_progress")
+                        }
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 px-3.5 py-2 text-xs font-extrabold text-white shadow-2xs transition cursor-pointer disabled:opacity-50"
+                      >
+                        {updatingStatusId === q.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Play className="h-3.5 w-3.5" />
+                        )}
+                        <span>Iniciar Execução</span>
+                      </button>
+                    )}
+
+                    {q.status === "in_progress" && (
+                      <button
+                        type="button"
+                        disabled={updatingStatusId === q.id}
+                        onClick={() =>
+                          handleQuickStatusChange(q, "completed", true)
+                        }
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-3.5 py-2 text-xs font-extrabold text-white shadow-2xs transition cursor-pointer disabled:opacity-50"
+                      >
+                        {updatingStatusId === q.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                        )}
+                        <span>Concluir Serviço</span>
+                      </button>
+                    )}
+
+                    {/* Dropdown Direto de Status para mudança rápida em qualquer etapa */}
+                    <div className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5">
+                      <span className="text-[11px] font-bold text-slate-500">
+                        Status:
+                      </span>
+                      <select
+                        aria-label={`Alterar status da placa ${plateDisplay}`}
+                        disabled={updatingStatusId === q.id}
+                        value={
+                          q.status === "rejected" ? "canceled" : q.status || "pending"
+                        }
+                        onChange={(e) => {
+                          const next = e.target.value as VehicleQuoteStatus;
+                          handleQuickStatusChange(
+                            q,
+                            next,
+                            next === "completed"
+                          );
+                        }}
+                        className="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer disabled:opacity-50"
+                      >
+                        <option value="pending">Pendente</option>
+                        <option value="quoted">Orçamento Enviado</option>
+                        <option value="approved">Aprovado</option>
+                        <option value="in_progress">Em Execução</option>
+                        <option value="completed">Concluído</option>
+                        <option value="canceled">Recusado / Cancelado</option>
+                      </select>
+                    </div>
 
                     <button
                       type="button"
@@ -1019,7 +1261,7 @@ export function VehicleQuotesClient({
                       className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 px-3.5 py-2 text-xs font-bold text-blue-800 transition cursor-pointer"
                     >
                       <Pencil className="h-3.5 w-3.5" />
-                      <span>Avaliar / Preencher Valores</span>
+                      <span>Avaliar / Valores</span>
                     </button>
 
                     <button
@@ -1032,10 +1274,25 @@ export function VehicleQuotesClient({
                       className="inline-flex items-center gap-1.5 rounded-xl border border-teal-200 bg-teal-50 hover:bg-teal-100 px-3.5 py-2 text-xs font-bold text-teal-800 transition cursor-pointer"
                     >
                       <CalendarClock className="h-3.5 w-3.5" />
-                      <span>Programar Próxima Revisão</span>
+                      <span>Programar Revisão</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const clean = normalizeLicensePlate(q.license_plate);
+                        setInspectedPlate(clean);
+                        setPlateSearch(plateDisplay);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 transition cursor-pointer"
+                    >
+                      <History className="h-3.5 w-3.5 text-blue-600" />
+                      <span>Histórico</span>
                     </button>
                   </div>
 
+                  {/* Direita: WhatsApp e Excluir */}
                   <div className="flex items-center gap-2">
                     <a
                       href={buildClientQuoteWhatsAppUrl(q)}

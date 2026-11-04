@@ -169,7 +169,7 @@ export const adminVehicleQuoteSchema = z.object({
   clientPhone: z.string().trim().min(8, "Informe o WhatsApp do cliente.").max(30),
   categoryTags: z.array(z.string()).optional(),
   status: z
-    .enum(["pending", "quoted", "approved", "in_progress", "completed", "canceled"])
+    .enum(["pending", "quoted", "approved", "in_progress", "completed", "canceled", "rejected"])
     .default("pending"),
   laborCost: z.coerce.number().min(0).default(0),
   partsCost: z.coerce.number().min(0).default(0),
@@ -187,7 +187,7 @@ export const updateVehicleQuoteSchema = z.object({
   clientName: z.string().trim().min(2).max(120).optional(),
   clientPhone: z.string().trim().min(8).max(30).optional(),
   status: z
-    .enum(["pending", "quoted", "approved", "in_progress", "completed", "canceled"])
+    .enum(["pending", "quoted", "approved", "in_progress", "completed", "canceled", "rejected"])
     .optional(),
   laborCost: z.coerce.number().min(0).optional(),
   partsCost: z.coerce.number().min(0).optional(),

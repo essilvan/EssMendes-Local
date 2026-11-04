@@ -468,7 +468,7 @@ export function MinimalTemplateView({
             <span>Falar no WhatsApp</span>
           </a>
 
-          {isAutomotiveNiche(tenant, profile, theme?.id) && onOpenVehicleQuote && (
+          {isAutomotiveNiche(tenant, profile, theme?.id) && onOpenVehicleQuote ? (
             <button
               type="button"
               onClick={onOpenVehicleQuote}
@@ -477,17 +477,17 @@ export function MinimalTemplateView({
               <CarFront className="h-3.5 w-3.5" />
               <span>Solicitar Orçamento do Veículo</span>
             </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onOpenBooking()}
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer shadow-xs"
+              style={{ backgroundColor: brandColor, color: contrastText }}
+            >
+              <Calendar className="h-3.5 w-3.5" />
+              <span>Agendar Horário</span>
+            </button>
           )}
-
-          <button
-            type="button"
-            onClick={() => onOpenBooking()}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer shadow-xs"
-            style={{ backgroundColor: brandColor, color: contrastText }}
-          >
-            <Calendar className="h-3.5 w-3.5" />
-            <span>Agendar Horário</span>
-          </button>
         </div>
       </footer>
     </div>

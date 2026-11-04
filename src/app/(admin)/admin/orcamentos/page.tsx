@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 interface AdminOrcamentosPageProps {
   searchParams?: Promise<{
     placa?: string;
+    status?: string;
   }>;
 }
 
@@ -32,6 +33,7 @@ export default async function AdminOrcamentosPage({
 
   const resolvedParams = searchParams ? await searchParams : {};
   const initialPlateFilter = resolvedParams?.placa || "";
+  const initialStatusFilter = resolvedParams?.status || "all";
 
   const tenantId = tenantData.tenantId;
   const supabase = createAdminClient();
@@ -81,6 +83,7 @@ export default async function AdminOrcamentosPage({
       initialSchedules={schedules}
       tenantName={tenantName}
       initialPlateFilter={initialPlateFilter}
+      initialStatusFilter={initialStatusFilter}
     />
   );
 }

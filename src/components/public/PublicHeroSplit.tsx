@@ -291,42 +291,42 @@ export function PublicHeroSplit({
             </a>
           )}
 
-          {/* Botão exclusivo de Orçamento por Placa (Nicho Automotivo) */}
-          {isAutomotive && onOpenVehicleQuote && (
+          {/* CTA Primário: Orçamento por Placa (Nicho Automotivo) ou Agendamento Online */}
+          {isAutomotive && onOpenVehicleQuote ? (
             <button
               type="button"
               onClick={onOpenVehicleQuote}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 via-sky-600 to-blue-700 hover:from-blue-500 hover:to-sky-500 px-5 py-2.5 text-xs sm:text-sm font-extrabold text-white shadow-xl shadow-blue-600/30 transition-all duration-200 hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer"
+              className="w-full sm:w-auto sm:ml-auto inline-flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-blue-600 via-sky-600 to-blue-700 hover:from-blue-500 hover:to-sky-500 px-6 py-2.5 text-xs sm:text-sm font-extrabold text-white shadow-xl shadow-blue-600/30 transition-all duration-200 hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer"
             >
               <CarFront className="h-4 w-4 shrink-0 text-blue-100" />
               <span>Solicitar Orçamento do Veículo</span>
+              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onOpenBooking}
+              className="w-full sm:w-auto sm:ml-auto inline-flex items-center justify-center gap-2.5 rounded-2xl px-6 py-2.5 text-xs sm:text-sm font-extrabold text-white shadow-xl transition-all duration-200 hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer animate-shimmer"
+              style={{
+                backgroundColor: brandColor || "var(--brand-primary, #0d9488)",
+                boxShadow: `0 10px 25px -5px ${brandColor ? `${brandColor}66` : "rgba(13,148,136,0.4)"}`,
+              }}
+            >
+              {isConfectionery ? (
+                <Cake className="h-4 w-4 shrink-0 text-rose-200 animate-sweet-float" />
+              ) : isPetShop ? (
+                <Dog className="h-4 w-4 shrink-0 text-amber-200 animate-tail-wag" />
+              ) : isAutomotive ? (
+                <Wrench className="h-4 w-4 shrink-0 text-blue-200 animate-wrench-tilt" />
+              ) : isRestaurant ? (
+                <UtensilsCrossed className="h-4 w-4 shrink-0 text-red-200 animate-culinary-float" />
+              ) : (
+                <Calendar className="h-4 w-4 shrink-0" />
+              )}
+              <span>{ctaLabel}</span>
+              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
             </button>
           )}
-
-          {/* Botão Agendar Horário Online com micro-shimmer e feedback tátil */}
-          <button
-            type="button"
-            onClick={isAutomotive && onOpenVehicleQuote && !ctaText ? onOpenVehicleQuote : onOpenBooking}
-            className="w-full sm:w-auto sm:ml-auto inline-flex items-center justify-center gap-2.5 rounded-2xl px-6 py-2.5 text-xs sm:text-sm font-extrabold text-white shadow-xl transition-all duration-200 hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer animate-shimmer"
-            style={{
-              backgroundColor: brandColor || "var(--brand-primary, #0d9488)",
-              boxShadow: `0 10px 25px -5px ${brandColor ? `${brandColor}66` : "rgba(13,148,136,0.4)"}`,
-            }}
-          >
-            {isConfectionery ? (
-              <Cake className="h-4 w-4 shrink-0 text-rose-200 animate-sweet-float" />
-            ) : isPetShop ? (
-              <Dog className="h-4 w-4 shrink-0 text-amber-200 animate-tail-wag" />
-            ) : isAutomotive ? (
-              <Wrench className="h-4 w-4 shrink-0 text-blue-200 animate-wrench-tilt" />
-            ) : isRestaurant ? (
-              <UtensilsCrossed className="h-4 w-4 shrink-0 text-red-200 animate-culinary-float" />
-            ) : (
-              <Calendar className="h-4 w-4 shrink-0" />
-            )}
-            <span>{ctaLabel}</span>
-            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
-          </button>
         </div>
       </div>
     </section>

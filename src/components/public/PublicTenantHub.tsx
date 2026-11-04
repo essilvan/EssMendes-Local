@@ -333,7 +333,7 @@ export function PublicTenantHub({
           statusDetailText={statusDetailText}
           theme={currentTheme}
           ctaText={ctaButtonText}
-          onOpenBooking={() => handleOpenBooking()}
+          onOpenBooking={() => (isAutomotive ? setIsVehicleQuoteOpen(true) : handleOpenBooking())}
         />
       ) : (
         <nav className="w-full sticky top-0 backdrop-blur-md bg-white/80 dark:bg-zinc-900/80 border-b border-zinc-200/50 z-40 px-4 sm:px-6 py-3.5 transition-colors">
@@ -352,7 +352,7 @@ export function PublicTenantHub({
             </div>
             <button
               type="button"
-              onClick={() => handleOpenBooking()}
+              onClick={() => (isAutomotive ? setIsVehicleQuoteOpen(true) : handleOpenBooking())}
               className="text-xs font-bold px-4 py-2 rounded-xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-xs"
               style={{ backgroundColor: brandColor, color: getContrastTextColor(brandColor) }}
             >
@@ -532,7 +532,7 @@ export function PublicTenantHub({
         activeTemplate={activeTemplate}
         brandColor={brandColor}
         ctaText={ctaButtonText}
-        onOpenBooking={() => handleOpenBooking()}
+        onOpenBooking={() => (isAutomotive ? setIsVehicleQuoteOpen(true) : handleOpenBooking())}
       />
 
       {/* 12. Botão Flutuante de WhatsApp (CRO Quick Action) */}
