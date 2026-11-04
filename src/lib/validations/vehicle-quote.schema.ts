@@ -115,6 +115,12 @@ export function extractAutomotiveCategoryTags(
   return Array.from(tags);
 }
 
+export const quotePartItemSchema = z.object({
+  name: z.string().trim().min(1),
+  quantity: z.coerce.number().min(1).optional().default(1),
+  unit_price: z.coerce.number().min(0).optional().default(0),
+});
+
 /**
  * Schema para solicitação pública de orçamento na vitrine
  */
@@ -173,6 +179,8 @@ export const adminVehicleQuoteSchema = z.object({
     .default("pending"),
   laborCost: z.coerce.number().min(0).default(0),
   partsCost: z.coerce.number().min(0).default(0),
+  partsNeeded: z.array(quotePartItemSchema).optional(),
+  damagedPartsPhotos: z.array(z.string()).max(3).optional(),
   mechanicNotes: z.string().trim().max(2000).optional().nullable(),
   scheduledFor: z.string().optional().nullable(),
 });
@@ -191,12 +199,31 @@ export const updateVehicleQuoteSchema = z.object({
     .optional(),
   laborCost: z.coerce.number().min(0).optional(),
   partsCost: z.coerce.number().min(0).optional(),
+  partsNeeded: z.array(quotePartItemSchema).optional(),
+  damagedPartsPhotos: z.array(z.string()).max(3).optional(),
+  postSaleContacted: z.boolean().optional(),
   mechanicNotes: z.string().trim().max(2000).optional().nullable(),
   scheduledFor: z.string().optional().nullable(),
   categoryTags: z.array(z.string()).optional(),
 });
 
 export type UpdateVehicleQuoteInput = z.infer<typeof updateVehicleQuoteSchema>;
+
+/**
+ * Schema para Checklist Digital de Entrada / Vistoria (vehicle_inspections)
+ */
+export const vehicleInspectionSchema = z.object({
+  quoteId: z.string().uuid("ID do orçamento inválido."),
+  licensePlate: z.string().trim().min(5, "Placa inválida.").max(10),
+  entryKm: z.coerce.number().int().min(0).optional().nullable(),
+  fuelLevel: z.enum(["1/4", "1/2", "3/4", "Cheio"]).default("1/2"),
+  spareTire: z.boolean().default(true),
+  jackTool: z.boolean().default(true),
+  photos: z.array(z.string()).max(4).default([]),
+  scratchNotes: z.string().trim().max(2000).optional().nullable(),
+});
+
+export type VehicleInspectionInput = z.infer<typeof vehicleInspectionSchema>;
 
 /**
  * Schema para Revisões Preventivas (vehicle_maintenance_schedules)
@@ -231,4 +258,3 @@ export const updateMaintenanceScheduleSchema = maintenanceScheduleSchema.partial
 });
 
 export type UpdateMaintenanceScheduleInput = z.infer<typeof updateMaintenanceScheduleSchema>;
-

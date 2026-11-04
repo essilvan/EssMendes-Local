@@ -7,13 +7,13 @@ import { createServerClient } from "@supabase/ssr";
  * 2. Faz o roteamento transparente de subdomínios multi-tenant:
  *    - oficina-do-joao.essmendes.com.br -> /[slug]
  *    - oficina-do-joao.localhost:3000 -> /[slug]
- * 3. Preserva domínio principal, preview no Vercel e rotas do sistema
+ * 3. Preserva domínio principal, preview no Vercel e rotas do sistema (/fatura, /orcamento)
  */
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
-  // 0. Exceção explícita para faturas públicas: bypass total sem reescrita e sem autenticação
-  if (pathname.startsWith('/fatura')) {
+  // 0. Exceção explícita para faturas e orçamentos públicos: bypass total sem reescrita e sem autenticação
+  if (pathname.startsWith("/fatura") || pathname.startsWith("/orcamento")) {
     return NextResponse.next();
   }
 
@@ -88,7 +88,8 @@ export async function middleware(request: NextRequest) {
     url.pathname.startsWith("/login") ||
     url.pathname.startsWith("/register") ||
     url.pathname.startsWith("/diagnostico") ||
-    url.pathname.startsWith("/fatura");
+    url.pathname.startsWith("/fatura") ||
+    url.pathname.startsWith("/orcamento");
 
   if (isSystemRoute) {
     return NextResponse.next();
@@ -109,15 +110,12 @@ export async function middleware(request: NextRequest) {
   }
 
   // 5. Extração do subdomínio (slug do cliente)
-  // Exemplo 1: "oficina-do-joao.essmendes.com.br" -> slug: "oficina-do-joao"
-  // Exemplo 2 (local): "oficina-do-joao.localhost:3000" -> slug: "oficina-do-joao"
   let slug = "";
   if (hostWithoutPort.endsWith(".localhost")) {
     slug = hostWithoutPort.replace(".localhost", "");
   } else if (hostWithoutPort.endsWith(".essmendes.com.br")) {
     slug = hostWithoutPort.replace(".essmendes.com.br", "");
   } else {
-    // Fallback caso venha com porta ou formato alternativo
     let currentHost = hostname.replace(/:\d+$/, "");
     if (currentHost.includes(".essmendes.com.br")) {
       slug = currentHost.replace(".essmendes.com.br", "");
@@ -154,13 +152,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Aplica o middleware em todas as rotas exceto:
-     * - api (rotas de API)
-     * - _next/static (arquivos estáticos JS/CSS)
-     * - _next/image (otimização de imagens)
-     * - favicon.ico, robots.txt, sitemap.xml
-     */
     "/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)",
   ],
 };

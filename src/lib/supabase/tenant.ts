@@ -10,13 +10,22 @@ export interface AuthenticatedTenantContext {
     app_metadata?: Record<string, unknown>;
   };
   tenantId: string;
-  role: "super_admin" | "tenant_owner" | "owner" | "admin" | "staff";
+  role:
+    | "super_admin"
+    | "tenant_owner"
+    | "tenant_admin"
+    | "owner"
+    | "admin"
+    | "staff";
   isSuperAdmin: boolean;
   isImpersonating?: boolean;
   tenant?: {
     id: string;
     name: string;
     slug: string;
+    niche?: string | null;
+    theme_niche?: string | null;
+    theme_settings?: Record<string, any> | null;
     plan_tier: string;
     subscription_status?: string | null;
     subscription_plan?: string | null;
@@ -30,6 +39,82 @@ export interface AuthenticatedTenantContext {
     current_period_end?: string | null;
     mp_payment_id?: string | null;
     permissions?: TenantPermissions | null;
+  };
+}
+
+const TENANT_SELECT_FIELDS =
+  "id, name, slug, niche, theme_niche, theme_settings, plan_tier, subscription_status, current_period_end, mp_payment_id, permissions, setup_paid, setup_fee_paid, setup_fee_amount, setup_paid_at, subscription_starts_at, subscription_expires_at, subscription_plan, monthly_fee_amount";
+
+/**
+ * Normaliza o nicho do tenant a partir das colunas niche, theme_niche e theme_settings.
+ */
+export function resolveTenantNiche(rawTenant: any): string {
+  const rawNiche = String(rawTenant?.niche || "")
+    .trim()
+    .toLowerCase();
+  const themeNiche = String(rawTenant?.theme_niche || "")
+    .trim()
+    .toLowerCase();
+  const settingsNiche = String(rawTenant?.theme_settings?.niche || "")
+    .trim()
+    .toLowerCase();
+  const combined = `${rawNiche} ${themeNiche} ${settingsNiche}`;
+
+  if (
+    rawNiche === "automotive" ||
+    rawNiche === "auto" ||
+    combined.includes("auto") ||
+    combined.includes("mecanic") ||
+    combined.includes("mecânic") ||
+    combined.includes("oficina")
+  ) {
+    return "automotive";
+  }
+
+  if (rawNiche && rawNiche !== "general") {
+    return rawNiche;
+  }
+
+  if (themeNiche && themeNiche !== "retail_default" && themeNiche !== "default") {
+    return themeNiche;
+  }
+
+  if (settingsNiche && settingsNiche !== "default") {
+    return settingsNiche;
+  }
+
+  return rawNiche || "general";
+}
+
+function mapTenantFields(rawT: any) {
+  if (!rawT) return undefined;
+  return {
+    id: rawT.id,
+    name: rawT.name,
+    slug: rawT.slug,
+    niche: resolveTenantNiche(rawT),
+    theme_niche: rawT.theme_niche || null,
+    theme_settings: rawT.theme_settings || null,
+    plan_tier: rawT.plan_tier,
+    subscription_status: rawT.subscription_status,
+    subscription_plan: rawT.subscription_plan || null,
+    subscription_expires_at:
+      rawT.subscription_expires_at || rawT.current_period_end || null,
+    setup_paid: Boolean(rawT.setup_paid),
+    setup_fee_paid: Boolean(rawT.setup_fee_paid ?? rawT.setup_paid),
+    setup_fee_amount:
+      rawT.setup_fee_amount !== null && rawT.setup_fee_amount !== undefined
+        ? Number(rawT.setup_fee_amount)
+        : 197,
+    setup_paid_at: rawT.setup_paid_at || null,
+    subscription_starts_at: rawT.subscription_starts_at || null,
+    monthly_fee_amount:
+      rawT.monthly_fee_amount !== null && rawT.monthly_fee_amount !== undefined
+        ? Number(rawT.monthly_fee_amount)
+        : 97,
+    current_period_end: rawT.current_period_end,
+    mp_payment_id: rawT.mp_payment_id,
+    permissions: rawT.permissions || DEFAULT_TENANT_PERMISSIONS,
   };
 }
 
@@ -98,8 +183,9 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
       };
     }
 
-    // 2. Checa se o usuário possui papel super_admin na tabela profiles
+    // 2. Checa se o usuário possui papel na tabela profiles (ex: super_admin, tenant_owner, tenant_admin, staff)
     let isSuperAdminUser = false;
+    let profileRoleFromDb: string | null = null;
     try {
       const { data: profileRow } = await supabase
         .from("profiles")
@@ -107,6 +193,9 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
         .eq("id", user.id)
         .maybeSingle();
 
+      if (profileRow?.role) {
+        profileRoleFromDb = profileRow.role;
+      }
       if (profileRow?.role === "super_admin") {
         isSuperAdminUser = true;
       }
@@ -117,7 +206,7 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
     // 3. Obter vínculo em tenant_users
     const { data: tenantUser, error: tenantUserError } = await supabase
       .from("tenant_users")
-      .select("tenant_id, role, tenants(id, name, slug, plan_tier, subscription_status, current_period_end, mp_payment_id, permissions, setup_paid, setup_fee_paid, setup_fee_amount, setup_paid_at, subscription_starts_at, subscription_expires_at, subscription_plan, monthly_fee_amount)")
+      .select(`tenant_id, role, tenants(${TENANT_SELECT_FIELDS})`)
       .eq("user_id", user.id)
       .maybeSingle();
 
@@ -126,7 +215,7 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
     }
 
     if (!isSuperAdminUser) {
-      isSuperAdminUser = checkIsSuperAdmin(user, tenantUser?.role);
+      isSuperAdminUser = checkIsSuperAdmin(user, tenantUser?.role || profileRoleFromDb);
     }
 
     // 4. Suporte a Super Admin com tenant selecionado via overrideTenantId ou cookie (impersonação)
@@ -138,12 +227,11 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
       if (targetTenantId) {
         const { data: targetTenant, error: targetError } = await supabase
           .from("tenants")
-          .select("id, name, slug, plan_tier, subscription_status, current_period_end, mp_payment_id, permissions, setup_paid, setup_fee_paid, setup_fee_amount, setup_paid_at, subscription_starts_at, subscription_expires_at, subscription_plan, monthly_fee_amount")
+          .select(TENANT_SELECT_FIELDS)
           .eq("id", targetTenantId)
           .maybeSingle();
 
         if (targetTenant && !targetError) {
-          // Se veio via query param, sincroniza o cookie para as próximas requisições
           if (overrideTenantId && overrideTenantId !== cookieTenantId) {
             cookieStore.set("em_active_tenant_id", overrideTenantId, {
               path: "/",
@@ -166,24 +254,7 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
               role: "super_admin",
               isSuperAdmin: true,
               isImpersonating: true,
-              tenant: {
-                id: targetTenant.id,
-                name: targetTenant.name,
-                slug: targetTenant.slug,
-                plan_tier: targetTenant.plan_tier,
-                subscription_status: (targetTenant as any).subscription_status,
-                subscription_plan: (targetTenant as any).subscription_plan || null,
-                subscription_expires_at: (targetTenant as any).subscription_expires_at || (targetTenant as any).current_period_end || null,
-                setup_paid: Boolean((targetTenant as any).setup_paid),
-                setup_fee_paid: Boolean((targetTenant as any).setup_fee_paid ?? (targetTenant as any).setup_paid),
-                setup_fee_amount: (targetTenant as any).setup_fee_amount !== null && (targetTenant as any).setup_fee_amount !== undefined ? Number((targetTenant as any).setup_fee_amount) : 197,
-                setup_paid_at: (targetTenant as any).setup_paid_at || null,
-                subscription_starts_at: (targetTenant as any).subscription_starts_at || null,
-                monthly_fee_amount: (targetTenant as any).monthly_fee_amount !== null && (targetTenant as any).monthly_fee_amount !== undefined ? Number((targetTenant as any).monthly_fee_amount) : 97,
-                current_period_end: (targetTenant as any).current_period_end,
-                mp_payment_id: (targetTenant as any).mp_payment_id,
-                permissions: (targetTenant as any).permissions || DEFAULT_TENANT_PERMISSIONS,
-              },
+              tenant: mapTenantFields(targetTenant),
             },
             error: null,
           };
@@ -206,26 +277,7 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
             role: "super_admin",
             isSuperAdmin: true,
             isImpersonating: false,
-            tenant: currentT
-              ? {
-                  id: currentT.id,
-                  name: currentT.name,
-                  slug: currentT.slug,
-                  plan_tier: currentT.plan_tier,
-                  subscription_status: (currentT as any).subscription_status,
-                  subscription_plan: (currentT as any).subscription_plan || null,
-                  subscription_expires_at: (currentT as any).subscription_expires_at || (currentT as any).current_period_end || null,
-                  setup_paid: Boolean((currentT as any).setup_paid),
-                  setup_fee_paid: Boolean((currentT as any).setup_fee_paid ?? (currentT as any).setup_paid),
-                  setup_fee_amount: (currentT as any).setup_fee_amount !== null && (currentT as any).setup_fee_amount !== undefined ? Number((currentT as any).setup_fee_amount) : 197,
-                  setup_paid_at: (currentT as any).setup_paid_at || null,
-                  subscription_starts_at: (currentT as any).subscription_starts_at || null,
-                  monthly_fee_amount: (currentT as any).monthly_fee_amount !== null && (currentT as any).monthly_fee_amount !== undefined ? Number((currentT as any).monthly_fee_amount) : 97,
-                  current_period_end: (currentT as any).current_period_end,
-                  mp_payment_id: (currentT as any).mp_payment_id,
-                  permissions: (currentT as any).permissions || DEFAULT_TENANT_PERMISSIONS,
-                }
-              : undefined,
+            tenant: mapTenantFields(currentT),
           },
           error: null,
         };
@@ -234,7 +286,7 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
       // Se super admin não tem vínculo direto em tenant_users, pega o primeiro tenant do sistema
       const { data: firstTenant } = await supabase
         .from("tenants")
-        .select("id, name, slug, plan_tier, subscription_status, current_period_end, mp_payment_id, permissions, setup_paid, setup_fee_paid, setup_fee_amount, setup_paid_at, subscription_starts_at, subscription_expires_at, subscription_plan, monthly_fee_amount")
+        .select(TENANT_SELECT_FIELDS)
         .order("created_at", { ascending: true })
         .limit(1)
         .maybeSingle();
@@ -252,31 +304,16 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
             role: "super_admin",
             isSuperAdmin: true,
             isImpersonating: false,
-            tenant: {
-              id: firstTenant.id,
-              name: firstTenant.name,
-              slug: firstTenant.slug,
-              plan_tier: firstTenant.plan_tier,
-              subscription_status: (firstTenant as any).subscription_status,
-              subscription_plan: (firstTenant as any).subscription_plan || null,
-              subscription_expires_at: (firstTenant as any).subscription_expires_at || (firstTenant as any).current_period_end || null,
-              setup_paid: Boolean((firstTenant as any).setup_paid),
-              setup_fee_paid: Boolean((firstTenant as any).setup_fee_paid ?? (firstTenant as any).setup_paid),
-              setup_fee_amount: (firstTenant as any).setup_fee_amount !== null && (firstTenant as any).setup_fee_amount !== undefined ? Number((firstTenant as any).setup_fee_amount) : 197,
-              setup_paid_at: (firstTenant as any).setup_paid_at || null,
-              subscription_starts_at: (firstTenant as any).subscription_starts_at || null,
-              monthly_fee_amount: (firstTenant as any).monthly_fee_amount !== null && (firstTenant as any).monthly_fee_amount !== undefined ? Number((firstTenant as any).monthly_fee_amount) : 97,
-              current_period_end: (firstTenant as any).current_period_end,
-              mp_payment_id: (firstTenant as any).mp_payment_id,
-              permissions: (firstTenant as any).permissions || DEFAULT_TENANT_PERMISSIONS,
-            },
+            tenant: mapTenantFields(firstTenant),
           },
           error: null,
         };
       }
     }
 
-    // 5. Fluxo Padrão: Lojista / Proprietário (tenant_owner)
+    // 5. Fluxo Padrão: Lojista / Proprietário (tenant_owner / tenant_admin / staff)
+    const effectiveRole = (profileRoleFromDb || tenantUser?.role || "owner") as AuthenticatedTenantContext["role"];
+
     if (!tenantUser || !tenantUser.tenant_id) {
       // 5.a Tenta recuperar pelo tenant_id presente em user_metadata
       const metadataTenantId =
@@ -286,7 +323,7 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
       if (metadataTenantId) {
         const { data: recoveredTenant } = await supabase
           .from("tenants")
-          .select("id, name, slug, plan_tier, subscription_status, current_period_end, mp_payment_id, permissions, setup_paid, setup_fee_paid, setup_fee_amount, setup_paid_at, subscription_starts_at, subscription_expires_at, subscription_plan, monthly_fee_amount")
+          .select(TENANT_SELECT_FIELDS)
           .eq("id", metadataTenantId)
           .maybeSingle();
 
@@ -313,27 +350,10 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
                 app_metadata: user.app_metadata,
               },
               tenantId: recoveredTenant.id,
-              role: "owner",
+              role: effectiveRole,
               isSuperAdmin: false,
               isImpersonating: false,
-              tenant: {
-                id: recoveredTenant.id,
-                name: recoveredTenant.name,
-                slug: recoveredTenant.slug,
-                plan_tier: recoveredTenant.plan_tier,
-                subscription_status: (recoveredTenant as any).subscription_status,
-                subscription_plan: (recoveredTenant as any).subscription_plan || null,
-                subscription_expires_at: (recoveredTenant as any).subscription_expires_at || (recoveredTenant as any).current_period_end || null,
-                setup_paid: Boolean((recoveredTenant as any).setup_paid),
-                setup_fee_paid: Boolean((recoveredTenant as any).setup_fee_paid ?? (recoveredTenant as any).setup_paid),
-                setup_fee_amount: (recoveredTenant as any).setup_fee_amount !== null && (recoveredTenant as any).setup_fee_amount !== undefined ? Number((recoveredTenant as any).setup_fee_amount) : 197,
-                setup_paid_at: (recoveredTenant as any).setup_paid_at || null,
-                subscription_starts_at: (recoveredTenant as any).subscription_starts_at || null,
-                monthly_fee_amount: (recoveredTenant as any).monthly_fee_amount !== null && (recoveredTenant as any).monthly_fee_amount !== undefined ? Number((recoveredTenant as any).monthly_fee_amount) : 97,
-                current_period_end: (recoveredTenant as any).current_period_end,
-                mp_payment_id: (recoveredTenant as any).mp_payment_id,
-                permissions: (recoveredTenant as any).permissions || DEFAULT_TENANT_PERMISSIONS,
-              },
+              tenant: mapTenantFields(recoveredTenant),
             },
             error: null,
           };
@@ -344,7 +364,7 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
       if (user.email) {
         const { data: tenantByEmail } = await supabase
           .from("tenants")
-          .select("id, name, slug, plan_tier, subscription_status, current_period_end, mp_payment_id, permissions, setup_paid, setup_fee_paid, setup_fee_amount, setup_paid_at, subscription_starts_at, subscription_expires_at, subscription_plan, monthly_fee_amount")
+          .select(TENANT_SELECT_FIELDS)
           .ilike("contact_email", user.email.trim())
           .maybeSingle();
 
@@ -371,27 +391,10 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
                 app_metadata: user.app_metadata,
               },
               tenantId: tenantByEmail.id,
-              role: "owner",
+              role: effectiveRole,
               isSuperAdmin: false,
               isImpersonating: false,
-              tenant: {
-                id: tenantByEmail.id,
-                name: tenantByEmail.name,
-                slug: tenantByEmail.slug,
-                plan_tier: tenantByEmail.plan_tier,
-                subscription_status: (tenantByEmail as any).subscription_status,
-                subscription_plan: (tenantByEmail as any).subscription_plan || null,
-                subscription_expires_at: (tenantByEmail as any).subscription_expires_at || (tenantByEmail as any).current_period_end || null,
-                setup_paid: Boolean((tenantByEmail as any).setup_paid),
-                setup_fee_paid: Boolean((tenantByEmail as any).setup_fee_paid ?? (tenantByEmail as any).setup_paid),
-                setup_fee_amount: (tenantByEmail as any).setup_fee_amount !== null && (tenantByEmail as any).setup_fee_amount !== undefined ? Number((tenantByEmail as any).setup_fee_amount) : 197,
-                setup_paid_at: (tenantByEmail as any).setup_paid_at || null,
-                subscription_starts_at: (tenantByEmail as any).subscription_starts_at || null,
-                monthly_fee_amount: (tenantByEmail as any).monthly_fee_amount !== null && (tenantByEmail as any).monthly_fee_amount !== undefined ? Number((tenantByEmail as any).monthly_fee_amount) : 97,
-                current_period_end: (tenantByEmail as any).current_period_end,
-                mp_payment_id: (tenantByEmail as any).mp_payment_id,
-                permissions: (tenantByEmail as any).permissions || DEFAULT_TENANT_PERMISSIONS,
-              },
+              tenant: mapTenantFields(tenantByEmail),
             },
             error: null,
           };
@@ -417,29 +420,10 @@ export async function getAuthenticatedTenant(overrideTenantId?: string): Promise
           app_metadata: user.app_metadata,
         },
         tenantId: tenantUser.tenant_id,
-        role: (tenantUser.role as any) || "owner",
+        role: effectiveRole,
         isSuperAdmin: false,
         isImpersonating: false,
-        tenant: tenant
-          ? {
-              id: tenant.id,
-              name: tenant.name,
-              slug: tenant.slug,
-              plan_tier: tenant.plan_tier,
-              subscription_status: (tenant as any).subscription_status,
-              subscription_plan: (tenant as any).subscription_plan || null,
-              subscription_expires_at: (tenant as any).subscription_expires_at || (tenant as any).current_period_end || null,
-              setup_paid: Boolean((tenant as any).setup_paid),
-              setup_fee_paid: Boolean((tenant as any).setup_fee_paid ?? (tenant as any).setup_paid),
-              setup_fee_amount: (tenant as any).setup_fee_amount !== null && (tenant as any).setup_fee_amount !== undefined ? Number((tenant as any).setup_fee_amount) : 197,
-              setup_paid_at: (tenant as any).setup_paid_at || null,
-              subscription_starts_at: (tenant as any).subscription_starts_at || null,
-              monthly_fee_amount: (tenant as any).monthly_fee_amount !== null && (tenant as any).monthly_fee_amount !== undefined ? Number((tenant as any).monthly_fee_amount) : 97,
-              current_period_end: (tenant as any).current_period_end,
-              mp_payment_id: (tenant as any).mp_payment_id,
-              permissions: (tenant as any).permissions || DEFAULT_TENANT_PERMISSIONS,
-            }
-          : undefined,
+        tenant: mapTenantFields(tenant),
       },
       error: null,
     };

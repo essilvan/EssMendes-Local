@@ -14,129 +14,176 @@ import {
   Building2,
   CarFront,
   Wrench,
+  Globe,
+  ShieldCheck,
 } from "lucide-react";
 import type { TenantPermissions } from "@/types";
+
+export type NavBlockType = "common" | "automotive" | "appointment" | "super_admin";
 
 export interface AdminNavItem {
   name: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
-  key: keyof TenantPermissions;
+  key: keyof TenantPermissions | "super_admin_tenants" | "public_site";
+  block: NavBlockType;
   superAdminOnly?: boolean;
+  external?: boolean;
+}
+
+export interface AdminNavSection {
+  id: NavBlockType;
+  title: string;
+  items: AdminNavItem[];
 }
 
 /**
- * Lista canônica dos módulos oficiais de navegação do EssMendes Local.
- * Compartilhada estritamente entre a Sidebar Desktop e o Drawer/Sheet Mobile:
- * 1. 📊 Dashboard (dashboard) -> /admin
- * 2. 📅 Agendamentos (appointments) -> /admin/agendamentos
- * 3. 👥 Profissionais (professionals) -> /admin/profissionais
- * 4. 🛠️ Serviços (services) -> /admin/servicos
- * 5. 🛍️ Vitrine Produtos (products) -> /admin/produtos
- * 6. 🔄 Antes & Depois (before_after) -> /admin/antes-depois
- * 7. ⭐ Avaliações Google (reviews) -> /admin/avaliacoes
- * 8. 🚀 Posts & SEO (posts_seo) -> /admin/posts-seo
- * 9. 📈 Resultados & Relatórios (reports) -> /admin/relatorios
- * 10. 👑 Assinatura Pro (subscription_pro) -> /admin/assinatura
- * 11. 💳 Faturamento & Planos (billing_plans) -> /admin/faturamento
- * 12. ⚙️ Configurações (settings) -> /admin/configuracoes
+ * Verifica se o nicho do tenant corresponde ao segmento automotivo ('automotive', 'auto', 'automotivo', 'mecanica')
+ */
+export function isAutomotiveTenantNiche(niche?: string | null): boolean {
+  const normalized = String(niche || "")
+    .trim()
+    .toLowerCase();
+  return (
+    normalized === "automotive" ||
+    normalized === "auto" ||
+    normalized.includes("auto") ||
+    normalized.includes("mecanic") ||
+    normalized.includes("mecânic") ||
+    normalized.includes("oficina")
+  );
+}
+
+/**
+ * Lista canônica dos módulos oficiais de navegação do EssMendes Local,
+ * estruturados por bloco funcional (Comum, Automotivo, Agendamento Convencional e Super Admin).
  */
 export const ADMIN_NAV_MODULES: AdminNavItem[] = [
+  // BLOCO COMUM
   {
     name: "Dashboard",
     href: "/admin",
     icon: LayoutDashboard,
     key: "dashboard",
+    block: "common",
   },
-  {
-    name: "Agendamentos",
-    href: "/admin/agendamentos",
-    icon: CalendarCheck,
-    key: "appointments",
-  },
+  // BLOCO AUTOMOTIVO (Apenas tenant.niche === 'automotive' | 'auto')
   {
     name: "Orçamentos por Placa",
     href: "/admin/orcamentos",
     icon: CarFront,
     key: "vehicle_quotes",
+    block: "automotive",
   },
   {
     name: "Revisões Preventivas",
     href: "/admin/revisoes",
     icon: Wrench,
     key: "maintenance_schedules",
+    block: "automotive",
+  },
+  // BLOCO AGENDAMENTO CONVENCIONAL (Apenas tenant.niche !== 'automotive')
+  {
+    name: "Agendamentos",
+    href: "/admin/agendamentos",
+    icon: CalendarCheck,
+    key: "appointments",
+    block: "appointment",
+  },
+  // BLOCO COMUM (Continuação)
+  {
+    name: "Serviços & Preços",
+    href: "/admin/servicos",
+    icon: Scissors,
+    key: "services",
+    block: "common",
   },
   {
     name: "Profissionais",
     href: "/admin/profissionais",
     icon: Users,
     key: "professionals",
-  },
-  {
-    name: "Serviços",
-    href: "/admin/servicos",
-    icon: Scissors,
-    key: "services",
+    block: "common",
   },
   {
     name: "Vitrine Produtos",
     href: "/admin/produtos",
     icon: ShoppingBag,
     key: "products",
+    block: "common",
   },
   {
     name: "Antes & Depois",
     href: "/admin/antes-depois",
     icon: Sparkles,
     key: "before_after",
+    block: "common",
   },
   {
     name: "Avaliações Google",
     href: "/admin/avaliacoes",
     icon: Star,
     key: "reviews",
+    block: "common",
   },
   {
     name: "Posts & SEO",
     href: "/admin/posts-seo",
     icon: Newspaper,
     key: "posts_seo",
+    block: "common",
   },
   {
     name: "Resultados & Relatórios",
     href: "/admin/relatorios",
     icon: BarChart3,
     key: "reports",
-  },
-  {
-    name: "Assinatura Pro",
-    href: "/admin/assinatura",
-    icon: CreditCard,
-    key: "subscription_pro",
-  },
-  {
-    name: "Faturamento & Planos",
-    href: "/admin/faturamento",
-    icon: Sparkles,
-    key: "billing_plans",
+    block: "common",
   },
   {
     name: "Configurações",
     href: "/admin/configuracoes",
     icon: Settings,
     key: "settings",
+    block: "common",
   },
 ];
 
 /**
- * Módulos técnicos restritos exclusivamente ao Super Admin.
+ * BLOCO SUPER ADMIN — Renderizado ESTRITAMENTE se profile.role === 'super_admin' (ou isSuperAdmin === true).
+ * Oculto completamente para tenant_owner, tenant_admin e staff.
  */
 export const SUPER_ADMIN_NAV_MODULES: AdminNavItem[] = [
   {
-    name: "Integrações Google",
+    name: "Gestão de Tenants",
+    href: "/super-admin",
+    icon: ShieldCheck,
+    key: "super_admin_tenants",
+    block: "super_admin",
+    superAdminOnly: true,
+  },
+  {
+    name: "Faturamento & Planos",
+    href: "/admin/faturamento",
+    icon: Sparkles,
+    key: "billing_plans",
+    block: "super_admin",
+    superAdminOnly: true,
+  },
+  {
+    name: "Assinatura Pro",
+    href: "/admin/assinatura",
+    icon: CreditCard,
+    key: "subscription_pro",
+    block: "super_admin",
+    superAdminOnly: true,
+  },
+  {
+    name: "Integrações Globais",
     href: "/admin/integracoes",
     icon: Building2,
     key: "settings",
+    block: "super_admin",
     superAdminOnly: true,
   },
 ];
@@ -145,6 +192,9 @@ export const SUPER_ADMIN_NAV_MODULES: AdminNavItem[] = [
  * Verifica se uma rota está ativa considerando aliases e sub-rotas.
  */
 export function isNavItemActive(pathname: string, item: AdminNavItem): boolean {
+  if (item.key === "public_site") {
+    return false;
+  }
   if (item.key === "dashboard") {
     return pathname === "/admin" || pathname === "/admin/dashboard";
   }
@@ -173,7 +223,7 @@ export function isNavItemActive(pathname: string, item: AdminNavItem): boolean {
       pathname.startsWith("/admin/resultados")
     );
   }
-  if (item.key === "settings") {
+  if (item.key === "settings" && !item.superAdminOnly) {
     return (
       pathname.startsWith("/admin/configuracoes") ||
       pathname.startsWith("/admin/perfil")
@@ -183,38 +233,142 @@ export function isNavItemActive(pathname: string, item: AdminNavItem): boolean {
 }
 
 /**
- * Filtra os módulos rigorosamente pelas permissões do lojista.
+ * Filtra os módulos rigorosamente pelo nicho do tenant, perfil RBAC (profile.role) e permissões.
  */
 export function getFilteredNavItems(
   permissions?: TenantPermissions | null,
-  isSuperAdmin = false
+  isSuperAdmin = false,
+  tenantNiche: string | null = "general",
+  userRole: string | null = "tenant_owner",
+  companySlug?: string
 ): AdminNavItem[] {
-  const baseItems = ADMIN_NAV_MODULES.filter((item) => {
-    if (isSuperAdmin) {
+  const effectiveSuperAdmin = isSuperAdmin || userRole === "super_admin";
+  const isAutomotive = isAutomotiveTenantNiche(tenantNiche);
+
+  const publicSiteItem: AdminNavItem | null = companySlug
+    ? {
+        name: "Meu Site",
+        href: `/${companySlug}`,
+        icon: Globe,
+        key: "public_site",
+        block: "common",
+        external: true,
+      }
+    : null;
+
+  const filteredModules = ADMIN_NAV_MODULES.filter((item) => {
+    // 1. Filtro Contextual Estrito por Nicho
+    if (item.block === "automotive" && !isAutomotive) {
+      return false;
+    }
+    if (item.block === "appointment" && isAutomotive) {
+      return false;
+    }
+
+    // 2. Super Admin tem acesso a todos os itens contextuais do nicho
+    if (effectiveSuperAdmin) {
       return true;
     }
+
     if (!permissions) {
       return true;
     }
 
-    // Regra rigorosa: tenant.permissions[item.key] !== false
-    // Compatibilidade com fallback de chaves legadas
-    if (item.key === "products" && permissions.products === false && permissions.showcase === false) {
-      return false;
-    }
-    if (item.key === "subscription_pro" && permissions.subscription_pro === false && permissions.billing === false) {
-      return false;
-    }
-    if (item.key === "billing_plans" && permissions.billing_plans === false && permissions.billing === false) {
+    // 3. Filtro de Permissões por Tenant
+    if (
+      item.key === "products" &&
+      permissions.products === false &&
+      permissions.showcase === false
+    ) {
       return false;
     }
 
-    return permissions[item.key] !== false;
+    const permKey = item.key as keyof TenantPermissions;
+    return permissions[permKey] !== false;
   });
 
-  if (isSuperAdmin) {
-    return [...baseItems, ...SUPER_ADMIN_NAV_MODULES];
+  // Insere "Meu Site" logo após "Dashboard" no Bloco Comum se companySlug for fornecido
+  const withPublicSite: AdminNavItem[] = [];
+  for (const mod of filteredModules) {
+    withPublicSite.push(mod);
+    if (mod.key === "dashboard" && publicSiteItem) {
+      withPublicSite.push(publicSiteItem);
+    }
   }
 
-  return baseItems;
+  // 4. Bloco Super Admin: EXCLUSIVO para profile.role === 'super_admin'
+  if (effectiveSuperAdmin) {
+    return [...withPublicSite, ...SUPER_ADMIN_NAV_MODULES];
+  }
+
+  return withPublicSite;
+}
+
+/**
+ * Retorna os blocos modulares agrupados para exibição estruturada na Sidebar.
+ */
+export function getModularNavSections(options: {
+  permissions?: TenantPermissions | null;
+  isSuperAdmin?: boolean;
+  tenantNiche?: string | null;
+  userRole?: string | null;
+  companySlug?: string;
+}): AdminNavSection[] {
+  const {
+    permissions,
+    isSuperAdmin = false,
+    tenantNiche = "general",
+    userRole = "tenant_owner",
+    companySlug,
+  } = options;
+
+  const allItems = getFilteredNavItems(
+    permissions,
+    isSuperAdmin,
+    tenantNiche,
+    userRole,
+    companySlug
+  );
+
+  const isAutomotive = isAutomotiveTenantNiche(tenantNiche);
+  const effectiveSuperAdmin = isSuperAdmin || userRole === "super_admin";
+
+  const commonItems = allItems.filter((i) => i.block === "common");
+  const automotiveItems = allItems.filter((i) => i.block === "automotive");
+  const appointmentItems = allItems.filter((i) => i.block === "appointment");
+  const superAdminItems = allItems.filter((i) => i.block === "super_admin");
+
+  const sections: AdminNavSection[] = [];
+
+  if (isAutomotive && automotiveItems.length > 0) {
+    sections.push({
+      id: "automotive",
+      title: "Operação Automotiva",
+      items: automotiveItems,
+    });
+  } else if (!isAutomotive && appointmentItems.length > 0) {
+    sections.push({
+      id: "appointment",
+      title: "Atendimento & Agenda",
+      items: appointmentItems,
+    });
+  }
+
+  if (commonItems.length > 0) {
+    sections.push({
+      id: "common",
+      title: "Gestão & Vitrine",
+      items: commonItems,
+    });
+  }
+
+  if (effectiveSuperAdmin && superAdminItems.length > 0) {
+    sections.push({
+      id: "super_admin",
+      title: "Super Admin Global",
+      items: superAdminItems,
+    });
+  }
+
+  return sections;
 }

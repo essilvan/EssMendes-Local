@@ -1,4 +1,4 @@
-import { getAuthenticatedTenant } from "@/lib/supabase/tenant";
+import { getAuthenticatedTenant, resolveTenantNiche } from "@/lib/supabase/tenant";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { AdminMobileNav } from "@/components/admin/AdminMobileNav";
 import { AdminPermissionNotice } from "@/components/admin/AdminPermissionNotice";
@@ -9,9 +9,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { ShieldCheck, ArrowLeft, X } from "lucide-react";
-import { getTenantPublicUrl } from "@/utils/tenant-url";
 import type { TenantPermissions } from "@/types";
-import { DEFAULT_TENANT_PERMISSIONS } from "@/types";
 
 export default async function AdminLayout({
   children,
@@ -27,7 +25,8 @@ export default async function AdminLayout({
   const user = tenantContext.user;
   const tenant = tenantContext.tenant;
   const isSuperAdmin = tenantContext.isSuperAdmin;
-  const isImpersonating = tenantContext.isImpersonating;
+  const userRole = tenantContext.role || "tenant_owner";
+  const tenantNiche = resolveTenantNiche(tenant);
 
   const fullName =
     (user.user_metadata?.full_name as string) ||
@@ -63,10 +62,13 @@ export default async function AdminLayout({
     billing: tenant?.permissions?.billing ?? true,
   };
 
-  // Proteção de Rotas Baseada em Permissões por Estabelecimento (para lojistas comuns)
-  if (!isSuperAdmin) {
-    // 1. Bloqueio de rotas exclusivas do Super Admin
-    if (currentPath.startsWith("/admin/integracoes")) {
+  // Proteção de Rotas Baseada em Permissões e Perfil RBAC (para lojistas comuns)
+  if (!isSuperAdmin && userRole !== "super_admin") {
+    // 1. Bloqueio de rotas globais exclusivas do Super Admin
+    if (
+      currentPath.startsWith("/admin/integracoes") ||
+      currentPath.startsWith("/admin/faturamento")
+    ) {
       redirect("/admin/dashboard?error=recurso_indisponivel");
     }
 
@@ -171,6 +173,8 @@ export default async function AdminLayout({
             userEmail={user.email || ""}
             fullName={fullName}
             isSuperAdmin={isSuperAdmin}
+            userRole={userRole}
+            tenantNiche={tenantNiche}
             permissions={permissions}
           />
         </div>
@@ -184,6 +188,8 @@ export default async function AdminLayout({
             userEmail={user.email || ""}
             fullName={fullName}
             isSuperAdmin={isSuperAdmin}
+            userRole={userRole}
+            tenantNiche={tenantNiche}
             permissions={permissions}
           />
 

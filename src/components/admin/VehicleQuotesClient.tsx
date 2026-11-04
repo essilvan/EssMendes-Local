@@ -13,24 +13,26 @@ import {
   CalendarClock,
   CheckCircle2,
   Clock,
-  AlertCircle,
   FileText,
   User,
   Phone,
-  DollarSign,
   Pencil,
   Trash2,
   X,
   Loader2,
   Filter,
-  ShieldCheck,
-  Sparkles,
-  ArrowRight,
   Gauge,
   Play,
   Send,
   XCircle,
   Check,
+  ClipboardCheck,
+  Camera,
+  Fuel,
+  Copy,
+  ExternalLink,
+  BellRing,
+  Calculator,
 } from "lucide-react";
 import {
   createAdminVehicleQuoteAction,
@@ -38,21 +40,27 @@ import {
   updateVehicleQuoteStatusAction,
   deleteVehicleQuoteAction,
   createMaintenanceScheduleAction,
+  saveVehicleInspectionAction,
+  completeQuoteWithMaintenanceCalculatorAction,
+  markPostSaleContactedAction,
 } from "@/services/vehicle-quote.actions";
 import {
   formatLicensePlateDisplay,
   normalizeLicensePlate,
 } from "@/lib/validations/vehicle-quote.schema";
+import { compressAndUploadAutomotivePhoto } from "@/utils/image-compression";
 import { sanitizePhoneNumber } from "@/utils/phone";
 import type {
   VehicleQuote,
   VehicleQuoteStatus,
   VehicleMaintenanceSchedule,
+  VehicleInspection,
 } from "@/types";
 
 interface VehicleQuotesClientProps {
   initialQuotes: VehicleQuote[];
   initialSchedules: VehicleMaintenanceSchedule[];
+  initialInspections?: VehicleInspection[];
   tenantName: string;
   initialPlateFilter?: string;
   initialStatusFilter?: string;
@@ -66,6 +74,15 @@ const VALID_STATUS_FILTERS = new Set([
   "in_progress",
   "completed",
 ]);
+
+const FUEL_LEVEL_OPTIONS = ["1/4", "1/2", "3/4", "Cheio"] as const;
+
+const INSPECTION_PHOTO_SLOTS = [
+  { index: 0, label: "Frente" },
+  { index: 1, label: "Traseira" },
+  { index: 2, label: "Lateral Esquerda" },
+  { index: 3, label: "Lateral Direita" },
+] as const;
 
 const STATUS_CONFIG: Record<
   string,
@@ -108,9 +125,16 @@ const STATUS_CONFIG: Record<
   },
 };
 
+function addMonthsToDateStr(monthsToAdd: number): string {
+  const d = new Date();
+  d.setMonth(d.getMonth() + monthsToAdd);
+  return d.toISOString().split("T")[0];
+}
+
 export function VehicleQuotesClient({
   initialQuotes,
   initialSchedules,
+  initialInspections = [],
   tenantName,
   initialPlateFilter = "",
   initialStatusFilter = "all",
@@ -120,6 +144,9 @@ export function VehicleQuotesClient({
   const [quotes, setQuotes] = useState<VehicleQuote[]>(initialQuotes);
   const [schedules, setSchedules] =
     useState<VehicleMaintenanceSchedule[]>(initialSchedules);
+  const [inspections, setInspections] =
+    useState<VehicleInspection[]>(initialInspections);
+
   const [statusFilter, setStatusFilter] = useState<string>(
     VALID_STATUS_FILTERS.has(initialStatusFilter) ? initialStatusFilter : "all"
   );
@@ -129,6 +156,7 @@ export function VehicleQuotesClient({
   );
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
   const [statusFeedback, setStatusFeedback] = useState<string | null>(null);
+  const [copiedTokenId, setCopiedTokenId] = useState<string | null>(null);
 
   // Modal Novo Orçamento Manual
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
@@ -144,7 +172,7 @@ export function VehicleQuotesClient({
   const [isCreating, setIsCreating] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Modal Editar / Avaliar Orçamento
+  // Modal Editar / Avaliar Orçamento (+ 3 Fotos de Peças Danificadas)
   const [editingQuote, setEditingQuote] = useState<VehicleQuote | null>(null);
   const [editStatus, setEditStatus] = useState<VehicleQuoteStatus>("pending");
   const [editPartsCost, setEditPartsCost] = useState<string>("0");
@@ -152,19 +180,46 @@ export function VehicleQuotesClient({
   const [editMechanicNotes, setEditMechanicNotes] = useState<string>("");
   const [editVehicleModel, setEditVehicleModel] = useState<string>("");
   const [editComplaint, setEditComplaint] = useState<string>("");
+  const [editDamagedPhotos, setEditDamagedPhotos] = useState<string[]>([]);
+  const [uploadingDamagedSlot, setUploadingDamagedSlot] = useState<
+    number | null
+  >(null);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
-  // Modal Programar Revisão Preventiva a partir do Orçamento
+  // Modal Checklist Digital de Entrada (Vistoria Rápida no Celular)
+  const [inspectingQuote, setInspectingQuote] = useState<VehicleQuote | null>(
+    null
+  );
+  const [inspEntryKm, setInspEntryKm] = useState<string>("");
+  const [inspFuelLevel, setInspFuelLevel] =
+    useState<(typeof FUEL_LEVEL_OPTIONS)[number]>("1/2");
+  const [inspSpareTire, setInspSpareTire] = useState<boolean>(true);
+  const [inspJackTool, setInspJackTool] = useState<boolean>(true);
+  const [inspPhotos, setInspPhotos] = useState<string[]>(["", "", "", ""]);
+  const [uploadingInspSlot, setUploadingInspSlot] = useState<number | null>(
+    null
+  );
+  const [inspScratchNotes, setInspScratchNotes] = useState<string>("");
+  const [isSavingInspection, setIsSavingInspection] = useState<boolean>(false);
+
+  // Modal Calculadora de Próxima Revisão por KM (Ao Concluir Serviço)
+  const [completingQuote, setCompletingQuote] = useState<VehicleQuote | null>(
+    null
+  );
+  const [calcCurrentKm, setCalcCurrentKm] = useState<string>("");
+  const [calcOilSelected, setCalcOilSelected] = useState<boolean>(true);
+  const [calcBeltSelected, setCalcBeltSelected] = useState<boolean>(true);
+  const [calcBrakesSelected, setCalcBrakesSelected] = useState<boolean>(true);
+  const [isCompletingWithCalc, setIsCompletingWithCalc] =
+    useState<boolean>(false);
+
+  // Modal Programar Revisão Preventiva Avulsa
   const [schedulingFromQuote, setSchedulingFromQuote] =
     useState<VehicleQuote | null>(null);
   const [revServiceType, setRevServiceType] = useState(
     "Troca de Óleo e Filtros + Revisão Preventiva"
   );
-  const [revDueDate, setRevDueDate] = useState(() => {
-    const d = new Date();
-    d.setMonth(d.getMonth() + 6);
-    return d.toISOString().split("T")[0];
-  });
+  const [revDueDate, setRevDueDate] = useState(() => addMonthsToDateStr(6));
   const [revDueKm, setRevDueKm] = useState("");
   const [revNotes, setRevNotes] = useState("");
   const [isCreatingSchedule, setIsCreatingSchedule] = useState(false);
@@ -184,6 +239,21 @@ export function VehicleQuotesClient({
     setSchedules(initialSchedules);
   }, [initialSchedules]);
 
+  useEffect(() => {
+    setInspections(initialInspections);
+  }, [initialInspections]);
+
+  // Mapa rápido de vistoria por quote_id
+  const inspectionByQuoteId = useMemo(() => {
+    const map = new Map<string, VehicleInspection>();
+    for (const insp of inspections) {
+      if (insp.quote_id && !map.has(insp.quote_id)) {
+        map.set(insp.quote_id, insp);
+      }
+    }
+    return map;
+  }, [inspections]);
+
   const formatCurrency = (val: number | null | undefined) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -200,6 +270,19 @@ export function VehicleQuotesClient({
       month: "2-digit",
       year: "numeric",
     });
+  };
+
+  // Verifica se um serviço concluído atingiu 7 dias ou mais sem contato pós-venda
+  const isPostSalePending7Days = (q: VehicleQuote): boolean => {
+    if (q.status !== "completed") return false;
+    if (q.post_sale_contacted) return false;
+    const refIso = q.approved_at || q.created_at;
+    if (!refIso) return true;
+    const refDate = new Date(refIso);
+    if (isNaN(refDate.getTime())) return true;
+    const diffMs = Date.now() - refDate.getTime();
+    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+    return diffDays >= 7;
   };
 
   // Placas únicas cadastradas para atalho de histórico
@@ -314,6 +397,9 @@ export function VehicleQuotesClient({
       q.status === "in_progress"
   ).length;
   const completedCount = quotes.filter((q) => q.status === "completed").length;
+  const postSalePendingCount = quotes.filter((q) =>
+    isPostSalePending7Days(q)
+  ).length;
   const totalVolume = quotes.reduce(
     (sum, q) => sum + (Number(q.total_cost) || 0),
     0
@@ -331,7 +417,7 @@ export function VehicleQuotesClient({
     }).length;
   }, [schedules]);
 
-  // Handlers
+  // Handlers de filtro de status
   const handleSelectStatusFilter = (nextStatus: string) => {
     setStatusFilter(nextStatus);
     if (typeof window !== "undefined") {
@@ -345,17 +431,120 @@ export function VehicleQuotesClient({
     }
   };
 
+  // Abre a Calculadora de Próxima Revisão por KM ao concluir um orçamento
+  const handleOpenCompletionCalculator = (q: VehicleQuote) => {
+    setFormError(null);
+    const existingInsp = inspectionByQuoteId.get(q.id);
+    setCalcCurrentKm(
+      existingInsp?.entry_km ? String(existingInsp.entry_km) : ""
+    );
+    setCalcOilSelected(true);
+    setCalcBeltSelected(true);
+    setCalcBrakesSelected(true);
+    setCompletingQuote(q);
+  };
+
+  const handleConfirmCompletionCalculator = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!completingQuote) return;
+
+    setIsCompletingWithCalc(true);
+    setFormError(null);
+
+    const baseKm = Number(calcCurrentKm) || 0;
+    const itemsToCreate: Array<{
+      serviceType: string;
+      dueDate: string;
+      dueKm?: number | null;
+      notes?: string | null;
+    }> = [];
+
+    if (calcOilSelected) {
+      itemsToCreate.push({
+        serviceType: "Troca de Óleo e Filtros",
+        dueDate: addMonthsToDateStr(6),
+        dueKm: baseKm > 0 ? baseKm + 10000 : null,
+        notes:
+          baseKm > 0
+            ? `Calculado em ${baseKm.toLocaleString("pt-BR")} km (+10.000 km ou 6 meses)`
+            : "Revisão programada para +6 meses",
+      });
+    }
+
+    if (calcBeltSelected) {
+      itemsToCreate.push({
+        serviceType: "Correia Dentada e Tensores",
+        dueDate: addMonthsToDateStr(24),
+        dueKm: baseKm > 0 ? baseKm + 40000 : null,
+        notes:
+          baseKm > 0
+            ? `Calculado em ${baseKm.toLocaleString("pt-BR")} km (+40.000 km ou 2 anos)`
+            : "Revisão programada para +2 anos",
+      });
+    }
+
+    if (calcBrakesSelected) {
+      itemsToCreate.push({
+        serviceType: "Revisão de Freios",
+        dueDate: addMonthsToDateStr(12),
+        dueKm: baseKm > 0 ? baseKm + 20000 : null,
+        notes: "Revisão preventiva de freios (+12 meses)",
+      });
+    }
+
+    const res = await completeQuoteWithMaintenanceCalculatorAction({
+      quoteId: completingQuote.id,
+      currentKm: baseKm > 0 ? baseKm : null,
+      items: itemsToCreate,
+    });
+
+    setIsCompletingWithCalc(false);
+
+    if (!res.success || !res.data) {
+      setFormError(
+        res.error || "Não foi possível concluir o serviço e agendar revisões."
+      );
+      return;
+    }
+
+    const { quote: updatedQuote, schedules: createdSchedules } = res.data;
+    setQuotes((prev) =>
+      prev.map((item) => (item.id === updatedQuote.id ? updatedQuote : item))
+    );
+    if (createdSchedules.length > 0) {
+      setSchedules((prev) => [...prev, ...createdSchedules]);
+    }
+
+    const plateLabel =
+      updatedQuote.plate_display ||
+      formatLicensePlateDisplay(updatedQuote.license_plate);
+    setCompletingQuote(null);
+    setStatusFeedback(
+      `Serviço da placa ${plateLabel} concluído e ${createdSchedules.length} revisão(ões) programada(s) automaticamente!`
+    );
+    setTimeout(() => setStatusFeedback(null), 4000);
+
+    startTransition(() => {
+      router.refresh();
+    });
+  };
+
   const handleQuickStatusChange = async (
     q: VehicleQuote,
     nextStatus: VehicleQuoteStatus,
     openPreventiveModalOnComplete = false
   ) => {
+    // Se o novo status for "completed", abre o modal da Calculadora de Próxima Revisão por KM!
+    if (nextStatus === "completed" || openPreventiveModalOnComplete) {
+      handleOpenCompletionCalculator(q);
+      return;
+    }
+
     if (updatingStatusId === q.id) return;
     const previousStatus = q.status;
     setUpdatingStatusId(q.id);
     setFormError(null);
 
-    // Atualização otimista imediata na lista sem recarregar a página
     setQuotes((prev) =>
       prev.map((item) =>
         item.id === q.id ? { ...item, status: nextStatus } : item
@@ -366,13 +555,14 @@ export function VehicleQuotesClient({
     setUpdatingStatusId(null);
 
     if (!res.success || !res.data) {
-      // Reverte em caso de erro
       setQuotes((prev) =>
         prev.map((item) =>
           item.id === q.id ? { ...item, status: previousStatus } : item
         )
       );
-      setFormError(res.error || "Não foi possível atualizar o status do orçamento.");
+      setFormError(
+        res.error || "Não foi possível atualizar o status do orçamento."
+      );
       return;
     }
 
@@ -390,23 +580,98 @@ export function VehicleQuotesClient({
     );
     setTimeout(() => setStatusFeedback(null), 3500);
 
-    // Se concluiu o serviço, já abre a programação de revisão preventiva
-    if (nextStatus === "completed" || openPreventiveModalOnComplete) {
-      setFormError(null);
-      setScheduleSuccessMsg(null);
-      setRevServiceType(
-        updatedQuote.complaint
-          ? `Revisão Preventiva (${updatedQuote.complaint.slice(0, 60)})`
-          : "Troca de Óleo e Filtros + Revisão Preventiva"
-      );
-      setSchedulingFromQuote(updatedQuote);
-    }
-
     startTransition(() => {
       router.refresh();
     });
   };
 
+  // Handlers de Vistoria Digital de Entrada
+  const handleOpenInspectionModal = (q: VehicleQuote) => {
+    setFormError(null);
+    const existing = inspectionByQuoteId.get(q.id);
+    setInspectingQuote(q);
+    setInspEntryKm(existing?.entry_km ? String(existing.entry_km) : "");
+    setInspFuelLevel(
+      (existing?.fuel_level as (typeof FUEL_LEVEL_OPTIONS)[number]) || "1/2"
+    );
+    setInspSpareTire(existing?.spare_tire ?? true);
+    setInspJackTool(existing?.jack_tool ?? true);
+    const savedPhotos = Array.isArray(existing?.photos) ? existing!.photos! : [];
+    setInspPhotos([
+      savedPhotos[0] || "",
+      savedPhotos[1] || "",
+      savedPhotos[2] || "",
+      savedPhotos[3] || "",
+    ]);
+    setInspScratchNotes(existing?.scratch_notes || "");
+  };
+
+  const handleUploadInspectionPhotoSlot = async (
+    slotIndex: number,
+    file: File | null
+  ) => {
+    if (!file || !inspectingQuote) return;
+    setUploadingInspSlot(slotIndex);
+    setFormError(null);
+
+    const res = await compressAndUploadAutomotivePhoto(
+      file,
+      "inspections",
+      inspectingQuote.license_plate
+    );
+    setUploadingInspSlot(null);
+
+    if (!res.success || !res.url) {
+      setFormError(res.error || "Falha ao comprimir/enviar foto da vistoria.");
+      return;
+    }
+
+    setInspPhotos((prev) => {
+      const next = [...prev];
+      next[slotIndex] = res.url!;
+      return next;
+    });
+  };
+
+  const handleSaveInspection = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inspectingQuote) return;
+    setIsSavingInspection(true);
+    setFormError(null);
+
+    const res = await saveVehicleInspectionAction({
+      quoteId: inspectingQuote.id,
+      licensePlate: inspectingQuote.license_plate,
+      entryKm: inspEntryKm ? Number(inspEntryKm) : null,
+      fuelLevel: inspFuelLevel,
+      spareTire: inspSpareTire,
+      jackTool: inspJackTool,
+      photos: inspPhotos.filter(Boolean),
+      scratchNotes: inspScratchNotes,
+    });
+
+    setIsSavingInspection(false);
+
+    if (!res.success || !res.data) {
+      setFormError(res.error || "Erro ao salvar vistoria de entrada.");
+      return;
+    }
+
+    const saved = res.data;
+    setInspections((prev) => {
+      const others = prev.filter((i) => i.quote_id !== saved.quote_id);
+      return [saved, ...others];
+    });
+    setInspectingQuote(null);
+    setStatusFeedback(
+      `Vistoria de entrada salva com sucesso para a placa ${formatLicensePlateDisplay(
+        saved.license_plate
+      )}!`
+    );
+    setTimeout(() => setStatusFeedback(null), 3500);
+  };
+
+  // Handlers de Avaliar / Editar Orçamento (+ Fotos de Peças Danificadas)
   const handleOpenEdit = (q: VehicleQuote) => {
     setFormError(null);
     setEditingQuote(q);
@@ -416,6 +681,40 @@ export function VehicleQuotesClient({
     setEditMechanicNotes(q.mechanic_notes || "");
     setEditVehicleModel(q.vehicle_model || "");
     setEditComplaint(q.complaint || "");
+    setEditDamagedPhotos(
+      Array.isArray(q.damaged_parts_photos)
+        ? q.damaged_parts_photos.filter(Boolean).slice(0, 3)
+        : []
+    );
+  };
+
+  const handleUploadDamagedPhoto = async (
+    slotIndex: number,
+    file: File | null
+  ) => {
+    if (!file || !editingQuote) return;
+    setUploadingDamagedSlot(slotIndex);
+    setFormError(null);
+
+    const res = await compressAndUploadAutomotivePhoto(
+      file,
+      "damaged-parts",
+      editingQuote.license_plate
+    );
+    setUploadingDamagedSlot(null);
+
+    if (!res.success || !res.url) {
+      setFormError(
+        res.error || "Erro ao enviar foto da peça danificada / laudo."
+      );
+      return;
+    }
+
+    setEditDamagedPhotos((prev) => {
+      const next = [...prev];
+      next[slotIndex] = res.url!;
+      return next.filter(Boolean).slice(0, 3);
+    });
   };
 
   const handleSaveEdit = async (e: React.FormEvent) => {
@@ -432,6 +731,7 @@ export function VehicleQuotesClient({
       mechanicNotes: editMechanicNotes,
       vehicleModel: editVehicleModel,
       complaint: editComplaint,
+      damagedPartsPhotos: editDamagedPhotos.filter(Boolean).slice(0, 3),
     });
 
     setIsSavingEdit(false);
@@ -451,18 +751,102 @@ export function VehicleQuotesClient({
     setEditingQuote(null);
 
     if (becameCompleted) {
-      setScheduleSuccessMsg(null);
-      setRevServiceType(
-        updatedQuote.complaint
-          ? `Revisão Preventiva (${updatedQuote.complaint.slice(0, 60)})`
-          : "Troca de Óleo e Filtros + Revisão Preventiva"
-      );
-      setSchedulingFromQuote(updatedQuote);
+      handleOpenCompletionCalculator(updatedQuote);
     }
 
     startTransition(() => {
       router.refresh();
     });
+  };
+
+  // Links públicos de aprovação online (/orcamento/[token])
+  const getPublicQuoteUrl = (q: VehicleQuote): string => {
+    if (!q.public_token) return "";
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : "";
+    return `${origin}/orcamento/${q.public_token}`;
+  };
+
+  const handleCopyPublicQuoteLink = async (q: VehicleQuote) => {
+    const link = getPublicQuoteUrl(q);
+    if (!link) return;
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopiedTokenId(q.id);
+      setTimeout(() => setCopiedTokenId(null), 2500);
+    } catch (err) {
+      console.error("Erro ao copiar link do orçamento:", err);
+    }
+  };
+
+  // Monta link de WhatsApp para enviar orçamento + link público de aprovação online para o cliente
+  const buildClientQuoteWhatsAppUrl = (q: VehicleQuote) => {
+    const cleanPhone = sanitizePhoneNumber(q.client_phone);
+    const targetPhone = cleanPhone.startsWith("55")
+      ? cleanPhone
+      : `55${cleanPhone}`;
+    const plateDisplay =
+      q.plate_display || formatLicensePlateDisplay(q.license_plate);
+    const total = Number(q.total_cost) || 0;
+    const parts = Number(q.parts_cost) || 0;
+    const labor = Number(q.labor_cost) || 0;
+    const publicLink = getPublicQuoteUrl(q);
+
+    const costDetails =
+      total > 0
+        ? `\n💰 *Resumo de Valores:*\n` +
+          `• Peças/Insumos: ${formatCurrency(parts)}\n` +
+          `• Mão de Obra: ${formatCurrency(labor)}\n` +
+          `• *Valor Total:* *${formatCurrency(total)}*\n`
+        : "";
+
+    const notesBlock = q.mechanic_notes
+      ? `\n📋 *Diagnóstico / Parecer Técnico:*\n${q.mechanic_notes}\n`
+      : "";
+
+    const approvalLinkBlock = publicLink
+      ? `\n🔗 *Confira as fotos técnicas e Aprove seu Orçamento Online em 1 clique:*\n${publicLink}\n`
+      : "";
+
+    const msg =
+      `Olá, *${q.client_name}*! Tudo bem? 👋\n` +
+      `Aqui é da equipe *${tenantName}* 🚗🔧\n\n` +
+      `Segue o orçamento detalhado do seu veículo:\n` +
+      `🪪 *Placa:* ${plateDisplay}\n` +
+      `🚘 *Veículo:* ${q.vehicle_model || "Informado na triagem"}\n` +
+      `🛠️ *Solicitação:* ${q.complaint || "Avaliação técnica"}` +
+      `${notesBlock}${costDetails}${approvalLinkBlock}\n` +
+      `Ficamos à disposição!`;
+
+    return `https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`;
+  };
+
+  // Handler Pós-Venda Automático de 7 Dias
+  const handlePostSaleWhatsAppClick = async (q: VehicleQuote) => {
+    const cleanPhone = sanitizePhoneNumber(q.client_phone);
+    const targetPhone = cleanPhone.startsWith("55")
+      ? cleanPhone
+      : `55${cleanPhone}`;
+    const plateDisplay =
+      q.plate_display || formatLicensePlateDisplay(q.license_plate);
+    const vehicleLabel = q.vehicle_model || "veículo";
+
+    const msg = `Olá, ${q.client_name}! Tudo bem? Aqui é da ${tenantName}. Passando para checar se o seu ${vehicleLabel} (Placa ${plateDisplay}) está rodando 100% após a revisão da semana passada. Qualquer dúvida estamos à disposição!`;
+    const waUrl = `https://wa.me/${targetPhone}?text=${encodeURIComponent(
+      msg
+    )}`;
+
+    if (typeof window !== "undefined") {
+      window.open(waUrl, "_blank", "noopener,noreferrer");
+    }
+
+    // Marca post_sale_contacted = true imediatamente
+    setQuotes((prev) =>
+      prev.map((item) =>
+        item.id === q.id ? { ...item, post_sale_contacted: true } : item
+      )
+    );
+    await markPostSaleContactedAction(q.id);
   };
 
   const handleCreateQuote = async (e: React.FormEvent) => {
@@ -551,43 +935,6 @@ export function VehicleQuotesClient({
     }
   };
 
-  // Monta link de WhatsApp para enviar orçamento pronto para o cliente
-  const buildClientQuoteWhatsAppUrl = (q: VehicleQuote) => {
-    const cleanPhone = sanitizePhoneNumber(q.client_phone);
-    const targetPhone = cleanPhone.startsWith("55")
-      ? cleanPhone
-      : `55${cleanPhone}`;
-    const plateDisplay =
-      q.plate_display || formatLicensePlateDisplay(q.license_plate);
-    const total = Number(q.total_cost) || 0;
-    const parts = Number(q.parts_cost) || 0;
-    const labor = Number(q.labor_cost) || 0;
-
-    const costDetails =
-      total > 0
-        ? `\n💰 *Resumo de Valores:*\n` +
-          `• Peças/Insumos: ${formatCurrency(parts)}\n` +
-          `• Mão de Obra: ${formatCurrency(labor)}\n` +
-          `• *Valor Total:* *${formatCurrency(total)}*\n`
-        : "";
-
-    const notesBlock = q.mechanic_notes
-      ? `\n📋 *Diagnóstico / Parecer Técnico:*\n${q.mechanic_notes}\n`
-      : "";
-
-    const msg =
-      `Olá, *${q.client_name}*! Tudo bem? 👋\n` +
-      `Aqui é da equipe *${tenantName}* 🚗🔧\n\n` +
-      `Segue o retorno sobre o orçamento do seu veículo:\n` +
-      `🪪 *Placa:* ${plateDisplay}\n` +
-      `🚘 *Veículo:* ${q.vehicle_model || "Informado na triagem"}\n` +
-      `🛠️ *Solicitação:* ${q.complaint || "Avaliação técnica"}` +
-      `${notesBlock}${costDetails}\n` +
-      `Podemos confirmar a execução do serviço ou agendar a entrada do veículo?`;
-
-    return `https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`;
-  };
-
   return (
     <div className="space-y-6">
       {/* Abas Superiores de Navegação do Módulo Automotivo */}
@@ -633,10 +980,10 @@ export function VehicleQuotesClient({
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2.5">
             <CarFront className="h-6 w-6 text-blue-600" />
-            <span>Orçamentos Inteligentes por Placa</span>
+            <span>Orçamentos Inteligentes & Operação da Oficina</span>
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            Gerencie solicitações de orçamento da vitrine, consulte o histórico completo de serviços por placa e envie cotações no WhatsApp.
+            Faça vistoria digital de entrada, anexe fotos de peças danificadas, envie link de aprovação online e calcule próximas revisões por KM.
           </p>
         </div>
       </div>
@@ -662,9 +1009,16 @@ export function VehicleQuotesClient({
         </div>
 
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4">
-          <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider">
-            Serviços Concluídos
-          </span>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider">
+              Serviços Concluídos
+            </span>
+            {postSalePendingCount > 0 && (
+              <span className="rounded-full bg-orange-500 px-2 py-0.5 text-[10px] font-black text-white">
+                {postSalePendingCount} Pós-Venda
+              </span>
+            )}
+          </div>
           <p className="text-2xl font-black text-emerald-950 mt-1">
             {completedCount}
           </p>
@@ -696,7 +1050,6 @@ export function VehicleQuotesClient({
             </p>
           </div>
 
-          {/* Barra de Busca por Placa */}
           <div className="flex items-center gap-2 w-full md:w-auto">
             <div className="relative flex-1 md:w-72">
               <Search className="h-4 w-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -774,7 +1127,6 @@ export function VehicleQuotesClient({
           <div className="mt-4 rounded-2xl bg-slate-950/90 border border-slate-800 p-4 sm:p-5 space-y-4 animate-in fade-in duration-150">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
               <div className="flex items-center gap-3.5">
-                {/* Placa Mercosul */}
                 <div className="rounded-lg border-2 border-slate-300 bg-white text-slate-950 overflow-hidden shadow-md shrink-0 min-w-[116px] text-center">
                   <div className="bg-[#003399] text-white text-[8px] font-bold tracking-widest uppercase py-0.5 px-2 flex items-center justify-between">
                     <span>BR</span>
@@ -978,7 +1330,7 @@ export function VehicleQuotesClient({
           })}
         </div>
 
-        {/* Feedback instantâneo de atualização de status */}
+        {/* Feedback instantâneo */}
         {statusFeedback && (
           <div className="flex items-center justify-between gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-xs font-bold text-emerald-900 animate-in fade-in duration-150">
             <div className="flex items-center gap-2">
@@ -1014,6 +1366,13 @@ export function VehicleQuotesClient({
             const plateDisplay =
               q.plate_display || formatLicensePlateDisplay(q.license_plate);
             const total = Number(q.total_cost) || 0;
+            const existingInspection = inspectionByQuoteId.get(q.id);
+            const damagedPhotos = Array.isArray(q.damaged_parts_photos)
+              ? q.damaged_parts_photos.filter(Boolean)
+              : [];
+            const isPostSalePending = isPostSalePending7Days(q);
+            const isPostSaleEligible =
+              q.status === "completed" && !q.post_sale_contacted;
 
             return (
               <div
@@ -1023,7 +1382,6 @@ export function VehicleQuotesClient({
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                   {/* Esquerda: Placa Mercosul, Modelo, Cliente e Status */}
                   <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                    {/* Placa estilo Mercosul clicável para ver histórico */}
                     <button
                       type="button"
                       onClick={() => {
@@ -1057,6 +1415,35 @@ export function VehicleQuotesClient({
                           />
                           <span>{st.label}</span>
                         </span>
+
+                        {existingInspection && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-teal-50 border border-teal-200 px-2.5 py-0.5 text-[11px] font-bold text-teal-800">
+                            <ClipboardCheck className="h-3 w-3 text-teal-600" />
+                            <span>
+                              Vistoria OK
+                              {existingInspection.entry_km
+                                ? ` (${Number(
+                                    existingInspection.entry_km
+                                  ).toLocaleString("pt-BR")} km)`
+                                : ""}
+                            </span>
+                          </span>
+                        )}
+
+                        {isPostSalePending && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 border border-orange-300 px-2.5 py-0.5 text-xs font-extrabold text-orange-900 animate-pulse">
+                            <BellRing className="h-3 w-3 text-orange-600" />
+                            <span>Pós-Venda Pendente</span>
+                          </span>
+                        )}
+
+                        {q.status === "completed" && q.post_sale_contacted && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">
+                            <Check className="h-3 w-3" />
+                            <span>Pós-Venda Realizado</span>
+                          </span>
+                        )}
+
                         <span className="text-xs text-slate-400">
                           Solicitado em {formatDate(q.created_at)}
                         </span>
@@ -1080,6 +1467,12 @@ export function VehicleQuotesClient({
                             {q.client_phone}
                           </a>
                         </span>
+                        {damagedPhotos.length > 0 && (
+                          <span className="inline-flex items-center gap-1 text-amber-700 font-bold">
+                            <Camera className="h-3.5 w-3.5" />
+                            <span>{damagedPhotos.length} foto(s) de peças</span>
+                          </span>
+                        )}
                       </div>
 
                       {q.category_tags && q.category_tags.length > 0 && (
@@ -1135,15 +1528,80 @@ export function VehicleQuotesClient({
                     </span>
                     <p className="text-slate-700 leading-relaxed">
                       {q.mechanic_notes ||
-                        "Clique em 'Avaliar / Valores' para registrar o diagnóstico e preços das peças/mão de obra."}
+                        "Clique em 'Avaliar / Valores' para registrar o diagnóstico, valores e fotos das peças danificadas."}
                     </p>
                   </div>
                 </div>
 
+                {/* Banner de Pós-Venda Automático (7 Dias) para Serviços Concluídos */}
+                {isPostSaleEligible && (
+                  <div
+                    className={`rounded-xl border p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                      isPostSalePending
+                        ? "border-orange-300 bg-orange-50/90"
+                        : "border-emerald-200 bg-emerald-50/50"
+                    }`}
+                  >
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${
+                            isPostSalePending
+                              ? "bg-orange-500 text-white"
+                              : "bg-emerald-600 text-white"
+                          }`}
+                        >
+                          <BellRing className="h-3 w-3" />
+                          <span>
+                            {isPostSalePending
+                              ? "Pós-Venda Pendente (7+ Dias)"
+                              : "Pós-Venda Disponível"}
+                          </span>
+                        </span>
+                        <span className="text-xs font-bold text-slate-900">
+                          Acompanhamento de Qualidade • {q.client_name}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-600">
+                        Envie mensagem automática para confirmar se o veículo{" "}
+                        <strong>{q.vehicle_model || plateDisplay}</strong> está
+                        rodando 100% após o serviço.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handlePostSaleWhatsAppClick(q)}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-4 py-2 text-xs font-extrabold text-white shadow-xs transition shrink-0 cursor-pointer"
+                    >
+                      <MessageCircle className="h-3.5 w-3.5 fill-white text-emerald-600" />
+                      <span>Enviar Pós-Venda no WhatsApp</span>
+                    </button>
+                  </div>
+                )}
+
                 {/* Barra de Ações do Orçamento & Avanço Rápido de Status */}
                 <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3 pt-3 border-t border-slate-100">
-                  {/* Esquerda: Ações Rápidas de Avanço de Status + Seletor Direto */}
+                  {/* Esquerda: Ações Operacionais & Avanço Rápido */}
                   <div className="flex flex-wrap items-center gap-2">
+                    {/* BOTÃO 1: FAZER VISTORIA DE ENTRADA */}
+                    <button
+                      type="button"
+                      onClick={() => handleOpenInspectionModal(q)}
+                      className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-extrabold transition cursor-pointer border ${
+                        existingInspection
+                          ? "border-teal-300 bg-teal-50 hover:bg-teal-100 text-teal-900"
+                          : "border-slate-800 bg-slate-900 hover:bg-slate-800 text-white shadow-2xs"
+                      }`}
+                    >
+                      <ClipboardCheck className="h-3.5 w-3.5" />
+                      <span>
+                        {existingInspection
+                          ? "Ver / Editar Vistoria"
+                          : "Fazer Vistoria de Entrada"}
+                      </span>
+                    </button>
+
                     {/* Botões de Ação Rápida por Etapa do Fluxo */}
                     {q.status === "pending" && (
                       <button
@@ -1211,21 +1669,15 @@ export function VehicleQuotesClient({
                       <button
                         type="button"
                         disabled={updatingStatusId === q.id}
-                        onClick={() =>
-                          handleQuickStatusChange(q, "completed", true)
-                        }
+                        onClick={() => handleOpenCompletionCalculator(q)}
                         className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-3.5 py-2 text-xs font-extrabold text-white shadow-2xs transition cursor-pointer disabled:opacity-50"
                       >
-                        {updatingStatusId === q.id ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                        )}
+                        <CheckCircle2 className="h-3.5 w-3.5" />
                         <span>Concluir Serviço</span>
                       </button>
                     )}
 
-                    {/* Dropdown Direto de Status para mudança rápida em qualquer etapa */}
+                    {/* Dropdown Direto de Status */}
                     <div className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5">
                       <span className="text-[11px] font-bold text-slate-500">
                         Status:
@@ -1234,7 +1686,9 @@ export function VehicleQuotesClient({
                         aria-label={`Alterar status da placa ${plateDisplay}`}
                         disabled={updatingStatusId === q.id}
                         value={
-                          q.status === "rejected" ? "canceled" : q.status || "pending"
+                          q.status === "rejected"
+                            ? "canceled"
+                            : q.status || "pending"
                         }
                         onChange={(e) => {
                           const next = e.target.value as VehicleQuoteStatus;
@@ -1261,39 +1715,56 @@ export function VehicleQuotesClient({
                       className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 px-3.5 py-2 text-xs font-bold text-blue-800 transition cursor-pointer"
                     >
                       <Pencil className="h-3.5 w-3.5" />
-                      <span>Avaliar / Valores</span>
+                      <span>Avaliar / Valores & Fotos</span>
                     </button>
 
                     <button
                       type="button"
-                      onClick={() => {
-                        setFormError(null);
-                        setScheduleSuccessMsg(null);
-                        setSchedulingFromQuote(q);
-                      }}
+                      onClick={() => handleOpenCompletionCalculator(q)}
                       className="inline-flex items-center gap-1.5 rounded-xl border border-teal-200 bg-teal-50 hover:bg-teal-100 px-3.5 py-2 text-xs font-bold text-teal-800 transition cursor-pointer"
+                      title="Abrir Calculadora de Próxima Revisão por KM"
                     >
-                      <CalendarClock className="h-3.5 w-3.5" />
-                      <span>Programar Revisão</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const clean = normalizeLicensePlate(q.license_plate);
-                        setInspectedPlate(clean);
-                        setPlateSearch(plateDisplay);
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                      }}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 transition cursor-pointer"
-                    >
-                      <History className="h-3.5 w-3.5 text-blue-600" />
-                      <span>Histórico</span>
+                      <Calculator className="h-3.5 w-3.5" />
+                      <span>Calculadora Revisão KM</span>
                     </button>
                   </div>
 
-                  {/* Direita: WhatsApp e Excluir */}
-                  <div className="flex items-center gap-2">
+                  {/* Direita: Copiar Link do Orçamento, Enviar no WhatsApp e Excluir */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {q.public_token && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyPublicQuoteLink(q)}
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-800 transition cursor-pointer"
+                          title="Copiar link público de aprovação online"
+                        >
+                          {copiedTokenId === q.id ? (
+                            <>
+                              <Check className="h-3.5 w-3.5 text-emerald-600" />
+                              <span className="text-emerald-700">
+                                Link Copiado!
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3.5 w-3.5 text-slate-500" />
+                              <span>Copiar Link do Orçamento</span>
+                            </>
+                          )}
+                        </button>
+
+                        <Link
+                          href={`/orcamento/${q.public_token}`}
+                          target="_blank"
+                          className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 px-2.5 py-2 text-xs font-bold text-slate-700 transition"
+                          title="Abrir página pública do orçamento"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </Link>
+                      </>
+                    )}
+
                     <a
                       href={buildClientQuoteWhatsAppUrl(q)}
                       target="_blank"
@@ -1301,7 +1772,7 @@ export function VehicleQuotesClient({
                       className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-4 py-2 text-xs font-extrabold text-white shadow-xs transition"
                     >
                       <MessageCircle className="h-3.5 w-3.5 fill-white text-emerald-600" />
-                      <span>Enviar Orçamento no WhatsApp</span>
+                      <span>Enviar Link no WhatsApp</span>
                     </a>
 
                     <button
@@ -1320,23 +1791,491 @@ export function VehicleQuotesClient({
         </div>
       )}
 
-      {/* MODAL 1: AVALIAR / EDITAR ORÇAMENTO */}
+      {/* ===================================================================== */}
+      {/* MODAL A: CHECKLIST DIGITAL DE ENTRADA (VISTORIA RÁPIDA NO CELULAR)    */}
+      {/* ===================================================================== */}
+      {inspectingQuote && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs overflow-y-auto"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !isSavingInspection) {
+              setInspectingQuote(null);
+            }
+          }}
+        >
+          <div className="w-full max-w-2xl rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden my-auto">
+            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <ClipboardCheck className="h-5 w-5 text-teal-400" />
+                <div>
+                  <h3 className="text-base font-extrabold">
+                    Checklist Digital de Entrada • Placa{" "}
+                    {inspectingQuote.plate_display ||
+                      formatLicensePlateDisplay(inspectingQuote.license_plate)}
+                  </h3>
+                  <p className="text-xs text-slate-300">
+                    {inspectingQuote.vehicle_model || "Veículo"} • Cliente:{" "}
+                    {inspectingQuote.client_name}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setInspectingQuote(null)}
+                className="text-slate-400 hover:text-white cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={handleSaveInspection}
+              className="p-6 space-y-5 max-h-[82vh] overflow-y-auto"
+            >
+              {formError && (
+                <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700">
+                  {formError}
+                </div>
+              )}
+
+              {/* 1. Quilometragem de Entrada (KM) e Nível de Combustível */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Quilometragem de Entrada (KM)
+                  </label>
+                  <div className="relative">
+                    <Gauge className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="number"
+                      min="0"
+                      value={inspEntryKm}
+                      onChange={(e) => setInspEntryKm(e.target.value)}
+                      placeholder="Ex: 58400"
+                      className="w-full rounded-xl border border-slate-300 pl-9 pr-3 py-2.5 text-sm font-bold text-slate-900 focus:border-blue-600 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Nível de Combustível
+                  </label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {FUEL_LEVEL_OPTIONS.map((lvl) => {
+                      const active = inspFuelLevel === lvl;
+                      return (
+                        <button
+                          key={lvl}
+                          type="button"
+                          onClick={() => setInspFuelLevel(lvl)}
+                          className={`py-2.5 px-2 rounded-xl text-xs font-extrabold border transition cursor-pointer flex items-center justify-center gap-1 ${
+                            active
+                              ? "bg-blue-600 text-white border-blue-600 shadow-xs"
+                              : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                          }`}
+                        >
+                          <Fuel className="h-3 w-3 shrink-0" />
+                          <span>[{lvl}]</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Checkboxes Rápidos: Estepe Presente e Chave/Macaco */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <label className="flex items-center justify-between gap-3 cursor-pointer">
+                  <div>
+                    <span className="text-xs font-extrabold text-slate-800 block">
+                      Estepe Presente?
+                    </span>
+                    <span className="text-[11px] text-slate-500">
+                      Confirme se o estepe está no porta-malas
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setInspSpareTire(true)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-extrabold border cursor-pointer ${
+                        inspSpareTire
+                          ? "bg-emerald-600 text-white border-emerald-600"
+                          : "bg-white text-slate-600 border-slate-300"
+                      }`}
+                    >
+                      Sim
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setInspSpareTire(false)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-extrabold border cursor-pointer ${
+                        !inspSpareTire
+                          ? "bg-red-600 text-white border-red-600"
+                          : "bg-white text-slate-600 border-slate-300"
+                      }`}
+                    >
+                      Não
+                    </button>
+                  </div>
+                </label>
+
+                <label className="flex items-center justify-between gap-3 cursor-pointer">
+                  <div>
+                    <span className="text-xs font-extrabold text-slate-800 block">
+                      Chave de Roda / Macaco?
+                    </span>
+                    <span className="text-[11px] text-slate-500">
+                      Kit de ferramentas de emergência presente
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setInspJackTool(true)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-extrabold border cursor-pointer ${
+                        inspJackTool
+                          ? "bg-emerald-600 text-white border-emerald-600"
+                          : "bg-white text-slate-600 border-slate-300"
+                      }`}
+                    >
+                      Sim
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setInspJackTool(false)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-extrabold border cursor-pointer ${
+                        !inspJackTool
+                          ? "bg-red-600 text-white border-red-600"
+                          : "bg-white text-slate-600 border-slate-300"
+                      }`}
+                    >
+                      Não
+                    </button>
+                  </div>
+                </label>
+              </div>
+
+              {/* 3. 4 Slots de Upload para Fotos (Frente, Traseira, Lateral Esquerda, Lateral Direita) */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-700">
+                    4 Fotos da Vistoria do Veículo (Compressão Automática máx 1280px)
+                  </label>
+                  <span className="text-[11px] text-slate-500">
+                    Bucket: establishment-photos
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {INSPECTION_PHOTO_SLOTS.map(({ index, label }) => {
+                    const photoUrl = inspPhotos[index];
+                    const isUploading = uploadingInspSlot === index;
+
+                    return (
+                      <div
+                        key={index}
+                        className="rounded-xl border border-slate-200 bg-slate-50 p-2.5 flex flex-col justify-between gap-2"
+                      >
+                        <span className="text-[11px] font-extrabold text-slate-700 text-center">
+                          {label}
+                        </span>
+
+                        {photoUrl ? (
+                          <div className="relative aspect-video rounded-lg overflow-hidden border border-slate-300 bg-slate-900">
+                            <img
+                              src={photoUrl}
+                              alt={label}
+                              className="h-full w-full object-cover"
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setInspPhotos((prev) => {
+                                  const next = [...prev];
+                                  next[index] = "";
+                                  return next;
+                                })
+                              }
+                              className="absolute top-1 right-1 rounded-full bg-black/70 p-1 text-white hover:bg-red-600 cursor-pointer"
+                              title="Remover foto"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <label className="flex flex-col items-center justify-center aspect-video rounded-lg border-2 border-dashed border-slate-300 hover:border-blue-500 bg-white text-slate-500 hover:text-blue-600 transition cursor-pointer p-2 text-center">
+                            {isUploading ? (
+                              <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                            ) : (
+                              <>
+                                <Camera className="h-5 w-5 mb-1" />
+                                <span className="text-[10px] font-bold">
+                                  Tirar / Enviar
+                                </span>
+                              </>
+                            )}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              capture="environment"
+                              className="hidden"
+                              disabled={isUploading}
+                              onChange={(e) => {
+                                const file = e.target.files?.[0] || null;
+                                handleUploadInspectionPhotoSlot(index, file);
+                              }}
+                            />
+                          </label>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 4. Campo para Anotações de Avarias Pré-existentes */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Anotações de Avarias Pré-existentes (Arranhões / Amassados)
+                </label>
+                <textarea
+                  rows={3}
+                  value={inspScratchNotes}
+                  onChange={(e) => setInspScratchNotes(e.target.value)}
+                  placeholder="Ex: Pequeno risco no para-choque dianteiro direito; calota traseira esquerda com marca de guia..."
+                  className="w-full rounded-xl border border-slate-300 p-3 text-sm text-slate-900 focus:border-blue-600 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setInspectingQuote(null)}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingInspection || uploadingInspSlot !== null}
+                  className="inline-flex items-center gap-2 rounded-xl bg-teal-700 hover:bg-teal-800 px-5 py-2.5 text-xs font-extrabold text-white shadow-sm transition cursor-pointer disabled:opacity-50"
+                >
+                  {isSavingInspection ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Salvando Vistoria...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ClipboardCheck className="h-4 w-4" />
+                      <span>Salvar Vistoria de Entrada</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================== */}
+      {/* MODAL B: CALCULADORA DE PRÓXIMA REVISÃO POR KM (AO CONCLUIR SERVIÇO)  */}
+      {/* ===================================================================== */}
+      {completingQuote && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs overflow-y-auto"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !isCompletingWithCalc) {
+              setCompletingQuote(null);
+            }
+          }}
+        >
+          <div className="w-full max-w-lg rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden my-auto">
+            <div className="bg-emerald-800 text-white px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Calculator className="h-5 w-5 text-emerald-200" />
+                <div>
+                  <h3 className="text-base font-extrabold">
+                    Concluir Serviço & Calculadora de Revisão por KM
+                  </h3>
+                  <p className="text-xs text-emerald-100">
+                    Placa{" "}
+                    {completingQuote.plate_display ||
+                      formatLicensePlateDisplay(completingQuote.license_plate)}{" "}
+                    • {completingQuote.client_name}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCompletingQuote(null)}
+                className="text-emerald-200 hover:text-white cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={handleConfirmCompletionCalculator}
+              className="p-6 space-y-4"
+            >
+              {formError && (
+                <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700">
+                  {formError}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Quilometragem Atual do Veículo (KM na Entrega) *
+                </label>
+                <div className="relative">
+                  <Gauge className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={calcCurrentKm}
+                    onChange={(e) => setCalcCurrentKm(e.target.value)}
+                    placeholder="Informe o KM atual do painel (ex: 60000)"
+                    className="w-full rounded-xl border border-slate-300 pl-9 pr-3 py-2.5 text-sm font-extrabold text-slate-900 focus:border-emerald-600 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2.5">
+                <span className="block text-xs font-extrabold uppercase tracking-wider text-slate-500">
+                  Próximas Revisões Calculadas Automaticamente:
+                </span>
+
+                {/* Item 1: Troca de Óleo e Filtros (+10.000 km ou +6 meses) */}
+                <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3.5 cursor-pointer hover:bg-slate-100/70 transition">
+                  <input
+                    type="checkbox"
+                    checked={calcOilSelected}
+                    onChange={(e) => setCalcOilSelected(e.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <div className="flex-1 text-xs">
+                    <div className="flex items-center justify-between font-extrabold text-slate-900">
+                      <span>🛢️ Troca de Óleo e Filtros</span>
+                      <span className="text-emerald-700">
+                        {Number(calcCurrentKm) > 0
+                          ? `${(Number(calcCurrentKm) + 10000).toLocaleString(
+                              "pt-BR"
+                            )} km`
+                          : "+10.000 km"}
+                      </span>
+                    </div>
+                    <p className="text-slate-500 mt-0.5">
+                      KM Atual + 10.000 km ou vencimento em{" "}
+                      <strong>{formatDate(addMonthsToDateStr(6))}</strong> (+6
+                      meses)
+                    </p>
+                  </div>
+                </label>
+
+                {/* Item 2: Correia Dentada e Tensores (+40.000 km ou +2 anos) */}
+                <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3.5 cursor-pointer hover:bg-slate-100/70 transition">
+                  <input
+                    type="checkbox"
+                    checked={calcBeltSelected}
+                    onChange={(e) => setCalcBeltSelected(e.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <div className="flex-1 text-xs">
+                    <div className="flex items-center justify-between font-extrabold text-slate-900">
+                      <span>⚙️ Correia Dentada e Tensores</span>
+                      <span className="text-emerald-700">
+                        {Number(calcCurrentKm) > 0
+                          ? `${(Number(calcCurrentKm) + 40000).toLocaleString(
+                              "pt-BR"
+                            )} km`
+                          : "+40.000 km"}
+                      </span>
+                    </div>
+                    <p className="text-slate-500 mt-0.5">
+                      KM Atual + 40.000 km ou vencimento em{" "}
+                      <strong>{formatDate(addMonthsToDateStr(24))}</strong> (+2
+                      anos)
+                    </p>
+                  </div>
+                </label>
+
+                {/* Item 3: Revisão de Freios (+12 meses) */}
+                <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3.5 cursor-pointer hover:bg-slate-100/70 transition">
+                  <input
+                    type="checkbox"
+                    checked={calcBrakesSelected}
+                    onChange={(e) => setCalcBrakesSelected(e.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <div className="flex-1 text-xs">
+                    <div className="flex items-center justify-between font-extrabold text-slate-900">
+                      <span>🛑 Revisão de Freios</span>
+                      <span className="text-emerald-700">+12 meses</span>
+                    </div>
+                    <p className="text-slate-500 mt-0.5">
+                      Vencimento programado para{" "}
+                      <strong>{formatDate(addMonthsToDateStr(12))}</strong> (+12
+                      meses)
+                    </p>
+                  </div>
+                </label>
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setCompletingQuote(null)}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isCompletingWithCalc}
+                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-5 py-2.5 text-xs font-extrabold text-white shadow-sm transition cursor-pointer disabled:opacity-50"
+                >
+                  {isCompletingWithCalc ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Calculando e Salvando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-4 w-4" />
+                      <span>Concluir e Agendar Revisões</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================== */}
+      {/* MODAL 1: AVALIAR / EDITAR ORÇAMENTO (+ 3 FOTOS DE PEÇAS DANIFICADAS)  */}
+      {/* ===================================================================== */}
       {editingQuote && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs overflow-y-auto"
           onClick={(e) => {
             if (e.target === e.currentTarget && !isSavingEdit) {
               setEditingQuote(null);
             }
           }}
         >
-          <div className="w-full max-w-lg rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden">
+          <div className="w-full max-w-xl rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden my-auto">
             <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <Wrench className="h-5 w-5 text-blue-400" />
                 <div>
                   <h3 className="text-base font-extrabold">
-                    Avaliar Orçamento • Placa{" "}
+                    Avaliar Orçamento & Laudo Visual • Placa{" "}
                     {editingQuote.plate_display ||
                       formatLicensePlateDisplay(editingQuote.license_plate)}
                   </h3>
@@ -1354,7 +2293,10 @@ export function VehicleQuotesClient({
               </button>
             </div>
 
-            <form onSubmit={handleSaveEdit} className="p-6 space-y-4">
+            <form
+              onSubmit={handleSaveEdit}
+              className="p-6 space-y-4 max-h-[82vh] overflow-y-auto"
+            >
               {formError && (
                 <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700">
                   {formError}
@@ -1450,6 +2392,82 @@ export function VehicleQuotesClient({
                 />
               </div>
 
+              {/* Campo para Anexar até 3 Fotos de Peças Danificadas / Laudo Visual */}
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-700">
+                    Fotos de Peças Danificadas / Laudo Visual (Até 3 Fotos)
+                  </label>
+                  <span className="text-[11px] text-slate-500">
+                    Visível na página pública do cliente
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  {[0, 1, 2].map((slotIdx) => {
+                    const photoUrl = editDamagedPhotos[slotIdx];
+                    const isUploading = uploadingDamagedSlot === slotIdx;
+
+                    return (
+                      <div
+                        key={slotIdx}
+                        className="rounded-xl border border-slate-200 bg-slate-50 p-2 flex flex-col justify-between gap-1.5"
+                      >
+                        <span className="text-[10px] font-bold text-slate-600 text-center">
+                          Peça / Laudo #{slotIdx + 1}
+                        </span>
+
+                        {photoUrl ? (
+                          <div className="relative aspect-video rounded-lg overflow-hidden border border-slate-300 bg-slate-900">
+                            <img
+                              src={photoUrl}
+                              alt={`Peça danificada ${slotIdx + 1}`}
+                              className="h-full w-full object-cover"
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setEditDamagedPhotos((prev) =>
+                                  prev.filter((_, i) => i !== slotIdx)
+                                )
+                              }
+                              className="absolute top-1 right-1 rounded-full bg-black/70 p-1 text-white hover:bg-red-600 cursor-pointer"
+                              title="Remover foto"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <label className="flex flex-col items-center justify-center aspect-video rounded-lg border-2 border-dashed border-slate-300 hover:border-blue-500 bg-white text-slate-500 hover:text-blue-600 transition cursor-pointer p-2 text-center">
+                            {isUploading ? (
+                              <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                            ) : (
+                              <>
+                                <Camera className="h-4 w-4 mb-0.5" />
+                                <span className="text-[10px] font-bold">
+                                  Anexar Foto
+                                </span>
+                              </>
+                            )}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              capture="environment"
+                              className="hidden"
+                              disabled={isUploading}
+                              onChange={(e) => {
+                                const file = e.target.files?.[0] || null;
+                                handleUploadDamagedPhoto(slotIdx, file);
+                              }}
+                            />
+                          </label>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
                 <button
                   type="button"
@@ -1460,7 +2478,7 @@ export function VehicleQuotesClient({
                 </button>
                 <button
                   type="submit"
-                  disabled={isSavingEdit}
+                  disabled={isSavingEdit || uploadingDamagedSlot !== null}
                   className="inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-2.5 text-xs font-extrabold text-white shadow-sm transition cursor-pointer disabled:opacity-50"
                 >
                   {isSavingEdit ? (
@@ -1674,7 +2692,7 @@ export function VehicleQuotesClient({
         </div>
       )}
 
-      {/* MODAL 3: PROGRAMAR PRÓXIMA REVISÃO PREVENTIVA A PARTIR DO VEÍCULO */}
+      {/* MODAL 3: PROGRAMAR REVISÃO PREVENTIVA AVULSA */}
       {schedulingFromQuote && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs"
@@ -1846,4 +2864,3 @@ export function VehicleQuotesClient({
 }
 
 export default VehicleQuotesClient;
-

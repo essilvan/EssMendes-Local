@@ -2,7 +2,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getAuthenticatedTenant } from "@/lib/supabase/tenant";
 import { AlertCircle } from "lucide-react";
 import { VehicleQuotesClient } from "@/components/admin/VehicleQuotesClient";
-import type { VehicleQuote, VehicleMaintenanceSchedule } from "@/types";
+import type {
+  VehicleQuote,
+  VehicleMaintenanceSchedule,
+  VehicleInspection,
+} from "@/types";
 
 export const dynamic = "force-dynamic";
 
@@ -38,28 +42,34 @@ export default async function AdminOrcamentosPage({
   const tenantId = tenantData.tenantId;
   const supabase = createAdminClient();
 
-  const [quotesRes, schedulesRes, tenantRes, profileRes] = await Promise.all([
-    supabase
-      .from("vehicle_quotes")
-      .select("*")
-      .eq("tenant_id", tenantId)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("vehicle_maintenance_schedules")
-      .select("*")
-      .eq("tenant_id", tenantId)
-      .order("due_date", { ascending: true }),
-    supabase
-      .from("tenants")
-      .select("id, name")
-      .eq("id", tenantId)
-      .maybeSingle(),
-    supabase
-      .from("tenant_profiles")
-      .select("name")
-      .eq("tenant_id", tenantId)
-      .maybeSingle(),
-  ]);
+  const [quotesRes, schedulesRes, inspectionsRes, tenantRes, profileRes] =
+    await Promise.all([
+      supabase
+        .from("vehicle_quotes")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("vehicle_maintenance_schedules")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .order("due_date", { ascending: true }),
+      supabase
+        .from("vehicle_inspections")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("tenants")
+        .select("id, name")
+        .eq("id", tenantId)
+        .maybeSingle(),
+      supabase
+        .from("tenant_profiles")
+        .select("name")
+        .eq("tenant_id", tenantId)
+        .maybeSingle(),
+    ]);
 
   if (quotesRes.error) {
     console.error(
@@ -70,6 +80,7 @@ export default async function AdminOrcamentosPage({
 
   const quotes = (quotesRes.data || []) as VehicleQuote[];
   const schedules = (schedulesRes.data || []) as VehicleMaintenanceSchedule[];
+  const inspections = (inspectionsRes.data || []) as VehicleInspection[];
 
   const tenantName =
     tenantRes.data?.name ||
@@ -81,10 +92,10 @@ export default async function AdminOrcamentosPage({
     <VehicleQuotesClient
       initialQuotes={quotes}
       initialSchedules={schedules}
+      initialInspections={inspections}
       tenantName={tenantName}
       initialPlateFilter={initialPlateFilter}
       initialStatusFilter={initialStatusFilter}
     />
   );
 }
-

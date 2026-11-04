@@ -8,6 +8,7 @@ import {
   publicVehicleQuoteSchema,
   adminVehicleQuoteSchema,
   updateVehicleQuoteSchema,
+  vehicleInspectionSchema,
   maintenanceScheduleSchema,
   updateMaintenanceScheduleSchema,
   normalizeLicensePlate,
@@ -16,16 +17,82 @@ import {
   type PublicVehicleQuoteInput,
   type AdminVehicleQuoteInput,
   type UpdateVehicleQuoteInput,
+  type VehicleInspectionInput,
   type MaintenanceScheduleInput,
   type UpdateMaintenanceScheduleInput,
 } from "@/lib/validations/vehicle-quote.schema";
-import type { VehicleQuote, VehicleMaintenanceSchedule } from "@/types";
+import type {
+  VehicleQuote,
+  VehicleInspection,
+  VehicleMaintenanceSchedule,
+} from "@/types";
 
 export interface ActionResult<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
   fieldErrors?: Record<string, string[]>;
+}
+
+/**
+ * 0. Ação Admin: Upload de foto automotiva (Vistoria / Peças Danificadas) para o bucket 'establishment-photos'
+ */
+export async function uploadAutomotivePhotoAction(
+  formData: FormData
+): Promise<ActionResult<{ url: string }>> {
+  try {
+    const { data: tenantCtx, error: authError } = await getAuthenticatedTenant();
+    if (authError || !tenantCtx?.tenantId) {
+      return { success: false, error: authError || "Não autenticado." };
+    }
+
+    const file = formData.get("file") as File | null;
+    const folder = String(formData.get("folder") || "inspections").replace(
+      /[^a-zA-Z0-9_-]/g,
+      ""
+    );
+    const licensePlate = normalizeLicensePlate(
+      String(formData.get("licensePlate") || "AUTO")
+    );
+
+    if (!file || typeof file.arrayBuffer !== "function") {
+      return { success: false, error: "Arquivo de imagem inválido." };
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const randomSuffix = Math.random().toString(36).slice(2, 8);
+    const filePath = `${tenantCtx.tenantId}/automotive/${folder}/${licensePlate}-${Date.now()}-${randomSuffix}.jpg`;
+
+    const adminSupabase = createAdminClient();
+    const { error: uploadError } = await adminSupabase.storage
+      .from("establishment-photos")
+      .upload(filePath, buffer, {
+        contentType: file.type || "image/jpeg",
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error("[uploadAutomotivePhotoAction] Erro storage:", uploadError);
+      return {
+        success: false,
+        error: "Não foi possível salvar a foto no armazenamento.",
+      };
+    }
+
+    const { data: publicUrlData } = adminSupabase.storage
+      .from("establishment-photos")
+      .getPublicUrl(filePath);
+
+    return {
+      success: true,
+      data: { url: publicUrlData.publicUrl },
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Erro ao enviar foto.";
+    console.error("[uploadAutomotivePhotoAction] Exceção:", err);
+    return { success: false, error: msg };
+  }
 }
 
 /**
@@ -84,7 +151,6 @@ export async function createPublicVehicleQuoteAction(
       .select("*")
       .maybeSingle();
 
-    // Fallback seguro com AdminClient caso a política RLS para 'anon' bloqueie o select pós-insert
     if (dbError || !data) {
       try {
         const adminSupabase = createAdminClient();
@@ -151,7 +217,7 @@ export async function createAdminVehicleQuoteAction(
       input.categoryTags
     );
 
-    const insertPayload = {
+    const insertPayload: Record<string, unknown> = {
       tenant_id: tenantCtx.tenantId,
       license_plate: normalizedPlate,
       plate_display: displayPlate,
@@ -167,6 +233,13 @@ export async function createAdminVehicleQuoteAction(
       mechanic_notes: input.mechanicNotes?.trim() || null,
       scheduled_for: input.scheduledFor || null,
     };
+
+    if (input.partsNeeded) {
+      insertPayload.parts_needed = input.partsNeeded;
+    }
+    if (input.damagedPartsPhotos) {
+      insertPayload.damaged_parts_photos = input.damagedPartsPhotos.slice(0, 3);
+    }
 
     const adminSupabase = createAdminClient();
     const { data, error: dbError } = await adminSupabase
@@ -194,7 +267,7 @@ export async function createAdminVehicleQuoteAction(
 }
 
 /**
- * 3. Ação Admin: Atualiza valores, notas do mecânico e status de um orçamento
+ * 3. Ação Admin: Atualiza valores, notas do mecânico, fotos de peças danificadas e status de um orçamento
  */
 export async function updateVehicleQuoteAction(
   rawInput: UpdateVehicleQuoteInput
@@ -217,7 +290,6 @@ export async function updateVehicleQuoteAction(
     const input = validation.data;
     const adminSupabase = createAdminClient();
 
-    // Busca registro atual garantindo isolamento por tenant_id
     const { data: existing, error: fetchErr } = await adminSupabase
       .from("vehicle_quotes")
       .select("*")
@@ -241,7 +313,12 @@ export async function updateVehicleQuoteAction(
       total_cost: totalCost,
     };
 
-    if (input.status !== undefined) updatePayload.status = input.status;
+    if (input.status !== undefined) {
+      updatePayload.status = input.status;
+      if (input.status === "approved" && !existing.approved_at) {
+        updatePayload.approved_at = new Date().toISOString();
+      }
+    }
     if (input.mechanicNotes !== undefined) updatePayload.mechanic_notes = input.mechanicNotes;
     if (input.vehicleModel !== undefined) updatePayload.vehicle_model = input.vehicleModel;
     if (input.complaint !== undefined) updatePayload.complaint = input.complaint;
@@ -249,6 +326,13 @@ export async function updateVehicleQuoteAction(
     if (input.clientPhone !== undefined) updatePayload.client_phone = input.clientPhone;
     if (input.scheduledFor !== undefined) updatePayload.scheduled_for = input.scheduledFor;
     if (input.categoryTags !== undefined) updatePayload.category_tags = input.categoryTags;
+    if (input.partsNeeded !== undefined) updatePayload.parts_needed = input.partsNeeded;
+    if (input.damagedPartsPhotos !== undefined) {
+      updatePayload.damaged_parts_photos = input.damagedPartsPhotos.slice(0, 3);
+    }
+    if (input.postSaleContacted !== undefined) {
+      updatePayload.post_sale_contacted = input.postSaleContacted;
+    }
     if (input.licensePlate !== undefined) {
       updatePayload.license_plate = normalizeLicensePlate(input.licensePlate);
       updatePayload.plate_display = formatLicensePlateDisplay(input.licensePlate);
@@ -268,6 +352,9 @@ export async function updateVehicleQuoteAction(
     }
 
     revalidatePath("/admin/orcamentos");
+    if (updated.public_token) {
+      revalidatePath(`/orcamento/${updated.public_token}`);
+    }
     return { success: true, data: updated as VehicleQuote };
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Erro inesperado.";
@@ -286,6 +373,273 @@ export async function updateVehicleQuoteStatusAction(
   return updateVehicleQuoteAction({
     id: quoteId,
     status: status as UpdateVehicleQuoteInput["status"],
+  });
+}
+
+/**
+ * 3.2 Ação Admin: Salvar Vistoria Digital de Entrada (vehicle_inspections)
+ */
+export async function saveVehicleInspectionAction(
+  rawInput: VehicleInspectionInput
+): Promise<ActionResult<VehicleInspection>> {
+  try {
+    const { data: tenantCtx, error: authError } = await getAuthenticatedTenant();
+    if (authError || !tenantCtx?.tenantId) {
+      return { success: false, error: authError || "Não autenticado." };
+    }
+
+    const validation = vehicleInspectionSchema.safeParse(rawInput);
+    if (!validation.success) {
+      return {
+        success: false,
+        error: validation.error.issues[0]?.message || "Dados da vistoria inválidos.",
+        fieldErrors: validation.error.flatten().fieldErrors,
+      };
+    }
+
+    const input = validation.data;
+    const normalizedPlate = normalizeLicensePlate(input.licensePlate);
+    const adminSupabase = createAdminClient();
+
+    // Verifica se já existe vistoria vinculada a este quote_id
+    const { data: existing } = await adminSupabase
+      .from("vehicle_inspections")
+      .select("id")
+      .eq("tenant_id", tenantCtx.tenantId)
+      .eq("quote_id", input.quoteId)
+      .maybeSingle();
+
+    const payload = {
+      tenant_id: tenantCtx.tenantId,
+      quote_id: input.quoteId,
+      license_plate: normalizedPlate,
+      entry_km: input.entryKm ?? null,
+      fuel_level: input.fuelLevel,
+      spare_tire: Boolean(input.spareTire),
+      jack_tool: Boolean(input.jackTool),
+      photos: (input.photos || []).slice(0, 4),
+      scratch_notes: input.scratchNotes?.trim() || null,
+    };
+
+    let saved: any = null;
+    let dbErr: any = null;
+
+    if (existing?.id) {
+      const res = await adminSupabase
+        .from("vehicle_inspections")
+        .update(payload)
+        .eq("id", existing.id)
+        .eq("tenant_id", tenantCtx.tenantId)
+        .select("*")
+        .single();
+      saved = res.data;
+      dbErr = res.error;
+    } else {
+      const res = await adminSupabase
+        .from("vehicle_inspections")
+        .insert(payload)
+        .select("*")
+        .single();
+      saved = res.data;
+      dbErr = res.error;
+    }
+
+    if (dbErr || !saved) {
+      console.error("[saveVehicleInspectionAction] Erro no banco:", dbErr);
+      return {
+        success: false,
+        error: "Não foi possível salvar a vistoria de entrada.",
+      };
+    }
+
+    revalidatePath("/admin/orcamentos");
+    return { success: true, data: saved as VehicleInspection };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Erro ao salvar vistoria.";
+    console.error("[saveVehicleInspectionAction] Exceção:", err);
+    return { success: false, error: msg };
+  }
+}
+
+/**
+ * 3.3 Ação Pública: Aprovar Orçamento Online via public_token (/orcamento/[token])
+ */
+export async function approvePublicVehicleQuoteAction(
+  publicToken: string
+): Promise<ActionResult<VehicleQuote>> {
+  try {
+    const cleanToken = String(publicToken || "").trim();
+    if (!cleanToken || cleanToken.length < 10) {
+      return { success: false, error: "Token de orçamento inválido." };
+    }
+
+    const adminSupabase = createAdminClient();
+    const { data: existing, error: fetchErr } = await adminSupabase
+      .from("vehicle_quotes")
+      .select("*")
+      .eq("public_token", cleanToken)
+      .maybeSingle();
+
+    if (fetchErr || !existing) {
+      return { success: false, error: "Orçamento não encontrado." };
+    }
+
+    const nowIso = new Date().toISOString();
+    const nextStatus =
+      existing.status === "in_progress" || existing.status === "completed"
+        ? existing.status
+        : "approved";
+
+    const { data: updated, error: updateErr } = await adminSupabase
+      .from("vehicle_quotes")
+      .update({
+        status: nextStatus,
+        approved_at: existing.approved_at || nowIso,
+      })
+      .eq("id", existing.id)
+      .select("*")
+      .single();
+
+    if (updateErr || !updated) {
+      console.error("[approvePublicVehicleQuoteAction] Erro:", updateErr);
+      return {
+        success: false,
+        error: "Não foi possível aprovar o orçamento no momento.",
+      };
+    }
+
+    revalidatePath(`/orcamento/${cleanToken}`);
+    revalidatePath("/admin/orcamentos");
+
+    return { success: true, data: updated as VehicleQuote };
+  } catch (err) {
+    const msg =
+      err instanceof Error ? err.message : "Erro ao aprovar orçamento online.";
+    console.error("[approvePublicVehicleQuoteAction] Exceção:", err);
+    return { success: false, error: msg };
+  }
+}
+
+/**
+ * 3.4 Ação Admin: Concluir Orçamento + Gravar Agendamentos da Calculadora de Próxima Revisão por KM
+ */
+export async function completeQuoteWithMaintenanceCalculatorAction(input: {
+  quoteId: string;
+  currentKm?: number | null;
+  items: Array<{
+    serviceType: string;
+    dueDate: string;
+    dueKm?: number | null;
+    notes?: string | null;
+  }>;
+}): Promise<
+  ActionResult<{
+    quote: VehicleQuote;
+    schedules: VehicleMaintenanceSchedule[];
+  }>
+> {
+  try {
+    const { data: tenantCtx, error: authError } = await getAuthenticatedTenant();
+    if (authError || !tenantCtx?.tenantId) {
+      return { success: false, error: authError || "Não autenticado." };
+    }
+
+    const adminSupabase = createAdminClient();
+    const { data: quote, error: quoteFetchErr } = await adminSupabase
+      .from("vehicle_quotes")
+      .select("*")
+      .eq("id", input.quoteId)
+      .eq("tenant_id", tenantCtx.tenantId)
+      .maybeSingle();
+
+    if (quoteFetchErr || !quote) {
+      return { success: false, error: "Orçamento não encontrado." };
+    }
+
+    // 1. Atualiza o status do orçamento para 'completed'
+    const { data: updatedQuote, error: updateErr } = await adminSupabase
+      .from("vehicle_quotes")
+      .update({ status: "completed" })
+      .eq("id", quote.id)
+      .eq("tenant_id", tenantCtx.tenantId)
+      .select("*")
+      .single();
+
+    if (updateErr || !updatedQuote) {
+      return {
+        success: false,
+        error: "Falha ao concluir o status do orçamento.",
+      };
+    }
+
+    // 2. Insere as revisões preventivas calculadas selecionadas
+    const normalizedPlate = normalizeLicensePlate(quote.license_plate);
+    const todayStr = new Date().toISOString().split("T")[0];
+    const createdSchedules: VehicleMaintenanceSchedule[] = [];
+
+    if (Array.isArray(input.items) && input.items.length > 0) {
+      const rowsToInsert = input.items.map((item) => ({
+        tenant_id: tenantCtx.tenantId,
+        license_plate: normalizedPlate,
+        vehicle_model: quote.vehicle_model || null,
+        client_name: quote.client_name,
+        client_phone: quote.client_phone,
+        service_type: item.serviceType.trim(),
+        last_service_date: todayStr,
+        due_date: item.dueDate,
+        due_km: item.dueKm ? Number(item.dueKm) : null,
+        status: "scheduled",
+        notes:
+          item.notes?.trim() ||
+          (input.currentKm
+            ? `Concluído com ${Number(input.currentKm).toLocaleString("pt-BR")} km`
+            : null),
+      }));
+
+      const { data: insertedRows, error: schedErr } = await adminSupabase
+        .from("vehicle_maintenance_schedules")
+        .insert(rowsToInsert)
+        .select("*");
+
+      if (schedErr) {
+        console.error(
+          "[completeQuoteWithMaintenanceCalculatorAction] Erro ao inserir revisões:",
+          schedErr
+        );
+      } else if (insertedRows) {
+        createdSchedules.push(...(insertedRows as VehicleMaintenanceSchedule[]));
+      }
+    }
+
+    revalidatePath("/admin/orcamentos");
+    revalidatePath("/admin/revisoes");
+
+    return {
+      success: true,
+      data: {
+        quote: updatedQuote as VehicleQuote,
+        schedules: createdSchedules,
+      },
+    };
+  } catch (err) {
+    const msg =
+      err instanceof Error
+        ? err.message
+        : "Erro ao concluir orçamento e agendar revisões.";
+    console.error("[completeQuoteWithMaintenanceCalculatorAction] Exceção:", err);
+    return { success: false, error: msg };
+  }
+}
+
+/**
+ * 3.5 Ação Admin: Marcar Pós-Venda de 7 Dias como Contatado (post_sale_contacted = true)
+ */
+export async function markPostSaleContactedAction(
+  quoteId: string
+): Promise<ActionResult<VehicleQuote>> {
+  return updateVehicleQuoteAction({
+    id: quoteId,
+    postSaleContacted: true,
   });
 }
 
@@ -546,4 +900,3 @@ export async function deleteMaintenanceScheduleAction(
     return { success: false, error: msg };
   }
 }
-

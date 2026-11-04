@@ -125,6 +125,7 @@ export interface Tenant {
   google_reviews_count?: number | null;
   presence_score?: number | null;
   business_attributes?: BusinessAttributes | null;
+  niche?: string | null;
   theme_niche?: string | null;
   theme_settings?: {
     template_id?: string;
@@ -423,6 +424,24 @@ export interface VehicleQuote {
   total_cost?: number | null;
   scheduled_for?: string | null;
   mechanic_notes?: string | null;
+  public_token?: string | null;
+  damaged_parts_photos?: string[] | null;
+  approved_at?: string | null;
+  post_sale_contacted?: boolean | null;
+  created_at: string;
+}
+
+export interface VehicleInspection {
+  id: string;
+  tenant_id: string;
+  quote_id?: string | null;
+  license_plate: string;
+  entry_km?: number | null;
+  fuel_level?: "1/4" | "1/2" | "3/4" | "Cheio" | string | null;
+  photos?: string[] | null;
+  scratch_notes?: string | null;
+  spare_tire?: boolean | null;
+  jack_tool?: boolean | null;
   created_at: string;
 }
 
