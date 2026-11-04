@@ -396,10 +396,10 @@ export function PublicTenantHub({
             <button
               type="button"
               onClick={() => setIsVehicleQuoteOpen(true)}
-              className="w-full md:w-auto shrink-0 inline-flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-blue-600 via-sky-600 to-blue-700 hover:from-blue-500 hover:to-sky-500 text-white font-extrabold text-xs sm:text-sm px-6 py-3.5 shadow-lg shadow-blue-600/30 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+              className="w-full md:w-auto shrink-0 inline-flex items-center justify-center gap-2.5 h-12 sm:h-14 px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 whitespace-nowrap font-medium text-sm sm:text-base transition-all duration-200 active:scale-95 cursor-pointer"
             >
-              <CarFront className="h-4 w-4 shrink-0" />
-              <span>Solicitar Orçamento do Veículo</span>
+              <Wrench className="h-4 w-4 shrink-0" />
+              <span>Solicitar Orçamento por Placa</span>
             </button>
           </div>
         )}

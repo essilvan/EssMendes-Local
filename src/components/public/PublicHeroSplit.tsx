@@ -265,18 +265,18 @@ export function PublicHeroSplit({
         <div className="my-5 border-t border-white/15" />
 
         {/* Botões de contacto rápido lado a lado e CTA de Agendamento */}
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Botão Localização (abre rota no Maps) */}
-          <a
-            href={mapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 rounded-2xl border border-white/25 bg-white/10 hover:bg-white/20 backdrop-blur-md px-4 py-2.5 text-xs sm:text-sm font-bold text-white transition-all duration-200 shadow-md hover:-translate-y-0.5 active:scale-[0.98]"
-            title="Ver localização e traçar rota no Maps"
-          >
-            <MapPin className="h-4 w-4 text-cyan-300 shrink-0" />
-            <span>Localização</span>
-          </a>
+        <div className="flex flex-col sm:flex-row flex-wrap items-center gap-3 sm:gap-4 mt-6">
+          {/* CTA Primário: Orçamento por Placa (Nicho Automotivo) */}
+          {isAutomotive && onOpenVehicleQuote && (
+            <button
+              type="button"
+              onClick={onOpenVehicleQuote}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 h-12 sm:h-14 px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 whitespace-nowrap font-medium text-sm sm:text-base transition-all duration-200 active:scale-95 cursor-pointer"
+            >
+              <Wrench className="h-4 w-4 shrink-0 text-white" />
+              <span>Solicitar Orçamento por Placa</span>
+            </button>
+          )}
 
           {/* Botão WhatsApp Direto com feedback tátil e sombra suave */}
           {phoneWhatsapp && (
@@ -284,29 +284,31 @@ export function PublicHeroSplit({
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 px-5 py-2.5 text-xs sm:text-sm font-extrabold text-white transition-all duration-200 active:scale-[0.98] shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 hover:-translate-y-0.5"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 h-12 sm:h-14 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 whitespace-nowrap font-medium text-sm sm:text-base transition-all duration-200 active:scale-95"
             >
-              <MessageCircle className="h-4 w-4 shrink-0 fill-white" />
+              <MessageCircle className="h-4 w-4 shrink-0 fill-white text-emerald-600" />
               <span>Falar no WhatsApp</span>
             </a>
           )}
 
-          {/* CTA Primário: Orçamento por Placa (Nicho Automotivo) ou Agendamento Online */}
-          {isAutomotive && onOpenVehicleQuote ? (
-            <button
-              type="button"
-              onClick={onOpenVehicleQuote}
-              className="w-full sm:w-auto sm:ml-auto inline-flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-blue-600 via-sky-600 to-blue-700 hover:from-blue-500 hover:to-sky-500 px-6 py-2.5 text-xs sm:text-sm font-extrabold text-white shadow-xl shadow-blue-600/30 transition-all duration-200 hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer"
-            >
-              <CarFront className="h-4 w-4 shrink-0 text-blue-100" />
-              <span>Solicitar Orçamento do Veículo</span>
-              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
-            </button>
-          ) : (
+          {/* Botão Localização (abre rota no Maps) */}
+          <a
+            href={mapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-12 sm:h-14 px-6 rounded-xl bg-zinc-900/60 hover:bg-zinc-800 text-zinc-300 border border-zinc-700/60 backdrop-blur-sm whitespace-nowrap font-medium text-sm sm:text-base transition-all duration-200 active:scale-95"
+            title="Ver localização e traçar rota no Maps"
+          >
+            <MapPin className="h-4 w-4 text-cyan-300 shrink-0" />
+            <span>Localização</span>
+          </a>
+
+          {/* CTA de Agendamento Online (quando não automotivo) */}
+          {(!isAutomotive || !onOpenVehicleQuote) && (
             <button
               type="button"
               onClick={onOpenBooking}
-              className="w-full sm:w-auto sm:ml-auto inline-flex items-center justify-center gap-2.5 rounded-2xl px-6 py-2.5 text-xs sm:text-sm font-extrabold text-white shadow-xl transition-all duration-200 hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer animate-shimmer"
+              className="w-full sm:w-auto sm:ml-auto inline-flex items-center justify-center gap-2.5 h-12 sm:h-14 px-6 rounded-xl whitespace-nowrap font-medium text-sm sm:text-base text-white shadow-xl transition-all duration-200 active:scale-95 cursor-pointer animate-shimmer"
               style={{
                 backgroundColor: brandColor || "var(--brand-primary, #0d9488)",
                 boxShadow: `0 10px 25px -5px ${brandColor ? `${brandColor}66` : "rgba(13,148,136,0.4)"}`,

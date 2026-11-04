@@ -273,54 +273,53 @@ export function ConversionTemplateView({
             </div>
           )}
 
-          {/* Dois botões de ação lado a lado com efeito tátil */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 pt-2 max-w-lg mx-auto w-full">
+          {/* Barra de botões de CTA horizontais modernizados e alinhados */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 w-full max-w-2xl mx-auto mt-6">
             {isAutomotiveNiche(tenant, profile, theme?.id) && onOpenVehicleQuote && (
               <button
                 type="button"
                 onClick={onOpenVehicleQuote}
-                className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-blue-600 via-sky-600 to-blue-700 hover:from-blue-500 hover:to-sky-500 text-white font-extrabold text-base sm:text-lg px-7 py-4 shadow-lg shadow-blue-600/30 transition-all duration-200 active:scale-[0.98] cursor-pointer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 h-12 sm:h-14 px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 whitespace-nowrap font-medium text-sm sm:text-base transition-all duration-200 active:scale-95 cursor-pointer"
               >
-                <CarFront className="h-5 w-5 text-white shrink-0" />
-                <span>Solicitar Orçamento do Veículo</span>
+                <Wrench className="h-4 w-4 text-white shrink-0" />
+                <span>Solicitar Orçamento por Placa</span>
               </button>
             )}
 
-            {/* 1. "💬 Falar no WhatsApp Agora" (verde chamativo, destaque primário) */}
+            {/* BOTÃO 2 (WhatsApp) */}
             <a
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-base sm:text-lg px-8 py-4 shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 transition-all duration-200 active:scale-[0.98]"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 h-12 sm:h-14 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 whitespace-nowrap font-medium text-sm sm:text-base transition-all duration-200 active:scale-95"
             >
-              <MessageCircle className="h-5 w-5 fill-white text-emerald-600 shrink-0" />
-              <span>💬 {tenant?.cta_text || "Falar no WhatsApp Agora"}</span>
+              <MessageCircle className="h-4 w-4 fill-white text-emerald-600 shrink-0" />
+              <span>Falar no WhatsApp</span>
             </a>
 
-            {/* 2. "📞 Ligar Agora" (secundário com fundo neutro/cinza escuro) */}
+            {/* BOTÃO 3 (Ligar Agora / Opcional) */}
             {cleanPhone && (
               <a
                 href={`tel:+55${cleanPhone}`}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-900/90 hover:bg-zinc-800 text-white font-semibold text-base px-7 py-4 border border-zinc-700/80 backdrop-blur-md shadow-lg transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-12 sm:h-14 px-6 rounded-xl bg-zinc-900/60 hover:bg-zinc-800 text-zinc-300 border border-zinc-700/60 backdrop-blur-sm whitespace-nowrap font-medium text-sm sm:text-base transition-all duration-200 active:scale-95"
               >
                 <Phone className="h-4 w-4 text-zinc-300 shrink-0" />
-                <span>📞 Ligar Agora</span>
+                <span>Ligar Agora</span>
               </a>
             )}
           </div>
 
-          {/* Chamada para agendamento online */}
-          <div className="pt-2">
+          {/* Link secundário inferior */}
+          <div className="mt-3 text-center">
             <button
               type="button"
               onClick={() => onOpenBooking()}
-              className="inline-flex items-center gap-2 text-xs sm:text-sm text-neutral-400 hover:text-white transition cursor-pointer group"
+              className="inline-flex items-center justify-center gap-1.5 text-xs sm:text-sm text-zinc-400 hover:text-white transition cursor-pointer group"
             >
-              <Calendar className="h-4 w-4 text-neutral-400 group-hover:text-emerald-400 transition" />
+              <Calendar className="h-4 w-4 text-zinc-400 group-hover:text-emerald-400 transition shrink-0" />
               <span className="underline underline-offset-4 decoration-white/20 group-hover:decoration-white">
-                Prefere escolher data e horário online? Clique aqui
+                Prefere escolher data e horário online? Clique aqui →
               </span>
-              <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
             </button>
           </div>
         </div>
