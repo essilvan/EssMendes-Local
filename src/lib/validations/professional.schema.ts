@@ -7,8 +7,11 @@ export const professionalSchema = z.object({
     .max(100, "Nome deve ter no máximo 100 caracteres."),
   phone: z
     .string()
-    .min(10, "Informe um WhatsApp válido com DDD (mínimo 10 dígitos).")
-    .max(25, "Telefone muito longo."),
+    .transform((val) => val.replace(/\D/g, ""))
+    .refine(
+      (digits) => digits.length >= 10 && digits.length <= 13,
+      "Informe um WhatsApp válido com DDD e número (mínimo 10 dígitos)."
+    ),
   role_title: z
     .string()
     .max(100, "Cargo/Especialidade deve ter no máximo 100 caracteres.")
@@ -28,6 +31,8 @@ export const professionalSchema = z.object({
     .nullable()
     .or(z.literal("")),
   is_active: z.boolean().default(true),
+  receives_quotes: z.boolean().default(true),
+  is_primary_quote_contact: z.boolean().default(false),
 });
 
-export type ProfessionalInput = z.infer<typeof professionalSchema>;
+export type ProfessionalInput = z.input<typeof professionalSchema>;

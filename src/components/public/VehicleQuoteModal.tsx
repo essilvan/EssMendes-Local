@@ -22,14 +22,40 @@ import {
   normalizeLicensePlate,
 } from "@/lib/validations/vehicle-quote.schema";
 import { sanitizePhoneNumber } from "@/utils/phone";
+import type { TenantProfessional } from "@/types";
 
 interface VehicleQuoteModalProps {
   isOpen: boolean;
   onClose: () => void;
   tenantId: string;
   tenantName: string;
+  professionals?: TenantProfessional[];
   phoneWhatsapp?: string | null;
   brandColor?: string;
+}
+
+/**
+ * Seleciona o profissional responsável pelo recebimento de orçamentos (receives_quotes = true e telefone válido),
+ * priorizando o contato marcado como principal (is_primary_quote_contact = true).
+ */
+export function resolveQuoteRecipientProfessional(
+  professionals?: TenantProfessional[]
+): TenantProfessional | null {
+  if (!Array.isArray(professionals) || professionals.length === 0) {
+    return null;
+  }
+
+  const eligible = professionals.filter((p) => {
+    const isActive = p.is_active !== false;
+    const receivesQuotes = p.receives_quotes !== false;
+    const cleanDigits = sanitizePhoneNumber(p.phone || "");
+    return isActive && receivesQuotes && cleanDigits.length >= 10;
+  });
+
+  if (eligible.length === 0) return null;
+
+  const primary = eligible.find((p) => p.is_primary_quote_contact === true);
+  return primary || eligible[0];
 }
 
 const QUICK_SYMPTOM_TAGS = [
@@ -61,6 +87,7 @@ export function VehicleQuoteModal({
   onClose,
   tenantId,
   tenantName,
+  professionals = [],
   phoneWhatsapp,
   brandColor = "#2563eb",
 }: VehicleQuoteModalProps) {
@@ -189,10 +216,14 @@ export function VehicleQuoteModal({
     });
   };
 
+  // Identifica o profissional habilitado para receber orçamentos (ou fallback para telefone geral do tenant)
+  const quoteRecipient = resolveQuoteRecipientProfessional(professionals);
+  const effectiveRecipientPhone = quoteRecipient?.phone || phoneWhatsapp || "";
+
   // Monta URL do WhatsApp com resumo preenchido para adiantar conversa na oficina
   const buildWorkshopWhatsAppUrl = () => {
     if (!submittedQuote) return "#";
-    const cleanShopPhone = sanitizePhoneNumber(phoneWhatsapp || "");
+    const cleanShopPhone = sanitizePhoneNumber(effectiveRecipientPhone);
     const targetPhone = cleanShopPhone
       ? cleanShopPhone.startsWith("55")
         ? cleanShopPhone
@@ -204,8 +235,12 @@ export function VehicleQuoteModal({
         ? `\n🏷️ *Categorias:* ${submittedQuote.categoryTags.join(", ")}`
         : "";
 
+    const greetingName = quoteRecipient
+      ? `Olá, *${quoteRecipient.name}* (*${tenantName}*)! 🚗🔧`
+      : `Olá, equipe *${tenantName}*! 🚗🔧`;
+
     const message =
-      `Olá, equipe *${tenantName}*! 🚗🔧\n` +
+      `${greetingName}\n` +
       `Acabei de solicitar um *Orçamento do Veículo por Placa* pelo site:\n\n` +
       `🪪 *Placa:* ${submittedQuote.plateDisplay}\n` +
       `🚘 *Modelo/Ano:* ${submittedQuote.vehicleModel}\n` +
@@ -334,8 +369,20 @@ export function VehicleQuoteModal({
                 </div>
               </div>
 
-              {/* Botão Principal: Adiantar conversa no WhatsApp da oficina */}
+              {/* Botão Principal: Avisar no WhatsApp do profissional principal (ou fallback da oficina) */}
               <div className="space-y-3 pt-1">
+                {quoteRecipient && (
+                  <p className="text-xs text-slate-400">
+                    Responsável pelo atendimento:{" "}
+                    <strong className="text-emerald-400">
+                      {quoteRecipient.name}
+                    </strong>
+                    {quoteRecipient.role_title
+                      ? ` (${quoteRecipient.role_title})`
+                      : ""}
+                  </p>
+                )}
+
                 <a
                   href={buildWorkshopWhatsAppUrl()}
                   target="_blank"
@@ -343,7 +390,11 @@ export function VehicleQuoteModal({
                   className="w-full inline-flex items-center justify-center gap-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm sm:text-base px-6 py-4 shadow-xl shadow-emerald-600/25 transition-all duration-200 hover:scale-[1.01] active:scale-[0.99]"
                 >
                   <MessageCircle className="h-5 w-5 fill-white text-emerald-600 shrink-0" />
-                  <span>Adiantar Conversa no WhatsApp da Oficina</span>
+                  <span>
+                    {quoteRecipient
+                      ? `Avisar no WhatsApp (${quoteRecipient.name})`
+                      : "Avisar no WhatsApp da Oficina"}
+                  </span>
                 </a>
 
                 <div className="flex items-center justify-center gap-4 pt-1">

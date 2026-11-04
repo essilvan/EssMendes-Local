@@ -15,6 +15,7 @@ import {
   Loader2,
   AlertCircle,
   MessageSquare,
+  Star,
 } from "lucide-react";
 import { ProfessionalFormModal } from "./ProfessionalFormModal";
 import {
@@ -272,6 +273,26 @@ export function ProfessionalsClient({
                       <Briefcase className="h-3 w-3 shrink-0 text-slate-400" />
                       <span>{role}</span>
                     </p>
+
+                    {/* Badges de Recebimento de Orçamentos */}
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                      {prof.is_primary_quote_contact && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-300 px-2 py-0.5 text-[10px] font-extrabold text-amber-800">
+                          <Star className="h-2.5 w-2.5 fill-amber-500 text-amber-500" />
+                          <span>Principal p/ Orçamentos</span>
+                        </span>
+                      )}
+                      {prof.receives_quotes !== false ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 border border-blue-200 px-2 py-0.5 text-[10px] font-bold text-blue-800">
+                          <MessageSquare className="h-2.5 w-2.5 text-blue-600" />
+                          <span>Recebe Orçamentos</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 border border-slate-200 px-2 py-0.5 text-[10px] font-medium text-slate-500">
+                          <span>Apenas Agendamentos</span>
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -350,8 +371,20 @@ export function ProfessionalsClient({
         onClose={() => setIsModalOpen(false)}
         professionalToEdit={selectedProfessional}
         tenantId={tenantId}
-        onSuccess={() => {
-          // Re-fetch or rely on revalidatePath
+        onSuccess={(savedProf) => {
+          if (!savedProf) return;
+          setProfessionals((prev) => {
+            const normalizedList = savedProf.is_primary_quote_contact
+              ? prev.map((p) => ({ ...p, is_primary_quote_contact: false }))
+              : prev;
+            const exists = normalizedList.some((p) => p.id === savedProf.id);
+            if (exists) {
+              return normalizedList.map((p) =>
+                p.id === savedProf.id ? savedProf : p
+              );
+            }
+            return [...normalizedList, savedProf];
+          });
         }}
       />
     </div>

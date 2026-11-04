@@ -280,18 +280,41 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
     console.error("[PublicTenantPage] Erro ao carregar profissionais:", professionalsRes.error);
   }
 
-  // 2.2.0 Tratamento Seguro dos Profissionais da Equipe
-  const professionals: TenantProfessional[] = (professionalsRes.data || []).map((p: any) => ({
-    id: p.id,
-    tenant_id: p.tenant_id,
-    name: p.name,
-    phone: p.phone,
-    role_title: p.role_title || p.specialty || "Profissional",
-    specialty: p.role_title || p.specialty || "Profissional",
-    avatar_url: p.avatar_url || null,
-    is_active: p.is_active ?? true,
-    created_at: p.created_at,
-  }));
+  // 2.2.0 Tratamento Seguro dos Profissionais da Equipe + Roteamento de Orçamentos
+  const quoteRoutingMap: Record<
+    string,
+    { receives_quotes?: boolean; is_primary_quote_contact?: boolean }
+  > = (tenant?.theme_settings as any)?.quote_routing_professionals || {};
+
+  const professionals: TenantProfessional[] = (professionalsRes.data || []).map((p: any) => {
+    const routingFallback = quoteRoutingMap[p.id];
+    const receivesQuotes =
+      typeof p.receives_quotes === "boolean"
+        ? p.receives_quotes
+        : typeof routingFallback?.receives_quotes === "boolean"
+        ? routingFallback.receives_quotes
+        : true;
+    const isPrimaryQuoteContact =
+      typeof p.is_primary_quote_contact === "boolean"
+        ? p.is_primary_quote_contact
+        : typeof routingFallback?.is_primary_quote_contact === "boolean"
+        ? routingFallback.is_primary_quote_contact
+        : false;
+
+    return {
+      id: p.id,
+      tenant_id: p.tenant_id,
+      name: p.name,
+      phone: p.phone,
+      role_title: p.role_title || p.specialty || "Profissional",
+      specialty: p.role_title || p.specialty || "Profissional",
+      avatar_url: p.avatar_url || null,
+      is_active: p.is_active ?? true,
+      receives_quotes: receivesQuotes,
+      is_primary_quote_contact: isPrimaryQuoteContact,
+      created_at: p.created_at,
+    };
+  });
 
   // 2.2.1 Tratamento Seguro de Produtos Físicos
   const products: TenantProduct[] = (productsRes.data || []).map((p: any) => ({

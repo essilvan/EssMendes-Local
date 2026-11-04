@@ -23,17 +23,51 @@ export default async function AdminProfissionaisPage() {
   const tenantId = tenantData.tenantId;
   const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from("tenant_professionals")
-    .select("*")
-    .eq("tenant_id", tenantId)
-    .order("name", { ascending: true });
+  const [profRes, tenantRowRes] = await Promise.all([
+    supabase
+      .from("tenant_professionals")
+      .select("*")
+      .eq("tenant_id", tenantId)
+      .order("name", { ascending: true }),
+    supabase
+      .from("tenants")
+      .select("theme_settings")
+      .eq("id", tenantId)
+      .maybeSingle(),
+  ]);
 
-  if (error) {
-    console.error("[AdminProfissionaisPage] Erro ao carregar profissionais:", error);
+  if (profRes.error) {
+    console.error("[AdminProfissionaisPage] Erro ao carregar profissionais:", profRes.error);
   }
 
-  const professionals = (data || []) as TenantProfessional[];
+  const routingMap: Record<
+    string,
+    { receives_quotes?: boolean; is_primary_quote_contact?: boolean }
+  > =
+    (tenantRowRes.data?.theme_settings as any)?.quote_routing_professionals ||
+    {};
+
+  const professionals: TenantProfessional[] = (profRes.data || []).map((p: any) => {
+    const fallback = routingMap[p.id];
+    const receivesQuotes =
+      typeof p.receives_quotes === "boolean"
+        ? p.receives_quotes
+        : typeof fallback?.receives_quotes === "boolean"
+        ? fallback.receives_quotes
+        : true;
+    const isPrimary =
+      typeof p.is_primary_quote_contact === "boolean"
+        ? p.is_primary_quote_contact
+        : typeof fallback?.is_primary_quote_contact === "boolean"
+        ? fallback.is_primary_quote_contact
+        : false;
+
+    return {
+      ...p,
+      receives_quotes: receivesQuotes,
+      is_primary_quote_contact: isPrimary,
+    } as TenantProfessional;
+  });
 
   return (
     <div className="space-y-6">

@@ -565,7 +565,13 @@ export function PublicTenantHub({
           onClose={() => setIsVehicleQuoteOpen(false)}
           tenantId={tenant.id}
           tenantName={tenant.name}
-          phoneWhatsapp={profile?.phone_whatsapp || profile?.phone || tenant.phone}
+          professionals={professionals}
+          phoneWhatsapp={
+            profile?.phone_whatsapp ||
+            profile?.phone ||
+            (tenant as any).whatsapp ||
+            tenant.phone
+          }
           brandColor={brandColor}
         />
       )}

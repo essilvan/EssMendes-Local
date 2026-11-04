@@ -12,6 +12,8 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
+  MessageSquare,
+  Star,
 } from "lucide-react";
 import {
   createProfessionalAction,
@@ -26,7 +28,7 @@ interface ProfessionalFormModalProps {
   onClose: () => void;
   professionalToEdit?: TenantProfessional | null;
   tenantId?: string;
-  onSuccess?: () => void;
+  onSuccess?: (savedProfessional?: TenantProfessional) => void;
 }
 
 function formatPhone(value: string): string {
@@ -61,6 +63,8 @@ export function ProfessionalFormModal({
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [isActive, setIsActive] = useState(true);
+  const [receivesQuotes, setReceivesQuotes] = useState(true);
+  const [isPrimaryQuoteContact, setIsPrimaryQuoteContact] = useState(false);
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -79,6 +83,10 @@ export function ProfessionalFormModal({
         setAvatarUrl(professionalToEdit.avatar_url || "");
         setPreviewUrl(professionalToEdit.avatar_url || null);
         setIsActive(professionalToEdit.is_active ?? true);
+        setReceivesQuotes(professionalToEdit.receives_quotes ?? true);
+        setIsPrimaryQuoteContact(
+          Boolean(professionalToEdit.is_primary_quote_contact)
+        );
         setShowUrlInput(
           Boolean(
             professionalToEdit.avatar_url &&
@@ -92,6 +100,8 @@ export function ProfessionalFormModal({
         setAvatarUrl("");
         setPreviewUrl(null);
         setIsActive(true);
+        setReceivesQuotes(true);
+        setIsPrimaryQuoteContact(false);
         setShowUrlInput(false);
       }
       setErrorMsg(null);
@@ -204,6 +214,8 @@ export function ProfessionalFormModal({
         specialty: roleTitle.trim() || "Profissional",
         avatar_url: avatarUrl.trim() || null,
         is_active: isActive,
+        receives_quotes: isPrimaryQuoteContact ? true : receivesQuotes,
+        is_primary_quote_contact: isPrimaryQuoteContact,
       };
 
       const res = isEditing && professionalToEdit
@@ -217,7 +229,7 @@ export function ProfessionalFormModal({
             : "Profissional cadastrado com sucesso!"
         );
         setTimeout(() => {
-          onSuccess?.();
+          onSuccess?.(res.data);
           onClose();
         }, 600);
       } else {
@@ -463,6 +475,63 @@ export function ProfessionalFormModal({
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Roteamento de Orçamentos via WhatsApp */}
+          <div className="space-y-3 rounded-xl border border-blue-200 bg-blue-50/60 p-3.5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="space-y-0.5">
+                <p className="font-bold text-slate-900 flex items-center gap-1.5">
+                  <MessageSquare className="h-3.5 w-3.5 text-blue-600" />
+                  <span>Receber notificações de novos orçamentos via WhatsApp</span>
+                </p>
+                <p className="text-[11px] text-slate-600">
+                  Habilita este número para receber solicitações de orçamento enviadas na vitrine pública.
+                </p>
+              </div>
+              <label className="relative inline-flex cursor-pointer items-center shrink-0">
+                <input
+                  type="checkbox"
+                  checked={receivesQuotes}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setReceivesQuotes(checked);
+                    if (!checked) {
+                      setIsPrimaryQuoteContact(false);
+                    }
+                  }}
+                  className="peer sr-only"
+                />
+                <div className="h-6 w-11 rounded-full bg-slate-300 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-focus:outline-none"></div>
+              </label>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 border-t border-blue-200/70 pt-3">
+              <div className="space-y-0.5">
+                <p className="font-bold text-slate-900 flex items-center gap-1.5">
+                  <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
+                  <span>Contato Principal para Orçamentos</span>
+                </p>
+                <p className="text-[11px] text-slate-600">
+                  Direciona prioritariamente o botão &ldquo;Avisar no WhatsApp&rdquo; pós-orçamento para este número.
+                </p>
+              </div>
+              <label className="relative inline-flex cursor-pointer items-center shrink-0">
+                <input
+                  type="checkbox"
+                  checked={isPrimaryQuoteContact}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setIsPrimaryQuoteContact(checked);
+                    if (checked) {
+                      setReceivesQuotes(true);
+                    }
+                  }}
+                  className="peer sr-only"
+                />
+                <div className="h-6 w-11 rounded-full bg-slate-300 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-amber-500 peer-checked:after:translate-x-full peer-focus:outline-none"></div>
+              </label>
+            </div>
           </div>
 
           {/* Status Ativo / Inativo */}

@@ -243,6 +243,8 @@ export interface TenantProfessional {
   specialty?: string | null;
   avatar_url?: string | null;
   is_active: boolean;
+  receives_quotes?: boolean;
+  is_primary_quote_contact?: boolean;
   created_at: string;
   updated_at?: string;
 }
