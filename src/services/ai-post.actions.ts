@@ -20,6 +20,8 @@ export interface GeneratePostParams {
   targetCity?: string;
   focusTopic?: string;
   pillarId?: string;
+  excludeTitles?: string[];
+  excludeImageUrls?: string[];
 }
 
 export interface GeneratedPostData {
@@ -188,136 +190,541 @@ function getNichePromptInstructions(niche: string, services: string[]): {
 }
 
 /**
- * Curadoria inteligente de imagens de alta definição por nicho e palavras-chave do título
+ * Subtemas rotativos por nicho para evitar qualquer repetição de ângulo nos posts gerados pela IA
  */
-const NICHE_ILLUSTRATIVE_IMAGES: Record<
+const NICHE_ROTATING_SUBTOPICS: Record<
   string,
-  Array<{ keywords: string[]; url: string }>
+  Array<{ angle: string; matchKeywords: string[] }>
 > = {
   automotive: [
     {
-      keywords: ["óleo", "oleo", "filtro", "motor", "lubrific"],
-      url: "https://images.unsplash.com/photo-1487754180451-c456f719a1fc?auto=format&fit=crop&w=1280&q=80",
+      angle:
+        "Troca de óleo do motor e substituição dos filtros (óleo, ar e combustível) no prazo correto para evitar borra e desgaste",
+      matchKeywords: ["óleo", "oleo", "filtro", "lubrific"],
     },
     {
-      keywords: ["freio", "pastilha", "disco", " roda", "pneu", "alinhamento"],
-      url: "https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&w=1280&q=80",
+      angle:
+        "Revisão do sistema de freios: sinais de desgaste nas pastilhas, discos, nível do fluido de freio e ruídos ao frear",
+      matchKeywords: ["freio", "pastilha", "disco"],
     },
     {
-      keywords: ["suspens", "amortecedor", "direção", "direcao", "embreagem", "câmbio"],
-      url: "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=1280&q=80",
+      angle:
+        "Suspensão automotiva e barulhos ao passar em buracos: amortecedores, buchas, pivôs, bieletas e estabilidade nas curvas",
+      matchKeywords: ["suspensão", "suspensao", "amortecedor", "barulho"],
     },
     {
-      keywords: ["scanner", "diagnóstic", "eletrônic", "painel", "bateria", "revisão"],
-      url: "https://images.unsplash.com/photo-1530046339160-ce3e530c7d2f?auto=format&fit=crop&w=1280&q=80",
+      angle:
+        "Sistema de embreagem e câmbio: pedal duro, embreagem patinando em subidas e dificuldade para engatar marchas",
+      matchKeywords: ["embreagem", "câmbio", "cambio", "pedal"],
     },
     {
-      keywords: [],
-      url: "https://images.unsplash.com/photo-1625047509168-a7026f36de04?auto=format&fit=crop&w=1280&q=80",
-    },
-  ],
-  barbearia: [
-    {
-      keywords: ["barba", "toalha", "navalha"],
-      url: "https://images.unsplash.com/photo-1621607512214-68297480165e?auto=format&fit=crop&w=1280&q=80",
+      angle:
+        "Ar-condicionado automotivo: higienização de dutos, troca do filtro de cabine (antipólen) e eficiência na refrigeração",
+      matchKeywords: ["ar-condicionado", "ar condicionado", "cabine", "higieniza"],
     },
     {
-      keywords: ["corte", "degradê", "fade", "cabelo"],
-      url: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=1280&q=80",
+      angle:
+        "Sistema de arrefecimento e radiador: importância do aditivo, limpeza, válvula termostática e prevenção de superaquecimento",
+      matchKeywords: ["arrefecimento", "radiador", "superaquecimento", "aditivo", "água"],
     },
     {
-      keywords: [],
-      url: "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&w=1280&q=80",
+      angle:
+        "Injeção eletrônica e diagnóstico computadorizado por scanner: luz da injeção acesa no painel, falhas e consumo elevado de combustível",
+      matchKeywords: ["injeção", "injecao", "scanner", "consumo", "painel"],
+    },
+    {
+      angle:
+        "Correia dentada e correia de acessórios: quando inspecionar e substituir preventivamente para proteger as válvulas do motor",
+      matchKeywords: ["correia", "dentada", "tensor"],
+    },
+    {
+      angle:
+        "Alinhamento de direção, balanceamento de rodas e rodízio de pneus: como evitar o desgaste irregular dos pneus",
+      matchKeywords: ["alinhamento", "balanceamento", "pneu", "volante"],
+    },
+    {
+      angle:
+        "Bateria automotiva, alternador e sistema elétrico: sinais de partida pesada e teste preventivo de carga",
+      matchKeywords: ["bateria", "alternador", "elétric", "partida"],
     },
   ],
   petshop: [
     {
-      keywords: ["gato", "felino"],
-      url: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=1280&q=80",
+      angle:
+        "Alimentação saudável e nutrição equilibrada para cães e gatos em cada fase da vida",
+      matchKeywords: ["alimentação", "alimentacao", "ração", "nutrição"],
     },
     {
-      keywords: ["banho", "tosa", "higiene"],
-      url: "https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?auto=format&fit=crop&w=1280&q=80",
+      angle:
+        "Banho e tosa higiênica regular: saúde da pele, pelagem macia, corte de unhas e prevenção de nós",
+      matchKeywords: ["banho", "tosa", "pelagem"],
     },
     {
-      keywords: ["veterin", "vacina", "consulta", "saúde"],
-      url: "https://images.unsplash.com/photo-1628009368231-7bb7cfcb0def?auto=format&fit=crop&w=1280&q=80",
+      angle:
+        "Cuidados dentários em cães e gatos: prevenção de tártaro, mau hálito e saúde bucal veterinária",
+      matchKeywords: ["dent", "tártaro", "tartaro", "bucal", "hálito"],
     },
     {
-      keywords: [],
-      url: "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=1280&q=80",
+      angle:
+        "Calendário de vacinação e vermifugação em dia: proteção essencial contra viroses e doenças graves",
+      matchKeywords: ["vacina", "vermifug", "imuniza"],
+    },
+    {
+      angle:
+        "Controle e prevenção de parasitas: pulgas, carrapatos e dermatites alérgicas no seu pet",
+      matchKeywords: ["pulga", "carrapato", "parasita", "coceira"],
+    },
+    {
+      angle:
+        "Cuidados especiais com pets idosos (sênior): check-up veterinário preventivo, articulações e qualidade de vida",
+      matchKeywords: ["idoso", "sênior", "senior", "articula"],
+    },
+    {
+      angle:
+        "Exercícios diários, passeios seguros e enriquecimento ambiental para reduzir a ansiedade do pet",
+      matchKeywords: ["exercício", "passeio", "ansiedade", "brinquedo"],
     },
   ],
-  confeitaria: [
+  barbearia: [
     {
-      keywords: ["bolo", "festa", "aniversário"],
-      url: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=1280&q=80",
+      angle:
+        "Corte degradê (fade) e visagismo masculino: como escolher o acabamento ideal para o seu formato de rosto",
+      matchKeywords: ["degradê", "degrade", "fade", "visagismo"],
     },
     {
-      keywords: [],
-      url: "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=1280&q=80",
+      angle:
+        "Hidratação e alinhamento de barba com óleos essenciais e balm para fios macios e sem frizz",
+      matchKeywords: ["hidratação", "alinhamento de barba", "óleo", "balm"],
+    },
+    {
+      angle:
+        "Barbaterapia com toalha quente e navalha: relaxamento e cuidado com a pele do rosto sem irritação",
+      matchKeywords: ["barbaterapia", "toalha quente", "navalha"],
+    },
+    {
+      angle:
+        "Cuidados com o couro cabeludo masculino: controle de oleosidade, caspa e fortalecimento dos fios",
+      matchKeywords: ["couro cabeludo", "oleosidade", "caspa", "queda"],
+    },
+    {
+      angle:
+        "Design de sobrancelha masculina, acabamento do pezinho e contorno da barba para um visual limpo",
+      matchKeywords: ["sobrancelha", "pezinho", "contorno"],
+    },
+    {
+      angle:
+        "Corte social e executivo moderno: praticidade para o dia a dia de trabalho e eventos",
+      matchKeywords: ["social", "executivo", "trabalho"],
     },
   ],
   estetica_saude: [
     {
-      keywords: [],
-      url: "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1280&q=80",
+      angle:
+        "Limpeza de pele profunda e renovação celular para manter o rosto saudável e iluminado",
+      matchKeywords: ["limpeza de pele", "rosto", "poros"],
+    },
+    {
+      angle:
+        "Cuidados diários pós-procedimento para prolongar a durabilidade e o brilho do seu resultado",
+      matchKeywords: ["durabilidade", "pós", "manutenção"],
+    },
+    {
+      angle:
+        "Biossegurança, materiais esterilizados e atendimento personalizado com hora marcada",
+      matchKeywords: ["biossegurança", "esteriliza", "segurança"],
+    },
+    {
+      angle:
+        "Protocolo de hidratação e revitalização rápida para eventos e ocasiões especiais",
+      matchKeywords: ["revitaliza", "evento", "hidrata"],
     },
   ],
-  default: [
+  confeitaria: [
     {
-      keywords: [],
-      url: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=1280&q=80",
+      angle:
+        "Bolos artesanais personalizados para aniversários e comemorações especiais em família",
+      matchKeywords: ["aniversário", "bolo", "personalizado"],
+    },
+    {
+      angle:
+        "Doces finos e brigadeiros gourmet feitos com chocolate nobre e ingredientes frescos",
+      matchKeywords: ["brigadeiro", "doce", "chocolate"],
+    },
+    {
+      angle:
+        "Como planejar e encomendar o kit festa ideal de acordo com o número de convidados",
+      matchKeywords: ["kit festa", "convidado", "encomenda"],
     },
   ],
 };
 
-function selectCuratedImageForNicheAndTitle(
-  niche: string,
-  titleText: string
-): string {
+function resolveBucketKeyForNiche(niche: string): string {
   const normNiche = (niche || "").toLowerCase();
-  const normTitle = (titleText || "").toLowerCase();
-
-  let bucketKey = "default";
   if (
     normNiche.includes("auto") ||
     normNiche.includes("mecanic") ||
     normNiche.includes("oficina")
   ) {
-    bucketKey = "automotive";
-  } else if (normNiche.includes("barbea") || normNiche.includes("barber")) {
-    bucketKey = "barbearia";
-  } else if (normNiche.includes("pet") || normNiche.includes("veterin")) {
-    bucketKey = "petshop";
-  } else if (normNiche.includes("confeit") || normNiche.includes("bolo")) {
-    bucketKey = "confeitaria";
-  } else if (
+    return "automotive";
+  }
+  if (normNiche.includes("barbea") || normNiche.includes("barber")) {
+    return "barbearia";
+  }
+  if (
+    normNiche.includes("pet") ||
+    normNiche.includes("veterin") ||
+    normNiche.includes("bicho")
+  ) {
+    return "petshop";
+  }
+  if (normNiche.includes("confeit") || normNiche.includes("bolo")) {
+    return "confeitaria";
+  }
+  if (
     normNiche.includes("estetica") ||
     normNiche.includes("beleza") ||
     normNiche.includes("salao")
   ) {
-    bucketKey = "estetica_saude";
+    return "estetica_saude";
+  }
+  return "default";
+}
+
+/**
+ * Seleciona um subtema do nicho que ainda NÃO foi abordado nos títulos anteriores
+ */
+function pickFreshSubtopicForNiche(
+  niche: string,
+  existingTitles: string[]
+): string {
+  const bucketKey = resolveBucketKeyForNiche(niche);
+  const subtopics = NICHE_ROTATING_SUBTOPICS[bucketKey] || [];
+  if (subtopics.length === 0) {
+    return "Destaque um diferencial prático e responda uma dúvida comum dos clientes da cidade (variando completamente dos títulos anteriores)";
   }
 
-  const candidates =
+  const joinedTitles = existingTitles.join(" | ").toLowerCase();
+
+  // Filtra subtemas cujas palavras-chave NÃO aparecem nos títulos anteriores
+  const unusedSubtopics = subtopics.filter(
+    (item) => !item.matchKeywords.some((kw) => joinedTitles.includes(kw.toLowerCase()))
+  );
+
+  const pool = unusedSubtopics.length > 0 ? unusedSubtopics : subtopics;
+  const randomIndex = Math.floor(Math.random() * pool.length);
+  return pool[randomIndex].angle;
+}
+
+/**
+ * Curadoria ampla de imagens de alta definição por nicho e palavras-chave do post,
+ * com ID único (`id`) para rastrear e impedir repetição de fotos já utilizadas pelo tenant.
+ */
+const NICHE_ILLUSTRATIVE_IMAGES: Record<
+  string,
+  Array<{ id: string; keywords: string[]; url: string }>
+> = {
+  automotive: [
+    {
+      id: "auto-oil-engine",
+      keywords: ["óleo", "oleo", "filtro", "lubrific"],
+      url: "https://images.unsplash.com/photo-1487754180451-c456f719a1fc?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "auto-brakes-wheel",
+      keywords: ["freio", "pastilha", "disco"],
+      url: "https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "auto-suspension-lift",
+      keywords: ["suspens", "amortecedor", "buchas", "pivô", "barulho"],
+      url: "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "auto-scanner-diag",
+      keywords: ["scanner", "diagnóstic", "eletrônic", "injeção", "injecao", "painel"],
+      url: "https://images.unsplash.com/photo-1530046339160-ce3e530c7d2f?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "auto-clutch-gearbox",
+      keywords: ["embreagem", "câmbio", "cambio", "marcha", "transmissão"],
+      url: "https://images.unsplash.com/photo-1625047509168-a7026f36de04?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "auto-ac-cooling",
+      keywords: ["ar-condicionado", "ar condicionado", "cabine", "higieniza", "climatiza"],
+      url: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "auto-radiator-engine",
+      keywords: ["arrefecimento", "radiador", "superaquecimento", "aditivo", "motor"],
+      url: "https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "auto-tires-align",
+      keywords: ["alinhamento", "balanceamento", "pneu", "roda", "direção"],
+      url: "https://images.unsplash.com/photo-1578844251758-2f71da64c96f?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "auto-battery-elec",
+      keywords: ["bateria", "alternador", "elétric", "partida", "correia"],
+      url: "https://images.unsplash.com/photo-1632823471565-1ecdf5c6da35?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "auto-workshop-bay",
+      keywords: ["oficina", "revisão", "manutenção", "check-up"],
+      url: "https://images.unsplash.com/photo-1597762470488-3877b1f538c6?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "auto-mechanic-tools",
+      keywords: ["mecânico", "ferramenta", "preventiva", "segurança"],
+      url: "https://images.unsplash.com/photo-1517524008697-84bbe3c3fd98?auto=format&fit=crop&w=1280&q=80",
+    },
+  ],
+  barbearia: [
+    {
+      id: "barber-beard-trim",
+      keywords: ["barba", "toalha", "navalha", "barbaterapia"],
+      url: "https://images.unsplash.com/photo-1621607512214-68297480165e?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "barber-fade-cut",
+      keywords: ["corte", "degradê", "fade", "cabelo"],
+      url: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "barber-classic-chair",
+      keywords: ["social", "executivo", "cadeira", "estilo"],
+      url: "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "barber-clippers-detail",
+      keywords: ["pezinho", "sobrancelha", "contorno", "acabamento"],
+      url: "https://images.unsplash.com/photo-1599351431202-1e0f0137899a?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "barber-hair-care",
+      keywords: ["hidratação", "couro cabeludo", "óleo", "pomada"],
+      url: "https://images.unsplash.com/photo-1622286342621-4bd786c2447c?auto=format&fit=crop&w=1280&q=80",
+    },
+  ],
+  petshop: [
+    {
+      id: "pet-cat-care",
+      keywords: ["gato", "felino"],
+      url: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "pet-grooming-bath",
+      keywords: ["banho", "tosa", "higiene", "pelagem"],
+      url: "https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "pet-vet-vaccine",
+      keywords: ["veterin", "vacina", "consulta", "saúde", "check-up"],
+      url: "https://images.unsplash.com/photo-1628009368231-7bb7cfcb0def?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "pet-happy-dogs",
+      keywords: ["passeio", "exercício", "brincadeira"],
+      url: "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "pet-nutrition-bowl",
+      keywords: ["alimentação", "ração", "nutrição", "dent", "tártaro"],
+      url: "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "pet-senior-golden",
+      keywords: ["idoso", "sênior", "pulga", "carrapato", "parasita"],
+      url: "https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?auto=format&fit=crop&w=1280&q=80",
+    },
+  ],
+  confeitaria: [
+    {
+      id: "bakery-cake-party",
+      keywords: ["bolo", "festa", "aniversário"],
+      url: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "bakery-sweets-choco",
+      keywords: ["doce", "brigadeiro", "chocolate"],
+      url: "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "bakery-pastry-tart",
+      keywords: ["torta", "encomenda", "artesanal"],
+      url: "https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=1280&q=80",
+    },
+  ],
+  estetica_saude: [
+    {
+      id: "beauty-salon-care",
+      keywords: ["beleza", "salão", "procedimento"],
+      url: "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "beauty-facial-skin",
+      keywords: ["pele", "rosto", "limpeza", "facial", "hidrata"],
+      url: "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "beauty-spa-wellness",
+      keywords: ["autoestima", "bem-estar", "revitaliza"],
+      url: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1280&q=80",
+    },
+  ],
+  default: [
+    {
+      id: "default-biz-1",
+      keywords: ["promoção", "desconto"],
+      url: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "default-biz-2",
+      keywords: ["atendimento", "equipe"],
+      url: "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "default-biz-3",
+      keywords: ["serviço", "qualidade"],
+      url: "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1280&q=80",
+    },
+  ],
+};
+
+/**
+ * Verifica se um item de imagem já foi utilizado nas URLs anteriores do tenant
+ */
+function isImageCandidateAlreadyUsed(
+  candidate: { id: string; url: string },
+  existingImages: string[]
+): boolean {
+  if (!existingImages || existingImages.length === 0) return false;
+  const basePhotoIdMatch = candidate.url.match(/photo-[a-z0-9-]+/i);
+  const basePhotoId = basePhotoIdMatch ? basePhotoIdMatch[0].toLowerCase() : "";
+
+  return existingImages.some((usedUrl) => {
+    const normUsed = (usedUrl || "").toLowerCase();
+    if (!normUsed) return false;
+    if (normUsed === candidate.url.toLowerCase()) return true;
+    if (normUsed.includes(candidate.id.toLowerCase())) return true;
+    if (basePhotoId && normUsed.includes(basePhotoId)) return true;
+    return false;
+  });
+}
+
+function selectCuratedImageForNicheAndTitle(
+  niche: string,
+  postDescription: string,
+  existingImages: string[] = []
+): { id: string; url: string } {
+  const bucketKey = resolveBucketKeyForNiche(niche);
+  const normDesc = (postDescription || "").toLowerCase();
+
+  const allCandidates =
     NICHE_ILLUSTRATIVE_IMAGES[bucketKey] || NICHE_ILLUSTRATIVE_IMAGES.default;
 
-  for (const item of candidates) {
-    if (
+  // Filtra primeiro apenas imagens que NUNCA foram usadas nos últimos 10 posts do tenant
+  const unusedCandidates = allCandidates.filter(
+    (c) => !isImageCandidateAlreadyUsed(c, existingImages)
+  );
+
+  const pool = unusedCandidates.length > 0 ? unusedCandidates : allCandidates;
+
+  // 1. Tenta encontrar candidatos não usados que batem com as palavras-chave da descrição do post
+  const keywordMatches = pool.filter(
+    (item) =>
       item.keywords.length > 0 &&
-      item.keywords.some((kw) => normTitle.includes(kw))
-    ) {
-      return item.url;
-    }
+      item.keywords.some((kw) => normDesc.includes(kw.toLowerCase()))
+  );
+
+  if (keywordMatches.length > 0) {
+    const picked =
+      keywordMatches[Math.floor(Math.random() * keywordMatches.length)];
+    const seed = Math.random().toString(36).substring(2, 8);
+    const sep = picked.url.includes("?") ? "&" : "?";
+    return {
+      id: picked.id,
+      url: `${picked.url}${sep}v=${Date.now()}-${seed}`,
+    };
   }
 
-  return candidates[candidates.length - 1].url;
+  // 2. Caso contrário, sorteia aleatoriamente entre as opções inéditas do nicho
+  const picked = pool[Math.floor(Math.random() * pool.length)];
+  const seed = Math.random().toString(36).substring(2, 8);
+  const sep = picked.url.includes("?") ? "&" : "?";
+  return {
+    id: picked.id,
+    url: `${picked.url}${sep}v=${Date.now()}-${seed}`,
+  };
+}
+
+/**
+ * Consulta os últimos 10 posts do tenant (suportando tanto 'tenant_posts' quanto 'posts')
+ * e retorna títulos e URLs de imagens já publicados para deduplicação estrita.
+ */
+async function fetchTenantRecentPostsHistory(
+  supabase: any,
+  tenantId: string,
+  extraTitles: string[] = [],
+  extraImages: string[] = []
+): Promise<{ existingTitles: string[]; existingImages: string[] }> {
+  const titlesSet = new Set<string>();
+  const imagesSet = new Set<string>();
+
+  for (const t of extraTitles) {
+    if (t && t.trim()) titlesSet.add(t.trim());
+  }
+  for (const img of extraImages) {
+    if (img && img.trim()) imagesSet.add(img.trim());
+  }
+
+  try {
+    const { data: tenantPosts } = await supabase
+      .from("tenant_posts")
+      .select("title, tags, image_url")
+      .eq("tenant_id", tenantId)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    if (Array.isArray(tenantPosts)) {
+      for (const p of tenantPosts) {
+        if (p?.title) titlesSet.add(String(p.title).trim());
+        if (p?.image_url) imagesSet.add(String(p.image_url).trim());
+      }
+    }
+  } catch {
+    // prossegue silenciosamente
+  }
+
+  try {
+    const { data: existingPosts } = await supabase
+      .from("posts")
+      .select("title, category, cover_image")
+      .eq("tenant_id", tenantId)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    if (Array.isArray(existingPosts)) {
+      for (const p of existingPosts) {
+        if (p?.title) titlesSet.add(String(p.title).trim());
+        if (p?.cover_image) imagesSet.add(String(p.cover_image).trim());
+      }
+    }
+  } catch {
+    // prossegue caso a tabela 'posts' seja representada por 'tenant_posts'
+  }
+
+  return {
+    existingTitles: Array.from(titlesSet),
+    existingImages: Array.from(imagesSet),
+  };
 }
 
 /**
  * Server Action: Gera Post Semanal Otimizado para SEO Local com IA
- * Calibrado estritamente pelo nicho do tenant (tenant.name, tenant.niche, tenant.city e services).
+ * Calibrado estritamente pelo nicho do tenant (tenant.name, tenant.niche, tenant.city e services)
+ * com deduplicação estrita dos últimos 10 posts e imagens.
  */
 export async function generateLocalSeoPost(
   params?: GeneratePostParams
@@ -343,8 +750,8 @@ export async function generateLocalSeoPost(
     const tenantId = tenantContext.tenantId;
     const supabase = await createClient();
 
-    // 1. Buscar dados completos do tenant, perfil, serviços e histórico recente de posts
-    const [tenantRes, profileRes, servicesRes, recentPostsRes] =
+    // 1. Buscar dados completos do tenant, perfil, serviços e histórico dos últimos 10 posts
+    const [tenantRes, profileRes, servicesRes, historyData] =
       await Promise.all([
         supabase
           .from("tenants")
@@ -361,26 +768,24 @@ export async function generateLocalSeoPost(
           .select("name")
           .eq("tenant_id", tenantId)
           .eq("is_active", true)
-          .limit(8),
-        supabase
-          .from("tenant_posts")
-          .select("title, tags")
-          .eq("tenant_id", tenantId)
-          .order("created_at", { ascending: false })
-          .limit(8),
+          .limit(10),
+        fetchTenantRecentPostsHistory(
+          supabase,
+          tenantId,
+          params?.excludeTitles || [],
+          params?.excludeImageUrls || []
+        ),
       ]);
 
     const tenantRow = tenantRes.data || tenantContext.tenant;
     const profile = profileRes.data;
     const servicesData = servicesRes.data || [];
-    const recentPosts = recentPostsRes.data || [];
+    const { existingTitles, existingImages } = historyData;
 
-    const pastTitles =
-      recentPosts.length > 0
-        ? recentPosts
-            .map((p) => `- "${p.title}"`)
-            .join("\n")
-        : "Nenhum post anterior.";
+    const existingTitlesFormatted =
+      existingTitles.length > 0
+        ? existingTitles.map((t, idx) => `${idx + 1}. "${t}"`).join("\n")
+        : "Nenhum post anterior registrado.";
 
     const selectedPillar =
       CONTENT_PILLARS.find((p) => p.id === params?.pillarId) ||
@@ -417,29 +822,43 @@ export async function generateLocalSeoPost(
 
     const nicheContext = getNichePromptInstructions(resolvedNiche, rawServices);
 
-    // 3. Prompt estrito em PT-BR sem vazamento de instruções de sistema
-    const prompt = `Gere uma publicação persuasiva de blog/novidades otimizada para SEO Local no Google.
+    // 3. Sorteia um subtema específico do nicho que ainda NÃO aparece nos existingTitles
+    const freshSubtopic =
+      params?.focusTopic ||
+      pickFreshSubtopicForNiche(resolvedNiche, existingTitles);
+
+    const randomGenerationSeed = `${Date.now()}-${Math.random()
+      .toString(36)
+      .substring(2, 8)}`;
+
+    // 4. Prompt estrito em PT-BR com bloqueio explícito de repetição de temas
+    const prompt = `Gere uma publicação inédita e persuasiva de blog/novidades otimizada para SEO Local no Google.
+Semente de variação única: ${randomGenerationSeed}
 
 DADOS REAIS DO ESTABELECIMENTO:
 - Nome da Empresa: ${businessName}
 - Nicho de Atuação: ${nicheContext.nicheLabel} (código: ${resolvedNiche})
 - Cidade / Região: ${targetCity}
 - Serviços Principais: ${nicheContext.defaultServices.join(", ")}
-- Tema / Pilar Editorial da Semana: ${selectedPillar.name} (${selectedPillar.angleDescription})
-${params?.focusTopic ? `- Tópico específico solicitado: ${params.focusTopic}` : ""}
+- Pilar Editorial: ${selectedPillar.name} (${selectedPillar.angleDescription})
+- PAUTA / ÂNGULO OBRIGATÓRIO DESTE NOVO POST: ${freshSubtopic}
 
 ${nicheContext.domainGuidelines}
 
-HISTÓRICO DE TÍTULOS JÁ PUBLICADOS (NÃO REPETIR):
-${pastTitles}
+TEMAS JÁ PUBLICADOS (PROIBIDO REPETIR QUALQUER UM DELES):
+${existingTitlesFormatted}
+
+INSTRUÇÃO DE DIVERSIFICAÇÃO OBRIGATÓRIA:
+- Escolha um ângulo, problema prático e título 100% DIFERENTES de todos os itens listados em "TEMAS JÁ PUBLICADOS".
+- Desenvolva especificamente a pauta "${freshSubtopic}", trazendo dicas práticas e reais que ainda não foram abordadas nos títulos acima.
 
 REGRAS ESTRITAS E OBRIGATÓRIAS DE SAÍDA:
 1. Retorne APENAS um objeto JSON puro e válido, sem blocos markdown (\`\`\`json) e sem nenhuma frase antes ou depois do JSON.
 2. O conteúdo deve ser 100% em Português do Brasil (PT-BR) natural, humano e persuasivo.
 3. PROIBIDO incluir termos técnicos de prompt ou meta-comentários dentro dos textos, tais como "SEO Specialist", "Copywriter", "placeholder", "[insira aqui]" ou textos em inglês.
-4. O campo "title" deve ter entre 35 e 70 caracteres, em PT-BR, direto e atrativo para clientes locais.
-5. O campo "content" deve ter entre 120 e 180 palavras divididas em 2 ou 3 parágrafos claros, educando o cliente e convidando-o a entrar em contato com a equipe da ${businessName} em ${targetCity}.
-6. O campo "keywords" deve conter 5 palavras-chave locais separadas por vírgula em PT-BR (incluindo o serviço e ${targetCity}).
+4. O campo "title" deve ter entre 35 e 70 caracteres, em PT-BR, inédito e atrativo para clientes locais.
+5. O campo "content" deve ter entre 120 e 180 palavras divididas em 2 ou 3 parágrafos claros, educando o cliente sobre o tema e convidando-o a falar com a equipe da ${businessName} em ${targetCity}.
+6. O campo "keywords" deve conter 5 palavras-chave locais separadas por vírgula em PT-BR (incluindo o serviço específico abordado e ${targetCity}).
 7. O campo "meta_description" deve ter até 155 caracteres em PT-BR resumindo o benefício do artigo para o Google.
 
 FORMATO EXATO DO JSON:
@@ -452,7 +871,7 @@ FORMATO EXATO DO JSON:
 
     const generatedText = await generateContentWithGemini(prompt, {
       apiKey,
-      temperature: 0.65,
+      temperature: 0.85,
       maxOutputTokens: 2048,
       responseMimeType: "application/json",
       responseSchema: {
@@ -472,8 +891,8 @@ FORMATO EXATO DO JSON:
     const parsedTitle =
       sanitizeAiText(postData.title) ||
       (resolvedNiche === "automotive"
-        ? `Revisão Preventiva em ${targetCity}: Cuide da Segurança do Seu Carro`
-        : `Novidades e Atendimento Especializado em ${targetCity}`);
+        ? `Manutenção em Dia em ${targetCity}: ${freshSubtopic.slice(0, 38)}`
+        : `Dica Especializada em ${targetCity}: ${freshSubtopic.slice(0, 38)}`);
 
     const parsedContent = sanitizeAiText(postData.content) || "";
     const rawKeywords = postData.keywords || postData.tags || "";
@@ -487,9 +906,11 @@ FORMATO EXATO DO JSON:
       postData.meta_description || postData.metaDescription || ""
     ).slice(0, 160);
 
-    const suggestedImageUrl = selectCuratedImageForNicheAndTitle(
+    // 5. Seleciona ou gera imagem baseada na descrição exata do novo post, garantindo que NÃO esteja em existingImages
+    const selectedImage = selectCuratedImageForNicheAndTitle(
       resolvedNiche,
-      `${parsedTitle} ${parsedContent}`
+      `${parsedTitle} ${parsedContent} ${freshSubtopic}`,
+      existingImages
     );
 
     return {
@@ -501,7 +922,7 @@ FORMATO EXATO DO JSON:
         metaDescription: parsedMetaDesc,
         ctaType: nicheContext.defaultCtaType,
         ctaLabel: nicheContext.defaultCtaLabel,
-        imageUrl: suggestedImageUrl,
+        imageUrl: selectedImage.url,
         source: "gemini",
         pillar: selectedPillar.name,
       },
@@ -517,13 +938,14 @@ FORMATO EXATO DO JSON:
 }
 
 /**
- * Server Action: Gera uma imagem ilustrativa com IA condizente com o título do post e o nicho do tenant,
- * persistindo no bucket 'establishment-photos' (pasta 'posts/') quando gerada em buffer.
+ * Server Action: Gera uma imagem ilustrativa com IA condizente com a descrição exata do novo post,
+ * utilizando semente randômica e verificando o histórico de posts para NUNCA repetir foto.
  */
 export async function generatePostCoverImageAction(input?: {
   title?: string;
   content?: string;
   niche?: string;
+  excludeImageUrls?: string[];
 }): Promise<{
   success: boolean;
   imageUrl?: string;
@@ -540,20 +962,45 @@ export async function generatePostCoverImageAction(input?: {
     }
 
     const tenantId = tenantContext.tenantId;
+    const supabase = await createClient();
+
+    // 1. Consulta histórico de imagens já utilizadas nos últimos 10 posts do tenant
+    const { existingImages } = await fetchTenantRecentPostsHistory(
+      supabase,
+      tenantId,
+      [],
+      input?.excludeImageUrls || []
+    );
+
     const resolvedNiche =
       input?.niche || resolveTenantNiche(tenantContext.tenant) || "general";
     const postTitle = (input?.title || "").trim();
     const postContent = (input?.content || "").trim();
+    const exactPostDescription = [postTitle, postContent]
+      .filter(Boolean)
+      .join(" — ")
+      .slice(0, 320);
+
+    const randomSeed = Math.floor(Math.random() * 1000000);
+    const randomToken = Math.random().toString(36).substring(2, 8);
+    const visualAngles = [
+      "close-up detailed shot, natural daylight",
+      "wide angle editorial perspective, warm studio lighting",
+      "dynamic action angle showing professional equipment in use",
+      "clean modern workspace environment, cinematic depth of field",
+    ];
+    const chosenAngle =
+      visualAngles[Math.floor(Math.random() * visualAngles.length)];
 
     const apiKey = process.env.GEMINI_API_KEY;
 
-    // 1. Tenta gerar imagem real via Gemini Imagen 3 (se disponível na conta Google AI)
+    // 2. Tenta gerar imagem exclusiva via Gemini Imagen 3 usando a descrição exata do post + semente randômica
     if (apiKey) {
       try {
         const subjectPrompt =
           resolvedNiche === "automotive"
-            ? `Professional modern automotive workshop mechanic inspecting a car, ${postTitle || "preventive maintenance"}, clean lighting, photorealistic, 16:9 banner, no text`
-            : `Professional local business photography for ${resolvedNiche}, ${postTitle || "featured service"}, warm lighting, photorealistic, 16:9 banner, no text`;
+            ? `Photorealistic automotive service photography illustrating: "${exactPostDescription || "preventive car maintenance"}". Style: ${chosenAngle}, modern clean mechanic workshop, 16:9 banner, no text, no watermarks, seed ${randomSeed}-${Date.now()}`
+            : `Photorealistic local business photography for ${resolvedNiche} illustrating: "${exactPostDescription || "professional service"}". Style: ${chosenAngle}, high-end commercial photography, 16:9 banner, no text, no watermarks, seed ${randomSeed}-${Date.now()}`;
 
         const imagenRes = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`,
@@ -564,6 +1011,7 @@ export async function generatePostCoverImageAction(input?: {
               instances: [{ prompt: subjectPrompt }],
               parameters: {
                 sampleCount: 1,
+                seed: randomSeed,
                 aspectRatio: "16:9",
                 outputOptions: { mimeType: "image/jpeg" },
               },
@@ -580,7 +1028,7 @@ export async function generatePostCoverImageAction(input?: {
           if (b64) {
             const buffer = Buffer.from(b64, "base64");
             const adminSupabase = createAdminClient();
-            const filePath = `posts/${tenantId}-ai-${Date.now()}.jpg`;
+            const filePath = `posts/${tenantId}-imagen-${Date.now()}-${randomToken}.jpg`;
 
             const { error: upErr } = await adminSupabase.storage
               .from("establishment-photos")
@@ -604,19 +1052,21 @@ export async function generatePostCoverImageAction(input?: {
       }
     }
 
-    // 2. Seleção inteligente calibrada pelo título + conteúdo + nicho e persistência no bucket 'establishment-photos/posts/'
-    const sourceUrl = selectCuratedImageForNicheAndTitle(
+    // 3. Seleção inteligente baseada na descrição exata do post e garantindo que NÃO exista em existingImages
+    const selectedCandidate = selectCuratedImageForNicheAndTitle(
       resolvedNiche,
-      `${postTitle} ${postContent}`
+      exactPostDescription || resolvedNiche,
+      existingImages
     );
 
     try {
-      const imgResponse = await fetch(sourceUrl);
+      const imgResponse = await fetch(selectedCandidate.url);
       if (imgResponse.ok) {
         const arrayBuffer = await imgResponse.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
         const adminSupabase = createAdminClient();
-        const filePath = `posts/${tenantId}-ai-cover-${Date.now()}.jpg`;
+        // Inclui o ID da foto no nome do arquivo salvo no bucket para que futuras verificações saibam qual imagem base foi usada
+        const filePath = `posts/${tenantId}-${selectedCandidate.id}-${Date.now()}-${randomToken}.jpg`;
 
         const { error: upErr } = await adminSupabase.storage
           .from("establishment-photos")
@@ -643,7 +1093,7 @@ export async function generatePostCoverImageAction(input?: {
 
     return {
       success: true,
-      imageUrl: sourceUrl,
+      imageUrl: selectedCandidate.url,
     };
   } catch (err: any) {
     return {

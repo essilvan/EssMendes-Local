@@ -148,6 +148,10 @@ export function PostsManager({
   const [imageError, setImageError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  // Histórico local da sessão para garantir deduplicação mesmo em múltiplos cliques seguidos antes de salvar
+  const [sessionTitles, setSessionTitles] = useState<string[]>([]);
+  const [sessionImages, setSessionImages] = useState<string[]>([]);
+
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
@@ -176,7 +180,30 @@ export function PostsManager({
     setFeedback(null);
     setImageError(null);
     try {
-      const res = await generateLocalSeoPost();
+      const excludeTitles = Array.from(
+        new Set(
+          [
+            title,
+            ...sessionTitles,
+            ...posts.map((p) => p.title),
+          ].filter(Boolean)
+        )
+      );
+      const excludeImageUrls = Array.from(
+        new Set(
+          [
+            imageUrl,
+            ...sessionImages,
+            ...posts.map((p) => p.image_url || ""),
+          ].filter(Boolean)
+        )
+      );
+
+      const res = await generateLocalSeoPost({
+        niche: tenantNiche,
+        excludeTitles,
+        excludeImageUrls,
+      });
       if (res.success && res.data) {
         setTitle(res.data.title);
         setContent(res.data.content);
@@ -184,14 +211,20 @@ export function PostsManager({
         setMetaDescription(res.data.metaDescription || "");
         setCtaType(res.data.ctaType);
         setCtaLabel(res.data.ctaLabel);
+        setSessionTitles((prev) =>
+          Array.from(new Set([...prev, res.data!.title]))
+        );
         if (res.data.imageUrl) {
           setImageUrl(res.data.imageUrl);
+          setSessionImages((prev) =>
+            Array.from(new Set([...prev, res.data!.imageUrl!]))
+          );
         }
         setIsAdding(true);
         const pillarInfo = res.data.pillar ? ` [${res.data.pillar}]` : "";
         setFeedback({
           type: "success",
-          message: `✨ Publicação semanal gerada com IA${pillarInfo}! Os campos e a imagem de capa foram preenchidos abaixo. Revise e clique em "Postar Agora".`,
+          message: `✨ Publicação inédita gerada com IA${pillarInfo}! Os campos e a imagem de capa foram preenchidos abaixo. Revise e clique em "Postar Agora".`,
         });
       } else {
         setFeedback({
@@ -210,25 +243,39 @@ export function PostsManager({
   };
 
   /**
-   * Opção A: Gerar Imagem com IA condizente com o título/conteúdo e nicho do tenant
+   * Opção A: Gerar Imagem com IA condizente com a descrição exata do post e sem repetir fotos anteriores
    */
   const handleGenerateCoverImageWithAi = async () => {
     if (isGeneratingImageAi || isUploadingPhoto || isPending) return;
     setIsGeneratingImageAi(true);
     setImageError(null);
     try {
+      const excludeImageUrls = Array.from(
+        new Set(
+          [
+            imageUrl,
+            ...sessionImages,
+            ...posts.map((p) => p.image_url || ""),
+          ].filter(Boolean)
+        )
+      );
+
       const res = await generatePostCoverImageAction({
         title: title || (isAutomotive ? "Revisão Preventiva Automotiva" : "Serviço Especializado"),
         content,
         niche: tenantNiche,
+        excludeImageUrls,
       });
 
       if (res.success && res.imageUrl) {
         setImageUrl(res.imageUrl);
+        setSessionImages((prev) =>
+          Array.from(new Set([...prev, res.imageUrl!]))
+        );
         setFeedback({
           type: "success",
           message:
-            "✨ Imagem ilustrativa do seu nicho gerada com IA e aplicada na capa com sucesso!",
+            "✨ Nova imagem ilustrativa gerada com IA e aplicada na capa com sucesso!",
         });
       } else {
         setImageError(res.error || "Não foi possível gerar a imagem com IA.");

@@ -28,6 +28,7 @@ export async function POST(request: Request) {
         title: body.title,
         content: body.content,
         niche: body.niche,
+        excludeImageUrls: body.excludeImageUrls,
       });
       return NextResponse.json(imgResult);
     }
