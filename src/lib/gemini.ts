@@ -4,6 +4,7 @@ export interface GenerateGeminiOptions {
   maxOutputTokens?: number;
   responseMimeType?: string;
   responseSchema?: Record<string, any>;
+  timeoutMs?: number;
 }
 
 /**
@@ -26,51 +27,60 @@ export function sanitizeAiText(text: string): string {
 
 /**
  * Função de higienização defensiva antes do JSON.parse()
- * Remove cercas de markdown (```json), isola o objeto JSON entre chaves {}
- * e extrai campos individualmente caso o JSON tenha sofrido corte.
+ * Remove cercas de markdown (```json e ```), isola o objeto JSON entre chaves {}
+ * e, se o parse falhar, utiliza extração segura ou fallback estruturado sem lançar exceção não tratada.
  */
-export function extractValidJson(raw: string): Record<string, any> {
-  let clean = (raw || "").trim();
-
-  // Remove cercas de código markdown se vierem incluídas
-  if (clean.startsWith("```json")) {
-    clean = clean.replace(/^```json\s*/i, "").replace(/\s*```$/, "");
-  } else if (clean.startsWith("```")) {
-    clean = clean.replace(/^```\s*/, "").replace(/\s*```$/, "");
+export function extractValidJson(
+  responseText: string,
+  fallbackData?: {
+    title?: string;
+    content?: string;
+    keywords?: string;
+    meta_description?: string;
   }
+): Record<string, any> {
+  let cleanJson = (responseText || "")
+    .replace(/```json/gi, "")
+    .replace(/```/g, "")
+    .trim();
 
   // Isola do primeiro '{' até ao último '}'
-  const firstBrace = clean.indexOf("{");
-  const lastBrace = clean.lastIndexOf("}");
+  const firstBrace = cleanJson.indexOf("{");
+  const lastBrace = cleanJson.lastIndexOf("}");
 
   if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-    clean = clean.substring(firstBrace, lastBrace + 1);
+    cleanJson = cleanJson.substring(firstBrace, lastBrace + 1);
   }
 
   try {
-    const parsed = JSON.parse(clean);
+    const parsed = JSON.parse(cleanJson);
     if (parsed && typeof parsed === "object") {
       return {
         ...parsed,
-        title: sanitizeAiText(parsed.title || ""),
-        content: sanitizeAiText(parsed.content || ""),
+        title: sanitizeAiText(parsed.title || fallbackData?.title || ""),
+        content: sanitizeAiText(parsed.content || fallbackData?.content || ""),
         keywords:
           typeof parsed.keywords === "string"
             ? sanitizeAiText(parsed.keywords)
-            : parsed.keywords,
+            : Array.isArray(parsed.keywords)
+            ? parsed.keywords.map((k: string) => sanitizeAiText(k)).join(", ")
+            : fallbackData?.keywords || "",
         meta_description: sanitizeAiText(
-          parsed.meta_description || parsed.metaDescription || ""
+          parsed.meta_description ||
+            parsed.metaDescription ||
+            fallbackData?.meta_description ||
+            ""
         ),
       };
     }
   } catch (err) {
-    console.warn("[extractValidJson] Tentando extração por regex de campos JSON...");
+    console.warn("[extractValidJson] Falha no JSON.parse direto, acionando parser de contingência...");
   }
 
   // Extração segura campo a campo por regex caso o JSON tenha alguma quebra de linha não escapada
   const extractField = (key: string): string => {
     const regex = new RegExp(`"${key}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"`, "i");
-    const match = clean.match(regex);
+    const match = cleanJson.match(regex);
     if (match?.[1]) {
       return sanitizeAiText(
         match[1]
@@ -82,33 +92,34 @@ export function extractValidJson(raw: string): Record<string, any> {
     return "";
   };
 
-  const title = extractField("title");
-  const content = extractField("content");
-  const keywords = extractField("keywords") || extractField("tags");
+  const title = extractField("title") || fallbackData?.title || "";
+  const content = extractField("content") || fallbackData?.content || "";
+  const keywords =
+    extractField("keywords") ||
+    extractField("tags") ||
+    fallbackData?.keywords ||
+    "";
   const meta_description =
-    extractField("meta_description") || extractField("metaDescription");
+    extractField("meta_description") ||
+    extractField("metaDescription") ||
+    fallbackData?.meta_description ||
+    "";
   const cta_type = extractField("cta_type") || extractField("ctaType");
   const cta_label = extractField("cta_label") || extractField("ctaLabel");
 
-  if (title && content) {
-    return {
-      title,
-      content,
-      keywords,
-      meta_description,
-      cta_type: cta_type || undefined,
-      cta_label: cta_label || undefined,
-    };
-  }
-
-  throw new Error(
-    "A resposta da IA não retornou um formato JSON válido. Tente novamente."
-  );
+  return {
+    title,
+    content,
+    keywords,
+    meta_description,
+    cta_type: cta_type || undefined,
+    cta_label: cta_label || undefined,
+  };
 }
 
 /**
- * Invoca a API do Google Generative AI (Gemini) priorizando modelos estáveis e rápidos
- * e forçando responseMimeType: application/json.
+ * Invoca a API do Google Generative AI (Gemini) com timeout estrito (máx 12s)
+ * para nunca travar a requisição no servidor.
  */
 export async function generateContentWithGemini(
   promptText: string,
@@ -120,74 +131,51 @@ export async function generateContentWithGemini(
     throw new Error("GEMINI_API_KEY não configurada no servidor.");
   }
 
-  let availableModels: string[] = [];
-
-  try {
-    const listRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
-    );
-    if (listRes.ok) {
-      const listData = await listRes.json();
-      availableModels = (listData.models || [])
-        .filter((m: any) =>
-          m.supportedGenerationMethods?.includes("generateContent")
-        )
-        .map((m: any) => m.name.replace("models/", ""));
-    }
-  } catch (e) {
-    console.warn("Não foi possível listar modelos dinamicamente:", e);
-  }
-
-  // Prioriza gemini-2.0-flash e gemini-1.5-flash para JSON rápido sem desperdício de tokens de raciocínio
-  const preferredOrder = [
+  const candidateModels = [
     "gemini-2.0-flash",
-    "gemini-2.0-flash-lite",
     "gemini-1.5-flash",
-    "gemini-1.5-flash-latest",
     "gemini-2.5-flash",
   ];
 
-  const candidateModels = Array.from(
-    new Set([
-      ...preferredOrder.filter(
-        (m) => availableModels.length === 0 || availableModels.includes(m)
-      ),
-      ...availableModels.filter((m) => m.includes("flash")),
-      ...preferredOrder,
-    ])
-  );
-
+  const totalTimeoutMs = options?.timeoutMs ?? 12000;
+  const startedAt = Date.now();
   let generatedText = "";
   let lastError: any = null;
 
   for (const modelToCall of candidateModels) {
+    const elapsed = Date.now() - startedAt;
+    const remainingMs = totalTimeoutMs - elapsed;
+    if (remainingMs <= 1000) {
+      break;
+    }
+
+    const controller = new AbortController();
+    const perModelTimeout = Math.min(remainingMs, 7500);
+    const timer = setTimeout(() => controller.abort(), perModelTimeout);
+
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelToCall}:generateContent?key=${apiKey}`;
 
       const generationConfig: Record<string, any> = {
-        temperature: options?.temperature ?? 0.65,
-        maxOutputTokens: options?.maxOutputTokens ?? 3072,
+        temperature: options?.temperature ?? 0.75,
+        maxOutputTokens: options?.maxOutputTokens ?? 2048,
         responseMimeType: options?.responseMimeType ?? "application/json",
       };
-
-      if (options?.responseSchema) {
-        generationConfig.responseSchema = options.responseSchema;
-      }
 
       const response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           contents: [{ parts: [{ text: promptText }] }],
           generationConfig,
         }),
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
       if (response.ok && data?.candidates?.[0]?.content?.parts) {
         const parts = data.candidates[0].content.parts;
-        // Concatena ou pega a parte que contém o JSON
         const jsonPart =
           parts.find(
             (p: any) => typeof p.text === "string" && p.text.includes("{")
@@ -195,6 +183,7 @@ export async function generateContentWithGemini(
 
         if (jsonPart?.text) {
           generatedText = jsonPart.text;
+          clearTimeout(timer);
           break;
         }
       } else {
@@ -204,13 +193,18 @@ export async function generateContentWithGemini(
         console.warn(`[gemini] Falha com modelo ${modelToCall}:`, lastError);
       }
     } catch (err: any) {
-      lastError = err?.message || String(err);
+      lastError =
+        err?.name === "AbortError"
+          ? `Timeout ao aguardar resposta do modelo ${modelToCall}`
+          : err?.message || String(err);
       console.warn(`[gemini] Exceção com modelo ${modelToCall}:`, lastError);
+    } finally {
+      clearTimeout(timer);
     }
   }
 
   if (!generatedText) {
-    throw new Error(lastError || "A IA não retornou conteúdo textual válido.");
+    throw new Error(lastError || "A IA não retornou conteúdo textual dentro do tempo limite.");
   }
 
   return generatedText.trim();

@@ -672,10 +672,10 @@ async function fetchTenantRecentPostsHistory(
   const titlesSet = new Set<string>();
   const imagesSet = new Set<string>();
 
-  for (const t of extraTitles) {
+  for (const t of extraTitles || []) {
     if (t && t.trim()) titlesSet.add(t.trim());
   }
-  for (const img of extraImages) {
+  for (const img of extraImages || []) {
     if (img && img.trim()) imagesSet.add(img.trim());
   }
 
@@ -687,11 +687,12 @@ async function fetchTenantRecentPostsHistory(
       .order("created_at", { ascending: false })
       .limit(10);
 
-    if (Array.isArray(tenantPosts)) {
-      for (const p of tenantPosts) {
-        if (p?.title) titlesSet.add(String(p.title).trim());
-        if (p?.image_url) imagesSet.add(String(p.image_url).trim());
-      }
+    const safeTenantTitles = (tenantPosts || []).map((p: any) => p?.title);
+    for (const title of safeTenantTitles) {
+      if (title) titlesSet.add(String(title).trim());
+    }
+    for (const p of tenantPosts || []) {
+      if (p?.image_url) imagesSet.add(String(p.image_url).trim());
     }
   } catch {
     // prossegue silenciosamente
@@ -705,11 +706,12 @@ async function fetchTenantRecentPostsHistory(
       .order("created_at", { ascending: false })
       .limit(10);
 
-    if (Array.isArray(existingPosts)) {
-      for (const p of existingPosts) {
-        if (p?.title) titlesSet.add(String(p.title).trim());
-        if (p?.cover_image) imagesSet.add(String(p.cover_image).trim());
-      }
+    const existingTitlesFromPosts = (existingPosts || []).map((p: any) => p?.title);
+    for (const title of existingTitlesFromPosts) {
+      if (title) titlesSet.add(String(title).trim());
+    }
+    for (const p of existingPosts || []) {
+      if (p?.cover_image) imagesSet.add(String(p.cover_image).trim());
     }
   } catch {
     // prossegue caso a tabela 'posts' seja representada por 'tenant_posts'
@@ -719,6 +721,109 @@ async function fetchTenantRecentPostsHistory(
     existingTitles: Array.from(titlesSet),
     existingImages: Array.from(imagesSet),
   };
+}
+
+/**
+ * Fallback estruturado e calibrado por nicho caso a API do Gemini falhe no parse ou atinja timeout.
+ * Garante que a requisição NUNCA falhe sem resposta e NUNCA repita títulos anteriores.
+ */
+function buildStructuredNicheFallbackPost(params: {
+  niche: string;
+  businessName: string;
+  targetCity: string;
+  freshSubtopic: string;
+  existingTitles: string[];
+}): {
+  title: string;
+  content: string;
+  keywords: string;
+  meta_description: string;
+} {
+  const bucketKey = resolveBucketKeyForNiche(params.niche);
+  const city = params.targetCity || "sua cidade";
+  const name = params.businessName || "nossa equipe";
+  const usedLower = (params.existingTitles || []).map((t) => t.toLowerCase());
+
+  const fallbackTemplates: Record<
+    string,
+    Array<{
+      title: string;
+      content: string;
+      keywords: string;
+      meta_description: string;
+    }>
+  > = {
+    automotive: [
+      {
+        title: `Troca de Óleo e Filtros em ${city}: Proteja o Motor do Seu Carro`,
+        content: `Manter a troca de óleo lubrificante e dos filtros de óleo, ar e combustível rigorosamente no prazo é o cuidado mais importante para evitar a formação de borra e o superaquecimento do motor.\n\nNa ${name}, em ${city}, utilizamos lubrificantes na especificação exata da montadora e realizamos uma checagem preventiva completa. Solicite seu orçamento rápido pela placa ou fale com nossa equipe no WhatsApp!`,
+        keywords: `troca de óleo, revisão automotiva, filtro de óleo, oficina mecânica, ${city}`,
+        meta_description: `Saiba quando trocar o óleo e os filtros do seu veículo em ${city} com a equipe da ${name}.`,
+      },
+      {
+        title: `Sinais de Desgaste nos Freios: Faça sua Revisão em ${city}`,
+        content: `Notou ruído metálico ao pisar no freio, pedal mais baixo ou trepidação no volante em frenagens? Esses sintomas indicam desgaste nas pastilhas, discos ou necessidade de substituição do fluido de freio.\n\nGaranta a segurança da sua família nas ruas e estradas: traga seu veículo até a ${name} em ${city} para uma inspeção técnica transparente do sistema de freios.`,
+        keywords: `revisão de freios, pastilha de freio, disco de freio, segurança automotiva, ${city}`,
+        meta_description: `Identifique sinais de desgaste nas pastilhas e discos de freio e agende uma avaliação em ${city}.`,
+      },
+      {
+        title: `Barulho na Suspensão ao Passar em Buracos? Avaliação em ${city}`,
+        content: `Estalos, batidas secas ou carro puxando para o lado são sinais de folga em amortecedores, buchas, bieletas ou pivôs da suspensão. Rodar com a suspensão comprometida acelera o desgaste dos pneus e reduz a estabilidade.\n\nNa ${name}, em ${city}, fazemos o diagnóstico completo de suspensão e direção para devolver o conforto e a segurança ao seu veículo.`,
+        keywords: `suspensão automotiva, amortecedores, alinhamento, direção, ${city}`,
+        meta_description: `Barulhos na suspensão ou direção instável? Confira como cuidar dos amortecedores e buchas em ${city}.`,
+      },
+      {
+        title: `Sistema de Arrefecimento e Radiador: Evite Superaquecimento`,
+        content: `O controle da temperatura do motor depende diretamente da água desmineralizada com aditivo na proporção correta, além de mangueiras e válvula termostática em perfeito estado.\n\nPrevina panes graves na estrada! A equipe da ${name} em ${city} realiza a limpeza e revisão completa do sistema de arrefecimento do seu carro com garantia e precisão.`,
+        keywords: `arrefecimento, limpeza de radiador, aditivo de radiador, revisão preventiva, ${city}`,
+        meta_description: `Evite o superaquecimento do motor com a revisão do sistema de arrefecimento e radiador em ${city}.`,
+      },
+      {
+        title: `Embreagem Dura ou Patinando? Diagnóstico Especializado em ${city}`,
+        content: `Se o pedal da embreagem está pesado, alto demais ou o motor sobe de giro sem ganhar velocidade nas subidas, o kit de embreagem pode estar no fim da vida útil.\n\nConte com a ${name} em ${city} para avaliar o sistema de transmissão e embreagem do seu veículo com orçamento transparente por placa.`,
+        keywords: `kit de embreagem, câmbio automotivo, pedal duro, mecânica especializada, ${city}`,
+        meta_description: `Pedal de embreagem duro ou patinando? Solicite um diagnóstico mecânico em ${city} com a ${name}.`,
+      },
+    ],
+    petshop: [
+      {
+        title: `Banho e Tosa Higiênica em ${city}: Saúde e Bem-Estar para seu Pet`,
+        content: `A higiene regular com produtos específicos para cães e gatos previne dermatites, elimina nós na pelagem e mantém seu melhor amigo sempre confortável e cheiroso.\n\nNa ${name}, em ${city}, cuidamos do seu pet com carinho, toalhas esterilizadas e profissionais apaixonados por animais. Agende o horário do seu pet!`,
+        keywords: `banho e tosa, pet shop, higiene pet, cuidados com cães e gatos, ${city}`,
+        meta_description: `Banho e tosa com carinho e segurança para cães e gatos em ${city} é na ${name}.`,
+      },
+      {
+        title: `Cuidados Preventivos e Vacinação Pet em ${city}: Proteja quem Você Ama`,
+        content: `Manter o calendário de vacinação, vermifugação e controle de pulgas e carrapatos em dia é essencial para garantir uma vida longa e saudável ao seu cão ou gato.\n\nConte com a equipe da ${name} em ${city} para orientar a rotina de saúde e nutrição ideal para o seu pet em todas as fases da vida.`,
+        keywords: `saúde pet, vacinação animal, prevenção de pulgas, clínica pet, ${city}`,
+        meta_description: `Mantenha a saúde, vacinação e prevenção do seu pet em dia com a ${name} em ${city}.`,
+      },
+    ],
+    barbearia: [
+      {
+        title: `Corte Degradê e Barba Alinhada em ${city}: Estilo Impecável`,
+        content: `Um corte bem executado e a barba hidratada com toalha quente fazem toda a diferença na sua apresentação pessoal no trabalho e nos momentos de lazer.\n\nNa ${name}, em ${city}, unimos técnicas modernas de visagismo e produtos premium. Reserve seu horário online sem filas!`,
+        keywords: `barbearia, corte degradê, barba com toalha quente, estilo masculino, ${city}`,
+        meta_description: `Agende seu corte degradê e alinhamento de barba com toalha quente na ${name} em ${city}.`,
+      },
+    ],
+    default: [
+      {
+        title: `Atendimento Especializado em ${city}: Qualidade e Confiança`,
+        content: `Cuidar de cada detalhe com transparência, pontualidade e materiais de alto padrão é o nosso compromisso diário com você.\n\nEntre em contato com a equipe da ${name} em ${city} e agende seu atendimento com praticidade pelo site ou WhatsApp!`,
+        keywords: `atendimento especializado, serviços de qualidade, agendamento rápido, ${name}, ${city}`,
+        meta_description: `Conheça os serviços especializados da ${name} em ${city} e agende seu atendimento.`,
+      },
+    ],
+  };
+
+  const candidates =
+    fallbackTemplates[bucketKey] || fallbackTemplates.default;
+  const unused = candidates.filter(
+    (c) => !usedLower.includes(c.title.toLowerCase())
+  );
+  const pool = unused.length > 0 ? unused : candidates;
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 /**
@@ -869,41 +974,75 @@ FORMATO EXATO DO JSON:
   "meta_description": "..."
 }`;
 
-    const generatedText = await generateContentWithGemini(prompt, {
-      apiKey,
-      temperature: 0.85,
-      maxOutputTokens: 2048,
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: "OBJECT",
-        properties: {
-          title: { type: "STRING" },
-          content: { type: "STRING" },
-          keywords: { type: "STRING" },
-          meta_description: { type: "STRING" },
-        },
-        required: ["title", "content", "keywords", "meta_description"],
-      },
+    const fallbackTemplate = buildStructuredNicheFallbackPost({
+      niche: resolvedNiche,
+      businessName,
+      targetCity,
+      freshSubtopic,
+      existingTitles,
     });
 
-    const postData = extractValidJson(generatedText);
+    let postData: Record<string, any> = fallbackTemplate;
+    let sourceUsed: "gemini" | "fallback" = "gemini";
+
+    try {
+      const responseText = await generateContentWithGemini(prompt, {
+        apiKey,
+        temperature: 0.8,
+        maxOutputTokens: 2048,
+        responseMimeType: "application/json",
+        timeoutMs: 11500,
+      });
+
+      // Limpeza obrigatória de delimitadores markdown antes do parse
+      let cleanJson = (responseText || "")
+        .replace(/```json/gi, "")
+        .replace(/```/g, "")
+        .trim();
+
+      const firstBrace = cleanJson.indexOf("{");
+      const lastBrace = cleanJson.lastIndexOf("}");
+      if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+        cleanJson = cleanJson.substring(firstBrace, lastBrace + 1);
+      }
+
+      try {
+        const parsed = JSON.parse(cleanJson);
+        if (parsed && typeof parsed === "object" && parsed.title && parsed.content) {
+          postData = parsed;
+        } else {
+          postData = extractValidJson(responseText, fallbackTemplate);
+        }
+      } catch (parseErr) {
+        console.warn("[generateLocalSeoPost] JSON.parse falhou, usando parser/fallback:", parseErr);
+        postData = extractValidJson(responseText, fallbackTemplate);
+      }
+    } catch (aiErr) {
+      console.warn(
+        "[generateLocalSeoPost] Timeout ou falha na API Gemini, utilizando fallback estruturado do nicho:",
+        aiErr
+      );
+      postData = fallbackTemplate;
+      sourceUsed = "fallback";
+    }
 
     const parsedTitle =
-      sanitizeAiText(postData.title) ||
-      (resolvedNiche === "automotive"
-        ? `Manutenção em Dia em ${targetCity}: ${freshSubtopic.slice(0, 38)}`
-        : `Dica Especializada em ${targetCity}: ${freshSubtopic.slice(0, 38)}`);
+      sanitizeAiText(postData.title) || fallbackTemplate.title;
 
-    const parsedContent = sanitizeAiText(postData.content) || "";
-    const rawKeywords = postData.keywords || postData.tags || "";
+    const parsedContent =
+      sanitizeAiText(postData.content) || fallbackTemplate.content;
+    const rawKeywords =
+      postData.keywords || postData.tags || fallbackTemplate.keywords;
     const parsedTags =
       typeof rawKeywords === "string"
         ? sanitizeAiText(rawKeywords)
         : Array.isArray(rawKeywords)
         ? rawKeywords.map((k: string) => sanitizeAiText(k)).join(", ")
-        : "";
+        : fallbackTemplate.keywords;
     const parsedMetaDesc = sanitizeAiText(
-      postData.meta_description || postData.metaDescription || ""
+      postData.meta_description ||
+        postData.metaDescription ||
+        fallbackTemplate.meta_description
     ).slice(0, 160);
 
     // 5. Seleciona ou gera imagem baseada na descrição exata do novo post, garantindo que NÃO esteja em existingImages
@@ -923,7 +1062,7 @@ FORMATO EXATO DO JSON:
         ctaType: nicheContext.defaultCtaType,
         ctaLabel: nicheContext.defaultCtaLabel,
         imageUrl: selectedImage.url,
-        source: "gemini",
+        source: sourceUsed,
         pillar: selectedPillar.name,
       },
     };
@@ -994,8 +1133,10 @@ export async function generatePostCoverImageAction(input?: {
 
     const apiKey = process.env.GEMINI_API_KEY;
 
-    // 2. Tenta gerar imagem exclusiva via Gemini Imagen 3 usando a descrição exata do post + semente randômica
+    // 2. Tenta gerar imagem exclusiva via Gemini Imagen 3 usando a descrição exata do post + semente randômica (timeout 6s)
     if (apiKey) {
+      const imagenController = new AbortController();
+      const imagenTimer = setTimeout(() => imagenController.abort(), 6000);
       try {
         const subjectPrompt =
           resolvedNiche === "automotive"
@@ -1007,6 +1148,7 @@ export async function generatePostCoverImageAction(input?: {
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+            signal: imagenController.signal,
             body: JSON.stringify({
               instances: [{ prompt: subjectPrompt }],
               parameters: {
@@ -1042,6 +1184,7 @@ export async function generatePostCoverImageAction(input?: {
                 .from("establishment-photos")
                 .getPublicUrl(filePath);
               if (pubData?.publicUrl) {
+                clearTimeout(imagenTimer);
                 return { success: true, imageUrl: pubData.publicUrl };
               }
             }
@@ -1049,6 +1192,8 @@ export async function generatePostCoverImageAction(input?: {
         }
       } catch (imgErr) {
         console.warn("[generatePostCoverImageAction] Fallback curado ativado:", imgErr);
+      } finally {
+        clearTimeout(imagenTimer);
       }
     }
 
@@ -1059,8 +1204,12 @@ export async function generatePostCoverImageAction(input?: {
       existingImages
     );
 
+    const dlController = new AbortController();
+    const dlTimer = setTimeout(() => dlController.abort(), 5000);
     try {
-      const imgResponse = await fetch(selectedCandidate.url);
+      const imgResponse = await fetch(selectedCandidate.url, {
+        signal: dlController.signal,
+      });
       if (imgResponse.ok) {
         const arrayBuffer = await imgResponse.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
@@ -1080,6 +1229,7 @@ export async function generatePostCoverImageAction(input?: {
             .from("establishment-photos")
             .getPublicUrl(filePath);
           if (pubData?.publicUrl) {
+            clearTimeout(dlTimer);
             return { success: true, imageUrl: pubData.publicUrl };
           }
         }
@@ -1089,6 +1239,8 @@ export async function generatePostCoverImageAction(input?: {
         "[generatePostCoverImageAction] Retornando URL direta:",
         storageErr
       );
+    } finally {
+      clearTimeout(dlTimer);
     }
 
     return {

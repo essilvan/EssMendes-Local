@@ -142,6 +142,8 @@ export function PostsManager({
   } | null>(null);
 
   const [isPending, startTransition] = useTransition();
+  const [isLoading, setIsLoading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [isGeneratingImageAi, setIsGeneratingImageAi] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
@@ -175,10 +177,16 @@ export function PostsManager({
   };
 
   const handleGenerateAiPost = async () => {
-    if (isGeneratingAi || isPending) return;
+    if (isGeneratingAi || isGenerating || isLoading || isPending) return;
+    setIsLoading(true);
+    setIsGenerating(true);
     setIsGeneratingAi(true);
     setFeedback(null);
     setImageError(null);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     try {
       const excludeTitles = Array.from(
         new Set(
@@ -199,29 +207,55 @@ export function PostsManager({
         )
       );
 
-      const res = await generateLocalSeoPost({
-        niche: tenantNiche,
-        excludeTitles,
-        excludeImageUrls,
+      const response = await fetch("/api/ai/generate-post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({
+          niche: tenantNiche,
+          excludeTitles,
+          excludeImageUrls,
+        }),
       });
-      if (res.success && res.data) {
-        setTitle(res.data.title);
-        setContent(res.data.content);
-        setTags(res.data.tags || "");
-        setMetaDescription(res.data.metaDescription || "");
-        setCtaType(res.data.ctaType);
-        setCtaLabel(res.data.ctaLabel);
-        setSessionTitles((prev) =>
-          Array.from(new Set([...prev, res.data!.title]))
-        );
-        if (res.data.imageUrl) {
-          setImageUrl(res.data.imageUrl);
+
+      const res = await response.json().catch(() => null);
+      const generated = res?.data || res?.post;
+
+      if (response.ok && res?.success && generated) {
+        const nextTitle = generated.title || "";
+        const nextContent = generated.content || "";
+        const nextTags = generated.tags || generated.keywords || "";
+        const nextMeta =
+          generated.metaDescription || generated.meta_description || "";
+        const nextCtaType =
+          generated.ctaType ||
+          generated.cta_type ||
+          (isAutomotive ? "whatsapp" : "booking");
+        const nextCtaLabel =
+          generated.ctaLabel ||
+          generated.cta_label ||
+          (isAutomotive ? "Solicitar Orçamento no WhatsApp" : "Agendar Horário");
+        const nextImage = generated.imageUrl || generated.image_url || "";
+
+        setTitle(nextTitle);
+        setContent(nextContent);
+        setTags(nextTags);
+        setMetaDescription(nextMeta);
+        setCtaType(nextCtaType);
+        setCtaLabel(nextCtaLabel);
+        if (nextTitle) {
+          setSessionTitles((prev) =>
+            Array.from(new Set([...prev, nextTitle]))
+          );
+        }
+        if (nextImage) {
+          setImageUrl(nextImage);
           setSessionImages((prev) =>
-            Array.from(new Set([...prev, res.data!.imageUrl!]))
+            Array.from(new Set([...prev, nextImage]))
           );
         }
         setIsAdding(true);
-        const pillarInfo = res.data.pillar ? ` [${res.data.pillar}]` : "";
+        const pillarInfo = generated.pillar ? ` [${generated.pillar}]` : "";
         setFeedback({
           type: "success",
           message: `✨ Publicação inédita gerada com IA${pillarInfo}! Os campos e a imagem de capa foram preenchidos abaixo. Revise e clique em "Postar Agora".`,
@@ -229,15 +263,23 @@ export function PostsManager({
       } else {
         setFeedback({
           type: "error",
-          message: res.error || "Não foi possível gerar o post com IA.",
+          message:
+            res?.error ||
+            "Não foi possível gerar no momento. Tente novamente em alguns segundos.",
         });
       }
-    } catch (err) {
+    } catch (err: any) {
       setFeedback({
         type: "error",
-        message: "Erro ao comunicar com a IA para criar o post.",
+        message:
+          err?.name === "AbortError"
+            ? "Não foi possível gerar no momento (tempo limite excedido). Tente novamente em alguns segundos."
+            : "Não foi possível gerar no momento. Tente novamente em alguns segundos.",
       });
     } finally {
+      clearTimeout(timeoutId);
+      setIsLoading(false);
+      setIsGenerating(false);
       setIsGeneratingAi(false);
     }
   };
@@ -249,6 +291,10 @@ export function PostsManager({
     if (isGeneratingImageAi || isUploadingPhoto || isPending) return;
     setIsGeneratingImageAi(true);
     setImageError(null);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     try {
       const excludeImageUrls = Array.from(
         new Set(
@@ -260,14 +306,26 @@ export function PostsManager({
         )
       );
 
-      const res = await generatePostCoverImageAction({
-        title: title || (isAutomotive ? "Revisão Preventiva Automotiva" : "Serviço Especializado"),
-        content,
-        niche: tenantNiche,
-        excludeImageUrls,
+      const response = await fetch("/api/ai/generate-post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({
+          action: "generate_image",
+          title:
+            title ||
+            (isAutomotive
+              ? "Revisão Preventiva Automotiva"
+              : "Serviço Especializado"),
+          content,
+          niche: tenantNiche,
+          excludeImageUrls,
+        }),
       });
 
-      if (res.success && res.imageUrl) {
+      const res = await response.json().catch(() => null);
+
+      if (response.ok && res?.success && res?.imageUrl) {
         setImageUrl(res.imageUrl);
         setSessionImages((prev) =>
           Array.from(new Set([...prev, res.imageUrl!]))
@@ -278,11 +336,17 @@ export function PostsManager({
             "✨ Nova imagem ilustrativa gerada com IA e aplicada na capa com sucesso!",
         });
       } else {
-        setImageError(res.error || "Não foi possível gerar a imagem com IA.");
+        setImageError(
+          res?.error ||
+            "Não foi possível gerar a imagem no momento. Tente novamente em alguns segundos."
+        );
       }
     } catch (err) {
-      setImageError("Erro ao gerar imagem ilustrativa com IA.");
+      setImageError(
+        "Não foi possível gerar a imagem no momento. Tente novamente em alguns segundos."
+      );
     } finally {
+      clearTimeout(timeoutId);
       setIsGeneratingImageAi(false);
     }
   };
