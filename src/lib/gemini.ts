@@ -3,15 +3,34 @@ export interface GenerateGeminiOptions {
   temperature?: number;
   maxOutputTokens?: number;
   responseMimeType?: string;
+  responseSchema?: Record<string, any>;
+}
+
+/**
+ * Remove frases vazadas de engenharia de prompt, placeholders ou instruções em inglês
+ */
+export function sanitizeAiText(text: string): string {
+  if (!text || typeof text !== "string") return "";
+  return text
+    .replace(/```json/gi, "")
+    .replace(/```/g, "")
+    .replace(/SEO Local Specialist and Copywriter[.:,-]?\s*/gi, "")
+    .replace(/SEO Specialist[.:,-]?\s*/gi, "")
+    .replace(/Copywriter[.:,-]?\s*/gi, "")
+    .replace(/will use a placeholder[^.\n]*[.\n]?/gi, "")
+    .replace(/\[placeholder[^\]]*\]/gi, "")
+    .replace(/\(placeholder[^)]*\)/gi, "")
+    .replace(/^["'\s]+|["'\s]+$/g, "")
+    .trim();
 }
 
 /**
  * Função de higienização defensiva antes do JSON.parse()
  * Remove cercas de markdown (```json), isola o objeto JSON entre chaves {}
- * e fornece fallback estruturado se o JSON estiver truncado ou malformado.
+ * e extrai campos individualmente caso o JSON tenha sofrido corte.
  */
-export function extractValidJson(raw: string) {
-  let clean = raw.trim();
+export function extractValidJson(raw: string): Record<string, any> {
+  let clean = (raw || "").trim();
 
   // Remove cercas de código markdown se vierem incluídas
   if (clean.startsWith("```json")) {
@@ -29,21 +48,67 @@ export function extractValidJson(raw: string) {
   }
 
   try {
-    return JSON.parse(clean);
+    const parsed = JSON.parse(clean);
+    if (parsed && typeof parsed === "object") {
+      return {
+        ...parsed,
+        title: sanitizeAiText(parsed.title || ""),
+        content: sanitizeAiText(parsed.content || ""),
+        keywords:
+          typeof parsed.keywords === "string"
+            ? sanitizeAiText(parsed.keywords)
+            : parsed.keywords,
+        meta_description: sanitizeAiText(
+          parsed.meta_description || parsed.metaDescription || ""
+        ),
+      };
+    }
   } catch (err) {
-    console.warn("Falha no JSON.parse direto, a usar fallback estruturado:", clean);
+    console.warn("[extractValidJson] Tentando extração por regex de campos JSON...");
+  }
+
+  // Extração segura campo a campo por regex caso o JSON tenha alguma quebra de linha não escapada
+  const extractField = (key: string): string => {
+    const regex = new RegExp(`"${key}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"`, "i");
+    const match = clean.match(regex);
+    if (match?.[1]) {
+      return sanitizeAiText(
+        match[1]
+          .replace(/\\n/g, "\n")
+          .replace(/\\"/g, '"')
+          .replace(/\\\\/g, "\\")
+      );
+    }
+    return "";
+  };
+
+  const title = extractField("title");
+  const content = extractField("content");
+  const keywords = extractField("keywords") || extractField("tags");
+  const meta_description =
+    extractField("meta_description") || extractField("metaDescription");
+  const cta_type = extractField("cta_type") || extractField("ctaType");
+  const cta_label = extractField("cta_label") || extractField("ctaLabel");
+
+  if (title && content) {
     return {
-      title: clean.split("\n")[0].replace(/[#*"]/g, "").trim(),
-      content: clean.replace(/[{}"\\]/g, "").trim(),
-      keywords: "serviço especializado, atendimento, novidades",
-      meta_description: clean.slice(0, 150).replace(/[#*"\n]/g, " ").trim(),
+      title,
+      content,
+      keywords,
+      meta_description,
+      cta_type: cta_type || undefined,
+      cta_label: cta_label || undefined,
     };
   }
+
+  throw new Error(
+    "A resposta da IA não retornou um formato JSON válido. Tente novamente."
+  );
 }
 
 /**
- * Invoca a API do Google Generative AI (Gemini) descobrindo em tempo real os modelos suportados
- * via ListModels (v1beta/models) e forçando responseMimeType: application/json.
+ * Invoca a API do Google Generative AI (Gemini) priorizando modelos estáveis e rápidos
+ * e forçando responseMimeType: application/json.
  */
 export async function generateContentWithGemini(
   promptText: string,
@@ -55,8 +120,6 @@ export async function generateContentWithGemini(
     throw new Error("GEMINI_API_KEY não configurada no servidor.");
   }
 
-  // 1. Descobrir dinamicamente os modelos disponíveis para esta chave
-  let targetModel = "gemini-2.0-flash";
   let availableModels: string[] = [];
 
   try {
@@ -66,61 +129,78 @@ export async function generateContentWithGemini(
     if (listRes.ok) {
       const listData = await listRes.json();
       availableModels = (listData.models || [])
-        .filter((m: any) => m.supportedGenerationMethods?.includes("generateContent"))
+        .filter((m: any) =>
+          m.supportedGenerationMethods?.includes("generateContent")
+        )
         .map((m: any) => m.name.replace("models/", ""));
-
-      // Prioriza modelos flash ou o primeiro disponível
-      const foundFlash = availableModels.find((name: string) => name.includes("flash"));
-      if (foundFlash) {
-        targetModel = foundFlash;
-      } else if (availableModels.length > 0) {
-        targetModel = availableModels[0];
-      }
     }
   } catch (e) {
-    console.warn("Não foi possível listar modelos dinamicamente, usando fallback:", e);
+    console.warn("Não foi possível listar modelos dinamicamente:", e);
   }
 
-  // Monta lista de tentativa iniciando pelo modelo descoberto e outros disponíveis
+  // Prioriza gemini-2.0-flash e gemini-1.5-flash para JSON rápido sem desperdício de tokens de raciocínio
+  const preferredOrder = [
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-lite",
+    "gemini-1.5-flash",
+    "gemini-1.5-flash-latest",
+    "gemini-2.5-flash",
+  ];
+
   const candidateModels = Array.from(
     new Set([
-      targetModel,
-      ...availableModels.filter((m) => m !== targetModel),
-      "gemini-2.5-flash",
-      "gemini-2.0-flash",
-      "gemini-1.5-flash-latest",
+      ...preferredOrder.filter(
+        (m) => availableModels.length === 0 || availableModels.includes(m)
+      ),
+      ...availableModels.filter((m) => m.includes("flash")),
+      ...preferredOrder,
     ])
   );
 
   let generatedText = "";
   let lastError: any = null;
 
-  // 2. Chamar o modelo descoberto forçando resposta como JSON puro
   for (const modelToCall of candidateModels) {
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelToCall}:generateContent?key=${apiKey}`;
+
+      const generationConfig: Record<string, any> = {
+        temperature: options?.temperature ?? 0.65,
+        maxOutputTokens: options?.maxOutputTokens ?? 3072,
+        responseMimeType: options?.responseMimeType ?? "application/json",
+      };
+
+      if (options?.responseSchema) {
+        generationConfig.responseSchema = options.responseSchema;
+      }
 
       const response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [{ parts: [{ text: promptText }] }],
-          generationConfig: {
-            temperature: options?.temperature ?? 0.7,
-            maxOutputTokens: options?.maxOutputTokens ?? 1500,
-            responseMimeType: options?.responseMimeType ?? "application/json",
-          },
+          generationConfig,
         }),
       });
 
       const data = await response.json();
 
-      if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-        generatedText = data.candidates[0].content.parts[0].text;
-        break; // Sucesso, sai do loop
+      if (response.ok && data?.candidates?.[0]?.content?.parts) {
+        const parts = data.candidates[0].content.parts;
+        // Concatena ou pega a parte que contém o JSON
+        const jsonPart =
+          parts.find(
+            (p: any) => typeof p.text === "string" && p.text.includes("{")
+          ) || parts[parts.length - 1];
+
+        if (jsonPart?.text) {
+          generatedText = jsonPart.text;
+          break;
+        }
       } else {
         lastError =
-          data?.error?.message || `Erro HTTP ${response.status} no modelo ${modelToCall}`;
+          data?.error?.message ||
+          `Erro HTTP ${response.status} no modelo ${modelToCall}`;
         console.warn(`[gemini] Falha com modelo ${modelToCall}:`, lastError);
       }
     } catch (err: any) {

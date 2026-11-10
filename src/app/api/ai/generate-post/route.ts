@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { generateLocalSeoPost } from "@/services/ai-post.actions";
+import {
+  generateLocalSeoPost,
+  generatePostCoverImageAction,
+} from "@/services/ai-post.actions";
 import { generateContentWithGemini, extractValidJson } from "@/lib/gemini";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +21,16 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json().catch(() => ({}));
+
+    // Se solicitado apenas geração de imagem de capa com IA:
+    if (body?.action === "generate_image") {
+      const imgResult = await generatePostCoverImageAction({
+        title: body.title,
+        content: body.content,
+        niche: body.niche,
+      });
+      return NextResponse.json(imgResult);
+    }
 
     // Se enviado promptText diretamente:
     if (body?.promptText) {
@@ -41,6 +54,7 @@ export async function POST(request: Request) {
           meta_description: result.data.metaDescription,
           cta_type: result.data.ctaType,
           cta_label: result.data.ctaLabel,
+          image_url: result.data.imageUrl,
         }
       : undefined;
 

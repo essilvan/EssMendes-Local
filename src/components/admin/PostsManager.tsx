@@ -1,12 +1,17 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useState, useRef, useTransition } from "react";
 import {
   createPostAction,
   deletePostAction,
   togglePostStatusAction,
 } from "@/services/post.actions";
-import { generateLocalSeoPost } from "@/services/ai-post.actions";
+import {
+  generateLocalSeoPost,
+  generatePostCoverImageAction,
+  uploadPostCoverPhotoAction,
+} from "@/services/ai-post.actions";
+import { createClient } from "@/lib/supabase/client";
 import type { TenantPost } from "@/types";
 import {
   Newspaper,
@@ -22,18 +27,98 @@ import {
   Eye,
   EyeOff,
   Image as ImageIcon,
+  Camera,
+  Wand2,
+  RefreshCw,
+  X,
   Tag,
   Globe,
   Search,
 } from "lucide-react";
-import { ImageUpload } from "@/components/ui/ImageUpload";
 
 interface PostsManagerProps {
   initialPosts: TenantPost[];
   slug: string;
+  tenantNiche?: string;
+  tenantId?: string;
 }
 
-export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
+/**
+ * Comprime a imagem no front-end via HTML5 Canvas (máximo 1280px de largura, qualidade 0.75 WebP/JPEG)
+ */
+async function compressImageViaCanvas(
+  file: File,
+  maxWidth = 1280,
+  quality = 0.75
+): Promise<{ blob: Blob; ext: "webp" | "jpg"; mimeType: string }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Falha ao ler arquivo de imagem."));
+    reader.onload = (event) => {
+      const img = new window.Image();
+      img.onerror = () => reject(new Error("Arquivo de imagem inválido."));
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Não foi possível inicializar o Canvas de compressão."));
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Tenta comprimir em WebP primeiro; se o navegador não suportar, usa JPEG
+        canvas.toBlob(
+          (webpBlob) => {
+            if (webpBlob && webpBlob.type === "image/webp") {
+              resolve({ blob: webpBlob, ext: "webp", mimeType: "image/webp" });
+            } else {
+              canvas.toBlob(
+                (jpegBlob) => {
+                  if (jpegBlob) {
+                    resolve({ blob: jpegBlob, ext: "jpg", mimeType: "image/jpeg" });
+                  } else {
+                    reject(new Error("Falha ao comprimir imagem no Canvas."));
+                  }
+                },
+                "image/jpeg",
+                quality
+              );
+            }
+          },
+          "image/webp",
+          quality
+        );
+      };
+      img.src = String(event.target?.result || "");
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+export function PostsManager({
+  initialPosts,
+  slug,
+  tenantNiche = "general",
+  tenantId,
+}: PostsManagerProps) {
+  const isAutomotive =
+    tenantNiche === "automotive" ||
+    tenantNiche.includes("auto") ||
+    tenantNiche.includes("mecanica") ||
+    tenantNiche.includes("oficina");
+
   const [posts, setPosts] = useState<TenantPost[]>(initialPosts);
   const [isAdding, setIsAdding] = useState(false);
 
@@ -43,8 +128,12 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
   const [imageUrl, setImageUrl] = useState("");
   const [tags, setTags] = useState("");
   const [metaDescription, setMetaDescription] = useState("");
-  const [ctaType, setCtaType] = useState<"booking" | "whatsapp" | "link">("booking");
-  const [ctaLabel, setCtaLabel] = useState("Agendar Horário");
+  const [ctaType, setCtaType] = useState<"booking" | "whatsapp" | "link">(
+    isAutomotive ? "whatsapp" : "booking"
+  );
+  const [ctaLabel, setCtaLabel] = useState(
+    isAutomotive ? "Solicitar Orçamento no WhatsApp" : "Agendar Horário"
+  );
   const [ctaUrl, setCtaUrl] = useState("");
 
   const [feedback, setFeedback] = useState<{
@@ -54,7 +143,13 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
 
   const [isPending, startTransition] = useTransition();
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
+  const [isGeneratingImageAi, setIsGeneratingImageAi] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   const handleApplyPreset = (preset: {
     title: string;
@@ -79,6 +174,7 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
     if (isGeneratingAi || isPending) return;
     setIsGeneratingAi(true);
     setFeedback(null);
+    setImageError(null);
     try {
       const res = await generateLocalSeoPost();
       if (res.success && res.data) {
@@ -88,11 +184,14 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
         setMetaDescription(res.data.metaDescription || "");
         setCtaType(res.data.ctaType);
         setCtaLabel(res.data.ctaLabel);
+        if (res.data.imageUrl) {
+          setImageUrl(res.data.imageUrl);
+        }
         setIsAdding(true);
         const pillarInfo = res.data.pillar ? ` [${res.data.pillar}]` : "";
         setFeedback({
           type: "success",
-          message: `✨ Publicação semanal gerada com IA${pillarInfo}! Os campos foram preenchidos abaixo. Revise e clique em "Postar Agora".`,
+          message: `✨ Publicação semanal gerada com IA${pillarInfo}! Os campos e a imagem de capa foram preenchidos abaixo. Revise e clique em "Postar Agora".`,
         });
       } else {
         setFeedback({
@@ -108,6 +207,117 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
     } finally {
       setIsGeneratingAi(false);
     }
+  };
+
+  /**
+   * Opção A: Gerar Imagem com IA condizente com o título/conteúdo e nicho do tenant
+   */
+  const handleGenerateCoverImageWithAi = async () => {
+    if (isGeneratingImageAi || isUploadingPhoto || isPending) return;
+    setIsGeneratingImageAi(true);
+    setImageError(null);
+    try {
+      const res = await generatePostCoverImageAction({
+        title: title || (isAutomotive ? "Revisão Preventiva Automotiva" : "Serviço Especializado"),
+        content,
+        niche: tenantNiche,
+      });
+
+      if (res.success && res.imageUrl) {
+        setImageUrl(res.imageUrl);
+        setFeedback({
+          type: "success",
+          message:
+            "✨ Imagem ilustrativa do seu nicho gerada com IA e aplicada na capa com sucesso!",
+        });
+      } else {
+        setImageError(res.error || "Não foi possível gerar a imagem com IA.");
+      }
+    } catch (err) {
+      setImageError("Erro ao gerar imagem ilustrativa com IA.");
+    } finally {
+      setIsGeneratingImageAi(false);
+    }
+  };
+
+  /**
+   * Opções B e C: Tirar Foto (Câmera) ou Escolher da Galeria
+   * Comprime via Canvas (máx 1280px, qualidade 0.75 WebP/JPEG) e faz upload direto
+   * para o bucket `establishment-photos` na pasta `posts/`.
+   */
+  const handlePhotoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setImageError("Selecione um arquivo de imagem válido (JPG, PNG ou WebP).");
+      return;
+    }
+
+    setImageError(null);
+    setIsUploadingPhoto(true);
+
+    try {
+      // 1. Compressão client-side via Canvas (máx 1280px largura, qualidade 0.75 WebP/JPEG)
+      const { blob, ext, mimeType } = await compressImageViaCanvas(file, 1280, 0.75);
+      const randomHash = Math.random().toString(36).substring(2, 8);
+      const safeTenant = (tenantId || slug || "tenant").replace(/[^a-zA-Z0-9_-]/g, "_");
+      const filePath = `posts/${safeTenant}-${Date.now()}-${randomHash}.${ext}`;
+
+      const compressedFile = new File([blob], `post-cover.${ext}`, {
+        type: mimeType,
+      });
+
+      // 2. Tenta upload direto para o bucket `establishment-photos` na pasta `posts/`
+      const supabase = createClient();
+      const { error: clientUploadError } = await supabase.storage
+        .from("establishment-photos")
+        .upload(filePath, compressedFile, {
+          contentType: mimeType,
+          cacheControl: "3600",
+          upsert: true,
+        });
+
+      if (!clientUploadError) {
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("establishment-photos").getPublicUrl(filePath);
+
+        if (publicUrl) {
+          setImageUrl(publicUrl);
+          return;
+        }
+      }
+
+      // 3. Fallback via Server Action autenticada (salva em `establishment-photos` -> `posts/`)
+      const uploadForm = new FormData();
+      uploadForm.append("file", compressedFile);
+      const serverRes = await uploadPostCoverPhotoAction(uploadForm);
+
+      if (serverRes.success && serverRes.imageUrl) {
+        setImageUrl(serverRes.imageUrl);
+      } else {
+        setImageError(
+          serverRes.error ||
+            clientUploadError?.message ||
+            "Não foi possível enviar a foto para o armazenamento."
+        );
+      }
+    } catch (err: any) {
+      console.error("[PostsManager] Erro ao comprimir/enviar foto:", err);
+      setImageError(err?.message || "Erro ao processar e enviar a foto.");
+    } finally {
+      setIsUploadingPhoto(false);
+      if (cameraInputRef.current) cameraInputRef.current.value = "";
+      if (galleryInputRef.current) galleryInputRef.current.value = "";
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImageUrl("");
+    setImageError(null);
+    if (cameraInputRef.current) cameraInputRef.current.value = "";
+    if (galleryInputRef.current) galleryInputRef.current.value = "";
   };
 
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
@@ -313,74 +523,155 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
           </div>
 
           <div className="grid gap-2.5 sm:grid-cols-3">
-            <button
-              type="button"
-              onClick={() =>
-                handleApplyPreset({
-                  title: "🎉 Condição Especial de Boas-Vindas: 15% OFF",
-                  content:
-                    "Agende seu primeiro atendimento online e garanta 15% de desconto especial. Vagas limitadas para horários agendados nesta semana.",
-                  tags: "desconto, boas vindas, agendamento online, promoção local, atendimento de excelência",
-                  metaDescription: "Ganhe 15% OFF no seu primeiro atendimento agendado online. Atendimento de excelência e pontualidade.",
-                  ctaType: "booking",
-                  ctaLabel: "Agendar com Desconto",
-                  imageUrl:
-                    "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800&auto=format&fit=crop&q=80",
-                })
-              }
-              className="rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-teal-400 hover:shadow-xs transition"
-            >
-              <p className="text-xs font-bold text-slate-900">🎉 Oferta de Boas-Vindas</p>
-              <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">
-                Post promocional com chamada para agendamento online e palavras-chave de conversão.
-              </p>
-            </button>
+            {isAutomotive ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleApplyPreset({
+                      title: "🔧 Troca de Óleo e Filtros: Evite o Desgaste Prematuro do Motor",
+                      content:
+                        "Manter o óleo lubrificante e os filtros em dia é essencial para proteger o motor contra superaquecimento e formação de borra. Traga seu veículo para uma avaliação preventiva rápida com nossa equipe.",
+                      tags: "troca de óleo, filtro de óleo, revisão preventiva, oficina mecânica, manutenção automotiva",
+                      metaDescription:
+                        "Saiba quando realizar a troca de óleo e filtros do seu carro e proteja o motor contra desgaste prematuro.",
+                      ctaType: "whatsapp",
+                      ctaLabel: "Solicitar Orçamento no WhatsApp",
+                      imageUrl:
+                        "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?w=1200&auto=format&fit=crop&q=80",
+                    })
+                  }
+                  className="rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-teal-400 hover:shadow-xs transition"
+                >
+                  <p className="text-xs font-bold text-slate-900">🔧 Dica de Troca de Óleo</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">
+                    Alerta preventivo sobre lubrificação do motor com chamada para orçamento.
+                  </p>
+                </button>
 
-            <button
-              type="button"
-              onClick={() =>
-                handleApplyPreset({
-                  title: "✨ Novos Serviços & Procedimentos Especializados",
-                  content:
-                    "Atualizamos nosso catálogo com técnicas modernas e produtos de altíssimo padrão para garantir a melhor experiência e resultado impecável.",
-                  tags: "novos serviços, qualidade premium, catálogo atualizado, estética, procedimentos",
-                  metaDescription: "Conheça as novas opções de serviços e tratamentos disponíveis com produtos e técnicas modernas.",
-                  ctaType: "booking",
-                  ctaLabel: "Conhecer Procedimentos",
-                  imageUrl:
-                    "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&auto=format&fit=crop&q=80",
-                })
-              }
-              className="rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-teal-400 hover:shadow-xs transition"
-            >
-              <p className="text-xs font-bold text-slate-900">✨ Lançamento de Serviços</p>
-              <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">
-                Aviso de novidades no catálogo com chamada para agendamento.
-              </p>
-            </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleApplyPreset({
+                      title: "🛑 Barulho ao Frear ou Pedal Baixo? Confira o Sistema de Freios",
+                      content:
+                        "Chiados nas rodas, trepidação no volante ao frear ou pedal fundo são sinais claros de desgaste nas pastilhas e discos de freio. Faça um check-up de segurança antes de pegar a estrada.",
+                      tags: "freios, pastilha de freio, disco de freio, revisão de segurança, mecânica automotiva",
+                      metaDescription:
+                        "Identifique os sinais de desgaste nas pastilhas e discos de freio e agende uma revisão de segurança.",
+                      ctaType: "whatsapp",
+                      ctaLabel: "Avaliar Freios Agora",
+                      imageUrl:
+                        "https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=1200&auto=format&fit=crop&q=80",
+                    })
+                  }
+                  className="rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-teal-400 hover:shadow-xs transition"
+                >
+                  <p className="text-xs font-bold text-slate-900">🛑 Alerta de Freios & Suspensão</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">
+                    Post educativo sobre segurança veicular com botão direto para WhatsApp.
+                  </p>
+                </button>
 
-            <button
-              type="button"
-              onClick={() =>
-                handleApplyPreset({
-                  title: "⏰ Atendimento aos Finais de Semana & Dúvidas Rápidas",
-                  content:
-                    "Consulte nossos horários especiais de atendimento e tire dúvidas diretamente com nossa equipe no WhatsApp para reservar seu horário com conforto.",
-                  tags: "horario de atendimento, agendamento de sabado, whatsapp direto, tirar duvidas",
-                  metaDescription: "Informações sobre horários de atendimento, agendamento aos finais de semana e contato WhatsApp.",
-                  ctaType: "whatsapp",
-                  ctaLabel: "Falar no WhatsApp",
-                  imageUrl:
-                    "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=800&auto=format&fit=crop&q=80",
-                })
-              }
-              className="rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-teal-400 hover:shadow-xs transition"
-            >
-              <p className="text-xs font-bold text-slate-900">⏰ Comunicado & WhatsApp</p>
-              <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">
-                Informações de atendimento com botão direto para WhatsApp.
-              </p>
-            </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleApplyPreset({
+                      title: "🚗 Revisão Preventiva Completa: Viaje com Tranquilidade",
+                      content:
+                        "Vai viajar ou atingir a quilometragem de revisão? Realizamos diagnóstico computadorizado de injeção, suspensão, bateria, arrefecimento e ar-condicionado automotivo com transparência total.",
+                      tags: "revisão preventiva, check-up automotivo, suspensão, alinhamento, injeção eletrônica",
+                      metaDescription:
+                        "Revisão preventiva completa com diagnóstico eletrônico, freios, suspensão e arrefecimento.",
+                      ctaType: "whatsapp",
+                      ctaLabel: "Agendar Revisão pelo WhatsApp",
+                      imageUrl:
+                        "https://images.unsplash.com/photo-1625047509168-a7026f36de04?w=1200&auto=format&fit=crop&q=80",
+                    })
+                  }
+                  className="rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-teal-400 hover:shadow-xs transition"
+                >
+                  <p className="text-xs font-bold text-slate-900">🚗 Revisão Preventiva</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">
+                    Chamada para check-up completo e orçamento rápido por placa ou WhatsApp.
+                  </p>
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleApplyPreset({
+                      title: "🎉 Condição Especial de Boas-Vindas: 15% OFF",
+                      content:
+                        "Agende seu primeiro atendimento online e garanta 15% de desconto especial. Vagas limitadas para horários agendados nesta semana.",
+                      tags: "desconto, boas vindas, agendamento online, promoção local, atendimento de excelência",
+                      metaDescription:
+                        "Ganhe 15% OFF no seu primeiro atendimento agendado online. Atendimento de excelência e pontualidade.",
+                      ctaType: "booking",
+                      ctaLabel: "Agendar com Desconto",
+                      imageUrl:
+                        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800&auto=format&fit=crop&q=80",
+                    })
+                  }
+                  className="rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-teal-400 hover:shadow-xs transition"
+                >
+                  <p className="text-xs font-bold text-slate-900">🎉 Oferta de Boas-Vindas</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">
+                    Post promocional com chamada para agendamento online e palavras-chave de conversão.
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleApplyPreset({
+                      title: "✨ Novos Serviços & Procedimentos Especializados",
+                      content:
+                        "Atualizamos nosso catálogo com técnicas modernas e produtos de altíssimo padrão para garantir a melhor experiência e resultado impecável.",
+                      tags: "novos serviços, qualidade premium, catálogo atualizado, atendimento, procedimentos",
+                      metaDescription:
+                        "Conheça as novas opções de serviços e tratamentos disponíveis com produtos e técnicas modernas.",
+                      ctaType: "booking",
+                      ctaLabel: "Conhecer Serviços",
+                      imageUrl:
+                        "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&auto=format&fit=crop&q=80",
+                    })
+                  }
+                  className="rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-teal-400 hover:shadow-xs transition"
+                >
+                  <p className="text-xs font-bold text-slate-900">✨ Lançamento de Serviços</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">
+                    Aviso de novidades no catálogo com chamada para agendamento.
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleApplyPreset({
+                      title: "⏰ Atendimento aos Finais de Semana & Dúvidas Rápidas",
+                      content:
+                        "Consulte nossos horários especiais de atendimento e tire dúvidas diretamente com nossa equipe no WhatsApp para reservar seu horário com conforto.",
+                      tags: "horario de atendimento, agendamento de sabado, whatsapp direto, tirar duvidas",
+                      metaDescription:
+                        "Informações sobre horários de atendimento, agendamento aos finais de semana e contato WhatsApp.",
+                      ctaType: "whatsapp",
+                      ctaLabel: "Falar no WhatsApp",
+                      imageUrl:
+                        "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=800&auto=format&fit=crop&q=80",
+                    })
+                  }
+                  className="rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-teal-400 hover:shadow-xs transition"
+                >
+                  <p className="text-xs font-bold text-slate-900">⏰ Comunicado & WhatsApp</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">
+                    Informações de atendimento com botão direto para WhatsApp.
+                  </p>
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -436,7 +727,11 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Ex: Dicas de Cuidados, Promoção da Semana ou Lançamento de Procedimento"
+                placeholder={
+                  isAutomotive
+                    ? "Ex: 5 Sinais de que o Freio do seu Carro Precisa de Revisão"
+                    : "Ex: Dicas de Cuidados, Promoção da Semana ou Lançamento de Serviço"
+                }
                 className="mt-1.5 block w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs sm:text-sm text-slate-900 focus:border-indigo-600 focus:outline-none"
               />
             </div>
@@ -466,7 +761,11 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
                 type="text"
                 value={tags}
                 onChange={(e) => setTags(e.target.value)}
-                placeholder="Ex: corte degradê, são paulo, estética, horário marcado, promoção"
+                placeholder={
+                  isAutomotive
+                    ? "Ex: revisão automotiva, troca de óleo, freios, suspensão, oficina mecânica"
+                    : "Ex: corte degradê, são paulo, estética, horário marcado, promoção"
+                }
                 className="mt-1.5 block w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs sm:text-sm text-slate-900 focus:border-indigo-600 focus:outline-none"
               />
               <p className="text-[11px] text-slate-400 mt-1">
@@ -490,17 +789,162 @@ export function PostsManager({ initialPosts, slug }: PostsManagerProps) {
               />
             </div>
 
-            {/* Imagem de Destaque */}
-            <div className="sm:col-span-2">
-              <ImageUpload
-                name="imageUrl"
-                value={imageUrl}
-                onChange={(url) => setImageUrl(url)}
-                label="Foto de Capa / Banner Ilustrativo (Opcional)"
-                description="Imagem que acompanha a publicação na vitrine e nos snippets de busca."
-                folder="posts"
-                aspectRatio="video"
+            {/* FOTO DE CAPA / BANNER ILUSTRATIVO (3 OPÇÕES: IA, CÂMERA, GALERIA) */}
+            <div className="sm:col-span-2 space-y-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 sm:p-5">
+              <input type="hidden" name="imageUrl" value={imageUrl} />
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-800">
+                    Foto de Capa / Banner Ilustrativo (Opcional)
+                  </label>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Gere uma arte ilustrativa com IA, tire uma foto na hora pela câmera ou escolha da galeria (compressão inteligente automática).
+                  </p>
+                </div>
+              </div>
+
+              {/* Grade com as 3 opções claras */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                {/* A) BOTÃO "Gerar Imagem com IA" */}
+                <button
+                  type="button"
+                  onClick={handleGenerateCoverImageWithAi}
+                  disabled={isGeneratingImageAi || isUploadingPhoto || isPending}
+                  className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-4 py-3 text-xs font-bold shadow-xs transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {isGeneratingImageAi ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Gerando Imagem...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="h-4 w-4" />
+                      <span>Gerar Imagem com IA</span>
+                    </>
+                  )}
+                </button>
+
+                {/* B) BOTÃO "Tirar Foto (Câmera)" */}
+                <button
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  disabled={isUploadingPhoto || isGeneratingImageAi || isPending}
+                  className="flex items-center justify-center gap-2 rounded-xl bg-teal-800 hover:bg-teal-900 text-white px-4 py-3 text-xs font-bold shadow-xs transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {isUploadingPhoto ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Processando Foto...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Camera className="h-4 w-4" />
+                      <span>Tirar Foto (Câmera)</span>
+                    </>
+                  )}
+                </button>
+
+                {/* C) BOTÃO "Escolher da Galeria" */}
+                <button
+                  type="button"
+                  onClick={() => galleryInputRef.current?.click()}
+                  disabled={isUploadingPhoto || isGeneratingImageAi || isPending}
+                  className="flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 px-4 py-3 text-xs font-bold shadow-2xs transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  <ImageIcon className="h-4 w-4 text-indigo-600" />
+                  <span>Escolher da Galeria</span>
+                </button>
+              </div>
+
+              {/* Inputs ocultos de Câmera e Galeria */}
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                id="camera-input"
+                className="hidden"
+                onChange={handlePhotoFileChange}
               />
+              <input
+                ref={galleryInputRef}
+                type="file"
+                accept="image/*"
+                id="gallery-input"
+                className="hidden"
+                onChange={handlePhotoFileChange}
+              />
+
+              {/* Alerta de erro de imagem */}
+              {imageError && (
+                <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
+                  <span>{imageError}</span>
+                </div>
+              )}
+
+              {/* Preview imediato da imagem carregada com botão para remover/trocar */}
+              {imageUrl ? (
+                <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-white p-3 shadow-2xs">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                    <div className="relative aspect-16/9 w-full sm:w-48 rounded-lg overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={imageUrl}
+                        alt={title || "Preview da capa do post"}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+
+                    <div className="flex-1 min-w-0 space-y-2 w-full">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700">
+                        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                        <span>Foto de capa pronta para publicação</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 truncate font-mono">
+                        {imageUrl}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={handleGenerateCoverImageWithAi}
+                          disabled={isGeneratingImageAi || isUploadingPhoto}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 px-2.5 py-1.5 text-[11px] font-bold transition"
+                        >
+                          <RefreshCw className={`h-3 w-3 ${isGeneratingImageAi ? "animate-spin" : ""}`} />
+                          <span>Trocar com IA</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => galleryInputRef.current?.click()}
+                          disabled={isUploadingPhoto || isGeneratingImageAi}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 text-[11px] font-bold transition"
+                        >
+                          <ImageIcon className="h-3 w-3" />
+                          <span>Trocar Foto</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleRemoveImage}
+                          disabled={isUploadingPhoto || isGeneratingImageAi}
+                          className="inline-flex items-center gap-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 px-2.5 py-1.5 text-[11px] font-bold transition"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                          <span>Remover Imagem</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-slate-300 bg-white/70 px-4 py-4 text-center text-xs text-slate-500">
+                  Nenhuma imagem selecionada. Use um dos 3 botões acima para gerar com IA, tirar uma foto com a câmera ou escolher da galeria.
+                </div>
+              )}
             </div>
 
             {/* Tipo de Chamada para Ação */}

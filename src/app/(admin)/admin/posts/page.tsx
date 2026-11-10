@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getAuthenticatedTenant } from "@/lib/supabase/tenant";
+import { getAuthenticatedTenant, resolveTenantNiche } from "@/lib/supabase/tenant";
 import { PostsManager } from "@/components/admin/PostsManager";
 import { redirect } from "next/navigation";
 import { AlertCircle } from "lucide-react";
@@ -43,8 +43,16 @@ export default async function AdminPostsPage() {
 
     const posts = (rawPosts || []) as TenantPost[];
     const slug = tenantContext.tenant?.slug || "meu-negocio";
+    const tenantNiche = resolveTenantNiche(tenantContext.tenant);
 
-    return <PostsManager initialPosts={posts} slug={slug} />;
+    return (
+      <PostsManager
+        initialPosts={posts}
+        slug={slug}
+        tenantNiche={tenantNiche}
+        tenantId={tenantContext.tenantId}
+      />
+    );
   } catch (err: any) {
     // Next.js redirect lida internamente com uma exceção especial
     if (err?.digest?.startsWith("NEXT_REDIRECT")) {
