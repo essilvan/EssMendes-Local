@@ -95,9 +95,12 @@ export async function createPostAction(
   }
 
   revalidatePath("/admin/posts");
+  revalidatePath("/admin/posts-seo");
   revalidatePath("/admin/dashboard");
+  revalidatePath("/[slug]", "page");
   if (tenantContext.tenant?.slug) {
     revalidatePath(`/${tenantContext.tenant.slug}`);
+    revalidatePath(`/${tenantContext.tenant.slug}`, "page");
   }
 
   return { success: true, message: "Publicação cadastrada com sucesso!" };
@@ -121,8 +124,11 @@ export async function deletePostAction(postId: string): Promise<PostActionState>
   }
 
   revalidatePath("/admin/posts");
+  revalidatePath("/admin/posts-seo");
+  revalidatePath("/[slug]", "page");
   if (tenantContext.tenant?.slug) {
     revalidatePath(`/${tenantContext.tenant.slug}`);
+    revalidatePath(`/${tenantContext.tenant.slug}`, "page");
   }
 
   return { success: true, message: "Publicação excluída com sucesso." };
@@ -149,8 +155,11 @@ export async function togglePostStatusAction(
   }
 
   revalidatePath("/admin/posts");
+  revalidatePath("/admin/posts-seo");
+  revalidatePath("/[slug]", "page");
   if (tenantContext.tenant?.slug) {
     revalidatePath(`/${tenantContext.tenant.slug}`);
+    revalidatePath(`/${tenantContext.tenant.slug}`, "page");
   }
 
   return { success: true };

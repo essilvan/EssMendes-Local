@@ -30,6 +30,7 @@ import { getContrastTextColor } from "@/utils/color";
 import { getUnifiedEstablishmentPhotos } from "@/utils/establishment-photos";
 import { PlacePhotoGallery } from "../PlacePhotoGallery";
 import { PublicProfessionalsSection } from "../PublicProfessionalsSection";
+import { PublicPostsSection } from "../PublicPostsSection";
 import { ItemDetailModal, type ItemDetailData } from "../ItemDetailModal";
 import {
   getHeroSubtitle,
@@ -389,6 +390,22 @@ export function MinimalTemplateView({
           address={profile?.address}
           theme={theme}
           title="Fotos do Estabelecimento • Nosso Ambiente"
+        />
+      )}
+
+      {/* 3.5 DICAS, ARTIGOS & NOVIDADES (SEO LOCAL) */}
+      {posts && posts.length > 0 && (
+        <PublicPostsSection
+          posts={posts}
+          tenantName={tenant.name}
+          phoneWhatsapp={rawPhone}
+          theme={theme}
+          brandColor={brandColor}
+          onOpenBooking={() =>
+            isAutomotiveNiche(tenant, profile, theme?.id) && onOpenVehicleQuote
+              ? onOpenVehicleQuote()
+              : onOpenBooking()
+          }
         />
       )}
 

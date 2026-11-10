@@ -168,7 +168,10 @@ export function PremiumTemplateView({
           tenantName={tenant.name}
           phoneWhatsapp={rawPhone}
           theme={theme}
-          onOpenBooking={() => onOpenBooking()}
+          brandColor={brandColor}
+          onOpenBooking={() =>
+            onOpenVehicleQuote ? onOpenVehicleQuote() : onOpenBooking()
+          }
         />
       )}
 

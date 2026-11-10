@@ -33,6 +33,7 @@ import { getContrastTextColor } from "@/utils/color";
 import { getUnifiedEstablishmentPhotos } from "@/utils/establishment-photos";
 import { PublicProductsSection } from "../PublicProductsSection";
 import { PublicProfessionalsSection } from "../PublicProfessionalsSection";
+import { PublicPostsSection } from "../PublicPostsSection";
 import { PlacePhotoGallery } from "../PlacePhotoGallery";
 import { MapLocationCard } from "../MapLocationCard";
 import { GoogleReviewsCard } from "../GoogleReviewsCard";
@@ -579,6 +580,22 @@ export function ModernTemplateView({
         googleMapsUrl={profile?.google_maps_url}
         theme={theme}
       />
+
+      {/* 5.5 DICAS, ARTIGOS & NOVIDADES (SEO LOCAL) */}
+      {posts && posts.length > 0 && (
+        <PublicPostsSection
+          posts={posts}
+          tenantName={tenant.name}
+          phoneWhatsapp={rawPhone}
+          theme={theme}
+          brandColor={brandColor}
+          onOpenBooking={() =>
+            isAutomotiveNiche(tenant, profile, theme?.id) && onOpenVehicleQuote
+              ? onOpenVehicleQuote()
+              : onOpenBooking()
+          }
+        />
+      )}
 
       {/* 6. LOCALIZAÇÃO E HORÁRIOS */}
       <MapLocationCard

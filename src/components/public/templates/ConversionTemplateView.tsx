@@ -47,6 +47,7 @@ import { getContrastTextColor } from "@/utils/color";
 import { getUnifiedEstablishmentPhotos } from "@/utils/establishment-photos";
 import { PublicProductsSection } from "../PublicProductsSection";
 import { PublicProfessionalsSection } from "../PublicProfessionalsSection";
+import { PublicPostsSection } from "../PublicPostsSection";
 import { GoogleReviewsCard } from "../GoogleReviewsCard";
 import { MapLocationCard } from "../MapLocationCard";
 import { BusinessAttributes } from "../BusinessAttributes";
@@ -519,6 +520,22 @@ export function ConversionTemplateView({
           reviews={reviews.filter((r) => r.is_visible !== false)}
           googleMapsUrl={profile?.google_maps_url}
           theme={theme}
+        />
+      )}
+
+      {/* 5.5 DICAS, ARTIGOS & NOVIDADES (SEO LOCAL) */}
+      {posts && posts.length > 0 && (
+        <PublicPostsSection
+          posts={posts}
+          tenantName={tenant.name}
+          phoneWhatsapp={rawPhone}
+          theme={theme}
+          brandColor={brandColor}
+          onOpenBooking={() =>
+            isAutomotiveNiche(tenant, profile, theme?.id) && onOpenVehicleQuote
+              ? onOpenVehicleQuote()
+              : onOpenBooking()
+          }
         />
       )}
 

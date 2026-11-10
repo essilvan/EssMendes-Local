@@ -258,7 +258,8 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
       .from("tenant_posts")
       .select("*")
       .eq("tenant_id", tenant.id)
-      .order("published_at", { ascending: false }),
+      .order("created_at", { ascending: false })
+      .limit(6),
     supabase
       .from("tenant_products")
       .select("*")
@@ -381,20 +382,46 @@ export default async function PublicTenantPage({ params }: PublicPageProps) {
       updated_at: r.updated_at,
     }));
 
-  // 2.6 Tratamento e Filtragem de Posts / Artigos de SEO Ativos
-  const rawPostsList = postsRes.data || [];
+  // 2.6 Tratamento e Filtragem de Posts / Artigos de SEO Ativos (suporta tenant_posts e fallback posts)
+  let rawPostsList = postsRes.data || [];
+  if (rawPostsList.length === 0) {
+    try {
+      const { data: legacyPosts } = await supabase
+        .from("posts")
+        .select("*")
+        .eq("tenant_id", tenant.id)
+        .order("created_at", { ascending: false })
+        .limit(6);
+      if (Array.isArray(legacyPosts) && legacyPosts.length > 0) {
+        rawPostsList = legacyPosts;
+      }
+    } catch {
+      // prossegue se tabela posts não existir
+    }
+  }
+
   const posts: TenantPost[] = rawPostsList
-    .filter((p: any) => p.is_active !== false && p.is_published !== false)
+    .filter(
+      (p: any) =>
+        p.is_active !== false &&
+        p.is_published !== false &&
+        (p.status === undefined || p.status === null || p.status === "published")
+    )
+    .slice(0, 6)
     .map((p: any) => ({
       id: p.id,
       tenant_id: p.tenant_id,
       title: p.title,
       content: p.content,
-      image_url: p.image_url || null,
+      image_url: p.image_url || p.cover_image || null,
       cta_type: p.cta_type || "booking",
-      cta_label: p.cta_label || "Agendar Horário",
+      cta_label: p.cta_label || "Saiba mais",
       cta_url: p.cta_url || null,
-      tags: Array.isArray(p.tags) ? p.tags : [],
+      tags: Array.isArray(p.tags)
+        ? p.tags
+        : typeof p.tags === "string" && p.tags.trim()
+        ? p.tags.split(",").map((t: string) => t.trim())
+        : [],
       meta_description: p.meta_description || null,
       slug: p.slug || null,
       is_active: p.is_active ?? p.is_published ?? true,
