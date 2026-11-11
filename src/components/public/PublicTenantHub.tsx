@@ -13,6 +13,8 @@ import type {
   TenantPost,
   TenantProduct,
   TenantProfessional,
+  MenuCategory,
+  MenuItem,
 } from "@/types";
 import { getThemeColorStyles, getContrastTextColor } from "@/utils/color";
 import { getTenantTheme, NICHE_THEMES } from "@/config/tenant-themes";
@@ -27,6 +29,7 @@ import { ModernTemplateView } from "./templates/ModernTemplateView";
 import { PremiumTemplateView } from "./templates/PremiumTemplateView";
 import { WhatsAppFloatingButton } from "./WhatsAppFloatingButton";
 import { VehicleQuoteModal } from "./VehicleQuoteModal";
+import { PublicRestaurantMenuSection } from "./PublicRestaurantMenuSection";
 import { getUnifiedEstablishmentPhotos } from "@/utils/establishment-photos";
 import { getCtaButtonText, isAutomotiveNiche } from "@/utils/showcase";
 import { CarFront, Wrench, Gauge, ShieldCheck } from "lucide-react";
@@ -74,6 +77,8 @@ interface PublicTenantHubProps {
   reviews?: TenantReview[];
   posts?: TenantPost[];
   products?: TenantProduct[];
+  menuCategories?: MenuCategory[];
+  menuItems?: MenuItem[];
   isOpenNow: boolean;
   statusBadgeText?: string;
   statusDetailText?: string;
@@ -175,6 +180,8 @@ export function PublicTenantHub({
   reviews = [],
   posts = [],
   products = [],
+  menuCategories = [],
+  menuItems = [],
   isOpenNow,
   statusBadgeText,
   statusDetailText,
@@ -249,6 +256,7 @@ export function PublicTenantHub({
     effectiveNiche === "mecanica" ||
     isAutomotiveNiche(tenant, profile, effectiveNiche);
   const isRestaurant =
+    tenant.niche === "restaurant" ||
     effectiveNiche === "restaurant" ||
     effectiveNiche === "gastronomia" ||
     effectiveNiche === "food" ||
@@ -402,6 +410,23 @@ export function PublicTenantHub({
               <span>Solicitar Orçamento por Placa</span>
             </button>
           </div>
+        )}
+
+        {/* Seção Destacada "Nosso Cardápio" (Exclusivo Nicho Restaurante / Bar) */}
+        {isRestaurant && (
+          <PublicRestaurantMenuSection
+            tenantId={tenant.id}
+            tenantName={tenant.name}
+            tenantSlug={tenant.slug}
+            categories={menuCategories}
+            items={menuItems}
+            restaurantPhone={
+              profile?.phone_whatsapp ||
+              profile?.phone ||
+              (tenant as any).whatsapp ||
+              tenant.phone
+            }
+          />
         )}
 
         {activeTemplate === "conversion" && (

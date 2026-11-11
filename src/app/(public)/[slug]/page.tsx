@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import type { Metadata } from "next";
 import { PublicTenantHub } from "@/components/public/PublicTenantHub";
+import { getPublicRestaurantMenuAction } from "@/services/restaurant.actions";
 import { sanitizePhoneNumber } from "@/utils/phone";
 import { getBusinessStatus } from "@/utils/opening-hours";
 import { extractNeighborhoodAndCity, sanitizeDescription } from "@/utils/address";
@@ -797,6 +798,8 @@ function detectLocalBusinessSchemaType(
     ],
   };
 
+  const restaurantMenu = await getPublicRestaurantMenuAction(tenant.id);
+
   const templateId = tenant?.theme_settings?.template_id || typedProfile?.template_id || "premium";
   const primaryColor = tenant?.theme_settings?.primary_color || typedProfile?.primary_color || "#e11d48";
 
@@ -880,6 +883,8 @@ function detectLocalBusinessSchemaType(
         reviews={reviews}
         posts={posts}
         products={products}
+        menuCategories={restaurantMenu.categories}
+        menuItems={restaurantMenu.items}
         isOpenNow={businessStatus.isOpenNow}
         statusBadgeText={businessStatus.badgeText}
         statusDetailText={businessStatus.detailText}

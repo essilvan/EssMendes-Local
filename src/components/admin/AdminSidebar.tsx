@@ -12,6 +12,7 @@ import {
   Copy,
   Check,
   CarFront,
+  UtensilsCrossed,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { getTenantPublicUrl } from "@/utils/tenant-url";
@@ -20,6 +21,7 @@ import {
   getModularNavSections,
   isNavItemActive,
   isAutomotiveTenantNiche,
+  isRestaurantTenantNiche,
   type AdminNavSection,
 } from "./admin-navigation";
 
@@ -50,6 +52,7 @@ export function AdminSidebar({
   const tenantSiteUrl = getTenantPublicUrl(companySlug);
   const effectiveSuperAdmin = isSuperAdmin || userRole === "super_admin";
   const isAutomotive = isAutomotiveTenantNiche(tenantNiche);
+  const isRestaurant = tenantNiche === "restaurant" || isRestaurantTenantNiche(tenantNiche);
 
   const copyToClipboard = async (url: string) => {
     try {
@@ -100,6 +103,12 @@ export function AdminSidebar({
                 <span className="inline-flex items-center gap-0.5 rounded bg-blue-100 px-1.5 py-0.2 text-[9px] font-extrabold uppercase text-blue-800">
                   <CarFront className="h-2.5 w-2.5" />
                   Auto
+                </span>
+              )}
+              {isRestaurant && (
+                <span className="inline-flex items-center gap-0.5 rounded bg-orange-100 px-1.5 py-0.2 text-[9px] font-extrabold uppercase text-orange-800">
+                  <UtensilsCrossed className="h-2.5 w-2.5" />
+                  Restaurante
                 </span>
               )}
             </div>

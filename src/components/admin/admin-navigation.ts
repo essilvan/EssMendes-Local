@@ -16,10 +16,18 @@ import {
   Wrench,
   Globe,
   ShieldCheck,
+  UtensilsCrossed,
+  QrCode,
+  ClipboardList,
 } from "lucide-react";
 import type { TenantPermissions } from "@/types";
 
-export type NavBlockType = "common" | "automotive" | "appointment" | "super_admin";
+export type NavBlockType =
+  | "common"
+  | "automotive"
+  | "restaurant"
+  | "appointment"
+  | "super_admin";
 
 export interface AdminNavItem {
   name: string;
@@ -55,8 +63,28 @@ export function isAutomotiveTenantNiche(niche?: string | null): boolean {
 }
 
 /**
+ * Verifica se o nicho do tenant corresponde ao segmento de gastronomia/restaurante/bar ('restaurant', 'restaurante', 'gastronomia', 'food')
+ */
+export function isRestaurantTenantNiche(niche?: string | null): boolean {
+  const normalized = String(niche || "")
+    .trim()
+    .toLowerCase();
+  return (
+    normalized === "restaurant" ||
+    normalized === "restaurante" ||
+    normalized === "gastronomia" ||
+    normalized === "food" ||
+    normalized.includes("restauran") ||
+    normalized.includes("gastronom") ||
+    normalized.includes("lanchonet") ||
+    normalized.includes("pizzaria") ||
+    normalized.includes("hamburgueria")
+  );
+}
+
+/**
  * Lista canônica dos módulos oficiais de navegação do EssMendes Local,
- * estruturados por bloco funcional (Comum, Automotivo, Agendamento Convencional e Super Admin).
+ * estruturados por bloco funcional (Comum, Automotivo, Gastronomia, Agendamento Convencional e Super Admin).
  */
 export const ADMIN_NAV_MODULES: AdminNavItem[] = [
   // BLOCO COMUM
@@ -82,7 +110,29 @@ export const ADMIN_NAV_MODULES: AdminNavItem[] = [
     key: "maintenance_schedules",
     block: "automotive",
   },
-  // BLOCO AGENDAMENTO CONVENCIONAL (Apenas tenant.niche !== 'automotive')
+  // BLOCO GASTRONOMIA (Apenas tenant.niche === 'restaurant')
+  {
+    name: "Cardápio Digital",
+    href: "/admin/cardapio",
+    icon: UtensilsCrossed,
+    key: "restaurant_menu",
+    block: "restaurant",
+  },
+  {
+    name: "Mesas & Garçons",
+    href: "/admin/mesas",
+    icon: QrCode,
+    key: "restaurant_tables",
+    block: "restaurant",
+  },
+  {
+    name: "Pedidos da Mesa",
+    href: "/admin/pedidos",
+    icon: ClipboardList,
+    key: "restaurant_orders",
+    block: "restaurant",
+  },
+  // BLOCO AGENDAMENTO CONVENCIONAL (Apenas tenant.niche !== 'automotive' e !== 'restaurant')
   {
     name: "Agendamentos",
     href: "/admin/agendamentos",
@@ -244,6 +294,7 @@ export function getFilteredNavItems(
 ): AdminNavItem[] {
   const effectiveSuperAdmin = isSuperAdmin || userRole === "super_admin";
   const isAutomotive = isAutomotiveTenantNiche(tenantNiche);
+  const isRestaurant = tenantNiche === "restaurant" || isRestaurantTenantNiche(tenantNiche);
 
   const publicSiteItem: AdminNavItem | null = companySlug
     ? {
@@ -261,7 +312,10 @@ export function getFilteredNavItems(
     if (item.block === "automotive" && !isAutomotive) {
       return false;
     }
-    if (item.block === "appointment" && isAutomotive) {
+    if (item.block === "restaurant" && !isRestaurant) {
+      return false;
+    }
+    if (item.block === "appointment" && (isAutomotive || isRestaurant)) {
       return false;
     }
 
@@ -331,10 +385,12 @@ export function getModularNavSections(options: {
   );
 
   const isAutomotive = isAutomotiveTenantNiche(tenantNiche);
+  const isRestaurant = tenantNiche === "restaurant" || isRestaurantTenantNiche(tenantNiche);
   const effectiveSuperAdmin = isSuperAdmin || userRole === "super_admin";
 
   const commonItems = allItems.filter((i) => i.block === "common");
   const automotiveItems = allItems.filter((i) => i.block === "automotive");
+  const restaurantItems = allItems.filter((i) => i.block === "restaurant");
   const appointmentItems = allItems.filter((i) => i.block === "appointment");
   const superAdminItems = allItems.filter((i) => i.block === "super_admin");
 
@@ -346,7 +402,13 @@ export function getModularNavSections(options: {
       title: "Operação Automotiva",
       items: automotiveItems,
     });
-  } else if (!isAutomotive && appointmentItems.length > 0) {
+  } else if (isRestaurant && restaurantItems.length > 0) {
+    sections.push({
+      id: "restaurant",
+      title: "GESTÃO GASTRONOMIA",
+      items: restaurantItems,
+    });
+  } else if (!isAutomotive && !isRestaurant && appointmentItems.length > 0) {
     sections.push({
       id: "appointment",
       title: "Atendimento & Agenda",

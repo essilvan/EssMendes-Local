@@ -45,6 +45,9 @@ export interface TenantPermissions {
   appointments: boolean;       // Agendamentos
   vehicle_quotes?: boolean;    // Orçamentos por Placa (Automotivo)
   maintenance_schedules?: boolean; // Revisões Preventivas (Automotivo)
+  restaurant_menu?: boolean;   // Cardápio Digital (Restaurante)
+  restaurant_tables?: boolean; // Mesas & Garçons (Restaurante)
+  restaurant_orders?: boolean; // Pedidos da Mesa (Restaurante)
   professionals?: boolean;     // Profissionais / Equipe
   services: boolean;           // Serviços
   products: boolean;           // Vitrine Produtos
@@ -66,6 +69,9 @@ export const DEFAULT_TENANT_PERMISSIONS: TenantPermissions = {
   appointments: true,
   vehicle_quotes: true,
   maintenance_schedules: true,
+  restaurant_menu: true,
+  restaurant_tables: true,
+  restaurant_orders: true,
   professionals: true,
   services: true,
   products: true,
@@ -465,5 +471,70 @@ export interface VehicleMaintenanceSchedule {
   due_km?: number | null;
   status: VehicleMaintenanceStatus | string;
   notes?: string | null;
+  created_at: string;
+}
+
+export interface MenuCategory {
+  id: string;
+  tenant_id: string;
+  name: string;
+  description?: string | null;
+  display_order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface MenuItem {
+  id: string;
+  tenant_id: string;
+  category_id?: string | null;
+  category?: string | null;
+  name: string;
+  description?: string | null;
+  price: number;
+  image_url?: string | null;
+  is_available: boolean;
+  is_active: boolean;
+  display_order: number;
+  created_at: string;
+}
+
+export interface RestaurantTable {
+  id: string;
+  tenant_id: string;
+  table_number: string;
+  name?: string | null;
+  capacity?: number | null;
+  waiter_id?: string | null;
+  waiter_name?: string | null;
+  waiter_phone?: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface RestaurantOrderItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  notes?: string | null;
+}
+
+export type RestaurantOrderStatus = "pending" | "in_kitchen" | "delivered" | "canceled";
+
+export interface RestaurantOrder {
+  id: string;
+  tenant_id: string;
+  table_id?: string | null;
+  table_number: string;
+  customer_name?: string | null;
+  customer_phone?: string | null;
+  items: RestaurantOrderItem[];
+  notes?: string | null;
+  total_amount: number;
+  status: RestaurantOrderStatus | string;
+  waiter_id?: string | null;
+  waiter_name?: string | null;
+  waiter_phone?: string | null;
   created_at: string;
 }

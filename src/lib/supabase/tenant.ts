@@ -71,6 +71,20 @@ export function resolveTenantNiche(rawTenant: any): string {
     return "automotive";
   }
 
+  if (
+    rawNiche === "restaurant" ||
+    rawNiche === "restaurante" ||
+    rawNiche === "gastronomia" ||
+    rawNiche === "food" ||
+    combined.includes("restauran") ||
+    combined.includes("gastronom") ||
+    combined.includes("lanchonet") ||
+    combined.includes("pizzaria") ||
+    combined.includes("hamburgueria")
+  ) {
+    return "restaurant";
+  }
+
   if (rawNiche && rawNiche !== "general") {
     return rawNiche;
   }
