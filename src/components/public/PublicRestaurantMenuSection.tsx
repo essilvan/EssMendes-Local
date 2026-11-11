@@ -2,20 +2,21 @@
 
 import React, { useState, useMemo } from "react";
 import { createPublicTableOrderAction } from "@/services/restaurant.actions";
+import { generateWhatsAppUrl } from "@/utils/phone";
 import type { MenuCategory, MenuItem } from "@/types";
 import {
-  UtensilsCrossed,
   Utensils,
-  LayoutGrid,
-  Flame,
   Beer,
   Wine,
   Sparkles,
-  IceCream,
+  LayoutGrid,
+  Phone,
+  MessageCircle,
+  MapPin,
+  Star,
   Plus,
   Minus,
   ShoppingBag,
-  MessageCircle,
   X,
   CheckCircle2,
   AlertCircle,
@@ -41,30 +42,21 @@ interface CartItem {
   quantity: number;
 }
 
-const DEFAULT_TABS = ["Todos", "Entradas", "Pratos", "Bebidas", "Sobremesas"];
+const defaultCategories = [
+  "Todos",
+  "Petiscos & Entradas",
+  "Pratos",
+  "Bebidas",
+  "Sobremesas",
+];
 
 function renderCategoryIcon(tabName: string, isActive: boolean) {
-  const normalized = tabName.toLowerCase();
+  const normalized = (tabName || "").toLowerCase();
   if (normalized === "todos" || normalized.includes("todo")) {
     return (
       <LayoutGrid
-        className={`w-4 h-4 mr-2 shrink-0 ${
+        className={`w-4 h-4 mr-1.5 shrink-0 ${
           isActive ? "text-zinc-950" : "text-amber-400"
-        }`}
-      />
-    );
-  }
-  if (
-    normalized.includes("entrada") ||
-    normalized.includes("petisc") ||
-    normalized.includes("porc") ||
-    normalized.includes("porç") ||
-    normalized.includes("tira-gosto")
-  ) {
-    return (
-      <Flame
-        className={`w-4 h-4 mr-2 shrink-0 ${
-          isActive ? "text-zinc-950" : "text-amber-500"
         }`}
       />
     );
@@ -73,73 +65,44 @@ function renderCategoryIcon(tabName: string, isActive: boolean) {
     normalized.includes("bebida") ||
     normalized.includes("cervej") ||
     normalized.includes("chopp") ||
-    normalized.includes("drink") ||
-    normalized.includes("coquet") ||
-    normalized.includes("suco") ||
-    normalized.includes("refrig")
+    normalized.includes("drink")
   ) {
     return (
       <Beer
-        className={`w-4 h-4 mr-2 shrink-0 ${
+        className={`w-4 h-4 mr-1.5 shrink-0 ${
           isActive ? "text-zinc-950" : "text-amber-400"
         }`}
       />
     );
   }
-  if (normalized.includes("vinho") || normalized.includes("adega")) {
+  if (normalized.includes("vinho")) {
     return (
       <Wine
-        className={`w-4 h-4 mr-2 shrink-0 ${
+        className={`w-4 h-4 mr-1.5 shrink-0 ${
           isActive ? "text-zinc-950" : "text-amber-400"
         }`}
       />
     );
   }
   if (
-    normalized.includes("sobremes") ||
-    normalized.includes("doce") ||
-    normalized.includes("sorvet") ||
-    normalized.includes("acai") ||
-    normalized.includes("açaí")
-  ) {
-    return (
-      <Sparkles
-        className={`w-4 h-4 mr-2 shrink-0 ${
-          isActive ? "text-zinc-950" : "text-pink-400"
-        }`}
-      />
-    );
-  }
-  if (normalized.includes("gelato") || normalized.includes("milkshake")) {
-    return (
-      <IceCream
-        className={`w-4 h-4 mr-2 shrink-0 ${
-          isActive ? "text-zinc-950" : "text-pink-400"
-        }`}
-      />
-    );
-  }
-  if (
-    normalized.includes("prato") ||
-    normalized.includes("principal") ||
-    normalized.includes("refeic") ||
-    normalized.includes("lanche") ||
-    normalized.includes("burger") ||
-    normalized.includes("carne") ||
-    normalized.includes("executivo")
+    normalized.includes("petisc") ||
+    normalized.includes("entrada") ||
+    normalized.includes("porc") ||
+    normalized.includes("porç") ||
+    normalized.includes("prato")
   ) {
     return (
       <Utensils
-        className={`w-4 h-4 mr-2 shrink-0 ${
-          isActive ? "text-zinc-950" : "text-orange-500"
+        className={`w-4 h-4 mr-1.5 shrink-0 ${
+          isActive ? "text-zinc-950" : "text-orange-400"
         }`}
       />
     );
   }
   return (
-    <UtensilsCrossed
-      className={`w-4 h-4 mr-2 shrink-0 ${
-        isActive ? "text-zinc-950" : "text-amber-400"
+    <Sparkles
+      className={`w-4 h-4 mr-1.5 shrink-0 ${
+        isActive ? "text-zinc-950" : "text-zinc-400"
       }`}
     />
   );
@@ -154,6 +117,7 @@ export function PublicRestaurantMenuSection({
   tableNumber = null,
   tableName = null,
   waiterName = null,
+  restaurantPhone = null,
 }: PublicRestaurantMenuSectionProps) {
   const [activeTab, setActiveTab] = useState<string>("Todos");
   const [cart, setCart] = useState<Record<string, CartItem>>({});
@@ -170,28 +134,48 @@ export function PublicRestaurantMenuSection({
     null
   );
 
-  // Abas dinâmicas combinando as 4 categorias clássicas + categorias com itens
+  const safeCategories = Array.isArray(categories) ? categories : [];
+  const safeItems = Array.isArray(items) ? items : [];
+
+  // Abas dinâmicas combinando as categorias padrão + categorias do banco
   const categoryTabs = useMemo(() => {
     const dynamicNames = [
-      ...categories.map((c) => c.name),
-      ...items.map((i) => i.category || "Pratos"),
-    ].filter(Boolean);
+      ...safeCategories.map((c) => c?.name).filter(Boolean),
+      ...safeItems.map((i) => i?.category || "Pratos").filter(Boolean),
+    ] as string[];
 
-    const merged = [...DEFAULT_TABS];
+    const merged = [...defaultCategories];
     for (const name of dynamicNames) {
       if (!merged.some((m) => m.toLowerCase() === name.toLowerCase())) {
         merged.push(name);
       }
     }
     return merged;
-  }, [categories, items]);
+  }, [safeCategories, safeItems]);
 
   const filteredItems = useMemo(() => {
-    if (activeTab === "Todos") return items;
-    return items.filter(
-      (item) => (item.category || "Pratos").toLowerCase() === activeTab.toLowerCase()
-    );
-  }, [items, activeTab]);
+    if (activeTab === "Todos") return safeItems;
+    const target = activeTab.toLowerCase();
+    return safeItems.filter((item) => {
+      const itemCat = (item?.category || "Pratos").toLowerCase();
+      if (target === "petiscos & entradas") {
+        return (
+          itemCat === target ||
+          itemCat.includes("entrada") ||
+          itemCat.includes("petisc") ||
+          itemCat.includes("porc") ||
+          itemCat.includes("porç")
+        );
+      }
+      return itemCat === target;
+    });
+  }, [safeItems, activeTab]);
+
+  const fallbackWhatsappUrl = generateWhatsAppUrl(
+    restaurantPhone || "",
+    tenantName,
+    `Olá! Vi a vitrine de ${tenantName} e gostaria de conferir o cardápio e itens disponíveis de hoje.`
+  );
 
   const cartEntries = Object.values(cart);
   const totalItemsCount = cartEntries.reduce((sum, c) => sum + c.quantity, 0);
@@ -324,7 +308,7 @@ export function PublicRestaurantMenuSection({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/80 pb-5">
           <div className="space-y-1.5">
             <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 px-3 py-1 text-xs font-bold uppercase tracking-wider text-amber-400">
-              <UtensilsCrossed className="h-3.5 w-3.5 text-amber-400" />
+              <Utensils className="h-3.5 w-3.5 text-amber-400" />
               <span>Cardápio Digital Interativo</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-zinc-100">
@@ -349,7 +333,7 @@ export function PublicRestaurantMenuSection({
           )}
         </div>
 
-        {/* Abas de Categorias com Ícones Lucide Modernos e Estilo Pill */}
+        {/* Abas de Categorias com Ícones Lucide Seguros e Estilo Pill */}
         <div className="flex items-center gap-2.5 overflow-x-auto pb-2 no-scrollbar">
           {categoryTabs.map((tab) => {
             const isActive = activeTab.toLowerCase() === tab.toLowerCase();
@@ -358,10 +342,10 @@ export function PublicRestaurantMenuSection({
                 key={tab}
                 type="button"
                 onClick={() => setActiveTab(tab)}
-                className={`inline-flex items-center whitespace-nowrap rounded-full px-5 py-2.5 text-sm transition-all duration-200 border cursor-pointer ${
+                className={`inline-flex items-center whitespace-nowrap text-xs sm:text-sm transition-all duration-200 cursor-pointer ${
                   isActive
-                    ? "bg-amber-500 text-zinc-950 font-bold border-amber-400 shadow-md shadow-amber-500/20"
-                    : "bg-zinc-900 text-zinc-400 hover:text-zinc-200 border-zinc-800 hover:bg-zinc-800"
+                    ? "bg-amber-500 text-zinc-950 font-bold px-4 py-2 rounded-full shadow-lg shadow-amber-500/20"
+                    : "bg-zinc-900 text-zinc-300 border border-zinc-800 hover:bg-zinc-800 px-4 py-2 rounded-full"
                 }`}
               >
                 {renderCategoryIcon(tab, isActive)}
@@ -371,16 +355,47 @@ export function PublicRestaurantMenuSection({
           })}
         </div>
 
-        {/* Grid de Pratos, Porções e Bebidas */}
-        {filteredItems.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-950/60 p-10 text-center space-y-2">
-            <UtensilsCrossed className="mx-auto h-8 w-8 text-zinc-500" />
+        {/* Grid de Pratos, Porções e Bebidas ou Fallback Seguro */}
+        {safeItems.length === 0 ? (
+          <div className="border border-zinc-800 bg-zinc-900/50 p-8 rounded-2xl text-center text-zinc-400 space-y-4">
+            <Utensils className="mx-auto h-10 w-10 text-amber-400/80" />
+            <div className="space-y-1.5 max-w-lg mx-auto">
+              <p className="text-sm sm:text-base font-semibold text-zinc-200">
+                O cardápio digital está sendo preparado pela nossa equipe. Entre em contato pelo WhatsApp para conferir os itens disponíveis de hoje!
+              </p>
+            </div>
+            <div className="pt-1">
+              <a
+                href={fallbackWhatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-5 py-3 text-xs sm:text-sm shadow-lg shadow-emerald-500/20 transition active:scale-95"
+              >
+                <MessageCircle className="h-4 w-4 shrink-0" />
+                <span>Conferir Cardápio no WhatsApp</span>
+              </a>
+            </div>
+          </div>
+        ) : filteredItems.length === 0 ? (
+          <div className="border border-zinc-800 bg-zinc-900/50 p-8 rounded-2xl text-center text-zinc-400 space-y-3">
+            <Utensils className="mx-auto h-8 w-8 text-zinc-500" />
             <p className="text-sm font-bold text-zinc-300">
               Nenhum item disponível nesta categoria no momento.
             </p>
-            <p className="text-xs text-zinc-500">
-              Selecione outra categoria acima para explorar o cardápio.
+            <p className="text-xs text-zinc-400">
+              Selecione outra categoria acima ou fale conosco pelo WhatsApp para consultar as opções do dia.
             </p>
+            <div>
+              <a
+                href={fallbackWhatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-4 py-2.5 text-xs shadow-md transition"
+              >
+                <MessageCircle className="h-4 w-4 shrink-0" />
+                <span>Consultar no WhatsApp</span>
+              </a>
+            </div>
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -403,7 +418,7 @@ export function PublicRestaurantMenuSection({
                         />
                       ) : (
                         <div className="flex h-full w-full flex-col items-center justify-center text-zinc-600 gap-1.5 bg-gradient-to-br from-zinc-900 to-zinc-950">
-                          <UtensilsCrossed className="h-8 w-8 text-amber-500/40 stroke-1" />
+                          <Utensils className="h-8 w-8 text-amber-500/40 stroke-1" />
                           <span className="text-[11px] font-medium text-zinc-500">
                             {tenantName}
                           </span>

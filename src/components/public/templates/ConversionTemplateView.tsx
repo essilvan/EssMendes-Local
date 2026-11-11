@@ -30,7 +30,7 @@ import {
   Sparkles,
   CarFront,
   Wrench,
-  UtensilsCrossed,
+  Utensils,
 } from "lucide-react";
 import type {
   Service,
@@ -63,6 +63,7 @@ import {
   getCtaButtonText,
   getServiceIcon,
   isAutomotiveNiche,
+  isRestaurantNiche,
 } from "@/utils/showcase";
 
 export interface TemplateViewProps {
@@ -145,10 +146,10 @@ export function ConversionTemplateView({
   const [selectedDetailItem, setSelectedDetailItem] = useState<ItemDetailData | null>(null);
 
   const isRestaurant =
-    tenant.niche === "restaurant" ||
     theme?.id === "restaurant" ||
     theme?.id === "gastronomia" ||
-    theme?.id === "food";
+    theme?.id === "food" ||
+    isRestaurantNiche(tenant, profile, theme?.id, menuCategories, menuItems);
   const effectiveLogoUrl =
     profile?.logo_url ||
     (tenant as any)?.logo_url ||
@@ -237,8 +238,8 @@ export function ConversionTemplateView({
             className="w-full h-full object-cover object-center brightness-95 contrast-100 blur-[1px] scale-105"
             referrerPolicy="no-referrer"
           />
-          {/* Máscara suave apenas com 30% a 40% de opacidade para a foto aparecer com clareza */}
-          <div className="absolute inset-0 bg-black/35" />
+          {/* Máscara escura (bg-black/60) para contraste nítido */}
+          <div className="absolute inset-0 bg-black/60" />
         </div>
 
         {/* Efeitos de iluminação ambiente suaves */}
@@ -323,12 +324,12 @@ export function ConversionTemplateView({
 
           {/* Barra de botões de CTA horizontais modernizados e alinhados */}
           {isRestaurant ? (
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 w-full max-w-2xl mx-auto mt-6">
+            <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3 sm:gap-4 w-full max-w-2xl mx-auto mt-6">
               <a
                 href="#cardapio"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 h-12 sm:h-14 px-6 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold shadow-lg shadow-amber-500/20 whitespace-nowrap text-sm sm:text-base transition-all duration-200 active:scale-95"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 h-12 sm:h-14 px-6 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold shadow-lg shadow-amber-500/20 whitespace-nowrap text-sm sm:text-base transition-all duration-200 active:scale-95"
               >
-                <UtensilsCrossed className="h-4 w-4 text-zinc-950 shrink-0" />
+                <Utensils className="h-4 w-4 text-zinc-950 shrink-0" />
                 <span>Ver Cardápio</span>
               </a>
 
@@ -341,6 +342,16 @@ export function ConversionTemplateView({
                 <MessageCircle className="h-4 w-4 fill-white text-emerald-600 shrink-0" />
                 <span>Chamar Garçom / WhatsApp</span>
               </a>
+
+              {cleanPhone && (
+                <a
+                  href={`tel:+55${cleanPhone}`}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-12 sm:h-14 px-6 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-200 border border-zinc-700/80 backdrop-blur-sm whitespace-nowrap font-medium text-sm sm:text-base transition-all duration-200 active:scale-95"
+                >
+                  <Phone className="h-4 w-4 text-amber-400 shrink-0" />
+                  <span>Ligar</span>
+                </a>
+              )}
 
               <a
                 href={

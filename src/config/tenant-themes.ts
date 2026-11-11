@@ -481,8 +481,19 @@ export const NICHE_THEMES: Record<ThemeNiche, NicheThemeConfig> = {
 
 export function getTenantTheme(themeKey?: string | null, category?: string | null, googleTypes?: string[]): NicheThemeConfig {
   const normalizedKey = (themeKey || '').toLowerCase().trim();
-  if (normalizedKey in NICHE_THEMES) {
-    return NICHE_THEMES[normalizedKey as ThemeNiche];
+  if (
+    normalizedKey === 'restaurant' ||
+    normalizedKey === 'gastronomia' ||
+    normalizedKey === 'food' ||
+    normalizedKey === 'restaurante' ||
+    normalizedKey === 'bar' ||
+    normalizedKey === 'lanchonete' ||
+    normalizedKey === 'pizzaria' ||
+    normalizedKey === 'hamburgueria' ||
+    normalizedKey === 'boteco' ||
+    normalizedKey === 'choperia'
+  ) {
+    return NICHE_THEMES.restaurant;
   }
   if (normalizedKey === 'bakery' || normalizedKey === 'confectionery' || normalizedKey === 'bolos' || normalizedKey === 'doceria') {
     return NICHE_THEMES.confeitaria;
@@ -490,8 +501,14 @@ export function getTenantTheme(themeKey?: string | null, category?: string | nul
   if (normalizedKey === 'automotive' || normalizedKey === 'automotivo' || normalizedKey === 'auto') {
     return NICHE_THEMES.automotive;
   }
-  if (normalizedKey === 'restaurant' || normalizedKey === 'gastronomia' || normalizedKey === 'food' || normalizedKey === 'restaurante') {
-    return NICHE_THEMES.restaurant;
+  if (
+    normalizedKey &&
+    normalizedKey !== 'default' &&
+    normalizedKey !== 'retail_default' &&
+    normalizedKey !== 'servicos' &&
+    normalizedKey in NICHE_THEMES
+  ) {
+    return NICHE_THEMES[normalizedKey as ThemeNiche];
   }
   const text = `${category || ''} ${(googleTypes || []).join(' ')}`.toLowerCase();
   if (

@@ -798,7 +798,15 @@ function detectLocalBusinessSchemaType(
     ],
   };
 
-  const restaurantMenu = await getPublicRestaurantMenuAction(tenant.id);
+  let restaurantMenu: { categories: any[]; items: any[] } = {
+    categories: [],
+    items: [],
+  };
+  try {
+    restaurantMenu = await getPublicRestaurantMenuAction(tenant.id);
+  } catch (err) {
+    console.error("[PublicTenantPage] Erro ao carregar cardápio:", err);
+  }
 
   const templateId = tenant?.theme_settings?.template_id || typedProfile?.template_id || "premium";
   const primaryColor = tenant?.theme_settings?.primary_color || typedProfile?.primary_color || "#e11d48";
@@ -813,7 +821,7 @@ function detectLocalBusinessSchemaType(
 
   return (
     <div
-      className={`w-full max-w-full overflow-x-hidden ${selectedTemplateClass}`}
+      className={`min-h-screen bg-zinc-950 text-zinc-100 flex flex-col w-full max-w-full overflow-x-hidden ${selectedTemplateClass}`}
       style={{ "--brand-primary": primaryColor } as React.CSSProperties}
     >
       {/* Injeção JSON-LD Estruturado com @graph para SEO Local (Rich Snippets Google) */}

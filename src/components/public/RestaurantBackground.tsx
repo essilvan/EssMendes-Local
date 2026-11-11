@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { UtensilsCrossed, Flame, Wine, Soup, Coffee } from "lucide-react";
+import { Utensils, Wine, Sparkles } from "lucide-react";
 
 /**
  * SVG delicado de faíscas gastronômicas e brasas douradas incandescentes
@@ -97,18 +97,16 @@ export function RestaurantBackground() {
       <div className="absolute -bottom-36 left-1/4 w-[30rem] h-[30rem] rounded-full bg-orange-500/8 blur-3xl" />
 
       {/* ============================================================== */}
-      {/* 2. TRILHA LATERAL ESQUERDA (Talheres, Chamas, Brasas & Café)   */}
+      {/* 2. TRILHA LATERAL ESQUERDA                                     */}
       {/* ============================================================== */}
       <div className="absolute top-0 bottom-0 left-0 w-24 sm:w-36 lg:w-48 overflow-hidden pointer-events-none">
-        {/* Talheres Cruzados 1 (Topo esquerdo) */}
         <div
           className="absolute top-16 left-4 sm:left-8 opacity-15 text-amber-400/70 animate-culinary-float"
-          title="Talheres Gastronômicos"
+          title="Gastronomia"
         >
-          <UtensilsCrossed className="w-12 h-12" />
+          <Utensils className="w-12 h-12" />
         </div>
 
-        {/* Faísca / Brasa Gastronômica Flutuante */}
         <div
           className="absolute top-36 left-10 sm:left-16 opacity-20 animate-ember-rise"
           title="Faísca Gastronômica"
@@ -116,15 +114,13 @@ export function RestaurantBackground() {
           <CulinarySparkSvg className="w-10 h-10" />
         </div>
 
-        {/* Chama Sutil (Meio-superior esquerdo) */}
         <div
           className="absolute top-[24%] left-5 sm:left-10 opacity-15 text-orange-500 animate-flame-flicker"
-          title="Fogo & Brasa"
+          title="Destaques da Casa"
         >
-          <Flame className="w-11 h-11" />
+          <Sparkles className="w-11 h-11" />
         </div>
 
-        {/* Prato Cloche Gourmet */}
         <div
           className="absolute top-[36%] left-3 sm:left-7 opacity-15 text-amber-400 animate-culinary-float"
           title="Prato Gourmet"
@@ -132,31 +128,27 @@ export function RestaurantBackground() {
           <ClochePlateSvg className="w-12 h-12" />
         </div>
 
-        {/* Taça de Vinho Selecionado */}
         <div
           className="absolute top-[50%] left-6 sm:left-12 opacity-15 text-amber-500 animate-culinary-float"
-          title="Carta de Vinhos"
+          title="Carta de Bebidas"
         >
           <Wine className="w-11 h-11" />
         </div>
 
-        {/* Sopa / Prato Fumegante com Vapor */}
         <div
           className="absolute top-[64%] left-4 sm:left-8 opacity-15 text-orange-400 animate-steam-drift"
-          title="Prato Especial Quente"
+          title="Prato Especial"
         >
-          <Soup className="w-11 h-11" />
+          <Utensils className="w-11 h-11" />
         </div>
 
-        {/* Café / Sobremesa (Meio-inferior) */}
         <div
           className="absolute top-[76%] left-6 sm:left-14 opacity-15 text-zinc-400 animate-steam-drift"
-          title="Cafeteria & Digestivo"
+          title="Especialidades"
         >
-          <Coffee className="w-10 h-10" />
+          <Sparkles className="w-10 h-10" />
         </div>
 
-        {/* Brasas Finais (Inferior) */}
         <div
           className="absolute top-[88%] left-4 sm:left-9 opacity-20 animate-ember-rise"
         >
@@ -165,18 +157,16 @@ export function RestaurantBackground() {
       </div>
 
       {/* ============================================================== */}
-      {/* 3. TRILHA LATERAL DIREITA (Chamas, Taças, Cloches & Talheres)  */}
+      {/* 3. TRILHA LATERAL DIREITA                                      */}
       {/* ============================================================== */}
       <div className="absolute top-0 bottom-0 right-0 w-24 sm:w-36 lg:w-48 overflow-hidden pointer-events-none">
-        {/* Chama Ardente 1 (Topo direito) */}
         <div
           className="absolute top-16 right-4 sm:right-10 opacity-15 text-orange-500 animate-flame-flicker"
-          title="Fogo de Brasa"
+          title="Especialidades"
         >
-          <Flame className="w-12 h-12" />
+          <Sparkles className="w-12 h-12" />
         </div>
 
-        {/* Taça de Vinho / Degustação (Superior direito) */}
         <div
           className="absolute top-[22%] right-6 sm:right-12 opacity-15 text-amber-500 animate-culinary-float"
           title="Degustação & Harmonização"
@@ -184,14 +174,12 @@ export function RestaurantBackground() {
           <Wine className="w-11 h-11" />
         </div>
 
-        {/* Faísca de Brasa Dourada */}
         <div
           className="absolute top-[34%] right-5 sm:right-14 opacity-20 animate-ember-rise"
         >
           <CulinarySparkSvg className="w-10 h-10" />
         </div>
 
-        {/* Prato Cloche Especial */}
         <div
           className="absolute top-[46%] right-4 sm:right-8 opacity-15 text-amber-400 animate-culinary-float"
           title="Alta Gastronomia"
@@ -199,27 +187,24 @@ export function RestaurantBackground() {
           <ClochePlateSvg className="w-12 h-12" />
         </div>
 
-        {/* Talheres Cruzados (Meio-inferior direito) */}
         <div
           className="absolute top-[58%] right-6 sm:right-12 opacity-15 text-amber-400/70 animate-culinary-float"
           title="Menu A la Carte"
         >
-          <UtensilsCrossed className="w-12 h-12" />
+          <Utensils className="w-12 h-12" />
         </div>
 
-        {/* Prato Quente / Sopa Fumegante */}
         <div
           className="absolute top-[72%] right-5 sm:right-10 opacity-15 text-orange-400 animate-steam-drift"
           title="Preparo Artesanal"
         >
-          <Soup className="w-11 h-11" />
+          <Utensils className="w-11 h-11" />
         </div>
 
-        {/* Café Expresso / Finalização */}
         <div
           className="absolute top-[84%] right-4 sm:right-8 opacity-15 text-zinc-400 animate-steam-drift"
         >
-          <Coffee className="w-10 h-10" />
+          <Sparkles className="w-10 h-10" />
         </div>
       </div>
     </div>

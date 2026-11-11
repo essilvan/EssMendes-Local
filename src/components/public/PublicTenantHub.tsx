@@ -31,7 +31,7 @@ import { WhatsAppFloatingButton } from "./WhatsAppFloatingButton";
 import { VehicleQuoteModal } from "./VehicleQuoteModal";
 import { PublicRestaurantMenuSection } from "./PublicRestaurantMenuSection";
 import { getUnifiedEstablishmentPhotos } from "@/utils/establishment-photos";
-import { getCtaButtonText, isAutomotiveNiche } from "@/utils/showcase";
+import { getCtaButtonText, isAutomotiveNiche, isRestaurantNiche } from "@/utils/showcase";
 import { CarFront, Wrench, Gauge, ShieldCheck } from "lucide-react";
 import type { BusinessAttributes as BusinessAttributesType } from "@/types";
 
@@ -212,12 +212,13 @@ export function PublicTenantHub({
     tenant.theme_settings?.niche ||
     tenant.theme_niche ||
     profile?.template_id;
-  const isRestaurant =
-    tenant.niche === "restaurant" ||
-    effectiveNiche === "restaurant" ||
-    effectiveNiche === "gastronomia" ||
-    effectiveNiche === "food" ||
-    effectiveNiche === "restaurante";
+  const isRestaurant = isRestaurantNiche(
+    tenant,
+    profile,
+    effectiveNiche,
+    menuCategories,
+    menuItems
+  );
   const ctaButtonText = isRestaurant
     ? "Ver Cardápio"
     : getCtaButtonText(
@@ -278,11 +279,13 @@ export function PublicTenantHub({
   const isFood = isRestaurant;
   const isHealth = effectiveNiche === "health_beauty" || effectiveNiche === "estetica_saude";
 
-  const currentTheme = getTenantTheme(
-    effectiveNiche,
-    tenant.category || profile?.business_category,
-    tenant.google_types || []
-  );
+  const currentTheme = isRestaurant
+    ? NICHE_THEMES.restaurant
+    : getTenantTheme(
+        effectiveNiche,
+        tenant.category || profile?.business_category,
+        tenant.google_types || []
+      );
 
   const heroBg =
     tenant.cover_image_url ||
@@ -303,7 +306,7 @@ export function PublicTenantHub({
   return (
     <div
       style={{ ...colorStyles, "--brand-primary": brandColor } as React.CSSProperties}
-      className={`min-h-screen w-full max-w-full overflow-x-hidden transition-colors duration-200 relative ${selectedTemplateClass} ${
+      className={`min-h-screen w-full max-w-full overflow-x-hidden transition-colors duration-200 relative flex flex-col ${selectedTemplateClass} ${
         isRestaurant
           ? "bg-zinc-950 text-zinc-100 dark"
           : activeTemplate === "minimal"

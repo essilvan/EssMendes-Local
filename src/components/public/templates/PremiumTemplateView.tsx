@@ -3,6 +3,7 @@
 import React from "react";
 import type { TemplateViewProps } from "./ConversionTemplateView";
 import { getUnifiedEstablishmentPhotos } from "@/utils/establishment-photos";
+import { isRestaurantNiche } from "@/utils/showcase";
 import { PublicHeroSplit } from "../PublicHeroSplit";
 import { TrustMetricsBar } from "../TrustMetricsBar";
 import { ConversionDashboard } from "../ConversionDashboard";
@@ -47,10 +48,10 @@ export function PremiumTemplateView({
     tenant.phone ||
     "";
   const isRestaurant =
-    tenant.niche === "restaurant" ||
     theme?.id === "restaurant" ||
     theme?.id === "gastronomia" ||
-    theme?.id === "food";
+    theme?.id === "food" ||
+    isRestaurantNiche(tenant, profile, theme?.id, menuCategories, menuItems);
 
   const photosData = getUnifiedEstablishmentPhotos(tenant, profile);
   const effectiveHeroImage = customHeroImage || photosData.heroImage;

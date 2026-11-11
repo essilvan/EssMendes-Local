@@ -8,9 +8,9 @@ import {
   Gauge,
   Disc,
   UtensilsCrossed,
+  Utensils,
   Flame,
   Wine,
-  Soup,
   Coffee,
   Cake,
   Cookie,
@@ -204,7 +204,7 @@ export function getServiceIcon(
     return UtensilsCrossed;
   }
   if (normalized.includes("sopa") || normalized.includes("caldo")) {
-    return Soup;
+    return Utensils;
   }
   if (normalized.includes("café") || normalized.includes("lanche")) {
     return Coffee;
@@ -245,6 +245,40 @@ export function isAutomotiveNiche(
     combined.includes("oficina") ||
     combined.includes("funilaria") ||
     combined.includes("car_repair")
+  );
+}
+
+/**
+ * Detecta se o estabelecimento pertence ao nicho de Restaurante / Bar / Gastronomia
+ */
+export function isRestaurantNiche(
+  tenant?: any,
+  profile?: TenantProfile | null,
+  niche?: string | null,
+  menuCategories?: any[],
+  menuItems?: any[]
+): boolean {
+  if (Array.isArray(menuCategories) && menuCategories.length > 0) return true;
+  if (Array.isArray(menuItems) && menuItems.length > 0) return true;
+  const combined = `${niche || ""} ${tenant?.niche || ""} ${tenant?.theme_niche || ""} ${tenant?.theme_settings?.niche || ""} ${tenant?.category || ""} ${tenant?.segment || ""} ${tenant?.template || ""} ${profile?.business_category || ""} ${profile?.template_id || ""} ${tenant?.name || ""} ${profile?.name || ""} ${tenant?.slug || ""} ${(tenant?.google_types || []).join(" ")}`.toLowerCase();
+  const withoutBarber = combined.replace(/barbearia/g, "").replace(/barber/g, "");
+  return (
+    withoutBarber.includes("restauran") ||
+    withoutBarber.includes("gastron") ||
+    withoutBarber.includes("food") ||
+    withoutBarber.includes("lanch") ||
+    withoutBarber.includes("pizz") ||
+    withoutBarber.includes("hamburg") ||
+    withoutBarber.includes("choperia") ||
+    withoutBarber.includes("boteco") ||
+    withoutBarber.includes("espet") ||
+    withoutBarber.includes("bistr") ||
+    withoutBarber.includes("cervej") ||
+    withoutBarber.includes("cardapio") ||
+    withoutBarber.includes("cardápio") ||
+    /\bbar\b/.test(withoutBarber) ||
+    withoutBarber.includes("bar-") ||
+    withoutBarber.includes("-bar")
   );
 }
 

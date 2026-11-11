@@ -3,6 +3,7 @@
 import React from "react";
 import {
   Calendar,
+  Phone,
   MessageCircle,
   MapPin,
   ArrowRight,
@@ -17,11 +18,10 @@ import {
   Sparkles,
   CarFront,
   Wrench,
-  UtensilsCrossed,
-  Flame,
+  Utensils,
 } from "lucide-react";
 import type { TenantReview, Service } from "@/types";
-import { generateWhatsAppUrl } from "@/utils/phone";
+import { generateWhatsAppUrl, sanitizePhoneNumber } from "@/utils/phone";
 import { sanitizeDescription } from "@/utils/address";
 import { getNicheFallbackImage } from "@/utils/establishment-photos";
 import type { NicheThemeConfig } from "@/config/tenant-themes";
@@ -32,6 +32,7 @@ import {
   getCtaButtonText,
   getServiceIcon,
   isAutomotiveNiche,
+  isRestaurantNiche,
 } from "@/utils/showcase";
 
 interface PublicHeroSplitProps {
@@ -98,13 +99,14 @@ export function PublicHeroSplit({
     currentTheme?.id === "auto" ||
     isAutomotiveNiche(tenant, undefined, currentTheme?.id);
   const isRestaurant =
-    tenant?.niche === "restaurant" ||
     currentTheme?.id === "restaurant" ||
     currentTheme?.id === "gastronomia" ||
-    currentTheme?.id === "food";
+    currentTheme?.id === "food" ||
+    isRestaurantNiche(tenant, undefined, currentTheme?.id);
   const effectiveLogoUrl =
     logoUrl || tenant?.logo_url || tenant?.tenant_profiles?.logo_url || null;
   const displayAddress = address || tenant?.address || "Atendimento Presencial";
+  const cleanPhone = phoneWhatsapp ? sanitizePhoneNumber(phoneWhatsapp) : "";
   const cleanDescription = sanitizeDescription(description, address);
   const heroSubtitle =
     getHeroSubtitle(tenant, undefined, currentTheme?.id, businessCategory) || cleanDescription;
@@ -140,7 +142,7 @@ export function PublicHeroSplit({
 
   return (
     <section className="relative overflow-hidden rounded-3xl min-h-[460px] md:min-h-[540px] flex items-end p-4 sm:p-8 lg:p-10 border border-white/10 shadow-2xl group">
-      {/* 1. Imagem de Capa com sobreposição de gradiente atmosférico */}
+      {/* 1. Imagem de Capa com sobreposição escura (bg-black/60) */}
       <div className="absolute inset-0 w-full h-full z-0 overflow-hidden">
         <img
           src={coverImage}
@@ -148,7 +150,7 @@ export function PublicHeroSplit({
           className="w-full h-full object-cover object-center scale-105 transition-transform duration-1000 ease-out group-hover:scale-100"
           referrerPolicy="no-referrer"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/65 to-black/35" />
+        <div className="absolute inset-0 bg-black/60 bg-gradient-to-t from-zinc-950 via-zinc-950/65 to-black/40" />
       </div>
 
       {/* Brilho ambiente dinâmico sutil no fundo */}
@@ -176,7 +178,7 @@ export function PublicHeroSplit({
             ) : isAutomotive ? (
               <CarFront className="h-10 w-10 text-blue-400" />
             ) : isRestaurant ? (
-              <UtensilsCrossed className="h-10 w-10 text-amber-400 animate-culinary-float" />
+              <Utensils className="h-10 w-10 text-amber-400 animate-culinary-float" />
             ) : (
               <span className="text-2xl sm:text-3xl font-black text-white uppercase select-none">
                 {tenantName.charAt(0)}
@@ -293,13 +295,13 @@ export function PublicHeroSplit({
             {/* 1. Ver Cardápio */}
             <a
               href="#cardapio"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 h-12 sm:h-14 px-6 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold shadow-lg shadow-amber-500/20 whitespace-nowrap text-sm sm:text-base transition-all duration-200 active:scale-95 cursor-pointer"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 h-12 sm:h-14 px-6 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold shadow-lg shadow-amber-500/20 whitespace-nowrap text-sm sm:text-base transition-all duration-200 active:scale-95 cursor-pointer"
             >
-              <UtensilsCrossed className="h-4 w-4 shrink-0 text-zinc-950" />
+              <Utensils className="h-4 w-4 shrink-0 text-zinc-950" />
               <span>Ver Cardápio</span>
             </a>
 
-            {/* 2. Chamar Garçom / WhatsApp */}
+            {/* 2. WhatsApp */}
             {phoneWhatsapp && (
               <a
                 href={whatsappUrl}
@@ -312,7 +314,18 @@ export function PublicHeroSplit({
               </a>
             )}
 
-            {/* 3. Como Chegar */}
+            {/* 3. Ligar */}
+            {cleanPhone && (
+              <a
+                href={`tel:+55${cleanPhone}`}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-12 sm:h-14 px-6 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-200 border border-zinc-700/80 backdrop-blur-sm whitespace-nowrap font-medium text-sm sm:text-base transition-all duration-200 active:scale-95"
+              >
+                <Phone className="h-4 w-4 text-amber-400 shrink-0" />
+                <span>Ligar</span>
+              </a>
+            )}
+
+            {/* 4. Como Chegar */}
             <a
               href={mapsUrl}
               target="_blank"

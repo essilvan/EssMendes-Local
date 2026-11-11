@@ -41,6 +41,7 @@ import {
   getCtaButtonText,
   getServiceIcon,
   isAutomotiveNiche,
+  isRestaurantNiche,
 } from "@/utils/showcase";
 
 export function MinimalTemplateView({
@@ -76,10 +77,10 @@ export function MinimalTemplateView({
   const formattedPhone = formatBrazilianPhone(rawPhone);
   const whatsappUrl = generateWhatsAppUrl(rawPhone, tenant.name);
   const isRestaurant =
-    tenant.niche === "restaurant" ||
     theme?.id === "restaurant" ||
     theme?.id === "gastronomia" ||
-    theme?.id === "food";
+    theme?.id === "food" ||
+    isRestaurantNiche(tenant, profile, theme?.id, menuCategories, menuItems);
 
   const heroSubtitle = getHeroSubtitle(
     tenant,
