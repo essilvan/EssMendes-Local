@@ -36,6 +36,7 @@ export function PlacePhotoGallery({
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(
     null
   );
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
 
   const cleanPhotos = Array.isArray(photos)
     ? photos.filter((p) => Boolean(p) && typeof p === "string")
@@ -72,10 +73,33 @@ export function PlacePhotoGallery({
       const originalOverflow = document.body.style.overflow;
       document.body.style.overflow = "hidden";
       return () => {
-        document.body.style.overflow = originalOverflow;
+        document.body.style.overflow = originalOverflow || "";
       };
+    } else {
+      document.body.style.overflow = "";
     }
   }, [selectedPhotoIndex]);
+
+  // Gestos touch / swipe no mobile
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches && e.touches.length > 0) {
+      setTouchStartX(e.touches[0].clientX);
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX === null) return;
+    if (e.changedTouches && e.changedTouches.length > 0) {
+      const touchEndX = e.changedTouches[0].clientX;
+      const diff = touchStartX - touchEndX;
+      if (diff > 50) {
+        handleNext();
+      } else if (diff < -50) {
+        handlePrev();
+      }
+    }
+    setTouchStartX(null);
+  };
 
   if (cleanPhotos.length === 0) {
     return null;
@@ -162,20 +186,25 @@ export function PlacePhotoGallery({
           role="dialog"
           aria-modal="true"
           aria-label={`Visualizador de foto ampliada de ${tenantName}`}
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/95 backdrop-blur-md p-4 sm:p-6 select-none animate-in fade-in duration-200"
+          className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-4 select-none animate-in fade-in duration-200"
           onClick={() => setSelectedPhotoIndex(null)}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
         >
-          {/* Botão Fechar no Canto Superior Direito */}
+          {/* Botão de Fechar Fixo e Destacado no Canto Superior Direito */}
           <button
             type="button"
-            onClick={() => setSelectedPhotoIndex(null)}
-            className="fixed top-4 right-4 sm:top-6 sm:right-6 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/35 active:scale-95 transition backdrop-blur-md shadow-lg"
-            aria-label="Fechar visualização de foto"
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedPhotoIndex(null);
+            }}
+            aria-label="Fechar"
+            className="fixed top-4 right-4 z-[10000] bg-zinc-800/90 hover:bg-zinc-700 text-white p-3 rounded-full shadow-xl border border-zinc-600 transition-transform active:scale-95 cursor-pointer pointer-events-auto"
           >
-            <X className="h-6 w-6" />
+            <X className="w-6 h-6" />
           </button>
 
-          {/* Botão Anterior na Lateral Esquerda (Desktop) */}
+          {/* Botão Anterior na Lateral Esquerda */}
           {cleanPhotos.length > 1 && (
             <button
               type="button"
@@ -183,14 +212,14 @@ export function PlacePhotoGallery({
                 e.stopPropagation();
                 handlePrev();
               }}
-              className="hidden sm:flex fixed left-4 sm:left-6 top-1/2 -translate-y-1/2 z-20 h-12 w-12 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/35 active:scale-95 transition backdrop-blur-md shadow-lg"
               aria-label="Foto anterior"
+              className="fixed left-3 sm:left-6 top-1/2 -translate-y-1/2 z-[10000] flex h-12 w-12 items-center justify-center rounded-full bg-zinc-800/90 hover:bg-zinc-700 text-white shadow-xl border border-zinc-600 transition-transform active:scale-95 cursor-pointer pointer-events-auto"
             >
-              <ChevronLeft className="h-6 w-6" />
+              <ChevronLeft className="w-6 h-6" />
             </button>
           )}
 
-          {/* Botão Próximo na Lateral Direita (Desktop) */}
+          {/* Botão Próximo na Lateral Direita */}
           {cleanPhotos.length > 1 && (
             <button
               type="button"
@@ -198,20 +227,20 @@ export function PlacePhotoGallery({
                 e.stopPropagation();
                 handleNext();
               }}
-              className="hidden sm:flex fixed right-4 sm:right-6 top-1/2 -translate-y-1/2 z-20 h-12 w-12 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/35 active:scale-95 transition backdrop-blur-md shadow-lg"
               aria-label="Próxima foto"
+              className="fixed right-3 sm:right-6 top-1/2 -translate-y-1/2 z-[10000] flex h-12 w-12 items-center justify-center rounded-full bg-zinc-800/90 hover:bg-zinc-700 text-white shadow-xl border border-zinc-600 transition-transform active:scale-95 cursor-pointer pointer-events-auto"
             >
-              <ChevronRight className="h-6 w-6" />
+              <ChevronRight className="w-6 h-6" />
             </button>
           )}
 
           {/* Container Central com a Imagem Ampliada */}
           <div
-            className="relative max-w-5xl w-full max-h-[88vh] flex flex-col items-center justify-center"
+            className="relative max-w-5xl w-full max-h-[85vh] flex flex-col items-center justify-center pointer-events-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Foto Ampliada com Moldura Fina */}
-            <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-slate-900 shadow-2xl max-h-[78vh] flex items-center justify-center">
+            {/* Foto Ampliada */}
+            <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-zinc-700/80 bg-zinc-950 shadow-2xl max-h-[75vh] flex items-center justify-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={cleanPhotos[selectedPhotoIndex]}
@@ -219,33 +248,16 @@ export function PlacePhotoGallery({
                   selectedPhotoIndex + 1
                 }`}
                 referrerPolicy="no-referrer"
-                className="max-h-[76vh] w-auto object-contain rounded-2xl shadow-inner"
+                className="max-h-[72vh] max-w-full w-auto object-contain rounded-xl sm:rounded-2xl shadow-inner pointer-events-auto"
+                draggable={false}
               />
             </div>
 
             {/* Barra de Controles e Legenda Inferior */}
-            <div className="flex items-center justify-between w-full max-w-md mt-4 px-2 text-white">
-              <button
-                type="button"
-                onClick={handlePrev}
-                className="sm:hidden inline-flex items-center gap-1 rounded-xl bg-white/20 px-3 py-2 text-xs font-bold hover:bg-white/30 transition backdrop-blur-xs"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                <span>Anterior</span>
-              </button>
-
-              <span className="text-xs font-bold text-white/90 bg-white/15 px-3.5 py-1.5 rounded-full backdrop-blur-xs shadow-xs mx-auto">
+            <div className="flex items-center justify-center w-full max-w-md mt-4 px-2 text-white">
+              <span className="text-xs sm:text-sm font-semibold text-zinc-200 bg-zinc-800/90 border border-zinc-700 px-4 py-1.5 rounded-full shadow-md">
                 Foto {selectedPhotoIndex + 1} de {cleanPhotos.length}
               </span>
-
-              <button
-                type="button"
-                onClick={handleNext}
-                className="sm:hidden inline-flex items-center gap-1 rounded-xl bg-white/20 px-3 py-2 text-xs font-bold hover:bg-white/30 transition backdrop-blur-xs"
-              >
-                <span>Próxima</span>
-                <ChevronRight className="h-4 w-4" />
-              </button>
             </div>
           </div>
         </div>

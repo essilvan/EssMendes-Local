@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import {
   MessageCircle,
@@ -143,6 +143,7 @@ export function ConversionTemplateView({
 }: TemplateViewProps) {
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [selectedDetailItem, setSelectedDetailItem] = useState<ItemDetailData | null>(null);
 
   const isRestaurant =
@@ -197,6 +198,66 @@ export function ConversionTemplateView({
       ? customGalleryPhotos
       : photosData.allPhotos;
   const allEstablishmentPhotos = photosData.allPhotos;
+
+  // Navegação no lightbox
+  const handleNextPhoto = useCallback(() => {
+    if (allEstablishmentPhotos.length === 0) return;
+    setSelectedPhotoIndex((prev) => (prev + 1) % allEstablishmentPhotos.length);
+  }, [allEstablishmentPhotos.length]);
+
+  const handlePrevPhoto = useCallback(() => {
+    if (allEstablishmentPhotos.length === 0) return;
+    setSelectedPhotoIndex((prev) =>
+      (prev - 1 + allEstablishmentPhotos.length) % allEstablishmentPhotos.length
+    );
+  }, [allEstablishmentPhotos.length]);
+
+  // Teclado: Escape fecha, Setas navegam
+  useEffect(() => {
+    if (!isLightboxOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsLightboxOpen(false);
+      if (e.key === "ArrowRight") handleNextPhoto();
+      if (e.key === "ArrowLeft") handlePrevPhoto();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isLightboxOpen, handleNextPhoto, handlePrevPhoto]);
+
+  // Trava scroll da página quando o modal estiver aberto
+  useEffect(() => {
+    if (isLightboxOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = originalOverflow || "";
+      };
+    } else {
+      document.body.style.overflow = "";
+    }
+  }, [isLightboxOpen]);
+
+  // Gestos touch / swipe no mobile
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches && e.touches.length > 0) {
+      setTouchStartX(e.touches[0].clientX);
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX === null) return;
+    if (e.changedTouches && e.changedTouches.length > 0) {
+      const touchEndX = e.changedTouches[0].clientX;
+      const diff = touchStartX - touchEndX;
+      if (diff > 50) {
+        handleNextPhoto();
+      } else if (diff < -50) {
+        handlePrevPhoto();
+      }
+    }
+    setTouchStartX(null);
+  };
 
   const realRating = profile?.google_rating ?? profile?.rating ?? tenant.google_rating ?? 5.0;
   const realReviewCount =
@@ -688,61 +749,85 @@ export function ConversionTemplateView({
       {/* Modal Lightbox para fotos em tamanho real */}
       {isLightboxOpen && allEstablishmentPhotos.length > 0 && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-md"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Visualizador de foto ampliada de ${tenant.name}`}
+          className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-4 select-none animate-in fade-in duration-200"
           onClick={() => setIsLightboxOpen(false)}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
         >
-          <div
-            className="relative max-w-4xl max-h-[85vh] w-full h-full flex items-center justify-center"
-            onClick={(e) => e.stopPropagation()}
+          {/* Botão de Fechar Fixo e Destacado no Canto Superior Direito */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsLightboxOpen(false);
+            }}
+            aria-label="Fechar"
+            className="fixed top-4 right-4 z-[10000] bg-zinc-800/90 hover:bg-zinc-700 text-white p-3 rounded-full shadow-xl border border-zinc-600 transition-transform active:scale-95 cursor-pointer pointer-events-auto"
           >
+            <X className="w-6 h-6" />
+          </button>
+
+          {/* Botão Anterior na Lateral Esquerda */}
+          {allEstablishmentPhotos.length > 1 && (
             <button
               type="button"
-              onClick={() => setIsLightboxOpen(false)}
-              className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-neutral-900/80 text-white hover:bg-neutral-800 transition cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePrevPhoto();
+              }}
+              aria-label="Foto anterior"
+              className="fixed left-3 sm:left-6 top-1/2 -translate-y-1/2 z-[10000] flex h-12 w-12 items-center justify-center rounded-full bg-zinc-800/90 hover:bg-zinc-700 text-white shadow-xl border border-zinc-600 transition-transform active:scale-95 cursor-pointer pointer-events-auto"
             >
-              <X className="h-6 w-6" />
+              <ChevronLeft className="w-6 h-6" />
             </button>
+          )}
 
-            <div className="relative w-full h-full max-h-[75vh]">
-              <Image
+          {/* Botão Próximo na Lateral Direita */}
+          {allEstablishmentPhotos.length > 1 && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleNextPhoto();
+              }}
+              aria-label="Próxima foto"
+              className="fixed right-3 sm:right-6 top-1/2 -translate-y-1/2 z-[10000] flex h-12 w-12 items-center justify-center rounded-full bg-zinc-800/90 hover:bg-zinc-700 text-white shadow-xl border border-zinc-600 transition-transform active:scale-95 cursor-pointer pointer-events-auto"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          )}
+
+          {/* Container Central com a Imagem Ampliada */}
+          <div
+            className="relative max-w-5xl w-full max-h-[85vh] flex flex-col items-center justify-center pointer-events-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Foto Ampliada */}
+            <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-zinc-700/80 bg-zinc-950 shadow-2xl max-h-[75vh] flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src={
                   allEstablishmentPhotos[selectedPhotoIndex] ||
                   allEstablishmentPhotos[0]
                 }
-                alt={`Foto ${selectedPhotoIndex + 1} - ${tenant.name}`}
-                fill
-                unoptimized
+                alt={`Instalações ${tenant.name} - Foto ampliada ${
+                  selectedPhotoIndex + 1
+                }`}
                 referrerPolicy="no-referrer"
-                className="object-contain"
+                className="max-h-[72vh] max-w-full w-auto object-contain rounded-xl sm:rounded-2xl shadow-inner pointer-events-auto"
+                draggable={false}
               />
             </div>
 
-            {allEstablishmentPhotos.length > 1 && (
-              <>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setSelectedPhotoIndex((prev) =>
-                      prev === 0 ? allEstablishmentPhotos.length - 1 : prev - 1
-                    )
-                  }
-                  className="absolute left-2 sm:left-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-neutral-900/80 text-white hover:bg-neutral-800 transition cursor-pointer"
-                >
-                  <ChevronLeft className="h-6 w-6" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setSelectedPhotoIndex((prev) =>
-                      prev === allEstablishmentPhotos.length - 1 ? 0 : prev + 1
-                    )
-                  }
-                  className="absolute right-2 sm:right-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-neutral-900/80 text-white hover:bg-neutral-800 transition cursor-pointer"
-                >
-                  <ChevronRight className="h-6 w-6" />
-                </button>
-              </>
-            )}
+            {/* Barra de Controles e Legenda Inferior */}
+            <div className="flex items-center justify-center w-full max-w-md mt-4 px-2 text-white">
+              <span className="text-xs sm:text-sm font-semibold text-zinc-200 bg-zinc-800/90 border border-zinc-700 px-4 py-1.5 rounded-full shadow-md">
+                Foto {selectedPhotoIndex + 1} de {allEstablishmentPhotos.length}
+              </span>
+            </div>
           </div>
         </div>
       )}

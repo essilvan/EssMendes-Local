@@ -595,21 +595,24 @@ export function PublicQuoteApprovalClient({
       {/* MODAL LIGHTBOX PARA AMPLIAR FOTOS */}
       {lightboxPhoto && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-md animate-in fade-in duration-150"
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 p-4 backdrop-blur-md animate-in fade-in duration-150 select-none"
           onClick={() => setLightboxPhoto(null)}
         >
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setLightboxPhoto(null);
+            }}
+            aria-label="Fechar"
+            className="fixed top-4 right-4 z-[10000] bg-zinc-800/90 hover:bg-zinc-700 text-white p-3 rounded-full shadow-xl border border-zinc-600 transition-transform active:scale-95 cursor-pointer pointer-events-auto"
+          >
+            <X className="w-6 h-6" />
+          </button>
           <div
             className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center"
             onClick={(e) => e.stopPropagation()}
           >
-            <button
-              type="button"
-              onClick={() => setLightboxPhoto(null)}
-              className="absolute -top-11 right-0 inline-flex items-center gap-1.5 rounded-full bg-white/10 hover:bg-white/20 px-3.5 py-1.5 text-xs font-bold text-white cursor-pointer"
-            >
-              <X className="h-4 w-4" />
-              <span>Fechar</span>
-            </button>
             <img
               src={lightboxPhoto.url}
               alt={lightboxPhoto.caption}
