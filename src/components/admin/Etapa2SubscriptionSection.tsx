@@ -7,6 +7,7 @@ import {
   Clock,
   Sparkles,
   Zap,
+  MessageCircle,
 } from "lucide-react";
 import { MercadoPagoSubscribeButton } from "@/components/admin/MercadoPagoSubscribeButton";
 import { cn } from "@/utils/cn";
@@ -17,6 +18,8 @@ interface Etapa2SubscriptionSectionProps {
   userEmail?: string;
   payerName?: string;
   payerCpf?: string;
+  ownerPhone?: string | null;
+  ownerName?: string | null;
   monthlyFeeAmount: number;
   isActive: boolean;
   isOverdue: boolean;
@@ -31,6 +34,8 @@ export function Etapa2SubscriptionSection({
   userEmail = "",
   payerName = "",
   payerCpf = "",
+  ownerPhone = "",
+  ownerName = "",
   monthlyFeeAmount,
   isActive,
   isOverdue,
@@ -47,6 +52,26 @@ export function Etapa2SubscriptionSection({
 
   const isYearly = billingCycle === "yearly";
   const currentAmount = isYearly ? yearlyAmount : monthlyAmount;
+
+  const isExpired = (daysRemaining !== null && daysRemaining < 0) || isOverdue;
+
+  const rawDigits = String(ownerPhone || "").replace(/\D/g, "");
+  const cleanPhone =
+    rawDigits.startsWith("55") && (rawDigits.length === 12 || rawDigits.length === 13)
+      ? rawDigits.slice(2)
+      : rawDigits;
+
+  const recipientName = ownerName || tenantName || "Parceiro";
+  const dueDateStr = formattedPeriodEnd || new Date().toLocaleDateString("pt-BR");
+  const referenceMonthYear =
+    formattedPeriodEnd && formattedPeriodEnd.length >= 10
+      ? formattedPeriodEnd.slice(3)
+      : `${String(new Date().getMonth() + 1).padStart(2, "0")}/${new Date().getFullYear()}`;
+  const formattedValue = currentAmount.toFixed(2).replace(".", ",");
+
+  const billingMessage = `Olá, ${recipientName}! Tudo bem? Passando para lembrar que a mensalidade da sua Vitrine Digital (EssMendes Local) referente a ${referenceMonthYear} venceu em ${dueDateStr} no valor de R$ ${formattedValue}. Para manter sua vitrine, sincronização do Google e módulo de orçamentos ativos sem interrupções, você pode efetuar o pagamento via Pix instantâneo acessando seu painel ou através da nossa chave Pix. Qualquer dúvida estamos à disposição!`;
+  const encodedMessage = encodeURIComponent(billingMessage);
+  const whatsappBillingUrl = `https://wa.me/55${cleanPhone}?text=${encodedMessage}`;
 
   return (
     <div className="space-y-3">
@@ -173,23 +198,39 @@ export function Etapa2SubscriptionSection({
 
         {/* 2. Destaque do Valor Recorrente Atualizado Dinamicamente */}
         <div className="rounded-2xl bg-slate-50 p-5 border border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all">
-          <div className="space-y-1">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              {isYearly ? "Valor do Plano Anual (12 Meses)" : "Valor Recorrente Acordado"}
-            </span>
-            <div className="flex items-baseline gap-2 flex-wrap">
-              <span className="text-3xl sm:text-4xl font-black text-slate-900">
-                R$ {currentAmount.toFixed(2).replace(".", ",")}
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                {isYearly ? "Valor do Plano Anual (12 Meses)" : "Valor Recorrente Acordado"}
               </span>
-              <span className="text-xs text-slate-500 font-semibold">
-                {isYearly ? "/ ano à vista" : "/ mês"}
-              </span>
-              {isYearly && (
-                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                  equivale a ~R$ {monthlyEquivalent.toFixed(2).replace(".", ",")}/mês
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <span className="text-3xl sm:text-4xl font-black text-slate-900">
+                  R$ {currentAmount.toFixed(2).replace(".", ",")}
                 </span>
-              )}
+                <span className="text-xs text-slate-500 font-semibold">
+                  {isYearly ? "/ ano à vista" : "/ mês"}
+                </span>
+                {isYearly && (
+                  <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                    equivale a ~R$ {monthlyEquivalent.toFixed(2).replace(".", ",")}/mês
+                  </span>
+                )}
+              </div>
             </div>
+
+            {isExpired && (
+              <div>
+                <a
+                  href={whatsappBillingUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-4 py-2.5 text-xs sm:text-sm font-bold text-white shadow-sm hover:shadow-md transition-all duration-200 active:scale-95"
+                >
+                  <MessageCircle className="h-4 w-4 shrink-0" />
+                  <span>Cobrar Proprietário via WhatsApp</span>
+                </a>
+              </div>
+            )}
           </div>
 
           <div className="text-xs text-slate-600 max-w-sm leading-relaxed">

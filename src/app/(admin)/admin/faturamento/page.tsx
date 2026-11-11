@@ -13,6 +13,8 @@ import {
   ArrowRight,
   AlertCircle,
   HelpCircle,
+  MessageCircle,
+  AlertTriangle,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -46,14 +48,79 @@ export default async function AdminFaturamentoPage() {
   const currentPlanTier = tenantContext.tenant?.plan_tier || "free";
   const currentPlan = getPlanConfig(currentPlanTier);
 
-  // Busca total de serviços para conferir o limite
-  const { count: servicesCount } = await supabase
-    .from("services")
-    .select("*", { count: "exact", head: true })
-    .eq("tenant_id", tenantId);
+  const [{ count: servicesCount }, { data: rawTenantRow }, { data: tenantProfileRow }] = await Promise.all([
+    supabase
+      .from("services")
+      .select("*", { count: "exact", head: true })
+      .eq("tenant_id", tenantId),
+    supabase.from("tenants").select("*").eq("id", tenantId).maybeSingle(),
+    supabase.from("tenant_profiles").select("*").eq("tenant_id", tenantId).maybeSingle(),
+  ]);
 
   const activeServices = servicesCount || 0;
   const limitCheck = validateServiceLimit(activeServices, currentPlanTier);
+
+  const monthlyFeeAmount =
+    tenantContext.tenant?.monthly_fee_amount !== null &&
+    tenantContext.tenant?.monthly_fee_amount !== undefined
+      ? Number(tenantContext.tenant.monthly_fee_amount)
+      : 97;
+
+  const expirationDateRaw =
+    tenantContext.tenant?.subscription_expires_at ||
+    tenantContext.tenant?.current_period_end ||
+    (rawTenantRow as any)?.subscription_expires_at ||
+    (rawTenantRow as any)?.current_period_end;
+
+  let formattedPeriodEnd: string | null = null;
+  let daysRemaining: number | null = null;
+  if (expirationDateRaw) {
+    try {
+      const dateObj = new Date(expirationDateRaw);
+      if (!isNaN(dateObj.getTime())) {
+        formattedPeriodEnd = dateObj.toLocaleDateString("pt-BR", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        });
+        daysRemaining = Math.ceil((dateObj.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+      }
+    } catch {}
+  }
+
+  const isExpired =
+    (daysRemaining !== null && daysRemaining < 0) ||
+    tenantContext.tenant?.subscription_status === "overdue" ||
+    tenantContext.tenant?.subscription_status === "expired";
+
+  const ownerPhone =
+    (rawTenantRow as any)?.whatsapp ||
+    (rawTenantRow as any)?.phone ||
+    (tenantProfileRow as any)?.phone_whatsapp ||
+    (tenantProfileRow as any)?.whatsapp ||
+    (tenantProfileRow as any)?.phone ||
+    "";
+
+  const rawDigits = String(ownerPhone || "").replace(/\D/g, "");
+  const cleanPhone =
+    rawDigits.startsWith("55") && (rawDigits.length === 12 || rawDigits.length === 13)
+      ? rawDigits.slice(2)
+      : rawDigits;
+
+  const recipientName =
+    (rawTenantRow as any)?.owner_name ||
+    (rawTenantRow as any)?.responsible_name ||
+    tenantContext.tenant?.name ||
+    "Parceiro";
+  const dueDateStr = formattedPeriodEnd || new Date().toLocaleDateString("pt-BR");
+  const referenceMonthYear =
+    formattedPeriodEnd && formattedPeriodEnd.length >= 10
+      ? formattedPeriodEnd.slice(3)
+      : `${String(new Date().getMonth() + 1).padStart(2, "0")}/${new Date().getFullYear()}`;
+  const formattedValue = monthlyFeeAmount.toFixed(2).replace(".", ",");
+  const billingMessage = `Olá, ${recipientName}! Tudo bem? Passando para lembrar que a mensalidade da sua Vitrine Digital (EssMendes Local) referente a ${referenceMonthYear} venceu em ${dueDateStr} no valor de R$ ${formattedValue}. Para manter sua vitrine, sincronização do Google e módulo de orçamentos ativos sem interrupções, você pode efetuar o pagamento via Pix instantâneo acessando seu painel ou através da nossa chave Pix. Qualquer dúvida estamos à disposição!`;
+  const encodedMessage = encodeURIComponent(billingMessage);
+  const whatsappBillingUrl = `https://wa.me/55${cleanPhone}?text=${encodedMessage}`;
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -85,27 +152,46 @@ export default async function AdminFaturamentoPage() {
             <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
               Plano Ativo
             </p>
-            <div className="flex items-center gap-2.5">
+            <div className="flex flex-wrap items-center gap-2.5">
               <h2 className="text-2xl font-extrabold text-slate-900">
                 Plano {currentPlan.name}
               </h2>
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
-                <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-                Ativo
-              </span>
+              {isExpired ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-bold text-red-800">
+                  <AlertTriangle className="h-3.5 w-3.5 text-red-600" />
+                  Expirado {formattedPeriodEnd ? `(${formattedPeriodEnd})` : ""}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+                  Ativo
+                </span>
+              )}
             </div>
             <p className="text-xs text-slate-500">
               {currentPlan.description}
             </p>
           </div>
 
-          <div className="flex flex-col sm:items-end">
-            <span className="text-xs text-slate-500">Mensalidade</span>
-            <span className="text-2xl font-black text-slate-900">
-              {currentPlan.priceMonthly === 0
-                ? "Grátis"
-                : `${formatCurrency(currentPlan.priceMonthly)}/mês`}
-            </span>
+          <div className="flex flex-col sm:items-end gap-2">
+            <div className="flex flex-col sm:items-end">
+              <span className="text-xs text-slate-500">Mensalidade Acordada</span>
+              <span className="text-2xl font-black text-slate-900">
+                R$ {formattedValue}/mês
+              </span>
+            </div>
+
+            {isExpired && (
+              <a
+                href={whatsappBillingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-4 py-2.5 text-xs sm:text-sm font-bold text-white shadow-sm hover:shadow-md transition-all duration-200 active:scale-95"
+              >
+                <MessageCircle className="h-4 w-4 shrink-0" />
+                <span>Cobrar Proprietário via WhatsApp</span>
+              </a>
+            )}
           </div>
         </div>
 

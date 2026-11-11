@@ -34,6 +34,7 @@ import {
   Star,
   ShieldCheck,
   Zap,
+  CreditCard,
 } from "lucide-react";
 import type { Appointment } from "@/types";
 
@@ -105,6 +106,33 @@ export default async function AdminDashboardPage({
 
   const companySlug = tenantContext.tenant?.slug || "meu-negocio";
 
+  const expirationDateRaw =
+    tenantContext.tenant?.subscription_expires_at ||
+    tenantContext.tenant?.current_period_end ||
+    null;
+  const subscriptionStatus = tenantContext.tenant?.subscription_status || "trialing";
+
+  let formattedExpirationDate: string | null = null;
+  let isSubscriptionExpired = false;
+  if (expirationDateRaw) {
+    try {
+      const expDate = new Date(expirationDateRaw);
+      if (!isNaN(expDate.getTime())) {
+        formattedExpirationDate = expDate.toLocaleDateString("pt-BR", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        });
+        if (Date.now() > expDate.getTime() && subscriptionStatus !== "paid") {
+          isSubscriptionExpired = true;
+        }
+      }
+    } catch {}
+  }
+  if (subscriptionStatus === "overdue" || subscriptionStatus === "expired") {
+    isSubscriptionExpired = true;
+  }
+
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -124,6 +152,27 @@ export default async function AdminDashboardPage({
 
   return (
     <div className="space-y-8">
+      {/* Banner de Aviso se a Assinatura estiver Expirada */}
+      {isSubscriptionExpired && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 sm:p-5 text-amber-950 shadow-sm">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700 border border-amber-200">
+              <AlertTriangle className="h-5 w-5" />
+            </div>
+            <p className="text-xs sm:text-sm font-bold text-amber-950 leading-relaxed">
+              Sua assinatura expirou em {formattedExpirationDate || "data recente"}. Renove agora para evitar a suspensão da sua vitrine e dos recursos automáticos.
+            </p>
+          </div>
+          <Link
+            href="/admin/assinatura"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-600 hover:bg-amber-700 px-4 py-2.5 text-xs sm:text-sm font-bold text-white shadow-sm transition-all active:scale-95 shrink-0"
+          >
+            <CreditCard className="h-4 w-4" />
+            <span>Pagar Fatura</span>
+          </Link>
+        </div>
+      )}
+
       {/* Welcome Hero Banner */}
       <div className="rounded-2xl border border-teal-100 bg-gradient-to-r from-teal-950 via-teal-900 to-teal-800 p-6 sm:p-8 text-white shadow-sm">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

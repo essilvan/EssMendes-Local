@@ -1,4 +1,5 @@
 import { getAuthenticatedTenant } from "@/lib/supabase/tenant";
+import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { MercadoPagoSubscribeButton } from "@/components/admin/MercadoPagoSubscribeButton";
 import { Etapa2SubscriptionSection } from "@/components/admin/Etapa2SubscriptionSection";
@@ -45,6 +46,34 @@ export default async function AdminAssinaturaPage({ searchParams }: AssinaturaPa
 
   const tenant = tenantContext.tenant;
   const user = tenantContext.user;
+
+  const supabase = await createClient();
+  const [{ data: rawTenantRow }, { data: tenantProfileRow }] = await Promise.all([
+    supabase
+      .from("tenants")
+      .select("*")
+      .eq("id", tenantContext.tenantId)
+      .maybeSingle(),
+    supabase
+      .from("tenant_profiles")
+      .select("*")
+      .eq("tenant_id", tenantContext.tenantId)
+      .maybeSingle(),
+  ]);
+
+  const ownerPhone =
+    (rawTenantRow as any)?.whatsapp ||
+    (rawTenantRow as any)?.phone ||
+    (tenantProfileRow as any)?.phone_whatsapp ||
+    (tenantProfileRow as any)?.whatsapp ||
+    (tenantProfileRow as any)?.phone ||
+    "";
+
+  const ownerName =
+    (rawTenantRow as any)?.owner_name ||
+    (rawTenantRow as any)?.responsible_name ||
+    tenant?.name ||
+    "";
 
   // Status de Setup e Mensalidade
   const isSetupPaid = Boolean(tenant?.setup_fee_paid ?? tenant?.setup_paid);
@@ -279,6 +308,8 @@ export default async function AdminAssinaturaPage({ searchParams }: AssinaturaPa
           (user.user_metadata?.cnpj as string) ||
           ""
         }
+        ownerPhone={ownerPhone}
+        ownerName={ownerName}
         monthlyFeeAmount={monthlyFeeAmount}
         isActive={isActive}
         isOverdue={isOverdue}
