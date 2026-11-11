@@ -129,7 +129,7 @@ export function MinimalTemplateView({
     <div
       className={`max-w-4xl mx-auto space-y-20 py-12 sm:py-16 px-4 sm:px-6 ${
         isRestaurant
-          ? "bg-zinc-950 text-zinc-100"
+          ? "bg-transparent text-zinc-100 overflow-x-hidden"
           : "bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100"
       }`}
     >

@@ -821,7 +821,7 @@ function detectLocalBusinessSchemaType(
 
   return (
     <div
-      className={`min-h-screen bg-zinc-950 text-zinc-100 flex flex-col w-full max-w-full overflow-x-hidden ${selectedTemplateClass}`}
+      className={`bg-gradient-to-b from-[#18181b] via-[#121215] to-[#0d0d0f] text-zinc-100 min-h-screen flex flex-col w-full max-w-full overflow-x-hidden ${selectedTemplateClass}`}
       style={{ "--brand-primary": primaryColor } as React.CSSProperties}
     >
       {/* Injeção JSON-LD Estruturado com @graph para SEO Local (Rich Snippets Google) */}

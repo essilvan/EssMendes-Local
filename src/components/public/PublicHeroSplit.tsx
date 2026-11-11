@@ -140,6 +140,136 @@ export function PublicHeroSplit({
 
   const isOpen = isOpenNow;
 
+  if (isRestaurant) {
+    return (
+      <section className="relative w-full max-w-full overflow-x-hidden">
+        {/* Banner de capa com altura controlada e overlay suave integrado ao fundo */}
+        <div className="relative w-full">
+          <img
+            src={coverImage}
+            alt={tenantName}
+            className="h-52 sm:h-72 md:h-80 w-full object-cover rounded-b-3xl shadow-2xl"
+            referrerPolicy="no-referrer"
+          />
+          <div className="absolute inset-0 rounded-b-3xl bg-gradient-to-t from-[#18181b] via-[#18181b]/40 to-transparent pointer-events-none" />
+        </div>
+
+        {/* Conteúdo do Hero: logo sobreposta à borda inferior da capa */}
+        <div className="relative z-10 w-full -mt-10 sm:-mt-14">
+          <div className="flex flex-col sm:flex-row items-center sm:items-end gap-3 sm:gap-5">
+            <div className="shrink-0 w-20 h-20 sm:w-28 sm:h-28 rounded-2xl border-4 border-[#1f1f23] shadow-2xl bg-zinc-900 overflow-hidden flex items-center justify-center">
+              {effectiveLogoUrl ? (
+                <img
+                  src={effectiveLogoUrl}
+                  alt={tenantName}
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <Utensils className="h-9 w-9 text-amber-400" />
+              )}
+            </div>
+
+            <div className="min-w-0 max-w-full flex-1 space-y-2 text-center sm:text-left pb-1">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-white break-words max-w-full text-center sm:text-left leading-tight tracking-tight">
+                {tenantName}
+              </h1>
+
+              {/* Nota Google com estrelas douradas + status de funcionamento */}
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#1f1f23]/80 border border-zinc-700/60 text-xs sm:text-sm font-semibold text-zinc-300">
+                  <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400 shrink-0" />
+                  <span className="font-bold text-white">{displayRating}</span>
+                  <span className="text-zinc-300">({displayReviewsCount})</span>
+                  <span className="text-zinc-300 font-medium">• Google</span>
+                </div>
+
+                <div
+                  className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs sm:text-sm font-semibold border ${
+                    isOpen
+                      ? "bg-emerald-950/70 border-emerald-500/30 text-emerald-300"
+                      : "bg-amber-950/70 border-amber-500/30 text-amber-300"
+                  }`}
+                >
+                  <span
+                    className={`inline-flex rounded-full h-2 w-2 shrink-0 ${
+                      isOpen ? "bg-emerald-400" : "bg-amber-400"
+                    }`}
+                  />
+                  <span className="truncate sm:whitespace-normal break-words">
+                    {statusBadgeText || (isOpen ? "Aberto Agora" : "Fechado no momento")}
+                  </span>
+                </div>
+
+                {businessCategory && (
+                  <span className="hidden sm:inline-flex items-center px-3 py-1 rounded-full bg-[#1f1f23]/80 border border-zinc-700/60 text-xs sm:text-sm text-zinc-300 break-words">
+                    {businessCategory}
+                  </span>
+                )}
+              </div>
+
+              {/* Endereço */}
+              <div className="flex items-start justify-center sm:justify-start gap-1.5 text-xs sm:text-sm text-zinc-300 break-words max-w-full min-w-0">
+                <MapPin className="h-3.5 w-3.5 mt-0.5 text-amber-400 shrink-0" />
+                <span className="truncate sm:whitespace-normal break-words min-w-0">{displayAddress}</span>
+              </div>
+            </div>
+          </div>
+
+          {heroSubtitle && (
+            <p className="mt-4 text-xs sm:text-sm text-zinc-300 font-normal leading-relaxed text-center sm:text-left break-words">
+              {heroSubtitle}
+            </p>
+          )}
+
+          {/* Botões de ação: grade responsiva que nunca esmaga o texto */}
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2.5 w-full mt-4">
+            <a
+              href="#cardapio"
+              className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 shadow-md bg-amber-500 hover:bg-amber-400 text-zinc-950 transition active:scale-95"
+            >
+              <Utensils className="h-4 w-4 shrink-0" />
+              <span>Ver Cardápio</span>
+            </a>
+
+            {phoneWhatsapp && (
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 shadow-md bg-emerald-600 hover:bg-emerald-500 text-white transition active:scale-95"
+              >
+                <MessageCircle className="h-4 w-4 shrink-0" />
+                <span>WhatsApp</span>
+              </a>
+            )}
+
+            {cleanPhone && (
+              <a
+                href={`tel:+55${cleanPhone}`}
+                className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 shadow-md bg-[#1f1f23]/80 border border-zinc-700/60 text-zinc-100 hover:bg-zinc-800 transition active:scale-95"
+              >
+                <Phone className="h-4 w-4 text-amber-400 shrink-0" />
+                <span>Ligar</span>
+              </a>
+            )}
+
+            <a
+              href={mapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 shadow-md bg-[#1f1f23]/80 border border-zinc-700/60 text-zinc-100 hover:bg-zinc-800 transition active:scale-95"
+              title="Ver localização e traçar rota no Maps"
+            >
+              <MapPin className="h-4 w-4 text-amber-400 shrink-0" />
+              <span>Como Chegar</span>
+            </a>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="relative overflow-hidden rounded-3xl min-h-[460px] md:min-h-[540px] flex items-end p-4 sm:p-8 lg:p-10 border border-white/10 shadow-2xl group">
       {/* 1. Imagem de Capa com sobreposição escura (bg-black/60) */}

@@ -103,9 +103,9 @@ export function getThemeClasses(themeNiche: string | null | undefined) {
     case "food":
     case "restaurante":
       return {
-        root: "bg-zinc-950 text-zinc-100 dark",
-        card: "bg-zinc-900/80 border-zinc-800/80 text-zinc-100 backdrop-blur-md rounded-2xl shadow-xl",
-        textMuted: "text-zinc-400",
+        root: "bg-gradient-to-b from-[#18181b] via-[#121215] to-[#0d0d0f] text-zinc-100 dark",
+        card: "bg-[#1f1f23]/80 border-zinc-700/60 text-zinc-100 backdrop-blur-sm rounded-2xl shadow-xl",
+        textMuted: "text-zinc-300",
         accentText: "text-amber-400",
         badge: "bg-amber-500/15 text-amber-400 border-amber-500/30",
         button: "bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold shadow-lg shadow-amber-500/20",
@@ -308,7 +308,7 @@ export function PublicTenantHub({
       style={{ ...colorStyles, "--brand-primary": brandColor } as React.CSSProperties}
       className={`min-h-screen w-full max-w-full overflow-x-hidden transition-colors duration-200 relative flex flex-col ${selectedTemplateClass} ${
         isRestaurant
-          ? "bg-zinc-950 text-zinc-100 dark"
+          ? "bg-gradient-to-b from-[#18181b] via-[#121215] to-[#0d0d0f] text-zinc-100 dark"
           : activeTemplate === "minimal"
           ? "bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100"
           : isPetShop
@@ -387,7 +387,13 @@ export function PublicTenantHub({
       )}
 
       {/* Container Centralizado com Conteúdo Real Dinâmico por Template */}
-      <main className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-14 md:py-16">
+      <main
+        className={`relative z-10 mx-auto w-full overflow-x-hidden px-4 sm:px-6 lg:px-8 ${
+          isRestaurant
+            ? "max-w-5xl py-4 sm:py-8"
+            : "max-w-7xl py-8 sm:py-14 md:py-16"
+        }`}
+      >
         {/* Faixa de Triagem & Orçamento Inteligente por Placa (Exclusivo Nicho Automotivo / Mecânica) */}
         {isAutomotive && (
           <div className="mb-8 rounded-3xl border border-blue-500/30 bg-gradient-to-r from-slate-900/95 via-slate-800/95 to-slate-900/95 p-5 sm:p-6 shadow-xl shadow-black/40 backdrop-blur-md flex flex-col md:flex-row items-center justify-between gap-5">

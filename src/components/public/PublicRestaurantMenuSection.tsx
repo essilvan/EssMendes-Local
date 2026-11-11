@@ -273,7 +273,7 @@ export function PublicRestaurantMenuSection({
     : null;
 
   return (
-    <section id="cardapio" className="py-6 sm:py-10 space-y-6 scroll-mt-20">
+    <section id="cardapio" className="py-6 sm:py-10 space-y-6 scroll-mt-20 w-full max-w-full overflow-x-hidden">
       {/* Banner Identificador da Mesa (Quando aberto via QR Code /[slug]/mesa/[tableNumber]) */}
       {displayTableLabel && (
         <div className="bg-zinc-900/90 border border-amber-500/40 backdrop-blur-md rounded-2xl shadow-xl p-5 sm:p-6 text-zinc-100 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -304,14 +304,14 @@ export function PublicRestaurantMenuSection({
       )}
 
       {/* Container Principal da Seção "Nosso Cardápio" */}
-      <div className="bg-zinc-900/80 border border-zinc-800/80 backdrop-blur-md rounded-2xl shadow-xl p-6 sm:p-8 space-y-6">
+      <div className="bg-[#1f1f23]/80 border border-zinc-700/60 shadow-xl rounded-2xl backdrop-blur-sm p-4 sm:p-6 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/80 pb-5">
           <div className="space-y-1.5">
             <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 px-3 py-1 text-xs font-bold uppercase tracking-wider text-amber-400">
               <Utensils className="h-3.5 w-3.5 text-amber-400" />
               <span>Cardápio Digital Interativo</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-zinc-100">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-white break-words">
               Nosso Cardápio
             </h2>
             <p className="text-xs sm:text-sm text-zinc-400">
@@ -405,7 +405,7 @@ export function PublicRestaurantMenuSection({
               return (
                 <div
                   key={item.id}
-                  className="group bg-zinc-900/80 border border-zinc-800/80 backdrop-blur-md rounded-2xl shadow-xl overflow-hidden hover:border-amber-500/40 transition-all flex flex-col justify-between"
+                  className="group bg-[#1f1f23]/80 border border-zinc-700/60 shadow-xl rounded-2xl backdrop-blur-sm overflow-hidden hover:border-amber-500/40 transition-all flex flex-col justify-between"
                 >
                   <div>
                     {/* Foto do Prato / Porção / Bebida */}
@@ -432,12 +432,12 @@ export function PublicRestaurantMenuSection({
                     {/* Detalhes do Item */}
                     <div className="p-4 space-y-1.5">
                       <div className="flex items-start justify-between gap-2">
-                        <h3 className="text-base font-extrabold text-zinc-100 leading-snug">
+                        <h3 className="text-base font-bold text-white tracking-tight leading-snug break-words">
                           {item.name}
                         </h3>
                       </div>
                       {item.description && (
-                        <p className="text-xs text-zinc-400 line-clamp-2 leading-relaxed">
+                        <p className="text-xs sm:text-sm text-zinc-300 font-normal line-clamp-2 leading-relaxed">
                           {item.description}
                         </p>
                       )}
@@ -446,7 +446,7 @@ export function PublicRestaurantMenuSection({
 
                   {/* Preço e Botão "+ Adicionar" */}
                   <div className="px-4 pb-4 pt-3 flex items-center justify-between gap-3 border-t border-zinc-800/80">
-                    <span className="text-lg font-black text-amber-400">
+                    <span className="text-lg text-amber-400 font-extrabold">
                       {formatCurrency(item.price)}
                     </span>
 
@@ -502,7 +502,7 @@ export function PublicRestaurantMenuSection({
                     ? `Comanda da ${displayTableLabel}`
                     : "Resumo da sua Comanda"}
                 </p>
-                <p className="text-base sm:text-lg font-black text-amber-400">
+                <p className="text-base sm:text-lg text-amber-400 font-extrabold">
                   Total: {formatCurrency(totalOrderAmount)}
                 </p>
               </div>
