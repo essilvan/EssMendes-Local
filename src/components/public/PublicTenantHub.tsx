@@ -101,13 +101,14 @@ export function getThemeClasses(themeNiche: string | null | undefined) {
     case "restaurant":
     case "gastronomia":
     case "food":
+    case "restaurante":
       return {
-        root: "bg-[#FAF7F2] text-stone-900",
-        card: "bg-white/95 border-amber-200/90 text-stone-900 shadow-md shadow-stone-950/5 backdrop-blur-sm",
-        textMuted: "text-stone-600",
-        accentText: "text-red-600",
-        badge: "bg-orange-100/90 text-orange-950 border-orange-300/60",
-        button: "bg-gradient-to-r from-red-600 via-orange-500 to-amber-600 text-white font-extrabold shadow-md shadow-red-500/25",
+        root: "bg-zinc-950 text-zinc-100 dark",
+        card: "bg-zinc-900/80 border-zinc-800/80 text-zinc-100 backdrop-blur-md rounded-2xl shadow-xl",
+        textMuted: "text-zinc-400",
+        accentText: "text-amber-400",
+        badge: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+        button: "bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold shadow-lg shadow-amber-500/20",
         heroTagline: "Sabores Memoráveis, Ingredientes Nobres & Momentos Especiais",
       };
     case "estetica_saude":
@@ -207,12 +208,23 @@ export function PublicTenantHub({
     tenant.theme_settings?.primary_color || profile?.primary_color || "#e11d48";
   const colorStyles = getThemeColorStyles(brandColor);
   const effectiveNiche =
-    tenant.theme_settings?.niche || tenant.theme_niche || profile?.template_id;
-  const ctaButtonText = getCtaButtonText(
-    tenant,
-    effectiveNiche,
-    tenant.category || profile?.business_category
-  );
+    tenant.niche ||
+    tenant.theme_settings?.niche ||
+    tenant.theme_niche ||
+    profile?.template_id;
+  const isRestaurant =
+    tenant.niche === "restaurant" ||
+    effectiveNiche === "restaurant" ||
+    effectiveNiche === "gastronomia" ||
+    effectiveNiche === "food" ||
+    effectiveNiche === "restaurante";
+  const ctaButtonText = isRestaurant
+    ? "Ver Cardápio"
+    : getCtaButtonText(
+        tenant,
+        effectiveNiche,
+        tenant.category || profile?.business_category
+      );
 
   const templateClasses: Record<string, string> = {
     premium: "template-premium font-serif-headings",
@@ -229,6 +241,13 @@ export function PublicTenantHub({
     profile?.google_reviews_count ?? profile?.review_count ?? tenant.google_reviews_count ?? visibleReviews.length;
 
   const handleOpenBooking = (serviceId?: string, professionalId?: string) => {
+    if (isRestaurant) {
+      const menuEl = document.getElementById("cardapio");
+      if (menuEl) {
+        menuEl.scrollIntoView({ behavior: "smooth" });
+        return;
+      }
+    }
     setSelectedServiceId(
       serviceId || (services.length > 0 ? services[0].id : null)
     );
@@ -255,12 +274,6 @@ export function PublicTenantHub({
     effectiveNiche === "auto" ||
     effectiveNiche === "mecanica" ||
     isAutomotiveNiche(tenant, profile, effectiveNiche);
-  const isRestaurant =
-    tenant.niche === "restaurant" ||
-    effectiveNiche === "restaurant" ||
-    effectiveNiche === "gastronomia" ||
-    effectiveNiche === "food" ||
-    effectiveNiche === "restaurante";
   const isAuto = isAutomotive || effectiveNiche === "barbearia";
   const isFood = isRestaurant;
   const isHealth = effectiveNiche === "health_beauty" || effectiveNiche === "estetica_saude";
@@ -291,20 +304,20 @@ export function PublicTenantHub({
     <div
       style={{ ...colorStyles, "--brand-primary": brandColor } as React.CSSProperties}
       className={`min-h-screen w-full max-w-full overflow-x-hidden transition-colors duration-200 relative ${selectedTemplateClass} ${
-        activeTemplate === "minimal"
+        isRestaurant
+          ? "bg-zinc-950 text-zinc-100 dark"
+          : activeTemplate === "minimal"
           ? "bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100"
           : isPetShop
           ? "bg-[#fffbf5] text-stone-900"
           : isConfectionery
           ? "bg-[#fffdf9] text-rose-950"
-          : isRestaurant
-          ? "bg-[#FAF7F2] text-stone-900"
           : isAutomotive
           ? "bg-[#0f172a] text-slate-100 dark"
           : isAuto
           ? "bg-zinc-950 text-zinc-100"
           : isFood
-          ? "bg-stone-950 text-stone-100"
+          ? "bg-zinc-950 text-zinc-100 dark"
           : isHealth
           ? "bg-slate-50 text-slate-900"
           : "bg-neutral-50/50 text-neutral-900"
@@ -412,23 +425,6 @@ export function PublicTenantHub({
           </div>
         )}
 
-        {/* Seção Destacada "Nosso Cardápio" (Exclusivo Nicho Restaurante / Bar) */}
-        {isRestaurant && (
-          <PublicRestaurantMenuSection
-            tenantId={tenant.id}
-            tenantName={tenant.name}
-            tenantSlug={tenant.slug}
-            categories={menuCategories}
-            items={menuItems}
-            restaurantPhone={
-              profile?.phone_whatsapp ||
-              profile?.phone ||
-              (tenant as any).whatsapp ||
-              tenant.phone
-            }
-          />
-        )}
-
         {activeTemplate === "conversion" && (
           <ConversionTemplateView
             tenant={tenant}
@@ -439,6 +435,8 @@ export function PublicTenantHub({
             reviews={visibleReviews}
             posts={posts}
             products={products}
+            menuCategories={menuCategories}
+            menuItems={menuItems}
             isOpenNow={isOpenNow}
             statusBadgeText={statusBadgeText}
             statusDetailText={statusDetailText}
@@ -461,6 +459,8 @@ export function PublicTenantHub({
             reviews={visibleReviews}
             posts={posts}
             products={products}
+            menuCategories={menuCategories}
+            menuItems={menuItems}
             isOpenNow={isOpenNow}
             statusBadgeText={statusBadgeText}
             statusDetailText={statusDetailText}
@@ -483,6 +483,8 @@ export function PublicTenantHub({
             reviews={visibleReviews}
             posts={posts}
             products={products}
+            menuCategories={menuCategories}
+            menuItems={menuItems}
             isOpenNow={isOpenNow}
             statusBadgeText={statusBadgeText}
             statusDetailText={statusDetailText}
@@ -508,6 +510,8 @@ export function PublicTenantHub({
             reviews={visibleReviews}
             posts={posts}
             products={products}
+            menuCategories={menuCategories}
+            menuItems={menuItems}
             isOpenNow={isOpenNow}
             statusBadgeText={statusBadgeText}
             statusDetailText={statusDetailText}

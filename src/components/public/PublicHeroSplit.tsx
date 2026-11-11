@@ -97,14 +97,22 @@ export function PublicHeroSplit({
     currentTheme?.id === "automotivo" ||
     currentTheme?.id === "auto" ||
     isAutomotiveNiche(tenant, undefined, currentTheme?.id);
-  const isRestaurant = currentTheme?.id === "restaurant" || currentTheme?.id === "gastronomia" || currentTheme?.id === "food";
-  const displayAddress = address || "Atendimento Presencial";
+  const isRestaurant =
+    tenant?.niche === "restaurant" ||
+    currentTheme?.id === "restaurant" ||
+    currentTheme?.id === "gastronomia" ||
+    currentTheme?.id === "food";
+  const effectiveLogoUrl =
+    logoUrl || tenant?.logo_url || tenant?.tenant_profiles?.logo_url || null;
+  const displayAddress = address || tenant?.address || "Atendimento Presencial";
   const cleanDescription = sanitizeDescription(description, address);
   const heroSubtitle =
     getHeroSubtitle(tenant, undefined, currentTheme?.id, businessCategory) || cleanDescription;
   const heroPills = getHeroPills(tenant, services, currentTheme?.id, businessCategory);
   const ctaLabel = ctaText || getCtaButtonText(tenant, currentTheme?.id, businessCategory);
-  const heroWaMessage = `Olá, vi a vitrine de vocês e gostaria de agendar um atendimento/orçamento em ${tenantName}.`;
+  const heroWaMessage = isRestaurant
+    ? `Olá! Estou vendo o cardápio de ${tenantName} e gostaria de atendimento.`
+    : `Olá, vi a vitrine de vocês e gostaria de agendar um atendimento/orçamento em ${tenantName}.`;
   const whatsappUrl = generateWhatsAppUrl(phoneWhatsapp || "", heroWaMessage);
 
   const fallbackImage = getNicheFallbackImage(currentTheme?.id, businessCategory);
@@ -146,17 +154,17 @@ export function PublicHeroSplit({
       {/* Brilho ambiente dinâmico sutil no fundo */}
       <div
         className="pointer-events-none absolute -bottom-10 -left-10 h-72 w-72 rounded-full blur-3xl opacity-25"
-        style={{ backgroundColor: brandColor || (isConfectionery ? "#f43f5e" : isPetShop ? "#ea580c" : isRestaurant ? "#dc2626" : isAutomotive ? "#2563eb" : "var(--brand-primary, #0d9488)") }}
+        style={{ backgroundColor: brandColor || (isConfectionery ? "#f43f5e" : isPetShop ? "#ea580c" : isRestaurant ? "#f59e0b" : isAutomotive ? "#2563eb" : "var(--brand-primary, #0d9488)") }}
       />
 
       {/* 2. Cartão de Alta Densidade com Efeito Glassmorphism Nobre */}
-      <div className="relative z-10 w-full max-w-4xl backdrop-blur-2xl bg-neutral-950/80 border border-white/20 rounded-3xl p-5 sm:p-7 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)] text-white before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white/30 before:to-transparent">
+      <div className="relative z-10 w-full max-w-4xl backdrop-blur-2xl bg-zinc-950/85 border border-zinc-800/80 rounded-3xl p-5 sm:p-7 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)] text-white before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white/30 before:to-transparent">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
           {/* Logótipo / avatar circular com anel metálico e sombra de profundidade */}
-          <div className="relative h-18 w-18 sm:h-22 sm:w-22 shrink-0 rounded-2xl sm:rounded-3xl border-2 border-white/80 ring-4 ring-black/40 overflow-hidden shadow-2xl bg-neutral-900 flex items-center justify-center transition-transform duration-300 group-hover:scale-105">
-            {logoUrl ? (
+          <div className="relative h-18 w-18 sm:h-22 sm:w-22 shrink-0 rounded-2xl sm:rounded-3xl border-2 border-white/80 ring-4 ring-black/40 overflow-hidden shadow-2xl bg-zinc-900 flex items-center justify-center transition-transform duration-300 group-hover:scale-105">
+            {effectiveLogoUrl ? (
               <img
-                src={logoUrl}
+                src={effectiveLogoUrl}
                 alt={tenantName}
                 className="w-full h-full object-cover"
                 referrerPolicy="no-referrer"
@@ -168,7 +176,7 @@ export function PublicHeroSplit({
             ) : isAutomotive ? (
               <CarFront className="h-10 w-10 text-blue-400" />
             ) : isRestaurant ? (
-              <UtensilsCrossed className="h-10 w-10 text-red-400 animate-culinary-float" />
+              <UtensilsCrossed className="h-10 w-10 text-amber-400 animate-culinary-float" />
             ) : (
               <span className="text-2xl sm:text-3xl font-black text-white uppercase select-none">
                 {tenantName.charAt(0)}
@@ -182,10 +190,17 @@ export function PublicHeroSplit({
               {tenantName}
             </h1>
 
-            {/* Sinais de Confiança: Nota média e avaliações do Google diretamente abaixo do título */}
+            {/* Sinais de Confiança: Nota média com estrelas douradas, status de horário e endereço */}
             <div className="flex flex-wrap items-center gap-2 pt-0.5 pb-1">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 hover:bg-white/15 border border-white/20 text-xs font-semibold text-amber-300 backdrop-blur-md shadow-xs transition-colors">
-                <span className="text-amber-400">⭐</span>
+                <div className="flex items-center gap-0.5">
+                  {[1, 2, 3, 4, 5].map((starIdx) => (
+                    <Star
+                      key={starIdx}
+                      className="h-3.5 w-3.5 fill-amber-400 text-amber-400"
+                    />
+                  ))}
+                </div>
                 <span className="font-bold text-white">{displayRating}</span>
                 <span className="text-zinc-300">({displayReviewsCount} avaliações)</span>
                 <span className="text-zinc-400 font-medium">• Google</span>
@@ -235,6 +250,14 @@ export function PublicHeroSplit({
               )}
             </div>
 
+            {/* Endereço do Estabelecimento no Hero */}
+            {displayAddress && (
+              <div className="flex items-center gap-1.5 text-xs sm:text-sm text-zinc-300">
+                <MapPin className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                <span className="truncate">{displayAddress}</span>
+              </div>
+            )}
+
             {heroSubtitle && (
               <p className="text-xs sm:text-sm text-zinc-200/95 line-clamp-2 leading-relaxed drop-shadow-xs">
                 {heroSubtitle}
@@ -264,72 +287,108 @@ export function PublicHeroSplit({
         {/* Divisória subtil com gradiente */}
         <div className="my-5 border-t border-white/15" />
 
-        {/* Botões de contacto rápido lado a lado e CTA de Agendamento */}
-        <div className="flex flex-col sm:flex-row flex-wrap items-center gap-3 sm:gap-4 mt-6">
-          {/* CTA Primário: Orçamento por Placa (Nicho Automotivo) */}
-          {isAutomotive && onOpenVehicleQuote && (
-            <button
-              type="button"
-              onClick={onOpenVehicleQuote}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 h-12 sm:h-14 px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 whitespace-nowrap font-medium text-sm sm:text-base transition-all duration-200 active:scale-95 cursor-pointer"
-            >
-              <Wrench className="h-4 w-4 shrink-0 text-white" />
-              <span>Solicitar Orçamento por Placa</span>
-            </button>
-          )}
-
-          {/* Botão WhatsApp Direto com feedback tátil e sombra suave */}
-          {phoneWhatsapp && (
+        {/* Botões de Ação Rápida Horizontais Alinhados */}
+        {isRestaurant ? (
+          <div className="flex flex-col sm:flex-row flex-wrap items-center gap-3 sm:gap-4 mt-6">
+            {/* 1. Ver Cardápio */}
             <a
-              href={whatsappUrl}
+              href="#cardapio"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 h-12 sm:h-14 px-6 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold shadow-lg shadow-amber-500/20 whitespace-nowrap text-sm sm:text-base transition-all duration-200 active:scale-95 cursor-pointer"
+            >
+              <UtensilsCrossed className="h-4 w-4 shrink-0 text-zinc-950" />
+              <span>Ver Cardápio</span>
+            </a>
+
+            {/* 2. Chamar Garçom / WhatsApp */}
+            {phoneWhatsapp && (
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 h-12 sm:h-14 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold shadow-lg shadow-emerald-500/20 whitespace-nowrap text-sm sm:text-base transition-all duration-200 active:scale-95"
+              >
+                <MessageCircle className="h-4 w-4 shrink-0 fill-white text-emerald-600" />
+                <span>Chamar Garçom / WhatsApp</span>
+              </a>
+            )}
+
+            {/* 3. Como Chegar */}
+            <a
+              href={mapsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 h-12 sm:h-14 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 whitespace-nowrap font-medium text-sm sm:text-base transition-all duration-200 active:scale-95"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-12 sm:h-14 px-6 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-200 border border-zinc-700/80 backdrop-blur-sm whitespace-nowrap font-medium text-sm sm:text-base transition-all duration-200 active:scale-95"
+              title="Ver localização e traçar rota no Maps"
             >
-              <MessageCircle className="h-4 w-4 shrink-0 fill-white text-emerald-600" />
-              <span>Falar no WhatsApp</span>
+              <MapPin className="h-4 w-4 text-amber-400 shrink-0" />
+              <span>Como Chegar</span>
             </a>
-          )}
+          </div>
+        ) : (
+          <div className="flex flex-col sm:flex-row flex-wrap items-center gap-3 sm:gap-4 mt-6">
+            {/* CTA Primário: Orçamento por Placa (Nicho Automotivo) */}
+            {isAutomotive && onOpenVehicleQuote && (
+              <button
+                type="button"
+                onClick={onOpenVehicleQuote}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 h-12 sm:h-14 px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 whitespace-nowrap font-medium text-sm sm:text-base transition-all duration-200 active:scale-95 cursor-pointer"
+              >
+                <Wrench className="h-4 w-4 shrink-0 text-white" />
+                <span>Solicitar Orçamento por Placa</span>
+              </button>
+            )}
 
-          {/* Botão Localização (abre rota no Maps) */}
-          <a
-            href={mapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-12 sm:h-14 px-6 rounded-xl bg-zinc-900/60 hover:bg-zinc-800 text-zinc-300 border border-zinc-700/60 backdrop-blur-sm whitespace-nowrap font-medium text-sm sm:text-base transition-all duration-200 active:scale-95"
-            title="Ver localização e traçar rota no Maps"
-          >
-            <MapPin className="h-4 w-4 text-cyan-300 shrink-0" />
-            <span>Localização</span>
-          </a>
+            {/* Botão WhatsApp Direto com feedback tátil e sombra suave */}
+            {phoneWhatsapp && (
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 h-12 sm:h-14 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 whitespace-nowrap font-medium text-sm sm:text-base transition-all duration-200 active:scale-95"
+              >
+                <MessageCircle className="h-4 w-4 shrink-0 fill-white text-emerald-600" />
+                <span>Falar no WhatsApp</span>
+              </a>
+            )}
 
-          {/* CTA de Agendamento Online (quando não automotivo) */}
-          {(!isAutomotive || !onOpenVehicleQuote) && (
-            <button
-              type="button"
-              onClick={onOpenBooking}
-              className="w-full sm:w-auto sm:ml-auto inline-flex items-center justify-center gap-2.5 h-12 sm:h-14 px-6 rounded-xl whitespace-nowrap font-medium text-sm sm:text-base text-white shadow-xl transition-all duration-200 active:scale-95 cursor-pointer animate-shimmer"
-              style={{
-                backgroundColor: brandColor || "var(--brand-primary, #0d9488)",
-                boxShadow: `0 10px 25px -5px ${brandColor ? `${brandColor}66` : "rgba(13,148,136,0.4)"}`,
-              }}
+            {/* Botão Localização (abre rota no Maps) */}
+            <a
+              href={mapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-12 sm:h-14 px-6 rounded-xl bg-zinc-900/60 hover:bg-zinc-800 text-zinc-300 border border-zinc-700/60 backdrop-blur-sm whitespace-nowrap font-medium text-sm sm:text-base transition-all duration-200 active:scale-95"
+              title="Ver localização e traçar rota no Maps"
             >
-              {isConfectionery ? (
-                <Cake className="h-4 w-4 shrink-0 text-rose-200 animate-sweet-float" />
-              ) : isPetShop ? (
-                <Dog className="h-4 w-4 shrink-0 text-amber-200 animate-tail-wag" />
-              ) : isAutomotive ? (
-                <Wrench className="h-4 w-4 shrink-0 text-blue-200 animate-wrench-tilt" />
-              ) : isRestaurant ? (
-                <UtensilsCrossed className="h-4 w-4 shrink-0 text-red-200 animate-culinary-float" />
-              ) : (
-                <Calendar className="h-4 w-4 shrink-0" />
-              )}
-              <span>{ctaLabel}</span>
-              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
-            </button>
-          )}
-        </div>
+              <MapPin className="h-4 w-4 text-cyan-300 shrink-0" />
+              <span>Localização</span>
+            </a>
+
+            {/* CTA de Agendamento Online (quando não automotivo) */}
+            {(!isAutomotive || !onOpenVehicleQuote) && (
+              <button
+                type="button"
+                onClick={onOpenBooking}
+                className="w-full sm:w-auto sm:ml-auto inline-flex items-center justify-center gap-2.5 h-12 sm:h-14 px-6 rounded-xl whitespace-nowrap font-medium text-sm sm:text-base text-white shadow-xl transition-all duration-200 active:scale-95 cursor-pointer animate-shimmer"
+                style={{
+                  backgroundColor: brandColor || "var(--brand-primary, #0d9488)",
+                  boxShadow: `0 10px 25px -5px ${brandColor ? `${brandColor}66` : "rgba(13,148,136,0.4)"}`,
+                }}
+              >
+                {isConfectionery ? (
+                  <Cake className="h-4 w-4 shrink-0 text-rose-200 animate-sweet-float" />
+                ) : isPetShop ? (
+                  <Dog className="h-4 w-4 shrink-0 text-amber-200 animate-tail-wag" />
+                ) : isAutomotive ? (
+                  <Wrench className="h-4 w-4 shrink-0 text-blue-200 animate-wrench-tilt" />
+                ) : (
+                  <Calendar className="h-4 w-4 shrink-0" />
+                )}
+                <span>{ctaLabel}</span>
+                <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </section>
   );

@@ -53,6 +53,10 @@ export function PublicHeader({
 }: PublicHeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const currentTheme = theme || NICHE_THEMES.retail_default;
+  const isRestaurant =
+    currentTheme?.id === "restaurant" ||
+    currentTheme?.id === "gastronomia" ||
+    currentTheme?.id === "food";
 
   const cleanPhone = phoneWhatsapp ? sanitizePhoneNumber(phoneWhatsapp) : "";
   const displayAddress = address || "Atendimento Presencial";
@@ -196,10 +200,10 @@ export function PublicHeader({
           {/* Links de Ancoragem Desktop com Hover Pill Suave */}
           <div className="hidden md:flex items-center gap-1.5 text-xs font-semibold text-zinc-600 dark:text-zinc-400 shrink-0">
             <a
-              href="#servicos"
+              href={isRestaurant ? "#cardapio" : "#servicos"}
               className="px-3 py-1.5 rounded-xl hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 transition-all"
             >
-              Serviços
+              {isRestaurant ? "Cardápio" : "Serviços"}
             </a>
             <a
               href="#sobre"

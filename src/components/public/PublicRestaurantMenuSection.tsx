@@ -5,6 +5,13 @@ import { createPublicTableOrderAction } from "@/services/restaurant.actions";
 import type { MenuCategory, MenuItem } from "@/types";
 import {
   UtensilsCrossed,
+  Utensils,
+  LayoutGrid,
+  Flame,
+  Beer,
+  Wine,
+  Sparkles,
+  IceCream,
   Plus,
   Minus,
   ShoppingBag,
@@ -15,7 +22,6 @@ import {
   Loader2,
   UserCheck,
   QrCode,
-  Sparkles,
 } from "lucide-react";
 
 interface PublicRestaurantMenuSectionProps {
@@ -36,6 +42,108 @@ interface CartItem {
 }
 
 const DEFAULT_TABS = ["Todos", "Entradas", "Pratos", "Bebidas", "Sobremesas"];
+
+function renderCategoryIcon(tabName: string, isActive: boolean) {
+  const normalized = tabName.toLowerCase();
+  if (normalized === "todos" || normalized.includes("todo")) {
+    return (
+      <LayoutGrid
+        className={`w-4 h-4 mr-2 shrink-0 ${
+          isActive ? "text-zinc-950" : "text-amber-400"
+        }`}
+      />
+    );
+  }
+  if (
+    normalized.includes("entrada") ||
+    normalized.includes("petisc") ||
+    normalized.includes("porc") ||
+    normalized.includes("porç") ||
+    normalized.includes("tira-gosto")
+  ) {
+    return (
+      <Flame
+        className={`w-4 h-4 mr-2 shrink-0 ${
+          isActive ? "text-zinc-950" : "text-amber-500"
+        }`}
+      />
+    );
+  }
+  if (
+    normalized.includes("bebida") ||
+    normalized.includes("cervej") ||
+    normalized.includes("chopp") ||
+    normalized.includes("drink") ||
+    normalized.includes("coquet") ||
+    normalized.includes("suco") ||
+    normalized.includes("refrig")
+  ) {
+    return (
+      <Beer
+        className={`w-4 h-4 mr-2 shrink-0 ${
+          isActive ? "text-zinc-950" : "text-amber-400"
+        }`}
+      />
+    );
+  }
+  if (normalized.includes("vinho") || normalized.includes("adega")) {
+    return (
+      <Wine
+        className={`w-4 h-4 mr-2 shrink-0 ${
+          isActive ? "text-zinc-950" : "text-amber-400"
+        }`}
+      />
+    );
+  }
+  if (
+    normalized.includes("sobremes") ||
+    normalized.includes("doce") ||
+    normalized.includes("sorvet") ||
+    normalized.includes("acai") ||
+    normalized.includes("açaí")
+  ) {
+    return (
+      <Sparkles
+        className={`w-4 h-4 mr-2 shrink-0 ${
+          isActive ? "text-zinc-950" : "text-pink-400"
+        }`}
+      />
+    );
+  }
+  if (normalized.includes("gelato") || normalized.includes("milkshake")) {
+    return (
+      <IceCream
+        className={`w-4 h-4 mr-2 shrink-0 ${
+          isActive ? "text-zinc-950" : "text-pink-400"
+        }`}
+      />
+    );
+  }
+  if (
+    normalized.includes("prato") ||
+    normalized.includes("principal") ||
+    normalized.includes("refeic") ||
+    normalized.includes("lanche") ||
+    normalized.includes("burger") ||
+    normalized.includes("carne") ||
+    normalized.includes("executivo")
+  ) {
+    return (
+      <Utensils
+        className={`w-4 h-4 mr-2 shrink-0 ${
+          isActive ? "text-zinc-950" : "text-orange-500"
+        }`}
+      />
+    );
+  }
+  return (
+    <UtensilsCrossed
+      className={`w-4 h-4 mr-2 shrink-0 ${
+        isActive ? "text-zinc-950" : "text-amber-400"
+      }`}
+    />
+  );
+}
 
 export function PublicRestaurantMenuSection({
   tenantId,
@@ -181,49 +289,49 @@ export function PublicRestaurantMenuSection({
     : null;
 
   return (
-    <section id="cardapio" className="py-8 sm:py-12 space-y-6">
+    <section id="cardapio" className="py-6 sm:py-10 space-y-6 scroll-mt-20">
       {/* Banner Identificador da Mesa (Quando aberto via QR Code /[slug]/mesa/[tableNumber]) */}
       {displayTableLabel && (
-        <div className="rounded-3xl border-2 border-orange-300 bg-gradient-to-r from-orange-600 via-amber-600 to-red-600 p-5 sm:p-6 text-white shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="bg-zinc-900/90 border border-amber-500/40 backdrop-blur-md rounded-2xl shadow-xl p-5 sm:p-6 text-zinc-100 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4 text-center sm:text-left">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-xs ring-2 ring-white/30">
-              <QrCode className="h-7 w-7 text-white" />
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400">
+              <QrCode className="h-7 w-7" />
             </div>
             <div>
-              <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-3 py-0.5 text-[11px] font-extrabold uppercase tracking-wider text-amber-100">
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 border border-amber-500/30 px-3 py-0.5 text-[11px] font-bold uppercase tracking-wider text-amber-400">
                 Atendimento Digital na Mesa
               </span>
-              <h2 className="text-xl sm:text-2xl font-black tracking-tight mt-0.5">
+              <h2 className="text-xl sm:text-2xl font-black tracking-tight text-zinc-100 mt-1">
                 Você está na {displayTableLabel}
               </h2>
-              <p className="text-xs sm:text-sm text-orange-100">
+              <p className="text-xs sm:text-sm text-zinc-400">
                 Escolha seus pratos e bebidas abaixo e envie o pedido direto para o garçom!
               </p>
             </div>
           </div>
 
           {waiterName && (
-            <div className="inline-flex items-center gap-2 rounded-2xl bg-black/25 px-4 py-2.5 text-xs font-bold text-white shrink-0">
-              <UserCheck className="h-4 w-4 text-emerald-300" />
+            <div className="inline-flex items-center gap-2 rounded-2xl bg-zinc-950/80 border border-zinc-800 px-4 py-2.5 text-xs font-bold text-zinc-200 shrink-0">
+              <UserCheck className="h-4 w-4 text-emerald-400" />
               <span>Garçom da Mesa: {waiterName}</span>
             </div>
           )}
         </div>
       )}
 
-      {/* Cabeçalho da Seção "Nosso Cardápio" */}
-      <div className="rounded-3xl border border-orange-200/80 bg-white p-6 sm:p-8 shadow-sm space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-100 pb-5">
-          <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-orange-100 px-3 py-1 text-xs font-extrabold uppercase tracking-wider text-orange-800">
-              <UtensilsCrossed className="h-3.5 w-3.5 text-orange-600" />
-              <span>Gastronomia & Pedidos na Hora</span>
+      {/* Container Principal da Seção "Nosso Cardápio" */}
+      <div className="bg-zinc-900/80 border border-zinc-800/80 backdrop-blur-md rounded-2xl shadow-xl p-6 sm:p-8 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/80 pb-5">
+          <div className="space-y-1.5">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 px-3 py-1 text-xs font-bold uppercase tracking-wider text-amber-400">
+              <UtensilsCrossed className="h-3.5 w-3.5 text-amber-400" />
+              <span>Cardápio Digital Interativo</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-stone-900">
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-zinc-100">
               Nosso Cardápio
             </h2>
-            <p className="text-xs sm:text-sm text-stone-500">
-              Selecione seus itens favoritos, adicione observações e envie direto para nossa equipe.
+            <p className="text-xs sm:text-sm text-zinc-400">
+              Faça seu pedido diretamente para a nossa equipe
             </p>
           </div>
 
@@ -231,7 +339,7 @@ export function PublicRestaurantMenuSection({
             <button
               type="button"
               onClick={() => setIsOrderDrawerOpen(true)}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-600 hover:bg-orange-500 px-5 py-3 text-xs sm:text-sm font-extrabold text-white shadow-md transition active:scale-95 cursor-pointer"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold px-5 py-3 text-xs sm:text-sm shadow-lg shadow-amber-500/20 transition active:scale-95 cursor-pointer"
             >
               <ShoppingBag className="h-4 w-4" />
               <span>
@@ -241,8 +349,8 @@ export function PublicRestaurantMenuSection({
           )}
         </div>
 
-        {/* Abas de Categorias (Entradas, Pratos, Bebidas, Sobremesas) */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
+        {/* Abas de Categorias com Ícones Lucide Modernos e Estilo Pill */}
+        <div className="flex items-center gap-2.5 overflow-x-auto pb-2 no-scrollbar">
           {categoryTabs.map((tab) => {
             const isActive = activeTab.toLowerCase() === tab.toLowerCase();
             return (
@@ -250,26 +358,27 @@ export function PublicRestaurantMenuSection({
                 key={tab}
                 type="button"
                 onClick={() => setActiveTab(tab)}
-                className={`rounded-full px-4 py-2 text-xs sm:text-sm font-extrabold whitespace-nowrap transition-all cursor-pointer ${
+                className={`inline-flex items-center whitespace-nowrap rounded-full px-5 py-2.5 text-sm transition-all duration-200 border cursor-pointer ${
                   isActive
-                    ? "bg-orange-600 text-white shadow-md shadow-orange-600/20"
-                    : "bg-stone-100 text-stone-700 hover:bg-stone-200"
+                    ? "bg-amber-500 text-zinc-950 font-bold border-amber-400 shadow-md shadow-amber-500/20"
+                    : "bg-zinc-900 text-zinc-400 hover:text-zinc-200 border-zinc-800 hover:bg-zinc-800"
                 }`}
               >
-                {tab}
+                {renderCategoryIcon(tab, isActive)}
+                <span>{tab}</span>
               </button>
             );
           })}
         </div>
 
-        {/* Grid de Pratos & Bebidas */}
+        {/* Grid de Pratos, Porções e Bebidas */}
         {filteredItems.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-stone-200 bg-stone-50/60 p-10 text-center space-y-2">
-            <UtensilsCrossed className="mx-auto h-8 w-8 text-stone-400" />
-            <p className="text-sm font-bold text-stone-700">
+          <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-950/60 p-10 text-center space-y-2">
+            <UtensilsCrossed className="mx-auto h-8 w-8 text-zinc-500" />
+            <p className="text-sm font-bold text-zinc-300">
               Nenhum item disponível nesta categoria no momento.
             </p>
-            <p className="text-xs text-stone-500">
+            <p className="text-xs text-zinc-500">
               Selecione outra categoria acima para explorar o cardápio.
             </p>
           </div>
@@ -281,11 +390,11 @@ export function PublicRestaurantMenuSection({
               return (
                 <div
                   key={item.id}
-                  className="group rounded-2xl border border-stone-200/90 bg-white overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
+                  className="group bg-zinc-900/80 border border-zinc-800/80 backdrop-blur-md rounded-2xl shadow-xl overflow-hidden hover:border-amber-500/40 transition-all flex flex-col justify-between"
                 >
                   <div>
-                    {/* Foto do Prato */}
-                    <div className="relative h-44 w-full bg-stone-100 overflow-hidden">
+                    {/* Foto do Prato / Porção / Bebida */}
+                    <div className="relative h-44 w-full bg-zinc-950 overflow-hidden">
                       {item.image_url ? (
                         <img
                           src={item.image_url}
@@ -293,27 +402,27 @@ export function PublicRestaurantMenuSection({
                           className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       ) : (
-                        <div className="flex h-full w-full flex-col items-center justify-center text-stone-400 gap-1">
-                          <UtensilsCrossed className="h-8 w-8 stroke-1" />
-                          <span className="text-[11px] font-medium">
+                        <div className="flex h-full w-full flex-col items-center justify-center text-zinc-600 gap-1.5 bg-gradient-to-br from-zinc-900 to-zinc-950">
+                          <UtensilsCrossed className="h-8 w-8 text-amber-500/40 stroke-1" />
+                          <span className="text-[11px] font-medium text-zinc-500">
                             {tenantName}
                           </span>
                         </div>
                       )}
-                      <span className="absolute top-3 left-3 rounded-full bg-black/70 backdrop-blur-xs px-2.5 py-0.5 text-[10px] font-bold text-white">
+                      <span className="absolute top-3 left-3 rounded-full bg-zinc-950/85 border border-zinc-700/80 backdrop-blur-xs px-2.5 py-0.5 text-[10px] font-bold text-amber-400">
                         {item.category || "Pratos"}
                       </span>
                     </div>
 
-                    {/* Detalhes */}
+                    {/* Detalhes do Item */}
                     <div className="p-4 space-y-1.5">
                       <div className="flex items-start justify-between gap-2">
-                        <h3 className="text-base font-extrabold text-stone-900 leading-snug">
+                        <h3 className="text-base font-extrabold text-zinc-100 leading-snug">
                           {item.name}
                         </h3>
                       </div>
                       {item.description && (
-                        <p className="text-xs text-stone-500 line-clamp-2 leading-relaxed">
+                        <p className="text-xs text-zinc-400 line-clamp-2 leading-relaxed">
                           {item.description}
                         </p>
                       )}
@@ -321,27 +430,27 @@ export function PublicRestaurantMenuSection({
                   </div>
 
                   {/* Preço e Botão "+ Adicionar" */}
-                  <div className="px-4 pb-4 pt-2 flex items-center justify-between gap-3 border-t border-stone-100">
-                    <span className="text-lg font-black text-orange-600">
+                  <div className="px-4 pb-4 pt-3 flex items-center justify-between gap-3 border-t border-zinc-800/80">
+                    <span className="text-lg font-black text-amber-400">
                       {formatCurrency(item.price)}
                     </span>
 
                     {qtyInCart > 0 ? (
-                      <div className="inline-flex items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-2 py-1">
+                      <div className="inline-flex items-center gap-2 rounded-xl border border-amber-500/40 bg-zinc-950 px-2 py-1">
                         <button
                           type="button"
                           onClick={() => handleDecreaseItem(item.id)}
-                          className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-orange-700 shadow-2xs hover:bg-orange-100 cursor-pointer"
+                          className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-800 text-zinc-200 hover:bg-zinc-700 cursor-pointer"
                         >
                           <Minus className="h-3.5 w-3.5" />
                         </button>
-                        <span className="min-w-[20px] text-center text-xs font-black text-orange-950">
+                        <span className="min-w-[20px] text-center text-xs font-black text-amber-400">
                           {qtyInCart}
                         </span>
                         <button
                           type="button"
                           onClick={() => handleAddItem(item)}
-                          className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-600 text-white shadow-2xs hover:bg-orange-500 cursor-pointer"
+                          className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold cursor-pointer"
                         >
                           <Plus className="h-3.5 w-3.5" />
                         </button>
@@ -350,7 +459,7 @@ export function PublicRestaurantMenuSection({
                       <button
                         type="button"
                         onClick={() => handleAddItem(item)}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-orange-600 hover:bg-orange-500 px-4 py-2 text-xs font-extrabold text-white shadow-xs transition active:scale-95 cursor-pointer"
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold px-4 py-2 text-xs shadow-md shadow-amber-500/15 transition active:scale-95 cursor-pointer"
                       >
                         <Plus className="h-3.5 w-3.5" />
                         <span>+ Adicionar</span>
@@ -367,13 +476,13 @@ export function PublicRestaurantMenuSection({
       {/* Barra Flutuante Inferior com Resumo da Comanda e Botão "Ver Pedido" */}
       {totalItemsCount > 0 && (
         <div className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-2xl animate-in slide-in-from-bottom-4">
-          <div className="flex items-center justify-between gap-4 rounded-2xl border border-orange-400/40 bg-stone-950/95 p-4 text-white shadow-2xl backdrop-blur-md">
+          <div className="flex items-center justify-between gap-4 rounded-2xl border border-amber-500/40 bg-zinc-950/95 p-4 text-zinc-100 shadow-2xl backdrop-blur-md">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-orange-600 font-black text-white shadow-inner">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500 font-black text-zinc-950 shadow-inner">
                 {totalItemsCount}
               </div>
               <div>
-                <p className="text-xs font-semibold text-stone-300">
+                <p className="text-xs font-semibold text-zinc-400">
                   {displayTableLabel
                     ? `Comanda da ${displayTableLabel}`
                     : "Resumo da sua Comanda"}
@@ -387,7 +496,7 @@ export function PublicRestaurantMenuSection({
             <button
               type="button"
               onClick={() => setIsOrderDrawerOpen(true)}
-              className="inline-flex items-center gap-2 rounded-xl bg-orange-600 hover:bg-orange-500 px-5 py-3 text-xs sm:text-sm font-black text-white shadow-lg transition active:scale-95 cursor-pointer shrink-0"
+              className="inline-flex items-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold px-5 py-3 text-xs sm:text-sm shadow-lg shadow-amber-500/20 transition active:scale-95 cursor-pointer shrink-0"
             >
               <ShoppingBag className="h-4 w-4" />
               <span>Ver Pedido</span>
@@ -398,35 +507,35 @@ export function PublicRestaurantMenuSection({
 
       {/* Modal / Drawer de Finalização da Comanda e Envio para o Garçom */}
       {isOrderDrawerOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 p-0 sm:p-4 backdrop-blur-xs">
-          <div className="w-full max-w-lg rounded-t-3xl sm:rounded-3xl bg-white p-6 text-stone-900 shadow-2xl space-y-5 max-h-[92vh] overflow-y-auto animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-stone-100 pb-3.5">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 p-0 sm:p-4 backdrop-blur-xs">
+          <div className="w-full max-w-lg rounded-t-3xl sm:rounded-2xl bg-zinc-900 border border-zinc-800 p-6 text-zinc-100 shadow-2xl space-y-5 max-h-[92vh] overflow-y-auto animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-zinc-800 pb-3.5">
               <div>
-                <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2.5 py-0.5 text-[10px] font-extrabold uppercase text-orange-800">
-                  <Sparkles className="h-3 w-3 text-orange-600" />
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 border border-amber-500/30 px-2.5 py-0.5 text-[10px] font-bold uppercase text-amber-400">
+                  <Sparkles className="h-3 w-3 text-amber-400" />
                   {displayTableLabel || "Comanda Digital"}
                 </span>
-                <h3 className="text-lg font-black text-stone-900 mt-1">
+                <h3 className="text-lg font-black text-zinc-100 mt-1">
                   Conferir e Enviar Pedido
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setIsOrderDrawerOpen(false)}
-                className="rounded-xl p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-700 cursor-pointer"
+                className="rounded-xl p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 cursor-pointer"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             {submittedWhatsappUrl ? (
-              <div className="rounded-2xl border-2 border-emerald-500 bg-emerald-50 p-6 text-center space-y-4">
-                <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-600" />
+              <div className="rounded-2xl border border-emerald-500/40 bg-emerald-950/40 p-6 text-center space-y-4">
+                <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-400" />
                 <div className="space-y-1">
-                  <h4 className="text-base font-black text-emerald-950">
+                  <h4 className="text-base font-black text-emerald-300">
                     Pedido Registrado na Mesa!
                   </h4>
-                  <p className="text-xs text-emerald-800">
+                  <p className="text-xs text-zinc-300">
                     Seu pedido já foi salvo no painel do restaurante. Clique abaixo caso o WhatsApp do garçom não tenha aberto automaticamente:
                   </p>
                 </div>
@@ -445,7 +554,7 @@ export function PublicRestaurantMenuSection({
                     setSubmittedWhatsappUrl(null);
                     setIsOrderDrawerOpen(false);
                   }}
-                  className="text-xs font-semibold text-stone-500 hover:text-stone-800 underline cursor-pointer"
+                  className="text-xs font-semibold text-zinc-400 hover:text-zinc-200 underline cursor-pointer"
                 >
                   Voltar ao cardápio
                 </button>
@@ -457,13 +566,13 @@ export function PublicRestaurantMenuSection({
                   {cartEntries.map(({ item, quantity }) => (
                     <div
                       key={item.id}
-                      className="flex items-center justify-between gap-3 rounded-xl border border-stone-200 bg-stone-50/70 p-3"
+                      className="flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-950/70 p-3"
                     >
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-stone-900 truncate">
+                        <p className="text-xs font-bold text-zinc-100 truncate">
                           {item.name}
                         </p>
-                        <p className="text-[11px] font-semibold text-orange-600">
+                        <p className="text-[11px] font-semibold text-amber-400">
                           {formatCurrency(Number(item.price) * quantity)}
                         </p>
                       </div>
@@ -472,17 +581,17 @@ export function PublicRestaurantMenuSection({
                         <button
                           type="button"
                           onClick={() => handleDecreaseItem(item.id)}
-                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-stone-200 bg-white text-stone-700 hover:bg-stone-100 cursor-pointer"
+                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-zinc-700 bg-zinc-800 text-zinc-200 hover:bg-zinc-700 cursor-pointer"
                         >
                           <Minus className="h-3 w-3" />
                         </button>
-                        <span className="text-xs font-black w-5 text-center">
+                        <span className="text-xs font-black w-5 text-center text-zinc-100">
                           {quantity}
                         </span>
                         <button
                           type="button"
                           onClick={() => handleAddItem(item)}
-                          className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-600 text-white hover:bg-orange-500 cursor-pointer"
+                          className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500 text-zinc-950 hover:bg-amber-400 font-bold cursor-pointer"
                         >
                           <Plus className="h-3 w-3" />
                         </button>
@@ -494,7 +603,7 @@ export function PublicRestaurantMenuSection({
                 {/* Campos de Identificação e Observação */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="block text-xs font-bold text-stone-700">
+                    <label className="block text-xs font-bold text-zinc-300">
                       Seu Nome *
                     </label>
                     <input
@@ -503,13 +612,13 @@ export function PublicRestaurantMenuSection({
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
                       placeholder="Ex: Carlos Silva"
-                      className="w-full rounded-xl border border-stone-300 px-3.5 py-2.5 text-xs text-stone-900 focus:border-orange-500 focus:outline-none"
+                      className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3.5 py-2.5 text-xs text-zinc-100 placeholder:text-zinc-500 focus:border-amber-500 focus:outline-none"
                     />
                   </div>
 
                   {!tableNumber && (
                     <div className="space-y-1">
-                      <label className="block text-xs font-bold text-stone-700">
+                      <label className="block text-xs font-bold text-zinc-300">
                         Número da Mesa
                       </label>
                       <input
@@ -517,14 +626,14 @@ export function PublicRestaurantMenuSection({
                         value={manualTableNumber}
                         onChange={(e) => setManualTableNumber(e.target.value)}
                         placeholder="Ex: 01 ou Balcão"
-                        className="w-full rounded-xl border border-stone-300 px-3.5 py-2.5 text-xs font-bold text-stone-900 focus:border-orange-500 focus:outline-none"
+                        className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3.5 py-2.5 text-xs font-bold text-zinc-100 placeholder:text-zinc-500 focus:border-amber-500 focus:outline-none"
                       />
                     </div>
                   )}
                 </div>
 
                 <div className="space-y-1">
-                  <label className="block text-xs font-bold text-stone-700">
+                  <label className="block text-xs font-bold text-zinc-300">
                     Observações do Pedido (opcional)
                   </label>
                   <textarea
@@ -532,23 +641,23 @@ export function PublicRestaurantMenuSection({
                     value={orderNotes}
                     onChange={(e) => setOrderNotes(e.target.value)}
                     placeholder="Ex: Sem cebola, ponto da carne ao ponto, gelo e limão..."
-                    className="w-full rounded-xl border border-stone-300 p-3 text-xs text-stone-900 focus:border-orange-500 focus:outline-none"
+                    className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-xs text-zinc-100 placeholder:text-zinc-500 focus:border-amber-500 focus:outline-none"
                   />
                 </div>
 
                 {errorMsg && (
-                  <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-800">
-                    <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
+                  <div className="flex items-center gap-2 rounded-xl border border-rose-500/40 bg-rose-950/50 p-3 text-xs font-semibold text-rose-300">
+                    <AlertCircle className="h-4 w-4 text-rose-400 shrink-0" />
                     <span>{errorMsg}</span>
                   </div>
                 )}
 
                 {/* Total e Botão Enviar Pedido para o Garçom */}
-                <div className="rounded-2xl bg-stone-100 p-4 flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase text-stone-600">
+                <div className="rounded-2xl bg-zinc-950 border border-zinc-800 p-4 flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase text-zinc-400">
                     Total do Pedido
                   </span>
-                  <span className="text-xl font-black text-stone-900">
+                  <span className="text-xl font-black text-amber-400">
                     {formatCurrency(totalOrderAmount)}
                   </span>
                 </div>
@@ -556,7 +665,7 @@ export function PublicRestaurantMenuSection({
                 <button
                   type="submit"
                   disabled={isSubmitting || cartEntries.length === 0}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 px-5 py-3.5 text-sm font-black text-white shadow-lg transition active:scale-95 cursor-pointer"
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-amber-500 hover:bg-amber-400 disabled:opacity-50 px-5 py-3.5 text-sm font-black text-zinc-950 shadow-lg shadow-amber-500/20 transition active:scale-95 cursor-pointer"
                 >
                   {isSubmitting ? (
                     <Loader2 className="h-4 w-4 animate-spin" />

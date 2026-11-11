@@ -30,6 +30,7 @@ import {
   Sparkles,
   CarFront,
   Wrench,
+  UtensilsCrossed,
 } from "lucide-react";
 import type {
   Service,
@@ -39,6 +40,8 @@ import type {
   TenantPost,
   TenantProduct,
   TenantProfessional,
+  MenuCategory,
+  MenuItem,
   BusinessAttributes as BusinessAttributesType,
 } from "@/types";
 import type { NicheThemeConfig } from "@/config/tenant-themes";
@@ -48,6 +51,7 @@ import { getUnifiedEstablishmentPhotos } from "@/utils/establishment-photos";
 import { PublicProductsSection } from "../PublicProductsSection";
 import { PublicProfessionalsSection } from "../PublicProfessionalsSection";
 import { PublicPostsSection } from "../PublicPostsSection";
+import { PublicRestaurantMenuSection } from "../PublicRestaurantMenuSection";
 import { GoogleReviewsCard } from "../GoogleReviewsCard";
 import { MapLocationCard } from "../MapLocationCard";
 import { BusinessAttributes } from "../BusinessAttributes";
@@ -102,6 +106,8 @@ export interface TemplateViewProps {
   reviews?: TenantReview[];
   posts?: TenantPost[];
   products?: TenantProduct[];
+  menuCategories?: MenuCategory[];
+  menuItems?: MenuItem[];
   isOpenNow: boolean;
   statusBadgeText?: string;
   statusDetailText?: string;
@@ -122,6 +128,8 @@ export function ConversionTemplateView({
   reviews = [],
   posts = [],
   products = [],
+  menuCategories = [],
+  menuItems = [],
   isOpenNow,
   statusBadgeText,
   statusDetailText,
@@ -136,12 +144,31 @@ export function ConversionTemplateView({
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
   const [selectedDetailItem, setSelectedDetailItem] = useState<ItemDetailData | null>(null);
 
-  const rawPhone = profile?.phone_whatsapp || profile?.phone || "";
+  const isRestaurant =
+    tenant.niche === "restaurant" ||
+    theme?.id === "restaurant" ||
+    theme?.id === "gastronomia" ||
+    theme?.id === "food";
+  const effectiveLogoUrl =
+    profile?.logo_url ||
+    (tenant as any)?.logo_url ||
+    (tenant as any)?.tenant_profiles?.logo_url ||
+    null;
+  const displayAddress = profile?.address || tenant.address || null;
+
+  const rawPhone =
+    profile?.phone_whatsapp ||
+    profile?.phone ||
+    (tenant as any)?.whatsapp ||
+    tenant.phone ||
+    "";
   const cleanPhone = sanitizePhoneNumber(rawPhone);
   const whatsappUrl = generateWhatsAppUrl(
     rawPhone,
     tenant.name,
-    `Olá! Gostaria de um atendimento imediato com ${tenant.name}.`
+    isRestaurant
+      ? `Olá! Estou vendo o cardápio de ${tenant.name} e gostaria de atendimento.`
+      : `Olá! Gostaria de um atendimento imediato com ${tenant.name}.`
   );
 
   const heroSubtitle = getHeroSubtitle(
@@ -221,7 +248,19 @@ export function ConversionTemplateView({
           style={{ backgroundColor: brandColor }}
         />
 
-        <div className="relative z-10 max-w-3xl mx-auto text-center space-y-6 sm:space-y-7">
+        <div className="relative z-10 max-w-3xl mx-auto text-center space-y-5 sm:space-y-6">
+          {/* Logo da Empresa no Topo do Hero */}
+          {effectiveLogoUrl && (
+            <div className="mx-auto h-20 w-20 sm:h-24 sm:w-24 rounded-2xl border-2 border-white/80 ring-4 ring-black/40 overflow-hidden shadow-2xl bg-zinc-900 flex items-center justify-center">
+              <img
+                src={effectiveLogoUrl}
+                alt={tenant.name}
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+          )}
+
           {/* Badge superior: "⚡ Atendimento Rápido • Aberto Agora" (com ponto pulsante suave) */}
           <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold tracking-wide border border-emerald-500/30 bg-emerald-950/80 backdrop-blur-md text-emerald-400 shadow-xs">
             <span className="relative flex h-2.5 w-2.5">
@@ -235,6 +274,14 @@ export function ConversionTemplateView({
           <h1 className="uppercase tracking-tight font-extrabold text-3xl sm:text-5xl lg:text-6xl text-white leading-[1.1] sm:leading-[1.08] drop-shadow-md">
             {tenant.name}
           </h1>
+
+          {/* Endereço no Hero */}
+          {displayAddress && (
+            <div className="inline-flex items-center justify-center gap-1.5 text-xs sm:text-sm text-zinc-200">
+              <MapPin className="h-4 w-4 text-amber-400 shrink-0" />
+              <span>{displayAddress}</span>
+            </div>
+          )}
 
           {/* Frase de impacto / descrição curta logo abaixo em tom dourado/off-white */}
           <p className="text-base sm:text-lg text-amber-100/90 dark:text-amber-100/90 font-medium max-w-2xl mx-auto leading-relaxed drop-shadow-sm">
@@ -275,56 +322,107 @@ export function ConversionTemplateView({
           )}
 
           {/* Barra de botões de CTA horizontais modernizados e alinhados */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 w-full max-w-2xl mx-auto mt-6">
-            {isAutomotiveNiche(tenant, profile, theme?.id) && onOpenVehicleQuote && (
-              <button
-                type="button"
-                onClick={onOpenVehicleQuote}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 h-12 sm:h-14 px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 whitespace-nowrap font-medium text-sm sm:text-base transition-all duration-200 active:scale-95 cursor-pointer"
-              >
-                <Wrench className="h-4 w-4 text-white shrink-0" />
-                <span>Solicitar Orçamento por Placa</span>
-              </button>
-            )}
-
-            {/* BOTÃO 2 (WhatsApp) */}
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 h-12 sm:h-14 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 whitespace-nowrap font-medium text-sm sm:text-base transition-all duration-200 active:scale-95"
-            >
-              <MessageCircle className="h-4 w-4 fill-white text-emerald-600 shrink-0" />
-              <span>Falar no WhatsApp</span>
-            </a>
-
-            {/* BOTÃO 3 (Ligar Agora / Opcional) */}
-            {cleanPhone && (
+          {isRestaurant ? (
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 w-full max-w-2xl mx-auto mt-6">
               <a
-                href={`tel:+55${cleanPhone}`}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-12 sm:h-14 px-6 rounded-xl bg-zinc-900/60 hover:bg-zinc-800 text-zinc-300 border border-zinc-700/60 backdrop-blur-sm whitespace-nowrap font-medium text-sm sm:text-base transition-all duration-200 active:scale-95"
+                href="#cardapio"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 h-12 sm:h-14 px-6 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold shadow-lg shadow-amber-500/20 whitespace-nowrap text-sm sm:text-base transition-all duration-200 active:scale-95"
               >
-                <Phone className="h-4 w-4 text-zinc-300 shrink-0" />
-                <span>Ligar Agora</span>
+                <UtensilsCrossed className="h-4 w-4 text-zinc-950 shrink-0" />
+                <span>Ver Cardápio</span>
               </a>
-            )}
-          </div>
 
-          {/* Link secundário inferior */}
-          <div className="mt-3 text-center">
-            <button
-              type="button"
-              onClick={() => onOpenBooking()}
-              className="inline-flex items-center justify-center gap-1.5 text-xs sm:text-sm text-zinc-400 hover:text-white transition cursor-pointer group"
-            >
-              <Calendar className="h-4 w-4 text-zinc-400 group-hover:text-emerald-400 transition shrink-0" />
-              <span className="underline underline-offset-4 decoration-white/20 group-hover:decoration-white">
-                Prefere escolher data e horário online? Clique aqui →
-              </span>
-            </button>
-          </div>
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 h-12 sm:h-14 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold shadow-lg shadow-emerald-500/20 whitespace-nowrap text-sm sm:text-base transition-all duration-200 active:scale-95"
+              >
+                <MessageCircle className="h-4 w-4 fill-white text-emerald-600 shrink-0" />
+                <span>Chamar Garçom / WhatsApp</span>
+              </a>
+
+              <a
+                href={
+                  profile?.google_maps_url ||
+                  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                    `${tenant.name} ${displayAddress || ""}`
+                  )}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-12 sm:h-14 px-6 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-200 border border-zinc-700/80 backdrop-blur-sm whitespace-nowrap font-medium text-sm sm:text-base transition-all duration-200 active:scale-95"
+              >
+                <MapPin className="h-4 w-4 text-amber-400 shrink-0" />
+                <span>Como Chegar</span>
+              </a>
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 w-full max-w-2xl mx-auto mt-6">
+                {isAutomotiveNiche(tenant, profile, theme?.id) && onOpenVehicleQuote && (
+                  <button
+                    type="button"
+                    onClick={onOpenVehicleQuote}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 h-12 sm:h-14 px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 whitespace-nowrap font-medium text-sm sm:text-base transition-all duration-200 active:scale-95 cursor-pointer"
+                  >
+                    <Wrench className="h-4 w-4 text-white shrink-0" />
+                    <span>Solicitar Orçamento por Placa</span>
+                  </button>
+                )}
+
+                {/* BOTÃO 2 (WhatsApp) */}
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 h-12 sm:h-14 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 whitespace-nowrap font-medium text-sm sm:text-base transition-all duration-200 active:scale-95"
+                >
+                  <MessageCircle className="h-4 w-4 fill-white text-emerald-600 shrink-0" />
+                  <span>Falar no WhatsApp</span>
+                </a>
+
+                {/* BOTÃO 3 (Ligar Agora / Opcional) */}
+                {cleanPhone && (
+                  <a
+                    href={`tel:+55${cleanPhone}`}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-12 sm:h-14 px-6 rounded-xl bg-zinc-900/60 hover:bg-zinc-800 text-zinc-300 border border-zinc-700/60 backdrop-blur-sm whitespace-nowrap font-medium text-sm sm:text-base transition-all duration-200 active:scale-95"
+                  >
+                    <Phone className="h-4 w-4 text-zinc-300 shrink-0" />
+                    <span>Ligar Agora</span>
+                  </a>
+                )}
+              </div>
+
+              {/* Link secundário inferior */}
+              <div className="mt-3 text-center">
+                <button
+                  type="button"
+                  onClick={() => onOpenBooking()}
+                  className="inline-flex items-center justify-center gap-1.5 text-xs sm:text-sm text-zinc-400 hover:text-white transition cursor-pointer group"
+                >
+                  <Calendar className="h-4 w-4 text-zinc-400 group-hover:text-emerald-400 transition shrink-0" />
+                  <span className="underline underline-offset-4 decoration-white/20 group-hover:decoration-white">
+                    Prefere escolher data e horário online? Clique aqui →
+                  </span>
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </section>
+
+      {/* 2º SEÇÃO DO CARDÁPIO DIGITAL (Logo abaixo do Hero para Restaurante / Bar) */}
+      {isRestaurant && (
+        <PublicRestaurantMenuSection
+          tenantId={tenant.id}
+          tenantName={tenant.name}
+          tenantSlug={tenant.slug}
+          categories={menuCategories}
+          items={menuItems}
+          restaurantPhone={rawPhone}
+        />
+      )}
 
       {/* 2. GALERIA / FOTOS DO LOCAL */}
       {effectiveGalleryPhotos.length > 0 && (
@@ -369,8 +467,8 @@ export function ConversionTemplateView({
         </section>
       )}
 
-      {/* 3. SERVIÇOS / CARDÁPIO COM PREÇOS */}
-      {services.length > 0 && (
+      {/* 3. SERVIÇOS / CARDÁPIO COM PREÇOS (Para nichos não-restaurante) */}
+      {!isRestaurant && services.length > 0 && (
         <section className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 border-b border-neutral-200/80 dark:border-white/10 pb-4">
             <div className="space-y-1">
@@ -491,7 +589,7 @@ export function ConversionTemplateView({
       )}
 
       {/* 3.5 EQUIPE / PROFISSIONAIS */}
-      {professionals && professionals.length > 0 && (
+      {!isRestaurant && professionals && professionals.length > 0 && (
         <PublicProfessionalsSection
           professionals={professionals}
           tenantName={tenant.name}

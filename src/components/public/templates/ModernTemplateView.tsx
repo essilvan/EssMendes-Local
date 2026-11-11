@@ -34,6 +34,8 @@ import { getUnifiedEstablishmentPhotos } from "@/utils/establishment-photos";
 import { PublicProductsSection } from "../PublicProductsSection";
 import { PublicProfessionalsSection } from "../PublicProfessionalsSection";
 import { PublicPostsSection } from "../PublicPostsSection";
+import { PublicRestaurantMenuSection } from "../PublicRestaurantMenuSection";
+import { PublicHeroSplit } from "../PublicHeroSplit";
 import { PlacePhotoGallery } from "../PlacePhotoGallery";
 import { MapLocationCard } from "../MapLocationCard";
 import { GoogleReviewsCard } from "../GoogleReviewsCard";
@@ -55,6 +57,8 @@ export function ModernTemplateView({
   reviews = [],
   posts = [],
   products = [],
+  menuCategories = [],
+  menuItems = [],
   isOpenNow,
   statusBadgeText,
   statusDetailText,
@@ -67,10 +71,20 @@ export function ModernTemplateView({
 }: TemplateViewProps) {
   const [selectedDetailItem, setSelectedDetailItem] = React.useState<ItemDetailData | null>(null);
   const contrastText = getContrastTextColor(brandColor);
-  const rawPhone = profile?.phone_whatsapp || profile?.phone || "";
+  const rawPhone =
+    profile?.phone_whatsapp ||
+    profile?.phone ||
+    (tenant as any)?.whatsapp ||
+    tenant.phone ||
+    "";
   const cleanPhone = sanitizePhoneNumber(rawPhone);
   const formattedPhone = formatBrazilianPhone(rawPhone);
   const whatsappUrl = generateWhatsAppUrl(rawPhone, tenant.name);
+  const isRestaurant =
+    tenant.niche === "restaurant" ||
+    theme?.id === "restaurant" ||
+    theme?.id === "gastronomia" ||
+    theme?.id === "food";
 
   const heroSubtitle = getHeroSubtitle(
     tenant,
@@ -123,7 +137,48 @@ export function ModernTemplateView({
 
   return (
     <div className="space-y-16 md:space-y-24 pb-20">
-      
+      {/* Para Restaurante/Bar: 1º TOPO (Hero Principal com Logo e Ações Rápidas) -> 2º SEÇÃO DO CARDÁPIO DIGITAL */}
+      {isRestaurant ? (
+        <>
+          <PublicHeroSplit
+            tenant={tenant}
+            services={services}
+            tenantName={tenant.name}
+            logoUrl={profile?.logo_url || (tenant as any)?.logo_url}
+            coverUrl={effectiveHeroImage}
+            description={tenant?.description || profile?.description}
+            headline={tenant?.headline || profile?.editorial_summary}
+            address={profile?.address || tenant.address}
+            phoneWhatsapp={rawPhone}
+            heroImageUrl={effectiveHeroImage}
+            placePhotos={allEstablishmentPhotos}
+            latitude={profile?.latitude}
+            longitude={profile?.longitude}
+            businessCategory={profile?.business_category}
+            rating={realRating}
+            reviewCount={realReviewCount}
+            reviews={reviews.filter((r) => r.is_visible !== false)}
+            googleMapsUrl={profile?.google_maps_url}
+            isOpenNow={isOpenNow}
+            statusBadgeText={statusBadgeText}
+            brandColor={brandColor}
+            theme={theme}
+            ctaText={tenant?.cta_text || (tenant?.theme_settings as any)?.cta_text}
+            onOpenBooking={() => onOpenBooking()}
+            onOpenVehicleQuote={onOpenVehicleQuote}
+          />
+
+          <PublicRestaurantMenuSection
+            tenantId={tenant.id}
+            tenantName={tenant.name}
+            tenantSlug={tenant.slug}
+            categories={menuCategories}
+            items={menuItems}
+            restaurantPhone={rawPhone}
+          />
+        </>
+      ) : (
+        <>
       {/* 1. BENTO GRID PRINCIPAL (4 BLOCOS MODULARES ESTILO APPLE / LINEAR) */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
@@ -559,8 +614,20 @@ export function ModernTemplateView({
           theme={theme}
         />
       )}
+        </>
+      )}
 
-      {/* 4. SEÇÃO GLOBAL DE FOTOS DO ESTABELECIMENTO (AMBIENTE & ESTRUTURA COM LIGHTBOX) */}
+      {/* 3º SEÇÕES COMPLEMENTARES: Avaliações, Galeria de Fotos, Posts e Mapa/Endereço */}
+      <GoogleReviewsCard
+        tenantName={tenant.name}
+        rating={realRating}
+        reviewCount={realReviewCount}
+        reviews={reviews.filter((r) => r.is_visible !== false)}
+        googleMapsUrl={profile?.google_maps_url}
+        theme={theme}
+      />
+
+      {/* SEÇÃO GLOBAL DE FOTOS DO ESTABELECIMENTO (AMBIENTE & ESTRUTURA COM LIGHTBOX) */}
       {allEstablishmentPhotos.length > 0 && (
         <PlacePhotoGallery
           photos={allEstablishmentPhotos}
@@ -570,16 +637,6 @@ export function ModernTemplateView({
           title="Fotos do Estabelecimento • Nosso Ambiente"
         />
       )}
-
-      {/* 5. AVALIAÇÕES GOOGLE REVIEWS */}
-      <GoogleReviewsCard
-        tenantName={tenant.name}
-        rating={realRating}
-        reviewCount={realReviewCount}
-        reviews={reviews.filter((r) => r.is_visible !== false)}
-        googleMapsUrl={profile?.google_maps_url}
-        theme={theme}
-      />
 
       {/* 5.5 DICAS, ARTIGOS & NOVIDADES (SEO LOCAL) */}
       {posts && posts.length > 0 && (

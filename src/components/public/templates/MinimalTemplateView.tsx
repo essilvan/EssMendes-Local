@@ -31,6 +31,9 @@ import { getUnifiedEstablishmentPhotos } from "@/utils/establishment-photos";
 import { PlacePhotoGallery } from "../PlacePhotoGallery";
 import { PublicProfessionalsSection } from "../PublicProfessionalsSection";
 import { PublicPostsSection } from "../PublicPostsSection";
+import { PublicRestaurantMenuSection } from "../PublicRestaurantMenuSection";
+import { PublicHeroSplit } from "../PublicHeroSplit";
+import { GoogleReviewsCard } from "../GoogleReviewsCard";
 import { ItemDetailModal, type ItemDetailData } from "../ItemDetailModal";
 import {
   getHeroSubtitle,
@@ -49,6 +52,8 @@ export function MinimalTemplateView({
   reviews = [],
   posts = [],
   products = [],
+  menuCategories = [],
+  menuItems = [],
   isOpenNow,
   statusBadgeText,
   statusDetailText,
@@ -61,10 +66,20 @@ export function MinimalTemplateView({
 }: TemplateViewProps) {
   const [selectedDetailItem, setSelectedDetailItem] = React.useState<ItemDetailData | null>(null);
   const contrastText = getContrastTextColor(brandColor);
-  const rawPhone = profile?.phone_whatsapp || profile?.phone || "";
+  const rawPhone =
+    profile?.phone_whatsapp ||
+    profile?.phone ||
+    (tenant as any)?.whatsapp ||
+    tenant.phone ||
+    "";
   const cleanPhone = sanitizePhoneNumber(rawPhone);
   const formattedPhone = formatBrazilianPhone(rawPhone);
   const whatsappUrl = generateWhatsAppUrl(rawPhone, tenant.name);
+  const isRestaurant =
+    tenant.niche === "restaurant" ||
+    theme?.id === "restaurant" ||
+    theme?.id === "gastronomia" ||
+    theme?.id === "food";
 
   const heroSubtitle = getHeroSubtitle(
     tenant,
@@ -110,8 +125,66 @@ export function MinimalTemplateView({
   const hoursList = tenant.opening_hours || profile?.opening_hours_json || [];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-20 py-12 sm:py-16 px-4 sm:px-6 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100">
-      
+    <div
+      className={`max-w-4xl mx-auto space-y-20 py-12 sm:py-16 px-4 sm:px-6 ${
+        isRestaurant
+          ? "bg-zinc-950 text-zinc-100"
+          : "bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100"
+      }`}
+    >
+      {isRestaurant ? (
+        <>
+          {/* 1º TOPO: Hero Principal */}
+          <PublicHeroSplit
+            tenant={tenant}
+            services={services}
+            tenantName={tenant.name}
+            logoUrl={profile?.logo_url || (tenant as any)?.logo_url}
+            coverUrl={effectiveHeroImage}
+            description={tenant?.description || profile?.description}
+            headline={tenant?.headline || profile?.editorial_summary}
+            address={profile?.address || tenant.address}
+            phoneWhatsapp={rawPhone}
+            heroImageUrl={effectiveHeroImage}
+            placePhotos={allEstablishmentPhotos}
+            latitude={profile?.latitude}
+            longitude={profile?.longitude}
+            businessCategory={profile?.business_category}
+            rating={realRating}
+            reviewCount={realReviewCount}
+            reviews={reviews.filter((r) => r.is_visible !== false)}
+            googleMapsUrl={profile?.google_maps_url}
+            isOpenNow={isOpenNow}
+            statusBadgeText={statusBadgeText}
+            brandColor={brandColor}
+            theme={theme}
+            ctaText={tenant?.cta_text || (tenant?.theme_settings as any)?.cta_text}
+            onOpenBooking={() => onOpenBooking()}
+            onOpenVehicleQuote={onOpenVehicleQuote}
+          />
+
+          {/* 2º SEÇÃO DO CARDÁPIO DIGITAL */}
+          <PublicRestaurantMenuSection
+            tenantId={tenant.id}
+            tenantName={tenant.name}
+            tenantSlug={tenant.slug}
+            categories={menuCategories}
+            items={menuItems}
+            restaurantPhone={rawPhone}
+          />
+
+          {/* 3º SEÇÕES COMPLEMENTARES */}
+          <GoogleReviewsCard
+            tenantName={tenant.name}
+            rating={realRating}
+            reviewCount={realReviewCount}
+            reviews={reviews.filter((r) => r.is_visible !== false)}
+            googleMapsUrl={profile?.google_maps_url}
+            theme={theme}
+          />
+        </>
+      ) : (
+        <>
       {/* 1. HEADER MINIMALISTA & NOME DO NEGÓCIO */}
       <header className="space-y-5 border-b border-neutral-200 dark:border-neutral-800 pb-10">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -381,6 +454,8 @@ export function MinimalTemplateView({
         tenantName={tenant.name}
         themeNiche={tenant.theme_niche || tenant.category}
       />
+        </>
+      )}
 
       {/* 3.1 SEÇÃO GLOBAL DE FOTOS DO ESTABELECIMENTO (AMBIENTE & ESTRUTURA COM LIGHTBOX) */}
       {effectiveGalleryPhotos.length > 0 && (
