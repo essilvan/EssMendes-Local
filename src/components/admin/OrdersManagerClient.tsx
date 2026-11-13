@@ -98,6 +98,9 @@ export function OrdersManagerClient({
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const soundEnabledRef = useRef<boolean>(soundEnabled);
+  const knownOrderIdsRef = useRef<Set<string>>(
+    new Set(initialOrders.map((o) => o.id))
+  );
 
   useEffect(() => {
     soundEnabledRef.current = soundEnabled;
@@ -114,20 +117,47 @@ export function OrdersManagerClient({
     if (!audioCtxRef.current) {
       audioCtxRef.current = new AudioCtx();
     }
-    if (audioCtxRef.current.state === "suspended") {
-      audioCtxRef.current.resume().catch(() => {});
-    }
     return audioCtxRef.current;
   }, []);
 
-  // Campainha limpa de dois tons via Web Audio API (sem dependência de .mp3 externo)
-  const playNotificationBell = useCallback(
-    (forcePlay = false) => {
+  // Desbloqueio automático do AudioContext no primeiro clique/toque do usuário na página
+  useEffect(() => {
+    const unlockAudio = async () => {
+      const ctx = getOrCreateAudioContext();
+      if (!ctx) return;
+      try {
+        if (ctx.state === "suspended") {
+          await ctx.resume();
+        }
+        if (ctx.state === "running") {
+          setAudioUnlocked(true);
+        }
+      } catch {
+        // Ignora caso o navegador ainda bloqueie
+      }
+    };
+
+    document.addEventListener("click", unlockAudio, { passive: true });
+    document.addEventListener("touchstart", unlockAudio, { passive: true });
+
+    return () => {
+      document.removeEventListener("click", unlockAudio);
+      document.removeEventListener("touchstart", unlockAudio);
+    };
+  }, [getOrCreateAudioContext]);
+
+  // Campainha dupla bem audível via Web Audio API (880Hz -> 1174Hz)
+  const playNotificationSound = useCallback(
+    async (forcePlay = false) => {
       if (!forcePlay && !soundEnabledRef.current) return;
       const ctx = getOrCreateAudioContext();
       if (!ctx) return;
 
       try {
+        if (ctx.state === "suspended") {
+          await ctx.resume();
+        }
+
         const now = ctx.currentTime;
 
         const playTone = (
@@ -145,7 +175,7 @@ export function OrdersManagerClient({
           gain.gain.setValueAtTime(0.001, now + startOffset);
           gain.gain.exponentialRampToValueAtTime(
             peakGain,
-            now + startOffset + 0.02
+            now + startOffset + 0.015
           );
           gain.gain.exponentialRampToValueAtTime(
             0.0001,
@@ -159,9 +189,9 @@ export function OrdersManagerClient({
           osc.stop(now + startOffset + duration + 0.02);
         };
 
-        // Dois tons de campainha (Dó#6 -> Mi6) bem nítidos para balcão/cozinha
-        playTone(1046.5, 0, 0.22, 0.35);
-        playTone(1318.5, 0.16, 0.42, 0.4);
+        // Sequência dupla bem audível: 880Hz por 0.15s seguido de 1174Hz por 0.25s
+        playTone(880, 0, 0.15, 0.45);
+        playTone(1174, 0.16, 0.25, 0.5);
         setAudioUnlocked(true);
       } catch {
         // Autoplay pode estar bloqueado até interação do usuário
@@ -172,48 +202,78 @@ export function OrdersManagerClient({
 
   const handleActivateAndTestSound = () => {
     setSoundEnabled(true);
-    playNotificationBell(true);
+    void playNotificationSound(true);
   };
 
-  const handleRefreshOrders = async () => {
-    setIsRefreshing(true);
+  const syncOrdersFromServer = useCallback(async (isManual = false) => {
+    if (isManual) setIsRefreshing(true);
     try {
       const res = await getAdminOrdersDataAction();
       if (res.success && res.data) {
-        setOrders(res.data);
+        const freshOrders = res.data;
+        const newlyDetectedIds: string[] = [];
+
+        for (const ord of freshOrders) {
+          if (!knownOrderIdsRef.current.has(ord.id)) {
+            knownOrderIdsRef.current.add(ord.id);
+            newlyDetectedIds.push(ord.id);
+          }
+        }
+
+        setOrders(freshOrders);
+
+        if (newlyDetectedIds.length > 0) {
+          setNewOrderIds((prev) => {
+            const next = new Set(prev);
+            newlyDetectedIds.forEach((id) => next.add(id));
+            return next;
+          });
+          void playNotificationSound();
+        }
       }
     } finally {
-      setIsRefreshing(false);
+      if (isManual) setIsRefreshing(false);
     }
+  }, [playNotificationSound]);
+
+  const handleRefreshOrders = () => {
+    void syncOrdersFromServer(true);
   };
 
-  // Assinatura Supabase Realtime em restaurant_orders filtrada por tenant_id
+  // Entrega híbrida: Supabase Realtime (sem filtro de coluna) + Polling de segurança (8s)
   useEffect(() => {
     if (!tenantId) return;
     const supabase = createClient();
 
     const channel = supabase
-      .channel("orders-channel")
+      .channel("orders-realtime")
       .on(
         "postgres_changes",
         {
           event: "INSERT",
           schema: "public",
           table: "restaurant_orders",
-          filter: `tenant_id=eq.${tenantId}`,
         },
         (payload) => {
-          const incoming = normalizeOrderClient(payload.new);
-          setOrders((prev) => {
-            if (prev.some((o) => o.id === incoming.id)) return prev;
-            return [incoming, ...prev];
-          });
-          setNewOrderIds((prev) => {
-            const next = new Set(prev);
-            next.add(incoming.id);
-            return next;
-          });
-          playNotificationBell();
+          if (payload.new && payload.new.tenant_id === tenantId) {
+            const incoming = normalizeOrderClient(payload.new);
+            const isBrandNew = !knownOrderIdsRef.current.has(incoming.id);
+            knownOrderIdsRef.current.add(incoming.id);
+
+            setOrders((prev) => {
+              if (prev.some((o) => o.id === incoming.id)) return prev;
+              return [incoming, ...prev];
+            });
+
+            if (isBrandNew) {
+              setNewOrderIds((prev) => {
+                const next = new Set(prev);
+                next.add(incoming.id);
+                return next;
+              });
+              void playNotificationSound();
+            }
+          }
         }
       )
       .on(
@@ -222,22 +282,26 @@ export function OrdersManagerClient({
           event: "UPDATE",
           schema: "public",
           table: "restaurant_orders",
-          filter: `tenant_id=eq.${tenantId}`,
         },
         (payload) => {
-          const updated = normalizeOrderClient(payload.new);
-          setOrders((prev) => {
-            const exists = prev.some((o) => o.id === updated.id);
-            if (!exists) return [updated, ...prev];
-            return prev.map((o) => (o.id === updated.id ? updated : o));
-          });
-          if (updated.status !== "pending") {
-            setNewOrderIds((prev) => {
-              if (!prev.has(updated.id)) return prev;
-              const next = new Set(prev);
-              next.delete(updated.id);
-              return next;
+          if (payload.new && payload.new.tenant_id === tenantId) {
+            const updated = normalizeOrderClient(payload.new);
+            knownOrderIdsRef.current.add(updated.id);
+
+            setOrders((prev) => {
+              const exists = prev.some((o) => o.id === updated.id);
+              if (!exists) return [updated, ...prev];
+              return prev.map((o) => (o.id === updated.id ? updated : o));
             });
+
+            if (updated.status !== "pending") {
+              setNewOrderIds((prev) => {
+                if (!prev.has(updated.id)) return prev;
+                const next = new Set(prev);
+                next.delete(updated.id);
+                return next;
+              });
+            }
           }
         }
       )
@@ -249,10 +313,16 @@ export function OrdersManagerClient({
         }
       });
 
+    // Polling de segurança a cada 8 segundos
+    const pollingInterval = setInterval(() => {
+      void syncOrdersFromServer(false);
+    }, 8000);
+
     return () => {
+      clearInterval(pollingInterval);
       supabase.removeChannel(channel);
     };
-  }, [tenantId, playNotificationBell]);
+  }, [tenantId, playNotificationSound, syncOrdersFromServer]);
 
   const normalizeStatus = (
     raw: string
@@ -418,7 +488,7 @@ export function OrdersManagerClient({
             onClick={() => {
               const next = !soundEnabled;
               setSoundEnabled(next);
-              if (next) playNotificationBell(true);
+              if (next) void playNotificationSound(true);
             }}
             className={`inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2.5 text-xs font-bold transition cursor-pointer ${
               soundEnabled
