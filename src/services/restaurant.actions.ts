@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getAuthenticatedTenant } from "@/lib/supabase/tenant";
 import type {
   MenuCategory,
@@ -787,7 +788,7 @@ export async function getAdminOrdersDataAction(): Promise<{
       return { success: false, error: authError || "Não autenticado." };
     }
 
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const { data, error } = await supabase
       .from("restaurant_orders")
       .select("*")
@@ -820,7 +821,7 @@ export async function updateRestaurantOrderStatusAction(
       return { success: false, error: authError || "Não autenticado." };
     }
 
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const { error } = await resilientUpdate(
       supabase,
       "restaurant_orders",
@@ -907,7 +908,7 @@ export async function createPublicTableOrderAction(
     const { tenant_id, table_number, customer_name, customer_phone, notes, items } =
       parsed.data;
 
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     // 1. Calcula o total do pedido
     const totalAmount = items.reduce(
@@ -991,11 +992,20 @@ export async function createPublicTableOrderAction(
       waiter_phone: waiterPhone,
     };
 
-    const { data: savedOrder } = await resilientInsert(
+    const { data: savedOrder, error: insertError } = await resilientInsert(
       supabase,
       "restaurant_orders",
       orderPayload
     );
+
+    if (insertError || !savedOrder) {
+      return {
+        success: false,
+        error:
+          insertError?.message ||
+          "Erro ao registrar pedido no sistema. Tente novamente.",
+      };
+    }
 
     // 5. Monta a mensagem formatada para o WhatsApp do Garçom (ou fallback do Restaurante)
     const targetCleanPhone =

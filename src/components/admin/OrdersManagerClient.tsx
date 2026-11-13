@@ -2,7 +2,10 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { updateRestaurantOrderStatusAction } from "@/services/restaurant.actions";
+import {
+  getAdminOrdersDataAction,
+  updateRestaurantOrderStatusAction,
+} from "@/services/restaurant.actions";
 import type {
   RestaurantOrder,
   RestaurantOrderItem,
@@ -22,6 +25,7 @@ import {
   VolumeX,
   BellRing,
   Radio,
+  RefreshCw,
 } from "lucide-react";
 
 interface OrdersManagerClientProps {
@@ -84,6 +88,7 @@ export function OrdersManagerClient({
   const [orders, setOrders] = useState<RestaurantOrder[]>(initialOrders);
   const [statusFilter, setStatusFilter] = useState<OrderFilter>("all");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [newOrderIds, setNewOrderIds] = useState<Set<string>>(new Set());
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [audioUnlocked, setAudioUnlocked] = useState<boolean>(false);
@@ -168,6 +173,18 @@ export function OrdersManagerClient({
   const handleActivateAndTestSound = () => {
     setSoundEnabled(true);
     playNotificationBell(true);
+  };
+
+  const handleRefreshOrders = async () => {
+    setIsRefreshing(true);
+    try {
+      const res = await getAdminOrdersDataAction();
+      if (res.success && res.data) {
+        setOrders(res.data);
+      }
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   // Assinatura Supabase Realtime em restaurant_orders filtrada por tenant_id
@@ -370,8 +387,21 @@ export function OrdersManagerClient({
           </p>
         </div>
 
-        {/* Barra de Controle Sonoro */}
+        {/* Barra de Controle Sonoro e Atualização */}
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            disabled={isRefreshing}
+            onClick={handleRefreshOrders}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 px-3.5 py-2.5 text-xs font-bold text-slate-700 transition cursor-pointer disabled:opacity-60"
+            title="Sincronizar pedidos manualmente"
+          >
+            <RefreshCw
+              className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`}
+            />
+            <span>Atualizar</span>
+          </button>
+
           <button
             type="button"
             onClick={handleActivateAndTestSound}
