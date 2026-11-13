@@ -31,6 +31,16 @@ export const professionalSchema = z.object({
     .nullable()
     .or(z.literal("")),
   is_active: z.boolean().default(true),
+  access_pin: z
+    .string()
+    .trim()
+    .refine(
+      (val) => !val || /^\d{4}$/.test(val),
+      "O PIN de acesso deve ter exatamente 4 dígitos numéricos."
+    )
+    .optional()
+    .nullable()
+    .or(z.literal("")),
   receives_quotes: z.boolean().default(true),
   is_primary_quote_contact: z.boolean().default(false),
 });

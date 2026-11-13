@@ -14,6 +14,7 @@ import {
   AlertCircle,
   MessageSquare,
   Star,
+  KeyRound,
 } from "lucide-react";
 import {
   createProfessionalAction,
@@ -28,6 +29,7 @@ interface ProfessionalFormModalProps {
   onClose: () => void;
   professionalToEdit?: TenantProfessional | null;
   tenantId?: string;
+  isRestaurant?: boolean;
   onSuccess?: (savedProfessional?: TenantProfessional) => void;
 }
 
@@ -47,6 +49,7 @@ export function ProfessionalFormModal({
   onClose,
   professionalToEdit,
   tenantId,
+  isRestaurant = false,
   onSuccess,
 }: ProfessionalFormModalProps) {
   const isEditing = Boolean(professionalToEdit);
@@ -63,6 +66,7 @@ export function ProfessionalFormModal({
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [isActive, setIsActive] = useState(true);
+  const [accessPin, setAccessPin] = useState("");
   const [receivesQuotes, setReceivesQuotes] = useState(true);
   const [isPrimaryQuoteContact, setIsPrimaryQuoteContact] = useState(false);
 
@@ -83,6 +87,7 @@ export function ProfessionalFormModal({
         setAvatarUrl(professionalToEdit.avatar_url || "");
         setPreviewUrl(professionalToEdit.avatar_url || null);
         setIsActive(professionalToEdit.is_active ?? true);
+        setAccessPin(professionalToEdit.access_pin || "");
         setReceivesQuotes(professionalToEdit.receives_quotes ?? true);
         setIsPrimaryQuoteContact(
           Boolean(professionalToEdit.is_primary_quote_contact)
@@ -100,6 +105,7 @@ export function ProfessionalFormModal({
         setAvatarUrl("");
         setPreviewUrl(null);
         setIsActive(true);
+        setAccessPin("");
         setReceivesQuotes(true);
         setIsPrimaryQuoteContact(false);
         setShowUrlInput(false);
@@ -214,6 +220,7 @@ export function ProfessionalFormModal({
         specialty: roleTitle.trim() || "Profissional",
         avatar_url: avatarUrl.trim() || null,
         is_active: isActive,
+        access_pin: accessPin.trim() || null,
         receives_quotes: isPrimaryQuoteContact ? true : receivesQuotes,
         is_primary_quote_contact: isPrimaryQuoteContact,
       };
@@ -335,13 +342,43 @@ export function ProfessionalFormModal({
               <Briefcase className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
               <input
                 type="text"
-                placeholder="Ex: Barbeiro Master, Designer de Sobrancelhas, Tatuador"
+                placeholder={
+                  isRestaurant
+                    ? "Ex: Garçom, Atendente, Maitre"
+                    : "Ex: Barbeiro Master, Designer de Sobrancelhas, Tatuador"
+                }
                 value={roleTitle}
                 onChange={(e) => setRoleTitle(e.target.value)}
                 className="w-full rounded-xl border border-slate-200 py-2 pl-9 pr-3 text-slate-800 placeholder:text-slate-400 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
               />
             </div>
           </div>
+
+          {/* PIN de Acesso ao Terminal (Apenas Restaurante/Bar) */}
+          {isRestaurant && (
+            <div className="space-y-1 rounded-xl border border-amber-200 bg-amber-50/70 p-3">
+              <label className="block font-bold text-amber-950">
+                PIN de Acesso ao Terminal do Garçom (opcional)
+              </label>
+              <div className="relative">
+                <KeyRound className="absolute left-3 top-2.5 h-4 w-4 text-amber-600" />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={4}
+                  placeholder="Ex: 1234"
+                  value={accessPin}
+                  onChange={(e) =>
+                    setAccessPin(e.target.value.replace(/\D/g, "").slice(0, 4))
+                  }
+                  className="w-full rounded-xl border border-amber-300 bg-white py-2 pl-9 pr-3 font-mono text-sm font-bold tracking-widest text-slate-900 placeholder:font-sans placeholder:tracking-normal placeholder:font-normal placeholder:text-slate-400 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                />
+              </div>
+              <p className="text-[11px] text-amber-800">
+                4 dígitos numéricos para o garçom entrar no terminal móvel sem acessar o painel administrativo.
+              </p>
+            </div>
+          )}
 
           {/* Foto / Avatar do Profissional */}
           <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">

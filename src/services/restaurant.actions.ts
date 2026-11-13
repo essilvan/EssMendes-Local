@@ -161,6 +161,7 @@ function normalizeOrder(row: any): RestaurantOrder {
       price: Number(it.price || 0),
       quantity: Number(it.quantity || 1),
       notes: it.notes || null,
+      delivered: Boolean(it.delivered),
     })),
     notes: row.notes || row.observations || null,
     total_amount: Number(row.total_amount ?? row.total_price ?? row.total ?? 0),
@@ -168,6 +169,8 @@ function normalizeOrder(row: any): RestaurantOrder {
     waiter_id: row.waiter_id || row.professional_id || null,
     waiter_name: row.waiter_name || null,
     waiter_phone: row.waiter_phone || null,
+    confirmed_at: row.confirmed_at || null,
+    delivered_at: row.delivered_at || null,
     created_at: row.created_at || new Date().toISOString(),
   };
 }
@@ -1053,6 +1056,349 @@ export async function createPublicTableOrderAction(
     return {
       success: false,
       error: err?.message || "Não foi possível enviar o pedido.",
+    };
+  }
+}
+
+// ============================================================================
+// 5. TERMINAL MOBILE DO GARÇOM (/[slug]/garcom)
+// ============================================================================
+
+export async function getWaiterTerminalDataAction(tenantId: string): Promise<{
+  success: boolean;
+  data?: {
+    tables: RestaurantTable[];
+    orders: RestaurantOrder[];
+    menuItems: MenuItem[];
+  };
+  error?: string;
+}> {
+  try {
+    if (!tenantId) {
+      return { success: false, error: "Estabelecimento inválido." };
+    }
+
+    const supabase = createAdminClient();
+    const [tablesRes, ordersRes, itemsRes, catsRes] = await Promise.all([
+      supabase
+        .from("restaurant_tables")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .order("table_number", { ascending: true }),
+      supabase
+        .from("restaurant_orders")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .order("created_at", { ascending: false })
+        .limit(100),
+      supabase
+        .from("menu_items")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .order("name", { ascending: true }),
+      supabase
+        .from("menu_categories")
+        .select("*")
+        .eq("tenant_id", tenantId),
+    ]);
+
+    const catMap = new Map<string, string>();
+    (catsRes.data || []).forEach((c: any) => {
+      catMap.set(c.id, c.name || c.title || "Pratos");
+    });
+
+    return {
+      success: true,
+      data: {
+        tables: (tablesRes.data || []).map((row: any) => normalizeTable(row)),
+        orders: (ordersRes.data || []).map(normalizeOrder),
+        menuItems: (itemsRes.data || [])
+          .map((row: any) => normalizeMenuItem(row, catMap))
+          .filter((item: MenuItem) => item.is_available !== false),
+      },
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || "Erro ao carregar dados do terminal.",
+    };
+  }
+}
+
+export async function verifyWaiterPinAction(
+  tenantId: string,
+  waiterId: string,
+  pin: string
+): Promise<{
+  success: boolean;
+  waiter?: { id: string; name: string; phone?: string | null };
+  error?: string;
+}> {
+  try {
+    const supabase = createAdminClient();
+
+    const [{ data: tpRow }, { data: legacyRow }] = await Promise.all([
+      supabase
+        .from("tenant_professionals")
+        .select("*")
+        .eq("id", waiterId)
+        .eq("tenant_id", tenantId)
+        .maybeSingle(),
+      supabase
+        .from("professionals")
+        .select("*")
+        .eq("id", waiterId)
+        .eq("tenant_id", tenantId)
+        .maybeSingle(),
+    ]);
+
+    const profRow = tpRow || legacyRow;
+    if (!profRow) {
+      return { success: false, error: "Garçom não encontrado neste estabelecimento." };
+    }
+
+    const storedPin = String(
+      (tpRow as any)?.access_pin || (legacyRow as any)?.access_pin || ""
+    ).trim();
+
+    if (storedPin && storedPin !== String(pin || "").trim()) {
+      return {
+        success: false,
+        error: "PIN incorreto. Verifique os 4 dígitos com o gerente.",
+      };
+    }
+
+    return {
+      success: true,
+      waiter: {
+        id: profRow.id,
+        name: profRow.name,
+        phone: (tpRow as any)?.phone || null,
+      },
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || "Erro ao validar PIN do garçom.",
+    };
+  }
+}
+
+export async function confirmWaiterOrderAction(
+  tenantId: string,
+  orderId: string,
+  waiterId: string,
+  waiterName?: string | null
+): Promise<{ success: boolean; data?: RestaurantOrder; error?: string }> {
+  try {
+    const supabase = createAdminClient();
+    const nowIso = new Date().toISOString();
+
+    const { data, error } = await resilientUpdate(
+      supabase,
+      "restaurant_orders",
+      orderId,
+      tenantId,
+      {
+        status: "in_kitchen",
+        confirmed_at: nowIso,
+        waiter_id: waiterId,
+        ...(waiterName ? { waiter_name: waiterName } : {}),
+      }
+    );
+
+    if (error || !data) {
+      return {
+        success: false,
+        error: error?.message || "Não foi possível confirmar o pedido.",
+      };
+    }
+
+    revalidatePath("/admin/pedidos");
+    return { success: true, data: normalizeOrder(data) };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || "Erro ao confirmar pedido.",
+    };
+  }
+}
+
+export async function updateWaiterOrderItemsAction(
+  tenantId: string,
+  orderId: string,
+  items: RestaurantOrderItem[],
+  notes: string | null
+): Promise<{ success: boolean; data?: RestaurantOrder; error?: string }> {
+  try {
+    if (!Array.isArray(items) || items.length === 0) {
+      return {
+        success: false,
+        error: "O pedido deve conter pelo menos 1 item.",
+      };
+    }
+
+    const sanitizedItems: RestaurantOrderItem[] = items.map((it) => ({
+      id: String(it.id || ""),
+      name: String(it.name || "Item"),
+      price: Number(it.price || 0),
+      quantity: Math.max(1, Math.floor(Number(it.quantity || 1))),
+      notes: it.notes || null,
+      delivered: Boolean(it.delivered),
+    }));
+
+    const recalculatedTotal = sanitizedItems.reduce(
+      (sum, it) => sum + it.price * it.quantity,
+      0
+    );
+
+    const supabase = createAdminClient();
+    const { data, error } = await resilientUpdate(
+      supabase,
+      "restaurant_orders",
+      orderId,
+      tenantId,
+      {
+        items: sanitizedItems,
+        total_amount: recalculatedTotal,
+        total_price: recalculatedTotal,
+        total: recalculatedTotal,
+        notes: notes?.trim() || null,
+        observations: notes?.trim() || null,
+      }
+    );
+
+    if (error || !data) {
+      return {
+        success: false,
+        error: error?.message || "Não foi possível atualizar os itens do pedido.",
+      };
+    }
+
+    revalidatePath("/admin/pedidos");
+    return { success: true, data: normalizeOrder(data) };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || "Erro ao atualizar pedido.",
+    };
+  }
+}
+
+export async function toggleWaiterOrderItemDeliveredAction(
+  tenantId: string,
+  orderId: string,
+  itemIndex: number
+): Promise<{ success: boolean; data?: RestaurantOrder; error?: string }> {
+  try {
+    const supabase = createAdminClient();
+    const { data: currentRow, error: fetchErr } = await supabase
+      .from("restaurant_orders")
+      .select("*")
+      .eq("id", orderId)
+      .eq("tenant_id", tenantId)
+      .maybeSingle();
+
+    if (fetchErr || !currentRow) {
+      return { success: false, error: "Pedido não encontrado." };
+    }
+
+    const normalized = normalizeOrder(currentRow);
+    const updatedItems = normalized.items.map((it, idx) =>
+      idx === itemIndex ? { ...it, delivered: !it.delivered } : it
+    );
+
+    const allDelivered =
+      updatedItems.length > 0 && updatedItems.every((it) => Boolean(it.delivered));
+
+    const updatePayload: Record<string, any> = {
+      items: updatedItems,
+    };
+
+    if (allDelivered) {
+      updatePayload.status = "delivered";
+      updatePayload.delivered_at = new Date().toISOString();
+    } else if (normalized.status === "delivered") {
+      updatePayload.status = "in_kitchen";
+      updatePayload.delivered_at = null;
+    }
+
+    const { data, error } = await resilientUpdate(
+      supabase,
+      "restaurant_orders",
+      orderId,
+      tenantId,
+      updatePayload
+    );
+
+    if (error || !data) {
+      return {
+        success: false,
+        error: error?.message || "Erro ao atualizar entrega do item.",
+      };
+    }
+
+    revalidatePath("/admin/pedidos");
+    return { success: true, data: normalizeOrder(data) };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || "Erro ao marcar entrega do item.",
+    };
+  }
+}
+
+export async function completeWaiterOrderDeliveryAction(
+  tenantId: string,
+  orderId: string,
+  waiterId?: string | null
+): Promise<{ success: boolean; data?: RestaurantOrder; error?: string }> {
+  try {
+    const supabase = createAdminClient();
+    const { data: currentRow, error: fetchErr } = await supabase
+      .from("restaurant_orders")
+      .select("*")
+      .eq("id", orderId)
+      .eq("tenant_id", tenantId)
+      .maybeSingle();
+
+    if (fetchErr || !currentRow) {
+      return { success: false, error: "Pedido não encontrado." };
+    }
+
+    const normalized = normalizeOrder(currentRow);
+    const allDeliveredItems = normalized.items.map((it) => ({
+      ...it,
+      delivered: true,
+    }));
+
+    const nowIso = new Date().toISOString();
+    const { data, error } = await resilientUpdate(
+      supabase,
+      "restaurant_orders",
+      orderId,
+      tenantId,
+      {
+        items: allDeliveredItems,
+        status: "delivered",
+        delivered_at: nowIso,
+        ...(waiterId && !normalized.waiter_id ? { waiter_id: waiterId } : {}),
+      }
+    );
+
+    if (error || !data) {
+      return {
+        success: false,
+        error: error?.message || "Erro ao concluir entrega da mesa.",
+      };
+    }
+
+    revalidatePath("/admin/pedidos");
+    return { success: true, data: normalizeOrder(data) };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || "Erro ao concluir entrega.",
     };
   }
 }

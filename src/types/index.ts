@@ -250,6 +250,7 @@ export interface TenantProfessional {
   specialty?: string | null;
   avatar_url?: string | null;
   is_active: boolean;
+  access_pin?: string | null;
   receives_quotes?: boolean;
   is_primary_quote_contact?: boolean;
   created_at: string;
@@ -519,6 +520,7 @@ export interface RestaurantOrderItem {
   price: number;
   quantity: number;
   notes?: string | null;
+  delivered?: boolean;
 }
 
 export type RestaurantOrderStatus = "pending" | "in_kitchen" | "delivered" | "canceled";
@@ -538,5 +540,7 @@ export interface RestaurantOrder {
   assigned_staff_id?: string | null;
   waiter_name?: string | null;
   waiter_phone?: string | null;
+  confirmed_at?: string | null;
+  delivered_at?: string | null;
   created_at: string;
 }

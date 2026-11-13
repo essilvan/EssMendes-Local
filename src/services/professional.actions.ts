@@ -250,6 +250,7 @@ export async function createProfessionalAction(
       ? true
       : validation.data.receives_quotes ?? true;
     const cleanPhone = validation.data.phone.replace(/\D/g, "");
+    const cleanAccessPin = validation.data.access_pin?.trim() || null;
 
     // Se marcado como principal, desmarca os demais profissionais do tenant (se a coluna já existir)
     if (isPrimaryQuoteContact) {
@@ -311,7 +312,7 @@ export async function createProfessionalAction(
       isPrimaryQuoteContact
     );
 
-    // 3. Sincronização espelho preventiva com a tabela 'professionals' (compatibilidade legada)
+    // 3. Sincronização espelho preventiva com a tabela 'professionals' (compatibilidade legada e access_pin)
     try {
       await adminClient.from("professionals").upsert({
         id: data.id,
@@ -320,6 +321,7 @@ export async function createProfessionalAction(
         role_title: roleTitle,
         avatar_url: validation.data.avatar_url?.trim() || null,
         is_active: validation.data.is_active ?? true,
+        access_pin: cleanAccessPin,
       });
     } catch (syncErr) {
       console.warn(
@@ -335,12 +337,14 @@ export async function createProfessionalAction(
     revalidatePath("/[slug]", "page");
     if (tenantCtx.tenant?.slug) {
       revalidatePath(`/${tenantCtx.tenant.slug}`);
+      revalidatePath(`/${tenantCtx.tenant.slug}/garcom`);
     }
 
     const resultProf: TenantProfessional = {
       ...(data as TenantProfessional),
       role_title: data.role_title || roleTitle,
       specialty: data.role_title || roleTitle,
+      access_pin: cleanAccessPin,
       receives_quotes: receivesQuotes,
       is_primary_quote_contact: isPrimaryQuoteContact,
     };
@@ -389,6 +393,7 @@ export async function updateProfessionalAction(
       ? true
       : validation.data.receives_quotes ?? true;
     const cleanPhone = validation.data.phone.replace(/\D/g, "");
+    const cleanAccessPin = validation.data.access_pin?.trim() || null;
 
     // Se marcado como contato principal de orçamentos, desmarca os outros profissionais do tenant
     if (isPrimaryQuoteContact) {
@@ -452,7 +457,7 @@ export async function updateProfessionalAction(
       isPrimaryQuoteContact
     );
 
-    // 3. Sincronização espelho com 'professionals'
+    // 3. Sincronização espelho com 'professionals' (inclui access_pin)
     try {
       await adminClient.from("professionals").upsert({
         id: id,
@@ -461,6 +466,7 @@ export async function updateProfessionalAction(
         role_title: roleTitle,
         avatar_url: validation.data.avatar_url?.trim() || null,
         is_active: validation.data.is_active,
+        access_pin: cleanAccessPin,
       });
     } catch (syncErr) {
       console.warn(
@@ -476,12 +482,14 @@ export async function updateProfessionalAction(
     revalidatePath("/[slug]", "page");
     if (tenantCtx.tenant?.slug) {
       revalidatePath(`/${tenantCtx.tenant.slug}`);
+      revalidatePath(`/${tenantCtx.tenant.slug}/garcom`);
     }
 
     const resultProf: TenantProfessional = {
       ...(data as TenantProfessional),
       role_title: data.role_title || roleTitle,
       specialty: data.role_title || roleTitle,
+      access_pin: cleanAccessPin,
       receives_quotes: receivesQuotes,
       is_primary_quote_contact: isPrimaryQuoteContact,
     };

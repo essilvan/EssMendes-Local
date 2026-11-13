@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getAuthenticatedTenant } from "@/lib/supabase/tenant";
+import { getAuthenticatedTenant, resolveTenantNiche } from "@/lib/supabase/tenant";
 import { AlertCircle, Users, Sparkles } from "lucide-react";
 import { ProfessionalsClient } from "@/components/admin/ProfessionalsClient";
 import type { TenantProfessional } from "@/types";
@@ -21,20 +21,30 @@ export default async function AdminProfissionaisPage() {
   }
 
   const tenantId = tenantData.tenantId;
+  const isRestaurant = resolveTenantNiche(tenantData.tenant) === "restaurant";
   const supabase = await createClient();
 
-  const [profRes, tenantRowRes] = await Promise.all([
+  const [profRes, legacyProfRes, tenantRowRes] = await Promise.all([
     supabase
       .from("tenant_professionals")
       .select("*")
       .eq("tenant_id", tenantId)
       .order("name", { ascending: true }),
     supabase
+      .from("professionals")
+      .select("id, access_pin")
+      .eq("tenant_id", tenantId),
+    supabase
       .from("tenants")
       .select("theme_settings")
       .eq("id", tenantId)
       .maybeSingle(),
   ]);
+
+  const pinMap = new Map<string, string | null>();
+  (legacyProfRes.data || []).forEach((lp: any) => {
+    if (lp?.id) pinMap.set(lp.id, lp.access_pin || null);
+  });
 
   if (profRes.error) {
     console.error("[AdminProfissionaisPage] Erro ao carregar profissionais:", profRes.error);
@@ -64,6 +74,7 @@ export default async function AdminProfissionaisPage() {
 
     return {
       ...p,
+      access_pin: p.access_pin ?? pinMap.get(p.id) ?? null,
       receives_quotes: receivesQuotes,
       is_primary_quote_contact: isPrimary,
     } as TenantProfessional;
@@ -85,7 +96,11 @@ export default async function AdminProfissionaisPage() {
       </div>
 
       {/* Main Interactive Client */}
-      <ProfessionalsClient initialProfessionals={professionals} tenantId={tenantId} />
+      <ProfessionalsClient
+        initialProfessionals={professionals}
+        tenantId={tenantId}
+        isRestaurant={isRestaurant}
+      />
     </div>
   );
 }

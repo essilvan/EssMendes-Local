@@ -48,6 +48,7 @@ export function TablesManagerClient({
 
   const [isSaving, setIsSaving] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copiedTerminal, setCopiedTerminal] = useState(false);
   const [qrPreviewTable, setQrPreviewTable] = useState<RestaurantTable | null>(null);
   const [feedback, setFeedback] = useState<{
     type: "success" | "error";
@@ -153,6 +154,19 @@ export function TablesManagerClient({
     } catch {}
   };
 
+  const handleCopyTerminalLink = async () => {
+    const origin =
+      typeof window !== "undefined" && window.location.origin
+        ? window.location.origin
+        : "https://app.essmendes.com.br";
+    const url = `${origin}/${tenantSlug}/garcom`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedTerminal(true);
+      setTimeout(() => setCopiedTerminal(false), 2000);
+    } catch {}
+  };
+
   const handlePrintQrCode = (table: RestaurantTable) => {
     const qrSrc = getQrCodeImageUrl(table.table_number, 360);
     const menuUrl = getTableMenuUrl(table.table_number);
@@ -217,6 +231,29 @@ export function TablesManagerClient({
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="inline-flex items-center rounded-xl border border-amber-300 bg-amber-50 overflow-hidden">
+            <Link
+              href={`/${tenantSlug}/garcom`}
+              target="_blank"
+              className="inline-flex items-center gap-1.5 px-4 py-3 text-xs font-bold text-amber-900 hover:bg-amber-100 transition"
+            >
+              <ExternalLink className="h-4 w-4 text-amber-700" />
+              <span>Abrir Terminal do Garçom</span>
+            </Link>
+            <button
+              type="button"
+              onClick={handleCopyTerminalLink}
+              title="Copiar link do Terminal do Garçom para enviar no WhatsApp da equipe"
+              className="border-l border-amber-300 px-3 py-3 text-amber-800 hover:bg-amber-100 transition cursor-pointer"
+            >
+              {copiedTerminal ? (
+                <Check className="h-4 w-4 text-emerald-600" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+
           <Link
             href="/admin/profissionais"
             className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 px-4 py-3 text-xs font-bold text-slate-700 transition"
