@@ -41,6 +41,7 @@ const createRestaurantTableSchema = z.object({
   name: z.string().optional().nullable(),
   capacity: z.coerce.number().int().min(1).optional().default(4),
   waiter_id: z.string().optional().nullable(),
+  assigned_staff_id: z.string().optional().nullable(),
 });
 
 const createTableOrderSchema = z.object({
@@ -114,8 +115,10 @@ function normalizeTable(
   row: any,
   professionalsMap?: Map<string, TenantProfessional>
 ): RestaurantTable {
-  const waiterId = row.waiter_id || row.professional_id || null;
-  const linkedWaiter = waiterId && professionalsMap ? professionalsMap.get(waiterId) : null;
+  const waiterId =
+    row.assigned_staff_id || row.waiter_id || row.professional_id || null;
+  const linkedWaiter =
+    waiterId && professionalsMap ? professionalsMap.get(waiterId) : null;
   const tableNum = String(row.table_number ?? row.number ?? "01").trim();
 
   return {
@@ -125,6 +128,7 @@ function normalizeTable(
     name: row.name || row.label || `Mesa ${tableNum.padStart(2, "0")}`,
     capacity: Number(row.capacity ?? 4),
     waiter_id: waiterId,
+    assigned_staff_id: waiterId,
     waiter_name: row.waiter_name || linkedWaiter?.name || null,
     waiter_phone: row.waiter_phone || linkedWaiter?.phone || null,
     is_active: row.is_active !== false,
@@ -185,7 +189,7 @@ async function resilientInsert(
   payload: Record<string, any>
 ): Promise<{ data: any; error: any }> {
   const workingPayload = { ...payload };
-  for (let attempt = 0; attempt < 8; attempt++) {
+  for (let attempt = 0; attempt < 12; attempt++) {
     const { data, error } = await supabase
       .from(table)
       .insert(workingPayload)
@@ -220,7 +224,7 @@ async function resilientUpdate(
   payload: Record<string, any>
 ): Promise<{ data: any; error: any }> {
   const workingPayload = { ...payload };
-  for (let attempt = 0; attempt < 8; attempt++) {
+  for (let attempt = 0; attempt < 12; attempt++) {
     const { data, error } = await supabase
       .from(table)
       .update(workingPayload)
@@ -635,6 +639,7 @@ export async function saveRestaurantTableAction(input: {
   name?: string | null;
   capacity?: number;
   waiter_id?: string | null;
+  assigned_staff_id?: string | null;
 }): Promise<{ success: boolean; data?: RestaurantTable; error?: string }> {
   try {
     const parsed = createRestaurantTableSchema.safeParse(input);
@@ -655,10 +660,12 @@ export async function saveRestaurantTableAction(input: {
 
     let waiterName: string | null = null;
     let waiterPhone: string | null = null;
+    const rawStaffId =
+      parsed.data.assigned_staff_id !== undefined
+        ? parsed.data.assigned_staff_id
+        : parsed.data.waiter_id;
     const cleanWaiterId =
-      parsed.data.waiter_id && parsed.data.waiter_id.trim() !== ""
-        ? parsed.data.waiter_id.trim()
-        : null;
+      rawStaffId && rawStaffId.trim() !== "" ? rawStaffId.trim() : null;
 
     if (cleanWaiterId) {
       const { data: waiterRow } = await supabase
@@ -681,6 +688,8 @@ export async function saveRestaurantTableAction(input: {
     const payload: Record<string, any> = {
       tenant_id: tenantId,
       table_number: cleanNum,
+      assigned_staff_id: cleanWaiterId,
+      label: displayName,
       name: displayName,
       capacity: parsed.data.capacity || 4,
       waiter_id: cleanWaiterId,
@@ -715,10 +724,18 @@ export async function saveRestaurantTableAction(input: {
       resultRow = data;
     }
 
+    const normalized = normalizeTable(resultRow || payload);
+    if (cleanWaiterId && waiterName) {
+      normalized.waiter_id = cleanWaiterId;
+      normalized.assigned_staff_id = cleanWaiterId;
+      normalized.waiter_name = waiterName;
+      normalized.waiter_phone = waiterPhone;
+    }
+
     revalidatePath("/admin/mesas");
     return {
       success: true,
-      data: normalizeTable(resultRow || payload),
+      data: normalized,
     };
   } catch (err: any) {
     return {
@@ -916,7 +933,10 @@ export async function createPublicTableOrderAction(
     });
 
     let waiterId: string | null =
-      matchedTable?.waiter_id || matchedTable?.professional_id || null;
+      matchedTable?.assigned_staff_id ||
+      matchedTable?.waiter_id ||
+      matchedTable?.professional_id ||
+      null;
     let waiterName: string | null = matchedTable?.waiter_name || null;
     let waiterPhone: string | null = matchedTable?.waiter_phone || null;
 

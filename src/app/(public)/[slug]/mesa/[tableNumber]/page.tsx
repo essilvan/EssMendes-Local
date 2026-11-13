@@ -67,16 +67,22 @@ export default async function PublicTableMenuPage({
   });
 
   let waiterName: string | null = matchedTable?.waiter_name || null;
-  const waiterId = matchedTable?.waiter_id || matchedTable?.professional_id || null;
+  let waiterPhone: string | null = matchedTable?.waiter_phone || null;
+  const waiterId =
+    matchedTable?.assigned_staff_id ||
+    matchedTable?.waiter_id ||
+    matchedTable?.professional_id ||
+    null;
 
-  if (waiterId && !waiterName) {
+  if (waiterId) {
     const { data: waiterProf } = await supabase
       .from("tenant_professionals")
-      .select("name")
+      .select("name, phone")
       .eq("id", waiterId)
       .maybeSingle();
-    if (waiterProf?.name) {
-      waiterName = waiterProf.name;
+    if (waiterProf) {
+      waiterName = waiterName || waiterProf.name || null;
+      waiterPhone = waiterPhone || waiterProf.phone || null;
     }
   }
 
@@ -133,9 +139,10 @@ export default async function PublicTableMenuPage({
           categories={restaurantMenu.categories}
           items={restaurantMenu.items}
           tableNumber={cleanTableNumber}
-          tableName={matchedTable?.name || `Mesa ${cleanTableNumber}`}
+          tableName={matchedTable?.name || matchedTable?.label || `Mesa ${cleanTableNumber}`}
           waiterName={waiterName}
           restaurantPhone={
+            waiterPhone ||
             profile?.phone_whatsapp ||
             profile?.phone ||
             (tenant as any)?.whatsapp ||

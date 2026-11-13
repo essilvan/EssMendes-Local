@@ -84,7 +84,7 @@ export function TablesManagerClient({
     setTableNumber(table.table_number);
     setTableName(table.name || `Mesa ${table.table_number}`);
     setCapacity(table.capacity || 4);
-    setWaiterId(table.waiter_id || "");
+    setWaiterId(table.assigned_staff_id || table.waiter_id || "");
     setIsModalOpen(true);
   };
 
@@ -101,6 +101,7 @@ export function TablesManagerClient({
         name: tableName.trim() || `Mesa ${tableNumber.trim()}`,
         capacity: Number(capacity) || 4,
         waiter_id: waiterId || null,
+        assigned_staff_id: waiterId || null,
       });
 
       if (res.success && res.data) {
@@ -288,6 +289,12 @@ export function TablesManagerClient({
           {tables.map((table) => {
             const menuPath = `/${tenantSlug}/mesa/${table.table_number}`;
             const qrImgUrl = getQrCodeImageUrl(table.table_number, 200);
+            const staffId = table.assigned_staff_id || table.waiter_id || null;
+            const assignedPro = staffId
+              ? professionals.find((p) => p.id === staffId)
+              : undefined;
+            const waiterDisplayName = assignedPro?.name || table.waiter_name;
+            const waiterDisplayPhone = assignedPro?.phone || table.waiter_phone;
 
             return (
               <div
@@ -324,20 +331,26 @@ export function TablesManagerClient({
                   </div>
 
                   {/* Garçom Vinculado */}
-                  <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 space-y-1">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  <div
+                    className={`rounded-xl border p-3 space-y-1 ${
+                      waiterDisplayName
+                        ? "border-emerald-200 bg-emerald-50/70"
+                        : "border-slate-100 bg-slate-50"
+                    }`}
+                  >
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
                       Garçom / Responsável da Mesa
                     </span>
-                    {table.waiter_name ? (
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-bold text-slate-800 flex items-center gap-1.5">
-                          <UserCheck className="h-3.5 w-3.5 text-emerald-600" />
-                          {table.waiter_name}
+                    {waiterDisplayName ? (
+                      <div className="flex flex-wrap items-center justify-between gap-1 text-xs">
+                        <span className="font-bold text-emerald-800 flex items-center gap-1.5">
+                          <UserCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                          Garçom: {waiterDisplayName}
                         </span>
-                        {table.waiter_phone && (
-                          <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                        {waiterDisplayPhone && (
+                          <span className="text-[11px] font-semibold text-emerald-700 flex items-center gap-1">
                             <Phone className="h-3 w-3" />
-                            {table.waiter_phone}
+                            {waiterDisplayPhone}
                           </span>
                         )}
                       </div>

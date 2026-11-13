@@ -506,6 +506,7 @@ export interface RestaurantTable {
   name?: string | null;
   capacity?: number | null;
   waiter_id?: string | null;
+  assigned_staff_id?: string | null;
   waiter_name?: string | null;
   waiter_phone?: string | null;
   is_active: boolean;
@@ -534,6 +535,7 @@ export interface RestaurantOrder {
   total_amount: number;
   status: RestaurantOrderStatus | string;
   waiter_id?: string | null;
+  assigned_staff_id?: string | null;
   waiter_name?: string | null;
   waiter_phone?: string | null;
   created_at: string;
