@@ -15,6 +15,6 @@ export default async function AdminPedidosPage() {
   const res = await getAdminOrdersDataAction();
   const orders = res.data || [];
 
-  return <OrdersManagerClient initialOrders={orders} />;
+  return <OrdersManagerClient initialOrders={orders} tenantId={authContext.tenantId} />;
 }
 
