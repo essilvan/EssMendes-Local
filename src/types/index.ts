@@ -542,5 +542,6 @@ export interface RestaurantOrder {
   waiter_phone?: string | null;
   confirmed_at?: string | null;
   delivered_at?: string | null;
+  review_sent?: boolean;
   created_at: string;
 }

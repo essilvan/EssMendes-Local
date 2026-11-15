@@ -291,6 +291,7 @@ interface ProfileFormProps {
       [key: string]: any;
     } | null;
     googleMapsUrl?: string;
+    googleReviewUrl?: string;
     rating?: number;
     reviewCount?: number;
     slug: string;
@@ -340,6 +341,9 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
 
   // Google Maps Sync State
   const [googleInput, setGoogleInput] = useState(initialData.googleMapsUrl || "");
+  const [googleReviewUrl, setGoogleReviewUrl] = useState(
+    initialData.googleReviewUrl || ""
+  );
   const [isSyncingGoogle, startGoogleSync] = useTransition();
   const [googleSyncFeedback, setGoogleSyncFeedback] = useState<{
     type: "success" | "error";
@@ -1158,6 +1162,28 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                 placeholder="Ex: https://maps.app.goo.gl/..."
                 className="mt-1.5 block w-full rounded-lg border border-slate-300 bg-white p-2.5 text-xs text-slate-900 focus:border-teal-600 focus:outline-none"
               />
+            </div>
+
+            {/* Link Direto de Avaliação Google */}
+            <div className="sm:col-span-3">
+              <label
+                htmlFor="googleReviewUrl"
+                className="block text-xs font-semibold uppercase tracking-wider text-slate-700"
+              >
+                Link Direto de Avaliação Google (g.page/r/.../review)
+              </label>
+              <input
+                id="googleReviewUrl"
+                name="googleReviewUrl"
+                type="url"
+                value={googleReviewUrl}
+                onChange={(e) => setGoogleReviewUrl(e.target.value)}
+                placeholder="Ex: https://g.page/r/.../review ou https://search.google.com/local/writereview?placeid=..."
+                className="mt-1.5 block w-full rounded-lg border border-slate-300 bg-white p-2.5 text-xs text-slate-900 focus:border-teal-600 focus:outline-none"
+              />
+              <p className="mt-1 text-[11px] text-slate-500">
+                Usado automaticamente na tela de confirmação da comanda do cliente e no disparo de avaliação pelo WhatsApp no monitor de pedidos.
+              </p>
             </div>
 
             {/* Nota do Google */}

@@ -148,6 +148,9 @@ export default async function PublicTableMenuPage({
             (tenant as any)?.whatsapp ||
             tenant.phone
           }
+          googleReviewUrl={(tenant as any)?.google_review_url || null}
+          googlePlaceId={(tenant as any)?.google_place_id || profile?.google_place_id || null}
+          tenantAddress={address}
         />
       </main>
     </div>

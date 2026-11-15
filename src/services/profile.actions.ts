@@ -24,6 +24,7 @@ export async function updateTenantProfileAction(
     logoUrl: formData.get("logoUrl")?.toString().trim() || "",
     primaryColor: formData.get("primaryColor")?.toString().trim() || "",
     googleMapsUrl: formData.get("googleMapsUrl")?.toString().trim() || "",
+    googleReviewUrl: formData.get("googleReviewUrl")?.toString().trim() || "",
     rating: formData.get("rating") ? Number(formData.get("rating")) : 4.9,
     reviewCount: formData.get("reviewCount") ? Number(formData.get("reviewCount")) : 128,
     placePhotos: formData.get("placePhotos")?.toString().trim() || "",
@@ -50,6 +51,7 @@ export async function updateTenantProfileAction(
     logoUrl,
     primaryColor,
     googleMapsUrl,
+    googleReviewUrl,
     rating,
     reviewCount,
     placePhotos: rawPlacePhotos,
@@ -119,6 +121,10 @@ export async function updateTenantProfileAction(
 
     if (coverImageUrl) {
       tenantUpdateData.cover_image_url = coverImageUrl;
+    }
+
+    if (googleReviewUrl !== undefined) {
+      tenantUpdateData.google_review_url = googleReviewUrl || null;
     }
 
     const { error: tenantError } = await adminSupabase

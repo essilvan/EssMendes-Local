@@ -171,6 +171,7 @@ function normalizeOrder(row: any): RestaurantOrder {
     waiter_phone: row.waiter_phone || null,
     confirmed_at: row.confirmed_at || null,
     delivered_at: row.delivered_at || null,
+    review_sent: Boolean(row.review_sent),
     created_at: row.created_at || new Date().toISOString(),
   };
 }
@@ -853,6 +854,38 @@ export async function updateRestaurantOrderStatusAction(
   }
 }
 
+export async function markOrderReviewSentAction(
+  orderId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { data: authContext, error: authError } = await getAuthenticatedTenant();
+    if (authError || !authContext) {
+      return { success: false, error: authError || "Não autenticado." };
+    }
+
+    const supabase = createAdminClient();
+    const { error } = await resilientUpdate(
+      supabase,
+      "restaurant_orders",
+      orderId,
+      authContext.tenantId,
+      { review_sent: true }
+    );
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    revalidatePath("/admin/pedidos");
+    return { success: true };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || "Erro ao marcar avaliação como enviada.",
+    };
+  }
+}
+
 // ============================================================================
 // 4. AÇÕES PÚBLICAS (VITRINE & QR CODE DA MESA /[slug]/mesa/[tableNumber])
 // ============================================================================
@@ -988,7 +1021,7 @@ export async function createPublicTableOrderAction(
       table_number: cleanTableNumber,
       customer_name: customer_name.trim(),
       client_name: customer_name.trim(),
-      customer_phone: customer_phone?.trim() || null,
+      customer_phone: customer_phone ? customer_phone.replace(/\D/g, "") : null,
       items,
       notes: notes?.trim() || null,
       observations: notes?.trim() || null,

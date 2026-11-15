@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import {
   getAdminOrdersDataAction,
   updateRestaurantOrderStatusAction,
+  markOrderReviewSentAction,
 } from "@/services/restaurant.actions";
 import type {
   RestaurantOrder,
@@ -26,11 +27,17 @@ import {
   BellRing,
   Radio,
   RefreshCw,
+  Phone,
+  Star,
 } from "lucide-react";
 
 interface OrdersManagerClientProps {
   initialOrders: RestaurantOrder[];
   tenantId: string;
+  tenantName?: string;
+  googleReviewUrl?: string | null;
+  googlePlaceId?: string | null;
+  tenantAddress?: string | null;
 }
 
 type OrderFilter = "all" | "pending" | "in_kitchen" | "delivered" | "canceled";
@@ -68,6 +75,7 @@ function normalizeOrderClient(row: any): RestaurantOrder {
     waiter_id: row.waiter_id || row.professional_id || null,
     waiter_name: row.waiter_name || null,
     waiter_phone: row.waiter_phone || null,
+    review_sent: Boolean(row.review_sent),
     created_at: row.created_at || new Date().toISOString(),
   };
 }
@@ -84,6 +92,10 @@ function formatTableLabel(tableNumber?: string | null): string {
 export function OrdersManagerClient({
   initialOrders,
   tenantId,
+  tenantName = "nosso restaurante",
+  googleReviewUrl = null,
+  googlePlaceId = null,
+  tenantAddress = null,
 }: OrdersManagerClientProps) {
   const [orders, setOrders] = useState<RestaurantOrder[]>(initialOrders);
   const [statusFilter, setStatusFilter] = useState<OrderFilter>("all");
@@ -381,6 +393,49 @@ export function OrdersManagerClient({
     return normalizeStatus(order.status) === statusFilter;
   });
 
+  const formatPhoneDisplay = (phone?: string | null): string => {
+    const digits = String(phone || "").replace(/\D/g, "");
+    if (digits.length === 11) {
+      return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+    }
+    if (digits.length === 10) {
+      return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+    }
+    return phone || "";
+  };
+
+  const resolveGoogleReviewLink = (): string => {
+    if (googleReviewUrl && googleReviewUrl.trim()) {
+      return googleReviewUrl.trim();
+    }
+    if (googlePlaceId && googlePlaceId.trim()) {
+      return `https://search.google.com/local/writereview?placeid=${encodeURIComponent(googlePlaceId.trim())}`;
+    }
+    const q = [tenantName, tenantAddress].filter(Boolean).join(" ").trim();
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q || "restaurante")}`;
+  };
+
+  const handleSendReviewWhatsApp = async (order: RestaurantOrder) => {
+    const rawDigits = String(order.customer_phone || "").replace(/\D/g, "");
+    if (!rawDigits) return;
+    const cleanPhone =
+      rawDigits.startsWith("55") && rawDigits.length > 11
+        ? rawDigits.slice(2)
+        : rawDigits;
+
+    const googleReviewLink = resolveGoogleReviewLink();
+    const customerName = order.customer_name || "Cliente";
+    const msg = `Olá ${customerName}! Muito obrigado pela preferência hoje no *${tenantName}* 🙏🍻 Esperamos que tenha gostado! Se puder nos dar uma força avaliando nosso atendimento com 5 estrelas no Google, leva só 10 segundos: ${googleReviewLink}`;
+    const waUrl = `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(msg)}`;
+
+    window.open(waUrl, "_blank", "noopener,noreferrer");
+
+    setOrders((prev) =>
+      prev.map((o) => (o.id === order.id ? { ...o, review_sent: true } : o))
+    );
+    await markOrderReviewSentAction(order.id);
+  };
+
   const getWaiterWhatsAppUrl = (order: RestaurantOrder) => {
     const digits = String(order.waiter_phone || "").replace(/\D/g, "");
     const cleanPhone =
@@ -676,6 +731,12 @@ export function OrdersManagerClient({
                             {order.customer_name || "Cliente na Mesa"}
                           </strong>
                         </span>
+                        {order.customer_phone && (
+                          <span className="inline-flex items-center gap-1 text-slate-600 font-semibold">
+                            • <Phone className="h-3 w-3 text-emerald-600" />
+                            {formatPhoneDisplay(order.customer_phone)}
+                          </span>
+                        )}
                         {order.waiter_name && (
                           <span className="text-slate-400">
                             • Garçom:{" "}
@@ -776,6 +837,25 @@ export function OrdersManagerClient({
                       </button>
                     )}
                   </div>
+
+                  {/* Pós-venda: Agradecer & Pedir Avaliação Google */}
+                  {order.customer_phone && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleSendReviewWhatsApp(order)}
+                        className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] px-4 py-2.5 text-xs sm:text-sm font-extrabold text-white shadow-sm transition cursor-pointer"
+                      >
+                        <Star className="h-4 w-4 fill-amber-300 text-amber-300 shrink-0" />
+                        <span>Agradecer & Pedir Avaliação Google ⭐</span>
+                      </button>
+                      {order.review_sent && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 border border-emerald-200 px-3 py-1 text-[11px] font-bold text-emerald-800">
+                          Avaliação Solicitada ✓
+                        </span>
+                      )}
+                    </div>
+                  )}
 
                   {/* Ações Secundárias: Cancelar + WhatsApp Garçom */}
                   <div className="flex flex-wrap items-center justify-between gap-2">

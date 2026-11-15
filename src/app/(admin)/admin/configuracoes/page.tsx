@@ -170,6 +170,11 @@ export default async function ConfiguracoesPage() {
       "default",
     themeSettings: safeTenant.theme_settings || null,
     googleMapsUrl: safeProfile.google_maps_url || "",
+    googleReviewUrl:
+      safeTenant.google_review_url ||
+      (safeTenant.google_place_id
+        ? `https://search.google.com/local/writereview?placeid=${safeTenant.google_place_id}`
+        : ""),
     rating: safeProfile.rating ? Number(safeProfile.rating) : 4.9,
     reviewCount: safeProfile.review_count ? Number(safeProfile.review_count) : 128,
     slug: safeTenant.slug || "",

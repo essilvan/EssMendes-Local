@@ -172,6 +172,9 @@ export function MinimalTemplateView({
             categories={menuCategories}
             items={menuItems}
             restaurantPhone={rawPhone}
+            googleReviewUrl={(tenant as any)?.google_review_url || null}
+            googlePlaceId={(tenant as any)?.google_place_id || profile?.google_place_id || null}
+            tenantAddress={profile?.address || (tenant as any)?.address || null}
           />
 
           {/* 3º SEÇÕES COMPLEMENTARES */}

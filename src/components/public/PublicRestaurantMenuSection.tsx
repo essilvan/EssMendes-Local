@@ -35,6 +35,32 @@ interface PublicRestaurantMenuSectionProps {
   tableName?: string | null;
   waiterName?: string | null;
   restaurantPhone?: string | null;
+  googleReviewUrl?: string | null;
+  googlePlaceId?: string | null;
+  tenantAddress?: string | null;
+}
+
+function formatWhatsAppMask(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
+
+function resolveGoogleReviewUrl(
+  googleReviewUrl?: string | null,
+  googlePlaceId?: string | null,
+  tenantName?: string,
+  tenantAddress?: string | null
+): string {
+  if (googleReviewUrl && googleReviewUrl.trim()) {
+    return googleReviewUrl.trim();
+  }
+  if (googlePlaceId && googlePlaceId.trim()) {
+    return `https://search.google.com/local/writereview?placeid=${encodeURIComponent(googlePlaceId.trim())}`;
+  }
+  const query = [tenantName, tenantAddress].filter(Boolean).join(" ").trim();
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query || "restaurante")}`;
 }
 
 interface CartItem {
@@ -118,12 +144,16 @@ export function PublicRestaurantMenuSection({
   tableName = null,
   waiterName = null,
   restaurantPhone = null,
+  googleReviewUrl = null,
+  googlePlaceId = null,
+  tenantAddress = null,
 }: PublicRestaurantMenuSectionProps) {
   const [activeTab, setActiveTab] = useState<string>("Todos");
   const [cart, setCart] = useState<Record<string, CartItem>>({});
   const [isOrderDrawerOpen, setIsOrderDrawerOpen] = useState(false);
 
   const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
   const [manualTableNumber, setManualTableNumber] = useState(
     tableNumber || "01"
   );
@@ -228,6 +258,12 @@ export function PublicRestaurantMenuSection({
       return;
     }
 
+    const cleanPhoneDigits = customerPhone.replace(/\D/g, "");
+    if (cleanPhoneDigits.length < 10) {
+      setErrorMsg("Por favor, informe seu WhatsApp com DDD para contato.");
+      return;
+    }
+
     if (cartEntries.length === 0) {
       setErrorMsg("Adicione pelo menos 1 item ao seu pedido.");
       return;
@@ -240,6 +276,7 @@ export function PublicRestaurantMenuSection({
         tenant_slug: tenantSlug,
         table_number: effectiveTable,
         customer_name: customerName.trim(),
+        customer_phone: cleanPhoneDigits,
         notes: orderNotes.trim() || null,
         items: cartEntries.map((entry) => ({
           id: entry.item.id,
@@ -546,19 +583,35 @@ export function PublicRestaurantMenuSection({
             {submittedWhatsappUrl ? (
               <div className="rounded-2xl border border-emerald-500/40 bg-emerald-950/40 p-6 text-center space-y-4">
                 <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-400" />
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <h4 className="text-base font-black text-emerald-300">
-                    Pedido Registrado na Mesa!
+                    Pedido enviado com sucesso!
                   </h4>
-                  <p className="text-xs text-zinc-300">
-                    Seu pedido já foi salvo no painel do restaurante. Clique abaixo caso o WhatsApp do garçom não tenha aberto automaticamente:
+                  <p className="text-xs text-zinc-200 leading-relaxed">
+                    Enquanto aguarda ou ao finalizar sua experiência, avalie nosso atendimento no Google ⭐⭐⭐⭐⭐
                   </p>
                 </div>
+
+                <a
+                  href={resolveGoogleReviewUrl(
+                    googleReviewUrl,
+                    googlePlaceId,
+                    tenantName,
+                    tenantAddress
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-400 px-5 py-3.5 text-xs sm:text-sm font-black text-zinc-950 shadow-lg shadow-amber-500/20 transition"
+                >
+                  <Star className="h-4 w-4 fill-zinc-950" />
+                  <span>Avaliar no Google ⭐⭐⭐⭐⭐</span>
+                </a>
+
                 <a
                   href={submittedWhatsappUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-5 py-3.5 text-xs sm:text-sm font-black text-white shadow-md transition"
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-5 py-3 text-xs sm:text-sm font-bold text-white shadow-md transition"
                 >
                   <MessageCircle className="h-4 w-4" />
                   <span>Abrir WhatsApp do Garçom com o Pedido</span>
@@ -627,6 +680,24 @@ export function PublicRestaurantMenuSection({
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
                       placeholder="Ex: Carlos Silva"
+                      className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3.5 py-2.5 text-xs text-zinc-100 placeholder:text-zinc-500 focus:border-amber-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-xs font-bold text-zinc-300">
+                      Seu WhatsApp *
+                    </label>
+                    <input
+                      type="tel"
+                      inputMode="numeric"
+                      required
+                      maxLength={15}
+                      value={customerPhone}
+                      onChange={(e) =>
+                        setCustomerPhone(formatWhatsAppMask(e.target.value))
+                      }
+                      placeholder="(00) 00000-0000"
                       className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3.5 py-2.5 text-xs text-zinc-100 placeholder:text-zinc-500 focus:border-amber-500 focus:outline-none"
                     />
                   </div>

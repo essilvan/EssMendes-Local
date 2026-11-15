@@ -36,6 +36,7 @@ export const updateProfileSchema = z.object({
     .optional()
     .or(z.literal("")),
   googleMapsUrl: z.string().optional().or(z.literal("")),
+  googleReviewUrl: z.string().optional().or(z.literal("")),
   rating: z.coerce.number().min(1).max(5).optional(),
   reviewCount: z.coerce.number().min(0).max(99999).optional(),
   placePhotos: z.string().optional().or(z.literal("")),
