@@ -577,7 +577,7 @@ export function MenuManagerClient({
             return (
               <div
                 key={item.id}
-                className={`rounded-2xl border bg-white overflow-hidden shadow-xs transition flex flex-col justify-between ${
+                className={`group rounded-2xl border bg-white overflow-hidden shadow-xs transition flex flex-col justify-between ${
                   isAvailable
                     ? "border-slate-200"
                     : "border-slate-200 bg-slate-50/70 opacity-75"
@@ -585,12 +585,12 @@ export function MenuManagerClient({
               >
                 <div>
                   {/* Imagem do Prato */}
-                  <div className="relative h-44 w-full bg-slate-100 overflow-hidden">
+                  <div className="relative w-full h-44 bg-zinc-50 rounded-xl border border-zinc-100 flex items-center justify-center p-3 overflow-hidden">
                     {item.image_url ? (
                       <img
                         src={item.image_url}
                         alt={item.name}
-                        className="h-full w-full object-cover"
+                        className="max-h-full max-w-full w-auto h-auto object-contain rounded-lg drop-shadow-sm transition-transform duration-300 group-hover:scale-105"
                       />
                     ) : (
                       <div className="flex h-full w-full flex-col items-center justify-center text-slate-400 gap-1">
@@ -792,11 +792,11 @@ export function MenuManagerClient({
                 </label>
 
                 {itemImageUrl && (
-                  <div className="relative h-36 w-full rounded-xl overflow-hidden border border-slate-200 bg-white">
+                  <div className="relative h-36 w-full rounded-xl overflow-hidden border border-slate-200 bg-zinc-50 flex items-center justify-center p-2">
                     <img
                       src={itemImageUrl}
                       alt="Preview do Prato"
-                      className="h-full w-full object-cover"
+                      className="max-h-full max-w-full w-auto h-auto object-contain rounded-lg"
                     />
                     <button
                       type="button"

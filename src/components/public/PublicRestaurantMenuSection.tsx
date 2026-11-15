@@ -407,30 +407,30 @@ export function PublicRestaurantMenuSection({
                   key={item.id}
                   className="group bg-[#1f1f23]/80 border border-zinc-700/60 shadow-xl rounded-2xl backdrop-blur-sm overflow-hidden hover:border-amber-500/40 transition-all flex flex-col justify-between"
                 >
-                  <div>
+                  <div className="flex items-start gap-3.5 p-4">
                     {/* Foto do Prato / Porção / Bebida */}
-                    <div className="relative h-44 w-full bg-zinc-950 overflow-hidden">
+                    <div className="w-24 h-24 sm:w-28 sm:h-28 shrink-0 bg-zinc-900/80 border border-zinc-700/50 rounded-xl p-1.5 flex items-center justify-center overflow-hidden">
                       {item.image_url ? (
                         <img
                           src={item.image_url}
                           alt={item.name}
-                          className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          className="max-h-full max-w-full object-contain rounded-lg group-hover:scale-105 transition-transform duration-300"
                         />
                       ) : (
-                        <div className="flex h-full w-full flex-col items-center justify-center text-zinc-600 gap-1.5 bg-gradient-to-br from-zinc-900 to-zinc-950">
-                          <Utensils className="h-8 w-8 text-amber-500/40 stroke-1" />
-                          <span className="text-[11px] font-medium text-zinc-500">
+                        <div className="flex h-full w-full flex-col items-center justify-center text-zinc-600 gap-1 bg-gradient-to-br from-zinc-900 to-zinc-950 rounded-lg">
+                          <Utensils className="h-6 w-6 text-amber-500/40 stroke-1" />
+                          <span className="text-[10px] font-medium text-zinc-500 text-center px-1 truncate max-w-full">
                             {tenantName}
                           </span>
                         </div>
                       )}
-                      <span className="absolute top-3 left-3 rounded-full bg-zinc-950/85 border border-zinc-700/80 backdrop-blur-xs px-2.5 py-0.5 text-[10px] font-bold text-amber-400">
-                        {item.category || "Pratos"}
-                      </span>
                     </div>
 
                     {/* Detalhes do Item */}
-                    <div className="p-4 space-y-1.5">
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <span className="inline-block rounded-full bg-zinc-950/85 border border-zinc-700/80 px-2.5 py-0.5 text-[10px] font-bold text-amber-400">
+                        {item.category || "Pratos"}
+                      </span>
                       <div className="flex items-start justify-between gap-2">
                         <h3 className="text-base font-bold text-white tracking-tight leading-snug break-words">
                           {item.name}
