@@ -42,49 +42,72 @@ const DEFAULT_CATEGORY_SUGGESTIONS = [
 /**
  * Comprime imagem no cliente via HTML5 Canvas (máx 1280px, qualidade 0.75) antes do upload
  */
-async function compressMenuImageClient(file: File): Promise<Blob> {
-  return new Promise((resolve, reject) => {
+async function compressMenuImageClient(file: File): Promise<{
+  blob: Blob;
+  ext: string;
+  contentType: string;
+}> {
+  const originalExt = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  const originalContentType = file.type || "image/jpeg";
+
+  return new Promise((resolve) => {
     const img = new Image();
     const objectUrl = URL.createObjectURL(file);
 
     img.onload = () => {
       URL.revokeObjectURL(objectUrl);
-      const maxWidth = 1280;
-      let width = img.width;
-      let height = img.height;
+      try {
+        const maxWidth = 1000;
+        let width = img.width;
+        let height = img.height;
 
-      if (width > maxWidth) {
-        height = Math.round((height * maxWidth) / width);
-        width = maxWidth;
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+
+        if (!ctx) {
+          resolve({ blob: file, ext: originalExt, contentType: originalContentType });
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (webpBlob) => {
+            if (webpBlob && webpBlob.type === "image/webp") {
+              resolve({ blob: webpBlob, ext: "webp", contentType: "image/webp" });
+              return;
+            }
+            // Fallback para JPEG caso WebP falhe (ex: Safari/iOS ou limite de memória)
+            canvas.toBlob(
+              (jpegBlob) => {
+                if (jpegBlob) {
+                  resolve({ blob: jpegBlob, ext: "jpg", contentType: "image/jpeg" });
+                } else {
+                  resolve({ blob: file, ext: originalExt, contentType: originalContentType });
+                }
+              },
+              "image/jpeg",
+              0.75
+            );
+          },
+          "image/webp",
+          0.78
+        );
+      } catch {
+        resolve({ blob: file, ext: originalExt, contentType: originalContentType });
       }
-
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext("2d");
-
-      if (!ctx) {
-        resolve(file);
-        return;
-      }
-
-      ctx.drawImage(img, 0, 0, width, height);
-      canvas.toBlob(
-        (blob) => {
-          if (blob) {
-            resolve(blob);
-          } else {
-            resolve(file);
-          }
-        },
-        "image/webp",
-        0.78
-      );
     };
 
-    img.onerror = (err) => {
+    img.onerror = () => {
       URL.revokeObjectURL(objectUrl);
-      reject(err);
+      // Fallback seguro: envia o arquivo original caso o navegador não decodifique no canvas (ex: HEIC)
+      resolve({ blob: file, ext: originalExt, contentType: originalContentType });
     };
 
     img.src = objectUrl;
@@ -197,39 +220,35 @@ export function MenuManagerClient({
     }
   };
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const handleImageUpload = async (file: File) => {
     setIsUploadingImage(true);
     setFeedback(null);
     try {
-      const compressedBlob = await compressMenuImageClient(file);
+      const { blob, ext, contentType } = await compressMenuImageClient(file);
       const supabase = createClient();
-      const fileName = `menu/${tenantId}/${Date.now()}-${Math.random()
-        .toString(36)
-        .slice(2, 7)}.webp`;
+      const fileName = `${tenantId}/${Date.now()}.${ext}`;
 
       const { error: uploadError } = await supabase.storage
-        .from("establishment-photos")
-        .upload(fileName, compressedBlob, {
-          contentType: "image/webp",
+        .from("menu-items")
+        .upload(fileName, blob, {
+          contentType,
           upsert: true,
         });
 
       if (uploadError) {
+        alert("Erro ao enviar foto: " + uploadError.message);
         throw new Error(uploadError.message);
       }
 
       const { data: publicUrlData } = supabase.storage
-        .from("establishment-photos")
+        .from("menu-items")
         .getPublicUrl(fileName);
 
       if (publicUrlData?.publicUrl) {
         setItemImageUrl(publicUrlData.publicUrl);
         setFeedback({
           type: "success",
-          text: "Foto do prato comprimida e enviada com sucesso!",
+          text: "Foto do prato enviada com sucesso!",
         });
       }
     } catch (err: any) {
@@ -239,6 +258,15 @@ export function MenuManagerClient({
       });
     } finally {
       setIsUploadingImage(false);
+    }
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      await handleImageUpload(file);
+    } finally {
       e.target.value = "";
     }
   };
@@ -273,6 +301,28 @@ export function MenuManagerClient({
 
       if (res.success && res.data) {
         const saved = res.data;
+        const savedCategoryName = saved.category || itemCategory;
+        if (
+          saved.category_id &&
+          savedCategoryName &&
+          !categories.some(
+            (c) =>
+              c.id === saved.category_id ||
+              c.name.toLowerCase() === savedCategoryName.toLowerCase()
+          )
+        ) {
+          setCategories((prev) => [
+            ...prev,
+            {
+              id: saved.category_id!,
+              tenant_id: tenantId,
+              name: savedCategoryName,
+              display_order: prev.length + 1,
+              is_active: true,
+              created_at: new Date().toISOString(),
+            },
+          ]);
+        }
         if (editingItemId) {
           setItems((prev) =>
             prev.map((it) => (it.id === editingItemId ? saved : it))
@@ -755,6 +805,13 @@ export function MenuManagerClient({
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
+                  </div>
+                )}
+
+                {isUploadingImage && (
+                  <div className="flex items-center gap-2 rounded-lg bg-orange-50 border border-orange-200 px-3 py-2 text-xs font-bold text-orange-700">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span>Enviando foto...</span>
                   </div>
                 )}
 

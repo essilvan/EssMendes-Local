@@ -275,7 +275,7 @@ export async function getAdminMenuDataAction(): Promise<{
       return { success: false, error: authError || "Não autenticado." };
     }
 
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const tenantId = authContext.tenantId;
 
     const [catsRes, itemsRes] = await Promise.all([
@@ -330,7 +330,7 @@ export async function createMenuCategoryAction(input: {
       return { success: false, error: authError || "Não autenticado." };
     }
 
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const { data, error } = await resilientInsert(supabase, "menu_categories", {
       tenant_id: authContext.tenantId,
       name: parsed.data.name.trim(),
@@ -366,7 +366,7 @@ export async function deleteMenuCategoryAction(
       return { success: false, error: authError || "Não autenticado." };
     }
 
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const { error } = await supabase
       .from("menu_categories")
       .delete()
@@ -412,7 +412,7 @@ export async function saveMenuItemAction(input: {
       return { success: false, error: authError || "Não autenticado." };
     }
 
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const tenantId = authContext.tenantId;
 
     // Se a categoria selecionada não tiver category_id UUID mas tiver nome, garante ou localiza na tabela menu_categories
@@ -484,9 +484,15 @@ export async function saveMenuItemAction(input: {
       revalidatePath(`/${authContext.tenant.slug}`);
     }
 
+    const normalized = normalizeMenuItem(resultRow || payload);
     return {
       success: true,
-      data: normalizeMenuItem(resultRow || payload),
+      data: {
+        ...normalized,
+        category: normalized.category || categoryName,
+        category_id: normalized.category_id ?? resolvedCategoryId,
+        image_url: normalized.image_url ?? (parsed.data.image_url || null),
+      },
     };
   } catch (err: any) {
     return {
@@ -506,7 +512,7 @@ export async function toggleMenuItemAvailabilityAction(
       return { success: false, error: authError || "Não autenticado." };
     }
 
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const { error } = await resilientUpdate(
       supabase,
       "menu_items",
@@ -542,7 +548,7 @@ export async function deleteMenuItemAction(
       return { success: false, error: authError || "Não autenticado." };
     }
 
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const { error } = await supabase
       .from("menu_items")
       .delete()
@@ -584,7 +590,7 @@ export async function getAdminTablesDataAction(): Promise<{
       return { success: false, error: authError || "Não autenticado." };
     }
 
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const tenantId = authContext.tenantId;
 
     const [tablesRes, profsRes] = await Promise.all([
@@ -659,7 +665,7 @@ export async function saveRestaurantTableAction(input: {
       return { success: false, error: authError || "Não autenticado." };
     }
 
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const tenantId = authContext.tenantId;
 
     let waiterName: string | null = null;
