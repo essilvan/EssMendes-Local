@@ -886,6 +886,67 @@ export async function markOrderReviewSentAction(
   }
 }
 
+export async function deleteRestaurantOrderAction(
+  orderId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { data: authContext, error: authError } = await getAuthenticatedTenant();
+    if (authError || !authContext) {
+      return { success: false, error: authError || "Não autenticado." };
+    }
+
+    const supabase = createAdminClient();
+    const { error } = await supabase
+      .from("restaurant_orders")
+      .delete()
+      .eq("id", orderId)
+      .eq("tenant_id", authContext.tenantId);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    revalidatePath("/admin/pedidos");
+    return { success: true };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || "Erro ao excluir pedido.",
+    };
+  }
+}
+
+export async function clearCanceledRestaurantOrdersAction(): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  try {
+    const { data: authContext, error: authError } = await getAuthenticatedTenant();
+    if (authError || !authContext) {
+      return { success: false, error: authError || "Não autenticado." };
+    }
+
+    const supabase = createAdminClient();
+    const { error } = await supabase
+      .from("restaurant_orders")
+      .delete()
+      .eq("tenant_id", authContext.tenantId)
+      .eq("status", "canceled");
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    revalidatePath("/admin/pedidos");
+    return { success: true };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || "Erro ao limpar pedidos cancelados.",
+    };
+  }
+}
+
 // ============================================================================
 // 4. AÇÕES PÚBLICAS (VITRINE & QR CODE DA MESA /[slug]/mesa/[tableNumber])
 // ============================================================================

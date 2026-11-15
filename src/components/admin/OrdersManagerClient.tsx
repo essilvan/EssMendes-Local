@@ -6,6 +6,8 @@ import {
   getAdminOrdersDataAction,
   updateRestaurantOrderStatusAction,
   markOrderReviewSentAction,
+  deleteRestaurantOrderAction,
+  clearCanceledRestaurantOrdersAction,
 } from "@/services/restaurant.actions";
 import type {
   RestaurantOrder,
@@ -29,6 +31,7 @@ import {
   RefreshCw,
   Phone,
   Star,
+  Trash2,
 } from "lucide-react";
 
 interface OrdersManagerClientProps {
@@ -100,6 +103,7 @@ export function OrdersManagerClient({
   const [orders, setOrders] = useState<RestaurantOrder[]>(initialOrders);
   const [statusFilter, setStatusFilter] = useState<OrderFilter>("all");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [isClearingCanceled, setIsClearingCanceled] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [newOrderIds, setNewOrderIds] = useState<Set<string>>(new Set());
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
@@ -436,6 +440,61 @@ export function OrdersManagerClient({
     await markOrderReviewSentAction(order.id);
   };
 
+  const handleDeleteOrder = async (orderId: string) => {
+    if (!window.confirm("Deseja realmente excluir este pedido permanentemente?")) {
+      return;
+    }
+
+    setUpdatingId(orderId);
+    try {
+      const res = await deleteRestaurantOrderAction(orderId);
+      if (!res.success) {
+        alert(res.error || "Não foi possível excluir o pedido.");
+        return;
+      }
+
+      knownOrderIdsRef.current.delete(orderId);
+      setOrders((prev) => prev.filter((o) => o.id !== orderId));
+      setNewOrderIds((prev) => {
+        if (!prev.has(orderId)) return prev;
+        const next = new Set(prev);
+        next.delete(orderId);
+        return next;
+      });
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const handleClearCanceledOrders = async () => {
+    if (
+      !window.confirm(
+        "Deseja realmente excluir TODOS os pedidos cancelados permanentemente?"
+      )
+    ) {
+      return;
+    }
+
+    setIsClearingCanceled(true);
+    try {
+      const res = await clearCanceledRestaurantOrdersAction();
+      if (!res.success) {
+        alert(res.error || "Não foi possível limpar os pedidos cancelados.");
+        return;
+      }
+
+      setOrders((prev) => {
+        const canceledIds = prev
+          .filter((o) => String(o.status).toLowerCase() === "canceled")
+          .map((o) => o.id);
+        canceledIds.forEach((id) => knownOrderIdsRef.current.delete(id));
+        return prev.filter((o) => String(o.status).toLowerCase() !== "canceled");
+      });
+    } finally {
+      setIsClearingCanceled(false);
+    }
+  };
+
   const getWaiterWhatsAppUrl = (order: RestaurantOrder) => {
     const digits = String(order.waiter_phone || "").replace(/\D/g, "");
     const cleanPhone =
@@ -650,6 +709,29 @@ export function OrdersManagerClient({
           </button>
         )}
       </div>
+
+      {/* Ação de Limpeza em Massa na Aba Cancelados */}
+      {statusFilter === "canceled" && canceledCount > 0 && (
+        <div className="flex items-center justify-between rounded-2xl border border-red-200 bg-red-50/70 px-4 py-3">
+          <p className="text-xs font-semibold text-red-700">
+            Exibindo {canceledCount}{" "}
+            {canceledCount === 1 ? "pedido cancelado" : "pedidos cancelados"}.
+          </p>
+          <button
+            type="button"
+            disabled={isClearingCanceled}
+            onClick={handleClearCanceledOrders}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 px-3.5 py-2 text-xs font-bold transition cursor-pointer disabled:opacity-60"
+          >
+            {isClearingCanceled ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Trash2 className="h-3.5 w-3.5" />
+            )}
+            <span>Limpar Todos os Cancelados</span>
+          </button>
+        </div>
+      )}
 
       {/* Lista de Pedidos */}
       {filteredOrders.length === 0 ? (
@@ -872,15 +954,32 @@ export function OrdersManagerClient({
                       </button>
                     )}
 
-                    <a
-                      href={getWaiterWhatsAppUrl(order)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="ml-auto inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 px-3 py-2 text-xs font-bold text-emerald-800 transition"
-                    >
-                      <MessageCircle className="h-3.5 w-3.5 text-emerald-600" />
-                      <span>WhatsApp Garçom</span>
-                    </a>
+                    <div className="ml-auto flex items-center gap-1.5">
+                      <a
+                        href={getWaiterWhatsAppUrl(order)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 px-3 py-2 text-xs font-bold text-emerald-800 transition"
+                      >
+                        <MessageCircle className="h-3.5 w-3.5 text-emerald-600" />
+                        <span>WhatsApp Garçom</span>
+                      </a>
+
+                      <button
+                        type="button"
+                        disabled={isUpdating}
+                        onClick={() => handleDeleteOrder(order.id)}
+                        title="Excluir Pedido"
+                        aria-label="Excluir Pedido"
+                        className="p-2 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 transition-colors cursor-pointer disabled:opacity-60"
+                      >
+                        {isUpdating ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
