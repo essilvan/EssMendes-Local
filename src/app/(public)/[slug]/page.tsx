@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import type { Metadata } from "next";
@@ -15,8 +15,7 @@ interface PublicPageProps {
   }>;
 }
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+export const revalidate = 60;
 
 /**
  * Resolução resiliente do slug ou subdomínio do tenant
@@ -48,7 +47,7 @@ export async function generateMetadata({
 }: PublicPageProps): Promise<Metadata> {
   const { slug } = await params;
   const cleanSlug = await resolveTenantSlug(slug);
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   // Busca flexível por slug ou custom_domain com select(*) seguro
   let { data: tenant } = await supabase
@@ -197,7 +196,7 @@ export async function generateMetadata({
 export default async function PublicTenantPage({ params }: PublicPageProps) {
   const { slug } = await params;
   const cleanSlug = await resolveTenantSlug(slug);
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   // 2.1 Busca o tenant pelo slug ou custom_domain selecionando todas as colunas
   let { data: tenant } = await supabase

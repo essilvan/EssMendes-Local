@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getPublicRestaurantMenuAction } from "@/services/restaurant.actions";
@@ -12,7 +12,7 @@ interface TableMenuPageProps {
   }>;
 }
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export default async function PublicTableMenuPage({
   params,
@@ -21,7 +21,7 @@ export default async function PublicTableMenuPage({
   const cleanSlug = decodeURIComponent(slug || "").trim();
   const cleanTableNumber = decodeURIComponent(tableNumber || "").trim();
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   let { data: tenant } = await supabase
     .from("tenants")

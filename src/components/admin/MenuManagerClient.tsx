@@ -28,6 +28,7 @@ import {
 
 interface MenuManagerClientProps {
   tenantId: string;
+  tenantSlug?: string;
   initialCategories: MenuCategory[];
   initialItems: MenuItem[];
 }
@@ -116,9 +117,18 @@ async function compressMenuImageClient(file: File): Promise<{
 
 export function MenuManagerClient({
   tenantId,
+  tenantSlug = "",
   initialCategories,
   initialItems,
 }: MenuManagerClientProps) {
+  const triggerPublicRevalidate = () => {
+    if (!tenantSlug) return;
+    fetch("/api/revalidate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slug: tenantSlug }),
+    }).catch(() => {});
+  };
   const [categories, setCategories] = useState<MenuCategory[]>(initialCategories);
   const [items, setItems] = useState<MenuItem[]>(initialItems);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>("all");
@@ -339,6 +349,7 @@ export function MenuManagerClient({
           });
         }
         setIsItemModalOpen(false);
+        triggerPublicRevalidate();
       } else {
         setFeedback({
           type: "error",
@@ -363,6 +374,7 @@ export function MenuManagerClient({
               : it
           )
         );
+        triggerPublicRevalidate();
       }
     } finally {
       setTogglingId(null);
@@ -377,6 +389,7 @@ export function MenuManagerClient({
         type: "success",
         text: `Item "${item.name}" removido do cardápio.`,
       });
+      triggerPublicRevalidate();
     }
   };
 

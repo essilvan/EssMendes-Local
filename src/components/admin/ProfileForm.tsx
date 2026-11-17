@@ -407,7 +407,14 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
     if (state?.error) {
       console.error("[ProfileForm] Erro ao salvar dados do perfil:", state.error);
     }
-  }, [state]);
+    if (state?.success && initialData.slug) {
+      fetch("/api/revalidate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug: initialData.slug }),
+      }).catch(() => {});
+    }
+  }, [state, initialData.slug]);
 
   const handleColorChange = (newColor: string) => {
     setPrimaryColor(newColor);

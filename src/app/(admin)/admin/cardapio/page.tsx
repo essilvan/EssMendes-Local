@@ -19,6 +19,7 @@ export default async function AdminCardapioPage() {
   return (
     <MenuManagerClient
       tenantId={authContext.tenantId}
+      tenantSlug={authContext.tenant?.slug || ""}
       initialCategories={categories}
       initialItems={items}
     />

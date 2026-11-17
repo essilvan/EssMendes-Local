@@ -1,0 +1,14 @@
+name: Supabase Keep-Alive
+
+on:
+  schedule:
+    - cron: '0 12 * * *'
+  workflow_dispatch:
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping keep-alive endpoint
+        run: curl -s https://app.essmendes.com.br/api/keep-alive
+

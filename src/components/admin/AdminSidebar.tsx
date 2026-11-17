@@ -13,6 +13,7 @@ import {
   Check,
   CarFront,
   UtensilsCrossed,
+  HelpCircle,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { getTenantPublicUrl } from "@/utils/tenant-url";
@@ -219,6 +220,18 @@ export function AdminSidebar({
           </p>
           <p className="truncate text-[11px] text-slate-500">{userEmail}</p>
         </div>
+
+        <a
+          href={`https://wa.me/5561999685292?text=${encodeURIComponent(
+            "Olá Essilvan! Preciso de suporte no painel da empresa " + companyName
+          )}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-slate-600 hover:bg-emerald-50 hover:text-emerald-700 transition"
+        >
+          <HelpCircle className="h-4 w-4 text-emerald-600 shrink-0" />
+          <span>Suporte & Ajuda</span>
+        </a>
 
         <form action={logoutAction} className="w-full">
           <button
