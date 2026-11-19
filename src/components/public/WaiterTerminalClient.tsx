@@ -9,7 +9,14 @@ import {
   updateWaiterOrderItemsAction,
   toggleWaiterOrderItemDeliveredAction,
   completeWaiterOrderDeliveryAction,
+  closeWaiterTabAction,
 } from "@/services/restaurant.actions";
+import {
+  groupOpenRestaurantTabs,
+  printOpenTabStatement80mm,
+  formatTabCurrency,
+  type OpenTableTab,
+} from "@/utils/restaurant-tabs";
 import type {
   RestaurantTable,
   RestaurantOrder,
@@ -39,6 +46,9 @@ import {
   Loader2,
   AlertCircle,
   Radio,
+  Receipt,
+  Printer,
+  Star,
 } from "lucide-react";
 
 export interface WaiterSummary {
@@ -58,6 +68,11 @@ interface WaiterTerminalClientProps {
   initialTables: RestaurantTable[];
   initialOrders: RestaurantOrder[];
   menuItems: MenuItem[];
+  serviceFeeEnabled?: boolean;
+  serviceFeePercent?: number;
+  googleReviewUrl?: string | null;
+  googlePlaceId?: string | null;
+  tenantAddress?: string | null;
 }
 
 function normalizeTableMatch(a?: string | null, b?: string | null): boolean {
@@ -103,6 +118,12 @@ function normalizeOrderClient(row: any): RestaurantOrder {
     waiter_phone: row.waiter_phone || null,
     confirmed_at: row.confirmed_at || null,
     delivered_at: row.delivered_at || null,
+    review_sent: Boolean(row.review_sent),
+    is_paid: Boolean(row.is_paid),
+    paid_at: row.paid_at || null,
+    is_individual_tab: Boolean(row.is_individual_tab),
+    service_fee_included: Boolean(row.service_fee_included),
+    service_fee_amount: Number(row.service_fee_amount || 0),
     created_at: row.created_at || new Date().toISOString(),
   };
 }
@@ -168,6 +189,11 @@ export function WaiterTerminalClient({
   initialTables,
   initialOrders,
   menuItems,
+  serviceFeeEnabled = false,
+  serviceFeePercent = 10,
+  googleReviewUrl = null,
+  googlePlaceId = null,
+  tenantAddress = null,
 }: WaiterTerminalClientProps) {
   const storageKey = `essmendes_waiter_session_${tenantId}`;
 
@@ -193,7 +219,18 @@ export function WaiterTerminalClient({
     useState<MenuItem[]>(menuItems);
 
   // Filtros e UI
-  const [tableScope, setTableScope] = useState<"mine" | "all">("mine");
+  const [tableScope, setTableScope] = useState<"mine" | "all" | "open_tabs">("mine");
+  const [closingTabKey, setClosingTabKey] = useState<string | null>(null);
+  const [tabFeeMap, setTabFeeMap] = useState<Record<string, boolean>>({});
+  const [recentlyClosedTab, setRecentlyClosedTab] = useState<{
+    title: string;
+    customerName: string;
+    customerPhone: string | null;
+    subtotal: number;
+    feeAmount: number;
+    finalTotal: number;
+    includeFee: boolean;
+  } | null>(null);
   const [selectedTableFilter, setSelectedTableFilter] = useState<string | null>(
     null
   );
@@ -916,15 +953,15 @@ export function WaiterTerminalClient({
       </header>
 
       <main className="mx-auto max-w-3xl px-4 pt-5 space-y-6">
-        {/* Seletor de Escopo: Minhas Mesas vs Todas as Mesas */}
-        <div className="flex items-center justify-between gap-2 rounded-2xl border border-zinc-800 bg-zinc-900/80 p-1.5">
+        {/* Seletor de Escopo: Minhas Mesas vs Todas as Mesas vs Contas Abertas */}
+        <div className="flex items-center justify-between gap-1.5 rounded-2xl border border-zinc-800 bg-zinc-900/80 p-1.5">
           <button
             type="button"
             onClick={() => {
               setTableScope("mine");
               setSelectedTableFilter(null);
             }}
-            className={`flex-1 rounded-xl py-2.5 text-xs font-extrabold transition cursor-pointer ${
+            className={`flex-1 rounded-xl py-2.5 text-[11px] sm:text-xs font-extrabold transition cursor-pointer ${
               tableScope === "mine"
                 ? "bg-amber-500 text-zinc-950 shadow-sm"
                 : "text-zinc-400 hover:text-zinc-200"
@@ -938,16 +975,269 @@ export function WaiterTerminalClient({
               setTableScope("all");
               setSelectedTableFilter(null);
             }}
-            className={`flex-1 rounded-xl py-2.5 text-xs font-extrabold transition cursor-pointer ${
+            className={`flex-1 rounded-xl py-2.5 text-[11px] sm:text-xs font-extrabold transition cursor-pointer ${
               tableScope === "all"
                 ? "bg-amber-500 text-zinc-950 shadow-sm"
                 : "text-zinc-400 hover:text-zinc-200"
             }`}
           >
-            Todas as Mesas ({tables.length})
+            Todas ({tables.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setTableScope("open_tabs");
+              setSelectedTableFilter(null);
+            }}
+            className={`flex-1 rounded-xl py-2.5 text-[11px] sm:text-xs font-extrabold transition cursor-pointer inline-flex items-center justify-center gap-1 ${
+              tableScope === "open_tabs"
+                ? "bg-emerald-500 text-zinc-950 shadow-sm"
+                : "text-zinc-400 hover:text-zinc-200"
+            }`}
+          >
+            <Receipt className="h-3.5 w-3.5" />
+            <span>Contas ({groupOpenRestaurantTabs(orders).length})</span>
           </button>
         </div>
 
+        {/* Banner pós-fechamento no Terminal do Garçom */}
+        {recentlyClosedTab && (
+          <div className="rounded-2xl border border-emerald-500/40 bg-emerald-950/50 p-4 space-y-3">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="text-sm font-black text-emerald-300">
+                  ✅ Conta fechada: {recentlyClosedTab.title}
+                </p>
+                <p className="text-xs text-zinc-300 mt-0.5">
+                  Total recebido: {formatTabCurrency(recentlyClosedTab.finalTotal)}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRecentlyClosedTab(null)}
+                className="text-zinc-400 hover:text-white cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <a
+              href={(() => {
+                const rawDigits = String(recentlyClosedTab.customerPhone || "").replace(/\D/g, "");
+                const cleanPhone =
+                  rawDigits.startsWith("55") && rawDigits.length > 11
+                    ? rawDigits.slice(2)
+                    : rawDigits;
+                const reviewUrl =
+                  (googleReviewUrl && googleReviewUrl.trim()) ||
+                  (googlePlaceId && googlePlaceId.trim()
+                    ? `https://search.google.com/local/writereview?placeid=${encodeURIComponent(googlePlaceId.trim())}`
+                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([tenantName, tenantAddress].filter(Boolean).join(" "))}`);
+                const msg = [
+                  `Olá ${recentlyClosedTab.customerName}! Muito obrigado pela preferência hoje no *${tenantName}* 🙏🍻`,
+                  `🧾 *Recibo - ${recentlyClosedTab.title}*`,
+                  `Subtotal: ${formatTabCurrency(recentlyClosedTab.subtotal)}`,
+                  recentlyClosedTab.includeFee
+                    ? `Taxa de Serviço (${serviceFeePercent}%): ${formatTabCurrency(recentlyClosedTab.feeAmount)}`
+                    : `Taxa de Serviço: Não cobrada`,
+                  `*Total Pago: ${formatTabCurrency(recentlyClosedTab.finalTotal)}*`,
+                  ``,
+                  `Se puder nos dar uma força avaliando com 5 estrelas no Google, leva só 10 segundos: ${reviewUrl}`,
+                ].join("\n");
+                return cleanPhone
+                  ? `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(msg)}`
+                  : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+              })()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-4 py-2.5 text-xs font-black text-white transition"
+            >
+              <Star className="h-4 w-4 fill-amber-300 text-amber-300" />
+              <span>Enviar Recibo & Pedir Avaliação Google ⭐</span>
+            </a>
+          </div>
+        )}
+
+        {tableScope === "open_tabs" ? (
+          <section className="space-y-4">
+            {(() => {
+              const waiterOpenTabs = groupOpenRestaurantTabs(orders);
+              if (waiterOpenTabs.length === 0) {
+                return (
+                  <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-900/50 p-10 text-center space-y-2">
+                    <Receipt className="mx-auto h-9 w-9 text-zinc-600" />
+                    <p className="text-sm font-bold text-zinc-300">
+                      Nenhuma conta aberta no momento
+                    </p>
+                  </div>
+                );
+              }
+
+              return waiterOpenTabs.map((tab: OpenTableTab) => {
+                const includeFee =
+                  tabFeeMap[tab.tabKey] !== undefined
+                    ? tabFeeMap[tab.tabKey]
+                    : Boolean(serviceFeeEnabled);
+                const feeAmount = includeFee
+                  ? Number((tab.subtotal * (serviceFeePercent / 100)).toFixed(2))
+                  : 0;
+                const finalTotal = Number((tab.subtotal + feeAmount).toFixed(2));
+                const isClosing = closingTabKey === tab.tabKey;
+
+                return (
+                  <div
+                    key={tab.tabKey}
+                    className="rounded-2xl border border-zinc-800 bg-zinc-900/90 p-4 space-y-4"
+                  >
+                    <div className="flex items-start justify-between gap-2 border-b border-zinc-800 pb-3">
+                      <div className="space-y-1">
+                        <span
+                          className={`inline-block rounded-lg px-2.5 py-1 text-xs font-black text-white ${
+                            tab.isIndividualTab ? "bg-indigo-600" : "bg-teal-600"
+                          }`}
+                        >
+                          {tab.title}
+                        </span>
+                        <p className="text-xs text-zinc-400">
+                          {tab.roundsCount} {tab.roundsCount === 1 ? "rodada" : "rodadas"} •{" "}
+                          {tab.customerName}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      {tab.consolidatedItems.map((it) => (
+                        <div
+                          key={`${tab.tabKey}-${it.key}`}
+                          className="flex items-center justify-between rounded-xl bg-zinc-950/80 px-3 py-2 text-xs"
+                        >
+                          <span className="text-zinc-200 font-semibold">
+                            <strong className="text-amber-400">{it.quantity}x</strong>{" "}
+                            {it.name}
+                          </span>
+                          <span className="font-bold text-zinc-300">
+                            {formatTabCurrency(it.subtotal)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-3.5 space-y-2">
+                      <div className="flex items-center justify-between text-xs text-zinc-400">
+                        <span>Subtotal</span>
+                        <span className="font-bold text-zinc-200">
+                          {formatTabCurrency(tab.subtotal)}
+                        </span>
+                      </div>
+
+                      <label className="flex items-center justify-between gap-2 text-xs text-zinc-300 cursor-pointer select-none">
+                        <span className="inline-flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={includeFee}
+                            onChange={(e) =>
+                              setTabFeeMap((prev) => ({
+                                ...prev,
+                                [tab.tabKey]: e.target.checked,
+                              }))
+                            }
+                            className="h-4 w-4 rounded border-zinc-600 bg-zinc-900 text-amber-500"
+                          />
+                          <span>Incluir Taxa de Serviço ({serviceFeePercent}%)</span>
+                        </span>
+                        <span className="font-bold text-zinc-200">
+                          {formatTabCurrency(feeAmount)}
+                        </span>
+                      </label>
+
+                      <div className="flex items-center justify-between border-t border-zinc-800 pt-2">
+                        <span className="text-xs font-extrabold uppercase text-zinc-400">
+                          Total Final
+                        </span>
+                        <span className="text-lg font-black text-emerald-400">
+                          {formatTabCurrency(finalTotal)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          printOpenTabStatement80mm({
+                            tenantName,
+                            tab,
+                            includeServiceFee: includeFee,
+                            serviceFeePercent,
+                          })
+                        }
+                        className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 px-3.5 py-2.5 text-xs font-bold text-zinc-200 cursor-pointer"
+                      >
+                        <Printer className="h-4 w-4" />
+                        <span>Imprimir Extrato (80mm)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={isClosing}
+                        onClick={async () => {
+                          const msg = `Confirmar fechamento de "${tab.title}"?\nTotal a Receber: ${formatTabCurrency(finalTotal)}`;
+                          if (!window.confirm(msg)) return;
+                          setClosingTabKey(tab.tabKey);
+                          try {
+                            const res = await closeWaiterTabAction({
+                              tenantId,
+                              orderIds: tab.orderIds,
+                              serviceFeeIncluded: includeFee,
+                              serviceFeePercent,
+                            });
+                            if (!res.success) {
+                              alert(res.error || "Erro ao fechar conta.");
+                              return;
+                            }
+                            const closedSet = new Set(tab.orderIds);
+                            const paidAt = new Date().toISOString();
+                            setOrders((prev) =>
+                              prev.map((o) =>
+                                closedSet.has(o.id)
+                                  ? {
+                                      ...o,
+                                      is_paid: true,
+                                      paid_at: paidAt,
+                                      service_fee_included: includeFee,
+                                    }
+                                  : o
+                              )
+                            );
+                            setRecentlyClosedTab({
+                              title: tab.title,
+                              customerName: tab.customerName,
+                              customerPhone: tab.customerPhone,
+                              subtotal: tab.subtotal,
+                              feeAmount,
+                              finalTotal,
+                              includeFee,
+                            });
+                          } finally {
+                            setClosingTabKey(null);
+                          }
+                        }}
+                        className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-4 py-2.5 text-xs font-black text-white transition cursor-pointer disabled:opacity-60"
+                      >
+                        {isClosing ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <CheckCircle2 className="h-4 w-4" />
+                        )}
+                        <span>Fechar Conta & Receber</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              });
+            })()}
+          </section>
+        ) : (
+        <>
         {/* Painel Compacto das Mesas */}
         <section className="space-y-2.5">
           <div className="flex items-center justify-between">
@@ -1261,6 +1551,8 @@ export function WaiterTerminalClient({
             </div>
           )}
         </section>
+        </>
+        )}
       </main>
 
       {/* ===================================================================== */}

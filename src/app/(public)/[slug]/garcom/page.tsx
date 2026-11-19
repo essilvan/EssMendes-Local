@@ -45,7 +45,7 @@ export default async function WaiterTerminalPage({
     await Promise.all([
       supabase
         .from("tenant_profiles")
-        .select("name, logo_url")
+        .select("name, logo_url, address")
         .eq("tenant_id", tenant.id)
         .maybeSingle(),
       supabase
@@ -90,6 +90,11 @@ export default async function WaiterTerminalPage({
       initialTables={terminalData.data?.tables || []}
       initialOrders={terminalData.data?.orders || []}
       menuItems={terminalData.data?.menuItems || []}
+      serviceFeeEnabled={Boolean((tenant as any)?.service_fee_enabled)}
+      serviceFeePercent={Number((tenant as any)?.service_fee_percent ?? 10)}
+      googleReviewUrl={(tenant as any)?.google_review_url || null}
+      googlePlaceId={(tenant as any)?.google_place_id || null}
+      tenantAddress={profile?.address || (tenant as any)?.address || null}
     />
   );
 }

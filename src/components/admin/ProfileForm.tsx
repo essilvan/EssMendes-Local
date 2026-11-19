@@ -292,6 +292,8 @@ interface ProfileFormProps {
     } | null;
     googleMapsUrl?: string;
     googleReviewUrl?: string;
+    serviceFeeEnabled?: boolean;
+    serviceFeePercent?: number;
     rating?: number;
     reviewCount?: number;
     slug: string;
@@ -343,6 +345,12 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
   const [googleInput, setGoogleInput] = useState(initialData.googleMapsUrl || "");
   const [googleReviewUrl, setGoogleReviewUrl] = useState(
     initialData.googleReviewUrl || ""
+  );
+  const [serviceFeeEnabled, setServiceFeeEnabled] = useState<boolean>(
+    Boolean(initialData.serviceFeeEnabled)
+  );
+  const [serviceFeePercent, setServiceFeePercent] = useState<number>(
+    initialData.serviceFeePercent ?? 10
   );
   const [isSyncingGoogle, startGoogleSync] = useTransition();
   const [googleSyncFeedback, setGoogleSyncFeedback] = useState<{
@@ -1191,6 +1199,57 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
               <p className="mt-1 text-[11px] text-slate-500">
                 Usado automaticamente na tela de confirmação da comanda do cliente e no disparo de avaliação pelo WhatsApp no monitor de pedidos.
               </p>
+            </div>
+
+            {/* Taxa de Serviço (Garçom - 10% Opcional) */}
+            <div className="sm:col-span-3 rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                    Taxa de Serviço (Garçom)
+                  </p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Exibe a taxa opcional no extrato da conta da mesa e pré-marca o cálculo no fechamento.
+                  </p>
+                </div>
+
+                <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="hidden"
+                    name="serviceFeeEnabled"
+                    value={serviceFeeEnabled ? "true" : "false"}
+                  />
+                  <input
+                    type="checkbox"
+                    checked={serviceFeeEnabled}
+                    onChange={(e) => setServiceFeeEnabled(e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                  />
+                  <span className="text-xs font-bold text-slate-800">
+                    Cobrar Taxa de Serviço (Garçom)
+                  </span>
+                </label>
+              </div>
+
+              <div className="max-w-xs">
+                <label
+                  htmlFor="serviceFeePercent"
+                  className="block text-[11px] font-semibold text-slate-700"
+                >
+                  Percentual da Taxa (%)
+                </label>
+                <input
+                  id="serviceFeePercent"
+                  name="serviceFeePercent"
+                  type="number"
+                  min={0}
+                  max={50}
+                  step={1}
+                  value={serviceFeePercent}
+                  onChange={(e) => setServiceFeePercent(Number(e.target.value))}
+                  className="mt-1 block w-full rounded-lg border border-slate-300 bg-white p-2 text-xs text-slate-900 focus:border-teal-600 focus:outline-none"
+                />
+              </div>
             </div>
 
             {/* Nota do Google */}

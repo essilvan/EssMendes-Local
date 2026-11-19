@@ -18,7 +18,7 @@ export default async function AdminPedidosPage() {
     getAdminOrdersDataAction(),
     supabase
       .from("tenants")
-      .select("name, google_review_url, google_place_id")
+      .select("name, google_review_url, google_place_id, service_fee_enabled, service_fee_percent")
       .eq("id", authContext.tenantId)
       .maybeSingle(),
     supabase
@@ -38,6 +38,8 @@ export default async function AdminPedidosPage() {
       googleReviewUrl={tenantRow?.google_review_url || null}
       googlePlaceId={tenantRow?.google_place_id || null}
       tenantAddress={profileRow?.address || null}
+      serviceFeeEnabled={Boolean(tenantRow?.service_fee_enabled)}
+      serviceFeePercent={Number(tenantRow?.service_fee_percent ?? 10)}
     />
   );
 }

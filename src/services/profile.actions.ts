@@ -32,6 +32,10 @@ export async function updateTenantProfileAction(
     themeNiche: formData.get("themeNiche")?.toString().trim() || "",
     businessAttributes: formData.get("businessAttributes")?.toString().trim() || "",
     coverImageUrl: formData.get("coverImageUrl")?.toString().trim() || "",
+    serviceFeeEnabled: formData.get("serviceFeeEnabled") === "true",
+    serviceFeePercent: formData.get("serviceFeePercent")
+      ? Number(formData.get("serviceFeePercent"))
+      : 10,
   };
 
   // 1. Validação com Zod
@@ -59,6 +63,8 @@ export async function updateTenantProfileAction(
     themeNiche,
     businessAttributes,
     coverImageUrl,
+    serviceFeeEnabled,
+    serviceFeePercent,
   } = validation.data;
 
   // 2. Obter tenant_id e usuário autenticado com tratamento de erros
@@ -125,6 +131,14 @@ export async function updateTenantProfileAction(
 
     if (googleReviewUrl !== undefined) {
       tenantUpdateData.google_review_url = googleReviewUrl || null;
+    }
+
+    if (serviceFeeEnabled !== undefined) {
+      tenantUpdateData.service_fee_enabled = Boolean(serviceFeeEnabled);
+    }
+
+    if (serviceFeePercent !== undefined && !isNaN(Number(serviceFeePercent))) {
+      tenantUpdateData.service_fee_percent = Number(serviceFeePercent);
     }
 
     const { error: tenantError } = await adminSupabase

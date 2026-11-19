@@ -151,6 +151,8 @@ export default async function PublicTableMenuPage({
           googleReviewUrl={(tenant as any)?.google_review_url || null}
           googlePlaceId={(tenant as any)?.google_place_id || profile?.google_place_id || null}
           tenantAddress={address}
+          serviceFeeEnabled={Boolean((tenant as any)?.service_fee_enabled)}
+          serviceFeePercent={Number((tenant as any)?.service_fee_percent ?? 10)}
         />
       </main>
     </div>

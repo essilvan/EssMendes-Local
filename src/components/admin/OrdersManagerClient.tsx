@@ -8,7 +8,14 @@ import {
   markOrderReviewSentAction,
   deleteRestaurantOrderAction,
   clearCanceledRestaurantOrdersAction,
+  closeRestaurantTabAction,
 } from "@/services/restaurant.actions";
+import {
+  groupOpenRestaurantTabs,
+  printOpenTabStatement80mm,
+  formatTabCurrency,
+  type OpenTableTab,
+} from "@/utils/restaurant-tabs";
 import type {
   RestaurantOrder,
   RestaurantOrderItem,
@@ -33,6 +40,7 @@ import {
   Star,
   Trash2,
   Printer,
+  Receipt,
 } from "lucide-react";
 
 interface OrdersManagerClientProps {
@@ -42,9 +50,17 @@ interface OrdersManagerClientProps {
   googleReviewUrl?: string | null;
   googlePlaceId?: string | null;
   tenantAddress?: string | null;
+  serviceFeeEnabled?: boolean;
+  serviceFeePercent?: number;
 }
 
-type OrderFilter = "all" | "pending" | "in_kitchen" | "delivered" | "canceled";
+type OrderFilter =
+  | "all"
+  | "open_tabs"
+  | "pending"
+  | "in_kitchen"
+  | "delivered"
+  | "canceled";
 
 function normalizeOrderClient(row: any): RestaurantOrder {
   let parsedItems: RestaurantOrderItem[] = [];
@@ -80,6 +96,11 @@ function normalizeOrderClient(row: any): RestaurantOrder {
     waiter_name: row.waiter_name || null,
     waiter_phone: row.waiter_phone || null,
     review_sent: Boolean(row.review_sent),
+    is_paid: Boolean(row.is_paid),
+    paid_at: row.paid_at || null,
+    is_individual_tab: Boolean(row.is_individual_tab),
+    service_fee_included: Boolean(row.service_fee_included),
+    service_fee_amount: Number(row.service_fee_amount || 0),
     created_at: row.created_at || new Date().toISOString(),
   };
 }
@@ -100,11 +121,24 @@ export function OrdersManagerClient({
   googleReviewUrl = null,
   googlePlaceId = null,
   tenantAddress = null,
+  serviceFeeEnabled = false,
+  serviceFeePercent = 10,
 }: OrdersManagerClientProps) {
   const [orders, setOrders] = useState<RestaurantOrder[]>(initialOrders);
   const [statusFilter, setStatusFilter] = useState<OrderFilter>("all");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [isClearingCanceled, setIsClearingCanceled] = useState(false);
+  const [closingTabKey, setClosingTabKey] = useState<string | null>(null);
+  const [tabFeeMap, setTabFeeMap] = useState<Record<string, boolean>>({});
+  const [recentlyClosedTab, setRecentlyClosedTab] = useState<{
+    title: string;
+    customerName: string;
+    customerPhone: string | null;
+    subtotal: number;
+    feeAmount: number;
+    finalTotal: number;
+    includeFee: boolean;
+  } | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [newOrderIds, setNewOrderIds] = useState<Set<string>>(new Set());
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
@@ -694,6 +728,110 @@ export function OrdersManagerClient({
       : `https://wa.me/?text=${encoded}`;
   };
 
+  const openTabs = groupOpenRestaurantTabs(orders);
+
+  const isTabFeeIncluded = (tabKey: string) =>
+    tabFeeMap[tabKey] !== undefined
+      ? tabFeeMap[tabKey]
+      : Boolean(serviceFeeEnabled);
+
+  const handleCloseTab = async (tab: OpenTableTab) => {
+    const includeFee = isTabFeeIncluded(tab.tabKey);
+    const feeAmount = includeFee
+      ? Number((tab.subtotal * (serviceFeePercent / 100)).toFixed(2))
+      : 0;
+    const finalTotal = Number((tab.subtotal + feeAmount).toFixed(2));
+
+    const confirmMsg = `Confirmar fechamento de "${tab.title}"?\nSubtotal: ${formatTabCurrency(
+      tab.subtotal
+    )}\nTaxa (${serviceFeePercent}%): ${
+      includeFee ? formatTabCurrency(feeAmount) : "Não cobrada"
+    }\nTotal a Receber: ${formatTabCurrency(finalTotal)}`;
+
+    if (!window.confirm(confirmMsg)) return;
+
+    setClosingTabKey(tab.tabKey);
+    try {
+      const res = await closeRestaurantTabAction({
+        orderIds: tab.orderIds,
+        serviceFeeIncluded: includeFee,
+        serviceFeePercent,
+      });
+
+      if (!res.success) {
+        alert(res.error || "Não foi possível fechar a conta.");
+        return;
+      }
+
+      const paidAt = new Date().toISOString();
+      const closedSet = new Set(tab.orderIds);
+      setOrders((prev) =>
+        prev.map((o) =>
+          closedSet.has(o.id)
+            ? {
+                ...o,
+                is_paid: true,
+                paid_at: paidAt,
+                service_fee_included: includeFee,
+                service_fee_amount: includeFee
+                  ? Number(
+                      (
+                        Number(o.total_amount || 0) *
+                        (serviceFeePercent / 100)
+                      ).toFixed(2)
+                    )
+                  : 0,
+              }
+            : o
+        )
+      );
+
+      setRecentlyClosedTab({
+        title: tab.title,
+        customerName: tab.customerName,
+        customerPhone: tab.customerPhone,
+        subtotal: tab.subtotal,
+        feeAmount,
+        finalTotal,
+        includeFee,
+      });
+    } finally {
+      setClosingTabKey(null);
+    }
+  };
+
+  const getClosedTabReceiptWhatsAppUrl = (closed: {
+    title: string;
+    customerName: string;
+    customerPhone: string | null;
+    subtotal: number;
+    feeAmount: number;
+    finalTotal: number;
+    includeFee: boolean;
+  }) => {
+    const rawDigits = String(closed.customerPhone || "").replace(/\D/g, "");
+    const cleanPhone =
+      rawDigits.startsWith("55") && rawDigits.length > 11
+        ? rawDigits.slice(2)
+        : rawDigits;
+    const googleReviewLink = resolveGoogleReviewLink();
+    const msg = [
+      `Olá ${closed.customerName}! Muito obrigado pela preferência hoje no *${tenantName}* 🙏🍻`,
+      `🧾 *Recibo - ${closed.title}*`,
+      `Subtotal: ${formatTabCurrency(closed.subtotal)}`,
+      closed.includeFee
+        ? `Taxa de Serviço (${serviceFeePercent}%): ${formatTabCurrency(closed.feeAmount)}`
+        : `Taxa de Serviço: Não cobrada`,
+      `*Total Pago: ${formatTabCurrency(closed.finalTotal)}*`,
+      ``,
+      `Esperamos que tenha gostado! Se puder nos dar uma força avaliando nosso atendimento com 5 estrelas no Google, leva só 10 segundos: ${googleReviewLink}`,
+    ].join("\n");
+
+    return cleanPhone
+      ? `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(msg)}`
+      : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+  };
+
   return (
     <div className="space-y-6 sm:space-y-8">
       {/* Cabeçalho + Controles de Tempo Real e Som */}
@@ -811,6 +949,22 @@ export function OrdersManagerClient({
 
         <button
           type="button"
+          onClick={() => setStatusFilter("open_tabs")}
+          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition cursor-pointer ${
+            statusFilter === "open_tabs"
+              ? "bg-teal-700 text-white shadow-xs"
+              : "text-slate-600 hover:bg-teal-50 hover:text-teal-800"
+          }`}
+        >
+          <Receipt className="h-3.5 w-3.5" />
+          <span>Mesas & Contas Abertas</span>
+          <span className="rounded-full bg-teal-100 text-teal-900 px-2 py-0.5 text-[10px]">
+            {openTabs.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => setStatusFilter("pending")}
           className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition cursor-pointer ${
             statusFilter === "pending"
@@ -876,6 +1030,39 @@ export function OrdersManagerClient({
         )}
       </div>
 
+      {/* Banner pós-fechamento de conta com Recibo & Avaliação Google */}
+      {recentlyClosedTab && (
+        <div className="rounded-2xl border border-emerald-300 bg-emerald-50 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+          <div className="space-y-0.5">
+            <p className="text-sm font-black text-emerald-900">
+              ✅ Conta fechada: {recentlyClosedTab.title} (
+              {formatTabCurrency(recentlyClosedTab.finalTotal)})
+            </p>
+            <p className="text-xs text-emerald-800">
+              Envie o recibo consolidado e peça a avaliação 5 estrelas no Google em 1 clique.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <a
+              href={getClosedTabReceiptWhatsAppUrl(recentlyClosedTab)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-4 py-2.5 text-xs font-extrabold text-white shadow-sm transition"
+            >
+              <Star className="h-4 w-4 fill-amber-300 text-amber-300" />
+              <span>Enviar Recibo & Pedir Avaliação Google ⭐</span>
+            </a>
+            <button
+              type="button"
+              onClick={() => setRecentlyClosedTab(null)}
+              className="rounded-xl border border-emerald-200 bg-white px-3 py-2.5 text-xs font-bold text-emerald-800 hover:bg-emerald-100 cursor-pointer"
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Ação de Limpeza em Massa na Aba Cancelados */}
       {statusFilter === "canceled" && canceledCount > 0 && (
         <div className="flex items-center justify-between rounded-2xl border border-red-200 bg-red-50/70 px-4 py-3">
@@ -899,6 +1086,170 @@ export function OrdersManagerClient({
         </div>
       )}
 
+      {/* Visão: Mesas & Contas Abertas */}
+      {statusFilter === "open_tabs" ? (
+        openTabs.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center space-y-2">
+            <Receipt className="mx-auto h-10 w-10 text-slate-300" />
+            <h3 className="text-base font-bold text-slate-800">
+              Nenhuma mesa ou comanda em aberto
+            </h3>
+            <p className="text-xs text-slate-500 max-w-md mx-auto">
+              Todos os pedidos ativos já foram pagos ou não há consumo aberto no momento.
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {openTabs.map((tab) => {
+              const includeFee = isTabFeeIncluded(tab.tabKey);
+              const feeAmount = includeFee
+                ? Number((tab.subtotal * (serviceFeePercent / 100)).toFixed(2))
+                : 0;
+              const finalTotal = Number((tab.subtotal + feeAmount).toFixed(2));
+              const isClosing = closingTabKey === tab.tabKey;
+
+              return (
+                <div
+                  key={tab.tabKey}
+                  className="rounded-2xl border border-teal-200 bg-white p-5 shadow-xs flex flex-col justify-between space-y-4"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3">
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span
+                            className={`rounded-xl px-3 py-1 text-xs font-black text-white ${
+                              tab.isIndividualTab
+                                ? "bg-indigo-600"
+                                : "bg-teal-700"
+                            }`}
+                          >
+                            {tab.title}
+                          </span>
+                          <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-bold text-slate-700">
+                            {tab.roundsCount}{" "}
+                            {tab.roundsCount === 1 ? "rodada" : "rodadas"}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+                          <User className="h-3.5 w-3.5 text-slate-400" />
+                          <span>
+                            Responsável:{" "}
+                            <strong className="text-slate-900">
+                              {tab.customerName}
+                            </strong>
+                          </span>
+                          {tab.customerPhone && (
+                            <span className="inline-flex items-center gap-1 font-semibold text-slate-600">
+                              • <Phone className="h-3 w-3 text-emerald-600" />
+                              {formatPhoneDisplay(tab.customerPhone)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Itens consolidados de todas as rodadas */}
+                    <div className="space-y-1.5">
+                      {tab.consolidatedItems.map((it) => (
+                        <div
+                          key={`${tab.tabKey}-${it.key}`}
+                          className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-xs sm:text-sm"
+                        >
+                          <span className="font-semibold text-slate-800">
+                            <strong className="text-teal-700 font-black">
+                              {it.quantity}x
+                            </strong>{" "}
+                            {it.name}
+                          </span>
+                          <span className="font-bold text-slate-700 shrink-0 ml-2">
+                            {formatTabCurrency(it.subtotal)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Subtotal + Checkbox Taxa de Serviço + Total Final */}
+                    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 space-y-2.5">
+                      <div className="flex items-center justify-between text-xs text-slate-600">
+                        <span>Subtotal dos Itens</span>
+                        <span className="font-bold text-slate-900">
+                          {formatTabCurrency(tab.subtotal)}
+                        </span>
+                      </div>
+
+                      <label className="flex items-center justify-between gap-2 text-xs text-slate-700 cursor-pointer select-none">
+                        <span className="inline-flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={includeFee}
+                            onChange={(e) =>
+                              setTabFeeMap((prev) => ({
+                                ...prev,
+                                [tab.tabKey]: e.target.checked,
+                              }))
+                            }
+                            className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                          />
+                          <span className="font-semibold">
+                            Incluir Taxa de Serviço ({serviceFeePercent}%)
+                          </span>
+                        </span>
+                        <span className="font-bold text-slate-800">
+                          {formatTabCurrency(feeAmount)}
+                        </span>
+                      </label>
+
+                      <div className="flex items-center justify-between border-t border-slate-200 pt-2">
+                        <span className="text-xs font-extrabold uppercase text-slate-700">
+                          Total Final a Receber
+                        </span>
+                        <span className="text-lg font-black text-emerald-700">
+                          {formatTabCurrency(finalTotal)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Ações: Imprimir Extrato 80mm + Fechar Conta & Receber */}
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-2 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        printOpenTabStatement80mm({
+                          tenantName,
+                          tab,
+                          includeServiceFee: includeFee,
+                          serviceFeePercent,
+                        })
+                      }
+                      className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-100 px-3.5 py-2.5 text-xs font-bold text-zinc-700 transition cursor-pointer"
+                    >
+                      <Printer className="h-4 w-4" />
+                      <span>Imprimir Extrato da Conta (80mm)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={isClosing}
+                      onClick={() => handleCloseTab(tab)}
+                      className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] px-4 py-2.5 text-xs sm:text-sm font-extrabold text-white shadow-sm transition cursor-pointer disabled:opacity-60"
+                    >
+                      {isClosing ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="h-4 w-4" />
+                      )}
+                      <span>Fechar Conta & Receber</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )
+      ) : (
+        <>
       {/* Lista de Pedidos */}
       {filteredOrders.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center space-y-2">
@@ -942,6 +1293,12 @@ export function OrdersManagerClient({
                           <span className="inline-flex items-center gap-1 rounded-full bg-rose-600 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-white animate-pulse shadow-sm">
                             <BellRing className="h-3 w-3" />
                             NOVO PEDIDO
+                          </span>
+                        )}
+
+                        {order.is_individual_tab && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 border border-indigo-200 px-2.5 py-0.5 text-[11px] font-bold text-indigo-800">
+                            Comanda Individual: {order.customer_name || "Cliente"}
                           </span>
                         )}
 
@@ -1162,6 +1519,8 @@ export function OrdersManagerClient({
             );
           })}
         </div>
+      )}
+        </>
       )}
     </div>
   );

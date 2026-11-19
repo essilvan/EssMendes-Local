@@ -175,6 +175,12 @@ export default async function ConfiguracoesPage() {
       (safeTenant.google_place_id
         ? `https://search.google.com/local/writereview?placeid=${safeTenant.google_place_id}`
         : ""),
+    serviceFeeEnabled: Boolean(safeTenant.service_fee_enabled),
+    serviceFeePercent:
+      safeTenant.service_fee_percent !== null &&
+      safeTenant.service_fee_percent !== undefined
+        ? Number(safeTenant.service_fee_percent)
+        : 10,
     rating: safeProfile.rating ? Number(safeProfile.rating) : 4.9,
     reviewCount: safeProfile.review_count ? Number(safeProfile.review_count) : 128,
     slug: safeTenant.slug || "",

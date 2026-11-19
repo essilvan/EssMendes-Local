@@ -102,6 +102,8 @@ export function PremiumTemplateView({
           googleReviewUrl={(tenant as any)?.google_review_url || null}
           googlePlaceId={(tenant as any)?.google_place_id || profile?.google_place_id || null}
           tenantAddress={profile?.address || (tenant as any)?.address || null}
+          serviceFeeEnabled={Boolean((tenant as any)?.service_fee_enabled)}
+          serviceFeePercent={Number((tenant as any)?.service_fee_percent ?? 10)}
         />
       ) : (
         <>

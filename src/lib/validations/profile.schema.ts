@@ -44,6 +44,8 @@ export const updateProfileSchema = z.object({
   themeNiche: z.string().optional().or(z.literal("")),
   businessAttributes: z.string().optional().or(z.literal("")),
   coverImageUrl: z.string().optional().or(z.literal("")),
+  serviceFeeEnabled: z.boolean().optional(),
+  serviceFeePercent: z.coerce.number().min(0).max(50).optional(),
 });
 
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;

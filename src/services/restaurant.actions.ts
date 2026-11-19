@@ -51,6 +51,7 @@ const createTableOrderSchema = z.object({
   table_number: z.string().min(1, "Mesa inválida."),
   customer_name: z.string().min(2, "Informe seu nome para identificar o pedido."),
   customer_phone: z.string().optional().nullable(),
+  is_individual_tab: z.boolean().optional().default(false),
   notes: z.string().optional().nullable(),
   items: z
     .array(
@@ -172,6 +173,11 @@ function normalizeOrder(row: any): RestaurantOrder {
     confirmed_at: row.confirmed_at || null,
     delivered_at: row.delivered_at || null,
     review_sent: Boolean(row.review_sent),
+    is_paid: Boolean(row.is_paid),
+    paid_at: row.paid_at || null,
+    is_individual_tab: Boolean(row.is_individual_tab),
+    service_fee_included: Boolean(row.service_fee_included),
+    service_fee_amount: Number(row.service_fee_amount || 0),
     created_at: row.created_at || new Date().toISOString(),
   };
 }
@@ -947,6 +953,179 @@ export async function clearCanceledRestaurantOrdersAction(): Promise<{
   }
 }
 
+export async function getPublicOpenTabOrdersAction(input: {
+  tenant_id: string;
+  table_number: string;
+  is_individual_tab?: boolean;
+  customer_phone?: string | null;
+}): Promise<{ success: boolean; data?: RestaurantOrder[]; error?: string }> {
+  try {
+    if (!input.tenant_id || !input.table_number) {
+      return { success: true, data: [] };
+    }
+
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from("restaurant_orders")
+      .select("*")
+      .eq("tenant_id", input.tenant_id)
+      .eq("is_paid", false)
+      .neq("status", "canceled")
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    const normTargetTable = String(input.table_number)
+      .trim()
+      .toLowerCase()
+      .replace(/^mesa\s*/i, "")
+      .replace(/^0+/, "");
+    const cleanPhone = String(input.customer_phone || "").replace(/\D/g, "");
+
+    const matched = (data || [])
+      .map(normalizeOrder)
+      .filter((order) => {
+        const normOrderTable = String(order.table_number || "")
+          .trim()
+          .toLowerCase()
+          .replace(/^mesa\s*/i, "")
+          .replace(/^0+/, "");
+        if (normOrderTable !== normTargetTable) return false;
+
+        if (input.is_individual_tab) {
+          if (!order.is_individual_tab) return false;
+          if (!cleanPhone) return false;
+          const orderPhone = String(order.customer_phone || "").replace(/\D/g, "");
+          return orderPhone === cleanPhone;
+        }
+
+        // Conta Única da Mesa: soma apenas pedidos da conta geral da mesa
+        return !order.is_individual_tab;
+      });
+
+    return { success: true, data: matched };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || "Erro ao consultar conta aberta.",
+    };
+  }
+}
+
+export async function closeRestaurantTabAction(input: {
+  orderIds: string[];
+  serviceFeeIncluded: boolean;
+  serviceFeePercent: number;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!Array.isArray(input.orderIds) || input.orderIds.length === 0) {
+      return { success: false, error: "Nenhum pedido selecionado para fechamento." };
+    }
+
+    const { data: authContext, error: authError } = await getAuthenticatedTenant();
+    if (authError || !authContext) {
+      return { success: false, error: authError || "Não autenticado." };
+    }
+
+    const supabase = createAdminClient();
+    const { data: rows, error: fetchError } = await supabase
+      .from("restaurant_orders")
+      .select("id, total_amount")
+      .eq("tenant_id", authContext.tenantId)
+      .in("id", input.orderIds);
+
+    if (fetchError) {
+      return { success: false, error: fetchError.message };
+    }
+
+    const paidAt = new Date().toISOString();
+    const pct = Number(input.serviceFeePercent || 0);
+
+    await Promise.all(
+      (rows || []).map((row: any) => {
+        const base = Number(row.total_amount || 0);
+        const feeAmount = input.serviceFeeIncluded
+          ? Number((base * (pct / 100)).toFixed(2))
+          : 0;
+        return supabase
+          .from("restaurant_orders")
+          .update({
+            is_paid: true,
+            paid_at: paidAt,
+            service_fee_included: Boolean(input.serviceFeeIncluded),
+            service_fee_amount: feeAmount,
+          })
+          .eq("id", row.id)
+          .eq("tenant_id", authContext.tenantId);
+      })
+    );
+
+    revalidatePath("/admin/pedidos");
+    return { success: true };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || "Erro ao fechar conta da mesa.",
+    };
+  }
+}
+
+export async function closeWaiterTabAction(input: {
+  tenantId: string;
+  orderIds: string[];
+  serviceFeeIncluded: boolean;
+  serviceFeePercent: number;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!input.tenantId || !Array.isArray(input.orderIds) || input.orderIds.length === 0) {
+      return { success: false, error: "Dados inválidos para fechamento da conta." };
+    }
+
+    const supabase = createAdminClient();
+    const { data: rows, error: fetchError } = await supabase
+      .from("restaurant_orders")
+      .select("id, total_amount")
+      .eq("tenant_id", input.tenantId)
+      .in("id", input.orderIds);
+
+    if (fetchError) {
+      return { success: false, error: fetchError.message };
+    }
+
+    const paidAt = new Date().toISOString();
+    const pct = Number(input.serviceFeePercent || 0);
+
+    await Promise.all(
+      (rows || []).map((row: any) => {
+        const base = Number(row.total_amount || 0);
+        const feeAmount = input.serviceFeeIncluded
+          ? Number((base * (pct / 100)).toFixed(2))
+          : 0;
+        return supabase
+          .from("restaurant_orders")
+          .update({
+            is_paid: true,
+            paid_at: paidAt,
+            service_fee_included: Boolean(input.serviceFeeIncluded),
+            service_fee_amount: feeAmount,
+          })
+          .eq("id", row.id)
+          .eq("tenant_id", input.tenantId);
+      })
+    );
+
+    revalidatePath("/admin/pedidos");
+    return { success: true };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || "Erro ao fechar conta da mesa.",
+    };
+  }
+}
+
 // ============================================================================
 // 4. AÇÕES PÚBLICAS (VITRINE & QR CODE DA MESA /[slug]/mesa/[tableNumber])
 // ============================================================================
@@ -1008,8 +1187,15 @@ export async function createPublicTableOrderAction(
       };
     }
 
-    const { tenant_id, table_number, customer_name, customer_phone, notes, items } =
-      parsed.data;
+    const {
+      tenant_id,
+      table_number,
+      customer_name,
+      customer_phone,
+      is_individual_tab,
+      notes,
+      items,
+    } = parsed.data;
 
     const supabase = createAdminClient();
 
@@ -1083,6 +1269,8 @@ export async function createPublicTableOrderAction(
       customer_name: customer_name.trim(),
       client_name: customer_name.trim(),
       customer_phone: customer_phone ? customer_phone.replace(/\D/g, "") : null,
+      is_individual_tab: Boolean(is_individual_tab),
+      is_paid: false,
       items,
       notes: notes?.trim() || null,
       observations: notes?.trim() || null,

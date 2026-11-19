@@ -2,9 +2,12 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { createPublicTableOrderAction } from "@/services/restaurant.actions";
+import {
+  createPublicTableOrderAction,
+  getPublicOpenTabOrdersAction,
+} from "@/services/restaurant.actions";
 import { generateWhatsAppUrl } from "@/utils/phone";
-import type { MenuCategory, MenuItem } from "@/types";
+import type { MenuCategory, MenuItem, RestaurantOrder } from "@/types";
 import {
   Utensils,
   Beer,
@@ -24,6 +27,7 @@ import {
   Loader2,
   UserCheck,
   QrCode,
+  Receipt,
 } from "lucide-react";
 
 interface PublicRestaurantMenuSectionProps {
@@ -39,6 +43,8 @@ interface PublicRestaurantMenuSectionProps {
   googleReviewUrl?: string | null;
   googlePlaceId?: string | null;
   tenantAddress?: string | null;
+  serviceFeeEnabled?: boolean;
+  serviceFeePercent?: number;
 }
 
 function formatWhatsAppMask(value: string): string {
@@ -148,20 +154,24 @@ export function PublicRestaurantMenuSection({
   googleReviewUrl = null,
   googlePlaceId = null,
   tenantAddress = null,
+  serviceFeeEnabled = false,
+  serviceFeePercent = 10,
 }: PublicRestaurantMenuSectionProps) {
   const [activeTab, setActiveTab] = useState<string>("Todos");
   const [cart, setCart] = useState<Record<string, CartItem>>({});
   const [isOrderDrawerOpen, setIsOrderDrawerOpen] = useState(false);
+  const [isBillDrawerOpen, setIsBillDrawerOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [manualTableNumber, setManualTableNumber] = useState(
     tableNumber || "01"
+  );
+  const [isIndividualTab, setIsIndividualTab] = useState(false);
+  const [openTabOrders, setOpenTabOrders] = useState<RestaurantOrder[]>([]);
+  const [customerIncludeFee, setCustomerIncludeFee] = useState<boolean>(
+    Boolean(serviceFeeEnabled)
   );
   const [orderNotes, setOrderNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -169,6 +179,63 @@ export function PublicRestaurantMenuSection({
   const [submittedWhatsappUrl, setSubmittedWhatsappUrl] = useState<string | null>(
     null
   );
+
+  const sessionStorageKey = `essmendes_tab_${tenantId}`;
+
+  const fetchOpenTabOrders = async (opts?: {
+    table?: string;
+    individual?: boolean;
+    phone?: string;
+  }) => {
+    const effectiveTbl = (
+      opts?.table ??
+      tableNumber ??
+      manualTableNumber ??
+      ""
+    ).trim();
+    if (!effectiveTbl) return;
+    const ind = opts?.individual ?? isIndividualTab;
+    const phone = opts?.phone ?? customerPhone;
+
+    const res = await getPublicOpenTabOrdersAction({
+      tenant_id: tenantId,
+      table_number: effectiveTbl,
+      is_individual_tab: ind,
+      customer_phone: phone,
+    });
+    if (res.success && Array.isArray(res.data)) {
+      setOpenTabOrders(res.data);
+    }
+  };
+
+  useEffect(() => {
+    setIsMounted(true);
+    try {
+      const savedRaw = localStorage.getItem(sessionStorageKey);
+      if (savedRaw) {
+        const parsed = JSON.parse(savedRaw);
+        if (parsed?.customerName) setCustomerName(String(parsed.customerName));
+        if (parsed?.customerPhone) setCustomerPhone(String(parsed.customerPhone));
+        if (!tableNumber && parsed?.tableNumber) {
+          setManualTableNumber(String(parsed.tableNumber));
+        }
+        const savedInd = Boolean(parsed?.isIndividualTab);
+        setIsIndividualTab(savedInd);
+        fetchOpenTabOrders({
+          table: tableNumber || parsed?.tableNumber || "01",
+          individual: savedInd,
+          phone: parsed?.customerPhone || "",
+        });
+        return;
+      }
+    } catch {
+      // ignora erro de localStorage
+    }
+    if (tableNumber) {
+      fetchOpenTabOrders({ table: tableNumber, individual: false, phone: "" });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenantId, tableNumber]);
 
   const safeCategories = Array.isArray(categories) ? categories : [];
   const safeItems = Array.isArray(items) ? items : [];
@@ -223,7 +290,10 @@ export function PublicRestaurantMenuSection({
   useEffect(() => {
     window.dispatchEvent(
       new CustomEvent("essmendes:cart-change", {
-        detail: { count: totalItemsCount, isOpen: isOrderDrawerOpen },
+        detail: {
+          count: totalItemsCount,
+          isOpen: isOrderDrawerOpen || isBillDrawerOpen,
+        },
       })
     );
     return () => {
@@ -233,7 +303,7 @@ export function PublicRestaurantMenuSection({
         })
       );
     };
-  }, [totalItemsCount, isOrderDrawerOpen]);
+  }, [totalItemsCount, isOrderDrawerOpen, isBillDrawerOpen]);
 
   const handleAddItem = (item: MenuItem) => {
     setSubmittedWhatsappUrl(null);
@@ -292,6 +362,21 @@ export function PublicRestaurantMenuSection({
 
     setIsSubmitting(true);
 
+    // Persiste dados do cliente na sessão (localStorage) para próximas rodadas
+    try {
+      localStorage.setItem(
+        sessionStorageKey,
+        JSON.stringify({
+          customerName: customerName.trim(),
+          customerPhone: customerPhone.trim(),
+          tableNumber: effectiveTable,
+          isIndividualTab,
+        })
+      );
+    } catch {
+      // ignora erro de localStorage
+    }
+
     const buildContingencyWhatsAppUrl = () => {
       const rawDigits = String(restaurantPhone || "").replace(/\D/g, "");
       const targetPhone =
@@ -313,7 +398,7 @@ export function PublicRestaurantMenuSection({
 
       const contingencyMessage = [
         `⚠️ *PEDIDO ENVIADO VIA CONTINGÊNCIA*`,
-        `🔔 *Novo Pedido - Mesa ${effectiveTable}*`,
+        `🔔 *Novo Pedido - Mesa ${effectiveTable}*${isIndividualTab ? " (Comanda Individual)" : ""}`,
         `Cliente: ${customerName.trim()}`,
         `WhatsApp: ${customerPhone.trim()}`,
         `Itens:`,
@@ -336,6 +421,7 @@ export function PublicRestaurantMenuSection({
         table_number: effectiveTable,
         customer_name: customerName.trim(),
         customer_phone: cleanPhoneDigits,
+        is_individual_tab: isIndividualTab,
         notes: orderNotes.trim() || null,
         items: cartEntries.map((entry) => ({
           id: entry.item.id,
@@ -357,6 +443,11 @@ export function PublicRestaurantMenuSection({
         setSubmittedWhatsappUrl(res.data.whatsappUrl);
         setCart({});
         window.open(res.data.whatsappUrl, "_blank");
+        fetchOpenTabOrders({
+          table: effectiveTable,
+          individual: isIndividualTab,
+          phone: cleanPhoneDigits,
+        });
       } else {
         throw new Error(res.error || "Falha ao registrar pedido no servidor.");
       }
@@ -596,6 +687,195 @@ export function PublicRestaurantMenuSection({
         )}
       </div>
 
+      {/* Botão Flutuante Discreto no Topo: "Minha Conta: R$ XX,XX" */}
+      {isMounted &&
+        openTabOrders.length > 0 &&
+        !isOrderDrawerOpen &&
+        !isBillDrawerOpen &&
+        createPortal(
+          <button
+            type="button"
+            onClick={() => {
+              fetchOpenTabOrders();
+              setIsBillDrawerOpen(true);
+            }}
+            className="fixed top-16 right-4 z-40 inline-flex items-center gap-2 rounded-full border border-amber-500/50 bg-zinc-950/95 px-4 py-2 text-xs font-extrabold text-amber-400 shadow-xl backdrop-blur-md hover:bg-zinc-900 transition active:scale-95 cursor-pointer"
+          >
+            <Receipt className="h-3.5 w-3.5 text-amber-400" />
+            <span>
+              Minha Conta:{" "}
+              {formatCurrency(
+                openTabOrders.reduce(
+                  (sum, o) => sum + Number(o.total_amount || 0),
+                  0
+                )
+              )}
+            </span>
+          </button>,
+          document.body
+        )}
+
+      {/* Drawer / Modal "Minha Conta / Consumo da Mesa" */}
+      {isMounted &&
+        isBillDrawerOpen &&
+        createPortal(
+          (() => {
+            const billSubtotal = openTabOrders.reduce(
+              (sum, o) => sum + Number(o.total_amount || 0),
+              0
+            );
+            const effectivePct = Number(serviceFeePercent ?? 10);
+            const billFee = customerIncludeFee
+              ? Number((billSubtotal * (effectivePct / 100)).toFixed(2))
+              : 0;
+            const billTotal = Number((billSubtotal + billFee).toFixed(2));
+            const effectiveTbl = (
+              tableNumber ||
+              manualTableNumber ||
+              "Balcão"
+            ).trim();
+            const rawDigits = String(restaurantPhone || "").replace(/\D/g, "");
+            const targetPhone =
+              rawDigits.startsWith("55") && rawDigits.length > 11
+                ? rawDigits.slice(2)
+                : rawDigits;
+            const billMsg = [
+              `🧾 *Solicitação de Conta - Mesa ${effectiveTbl}*`,
+              isIndividualTab
+                ? `Tipo: Comanda Individual (${customerName || "Cliente"})`
+                : `Tipo: Conta Geral da Mesa`,
+              `Subtotal: ${formatCurrency(billSubtotal)}`,
+              `Taxa de Serviço (${effectivePct}%): ${
+                customerIncludeFee ? formatCurrency(billFee) : "Opcional (sem taxa)"
+              }`,
+              `*Total Estimado: ${formatCurrency(billTotal)}*`,
+              `Por favor, pode trazer a conta?`,
+            ].join("\n");
+            const billWhatsAppUrl = targetPhone
+              ? `https://wa.me/55${targetPhone}?text=${encodeURIComponent(billMsg)}`
+              : `https://wa.me/?text=${encodeURIComponent(billMsg)}`;
+
+            return (
+              <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/80 p-0 sm:p-4 backdrop-blur-xs">
+                <div className="w-full max-w-lg rounded-t-3xl sm:rounded-2xl bg-zinc-900 border border-zinc-800 p-6 pb-24 sm:pb-6 text-zinc-100 shadow-2xl space-y-5 max-h-[90dvh] overflow-y-auto animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-150">
+                  <div className="flex items-center justify-between border-b border-zinc-800 pb-3.5">
+                    <div>
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 border border-amber-500/30 px-2.5 py-0.5 text-[10px] font-bold uppercase text-amber-400">
+                        <Receipt className="h-3 w-3" />
+                        {isIndividualTab
+                          ? `Comanda Individual • Mesa ${effectiveTbl}`
+                          : `Consumo da Mesa ${effectiveTbl}`}
+                      </span>
+                      <h3 className="text-lg font-black text-zinc-100 mt-1">
+                        Minha Conta / Extrato Aberto
+                      </h3>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsBillDrawerOpen(false)}
+                      className="rounded-xl p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 cursor-pointer"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+
+                  {/* Rodadas já pedidas */}
+                  <div className="space-y-3">
+                    {openTabOrders.map((ord, idx) => (
+                      <div
+                        key={ord.id}
+                        className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-3.5 space-y-2"
+                      >
+                        <div className="flex items-center justify-between text-[11px] font-bold text-zinc-400 border-b border-zinc-800/80 pb-1.5">
+                          <span>
+                            Rodada #{idx + 1} •{" "}
+                            {new Date(ord.created_at).toLocaleTimeString(
+                              "pt-BR",
+                              { hour: "2-digit", minute: "2-digit" }
+                            )}
+                          </span>
+                          <span className="text-amber-400">
+                            {formatCurrency(ord.total_amount)}
+                          </span>
+                        </div>
+                        <div className="space-y-1">
+                          {(ord.items || []).map((it, iIdx) => (
+                            <div
+                              key={`${ord.id}-${iIdx}`}
+                              className="flex items-center justify-between text-xs text-zinc-200"
+                            >
+                              <span>
+                                <strong className="text-amber-400">
+                                  {it.quantity}x
+                                </strong>{" "}
+                                {it.name}
+                              </span>
+                              <span className="text-zinc-400">
+                                {formatCurrency(
+                                  Number(it.price) * Number(it.quantity)
+                                )}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Resumo financeiro com simulação da taxa de serviço */}
+                  <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4 space-y-3">
+                    <div className="flex items-center justify-between text-xs text-zinc-300">
+                      <span>Subtotal dos Itens</span>
+                      <span className="font-bold">
+                        {formatCurrency(billSubtotal)}
+                      </span>
+                    </div>
+
+                    <label className="flex items-center justify-between gap-2 text-xs text-zinc-300 cursor-pointer select-none">
+                      <span className="inline-flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={customerIncludeFee}
+                          onChange={(e) =>
+                            setCustomerIncludeFee(e.target.checked)
+                          }
+                          className="h-4 w-4 rounded border-zinc-600 bg-zinc-900 text-amber-500 focus:ring-amber-500"
+                        />
+                        <span>
+                          Taxa do Garçom ({effectivePct}% - Opcional)
+                        </span>
+                      </span>
+                      <span className="font-bold text-zinc-200">
+                        {formatCurrency(billFee)}
+                      </span>
+                    </label>
+
+                    <div className="flex items-center justify-between border-t border-zinc-800 pt-2.5">
+                      <span className="text-xs font-bold uppercase text-zinc-400">
+                        Total Geral
+                      </span>
+                      <span className="text-xl font-black text-amber-400">
+                        {formatCurrency(billTotal)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <a
+                    href={billWhatsAppUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 px-5 py-3.5 text-sm font-black text-white shadow-lg transition"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    <span>Chamar Garçom / Pedir a Conta</span>
+                  </a>
+                </div>
+              </div>
+            );
+          })(),
+          document.body
+        )}
+
       {/* Barra Flutuante Inferior com Resumo da Comanda e Botão "Ver Pedido" */}
       {isMounted &&
         totalItemsCount > 0 &&
@@ -797,6 +1077,44 @@ export function PublicRestaurantMenuSection({
                       />
                     </div>
                   )}
+                </div>
+
+                {/* Tipo de Comanda: Conta Única da Mesa vs Comanda Individual */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-zinc-300">
+                    Tipo de Comanda
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsIndividualTab(false)}
+                      className={`rounded-xl border px-3 py-2.5 text-left text-xs font-bold transition cursor-pointer ${
+                        !isIndividualTab
+                          ? "border-amber-500 bg-amber-500/15 text-amber-300"
+                          : "border-zinc-700 bg-zinc-950 text-zinc-400 hover:border-zinc-600"
+                      }`}
+                    >
+                      <span className="block">Conta Única da Mesa</span>
+                      <span className="block text-[10px] font-normal text-zinc-400 mt-0.5">
+                        Soma todos os pedidos da mesa juntos
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsIndividualTab(true)}
+                      className={`rounded-xl border px-3 py-2.5 text-left text-xs font-bold transition cursor-pointer ${
+                        isIndividualTab
+                          ? "border-amber-500 bg-amber-500/15 text-amber-300"
+                          : "border-zinc-700 bg-zinc-950 text-zinc-400 hover:border-zinc-600"
+                      }`}
+                    >
+                      <span className="block">Comanda Individual</span>
+                      <span className="block text-[10px] font-normal text-zinc-400 mt-0.5">
+                        Separar só os meus pedidos
+                      </span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="space-y-1">

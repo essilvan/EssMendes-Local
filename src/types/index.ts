@@ -543,5 +543,10 @@ export interface RestaurantOrder {
   confirmed_at?: string | null;
   delivered_at?: string | null;
   review_sent?: boolean;
+  is_paid?: boolean;
+  paid_at?: string | null;
+  is_individual_tab?: boolean;
+  service_fee_included?: boolean;
+  service_fee_amount?: number;
   created_at: string;
 }
