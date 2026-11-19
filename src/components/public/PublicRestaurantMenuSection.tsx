@@ -270,8 +270,46 @@ export function PublicRestaurantMenuSection({
     }
 
     setIsSubmitting(true);
+
+    const buildContingencyWhatsAppUrl = () => {
+      const rawDigits = String(restaurantPhone || "").replace(/\D/g, "");
+      const targetPhone =
+        rawDigits.startsWith("55") && rawDigits.length > 11
+          ? rawDigits.slice(2)
+          : rawDigits;
+
+      const itemLines = cartEntries
+        .map((entry) => {
+          const lineSubtotal = (Number(entry.item.price) * entry.quantity)
+            .toFixed(2)
+            .replace(".", ",");
+          return `- ${entry.quantity}x ${entry.item.name} (R$ ${lineSubtotal})`;
+        })
+        .join("\n");
+
+      const formattedTotal = totalOrderAmount.toFixed(2).replace(".", ",");
+      const obsText = orderNotes.trim() ? orderNotes.trim() : "Nenhuma";
+
+      const contingencyMessage = [
+        `⚠️ *PEDIDO ENVIADO VIA CONTINGÊNCIA*`,
+        `🔔 *Novo Pedido - Mesa ${effectiveTable}*`,
+        `Cliente: ${customerName.trim()}`,
+        `WhatsApp: ${customerPhone.trim()}`,
+        `Itens:`,
+        itemLines,
+        `Obs: ${obsText}`,
+        `Total: R$ ${formattedTotal}`,
+      ].join("\n");
+
+      const encodedText = encodeURIComponent(contingencyMessage);
+      return targetPhone
+        ? `https://wa.me/55${targetPhone}?text=${encodedText}`
+        : `https://wa.me/?text=${encodedText}`;
+    };
+
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
     try {
-      const res = await createPublicTableOrderAction({
+      const orderPromise = createPublicTableOrderAction({
         tenant_id: tenantId,
         tenant_slug: tenantSlug,
         table_number: effectiveTable,
@@ -286,16 +324,28 @@ export function PublicRestaurantMenuSection({
         })),
       });
 
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error("TIMEOUT_5S"));
+        }, 5000);
+      });
+
+      const res = await Promise.race([orderPromise, timeoutPromise]);
+
       if (res.success && res.data?.whatsappUrl) {
         setSubmittedWhatsappUrl(res.data.whatsappUrl);
         setCart({});
         window.open(res.data.whatsappUrl, "_blank");
       } else {
-        setErrorMsg(res.error || "Não foi possível registrar seu pedido.");
+        throw new Error(res.error || "Falha ao registrar pedido no servidor.");
       }
-    } catch (err: any) {
-      setErrorMsg(err?.message || "Erro ao enviar pedido.");
+    } catch {
+      const contingencyUrl = buildContingencyWhatsAppUrl();
+      setSubmittedWhatsappUrl(contingencyUrl);
+      setCart({});
+      window.open(contingencyUrl, "_blank");
     } finally {
+      if (timeoutId) clearTimeout(timeoutId);
       setIsSubmitting(false);
     }
   };
