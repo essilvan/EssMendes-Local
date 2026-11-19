@@ -32,6 +32,7 @@ import {
   Phone,
   Star,
   Trash2,
+  Printer,
 } from "lucide-react";
 
 interface OrdersManagerClientProps {
@@ -493,6 +494,171 @@ export function OrdersManagerClient({
     } finally {
       setIsClearingCanceled(false);
     }
+  };
+
+  const handlePrintOrder = (order: RestaurantOrder) => {
+    const printWindow = window.open("", "_blank", "width=350,height=600");
+    if (!printWindow) {
+      alert("Permita pop-ups no navegador para imprimir a comanda.");
+      return;
+    }
+
+    const escapeHtml = (val: string) =>
+      String(val || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+
+    const rawTable = String(order.table_number || "").trim();
+    const lowerTable = rawTable.toLowerCase();
+    const tableTitle =
+      !rawTable ||
+      rawTable === "0" ||
+      lowerTable === "balcão" ||
+      lowerTable === "balcao" ||
+      lowerTable === "retirada" ||
+      lowerTable === "vitrine" ||
+      lowerTable === "delivery"
+        ? "BALCÃO / DELIVERY"
+        : `MESA ${rawTable}`;
+
+    const formattedDate = new Date(order.created_at).toLocaleString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    const itemsHtml = (order.items || [])
+      .map((it) => {
+        const subtotal = (Number(it.price || 0) * Number(it.quantity || 1))
+          .toFixed(2)
+          .replace(".", ",");
+        const itemNotesHtml = it.notes
+          ? `<div class="item-note">  * ${escapeHtml(it.notes)}</div>`
+          : "";
+        return `
+          <div class="item-row">
+            <span class="item-name">${it.quantity}x ${escapeHtml(it.name)}</span>
+            <span class="item-price">R$ ${subtotal}</span>
+          </div>
+          ${itemNotesHtml}
+        `;
+      })
+      .join("");
+
+    const totalFormatted = Number(order.total_amount || 0)
+      .toFixed(2)
+      .replace(".", ",");
+
+    const phoneHtml = order.customer_phone
+      ? `<div>Tel: ${escapeHtml(formatPhoneDisplay(order.customer_phone))}</div>`
+      : "";
+
+    const notesHtml = order.notes
+      ? `<div class="obs-box"><strong>OBS:</strong> ${escapeHtml(order.notes)}</div>`
+      : "";
+
+    const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Comanda - ${escapeHtml(tableTitle)}</title>
+  <style>
+    @page { size: 80mm auto; margin: 4mm; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Courier New', monospace;
+      width: 72mm;
+      margin: 0 auto;
+      padding: 4px 0;
+      color: #000;
+      background: #fff;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+    .center { text-align: center; }
+    .restaurant-name { font-size: 15px; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; }
+    .date-line { font-size: 11px; margin-bottom: 8px; }
+    .table-box {
+      border: 1px solid #000;
+      padding: 6px;
+      margin: 6px 0;
+      text-align: center;
+    }
+    .table-title { font-size: 16px; font-weight: bold; letter-spacing: 0.5px; }
+    .customer-info { margin-top: 4px; font-size: 12px; text-align: left; }
+    .divider { margin: 8px 0; text-align: center; font-size: 11px; letter-spacing: -0.5px; }
+    .item-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; margin-bottom: 4px; }
+    .item-name { flex: 1; font-weight: bold; word-break: break-word; }
+    .item-price { white-space: nowrap; font-weight: bold; }
+    .item-note { font-size: 11px; margin: -2px 0 4px 6px; }
+    .obs-box {
+      border: 1px dashed #000;
+      padding: 5px;
+      margin: 8px 0;
+      font-size: 12px;
+      word-break: break-word;
+    }
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 16px;
+      font-weight: bold;
+      margin: 6px 0;
+    }
+    .footer {
+      margin-top: 12px;
+      text-align: center;
+      font-size: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="center">
+    <div class="restaurant-name">${escapeHtml(tenantName)}</div>
+    <div class="date-line">${escapeHtml(formattedDate)}</div>
+  </div>
+
+  <div class="table-box">
+    <div class="table-title">${escapeHtml(tableTitle)}</div>
+    <div class="customer-info">
+      <div><strong>Cliente:</strong> ${escapeHtml(order.customer_name || "Cliente na Mesa")}</div>
+      ${phoneHtml}
+    </div>
+  </div>
+
+  <div class="divider">--------------------------------</div>
+
+  <div>
+    ${itemsHtml}
+  </div>
+
+  ${notesHtml}
+
+  <div class="divider">--------------------------------</div>
+
+  <div class="total-row">
+    <span>TOTAL:</span>
+    <span>R$ ${totalFormatted}</span>
+  </div>
+
+  <div class="footer">EssMendes Local</div>
+
+  <script>
+    window.onload = function() {
+      window.print();
+      window.close();
+    };
+  </script>
+</body>
+</html>`;
+
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
   };
 
   const getWaiterWhatsAppUrl = (order: RestaurantOrder) => {
@@ -964,6 +1130,16 @@ export function OrdersManagerClient({
                         <MessageCircle className="h-3.5 w-3.5 text-emerald-600" />
                         <span>WhatsApp Garçom</span>
                       </a>
+
+                      <button
+                        type="button"
+                        onClick={() => handlePrintOrder(order)}
+                        title="Imprimir Comanda (80mm)"
+                        aria-label="Imprimir Comanda (80mm)"
+                        className="p-2 rounded-lg text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 border border-zinc-200 transition-colors cursor-pointer"
+                      >
+                        <Printer className="h-4 w-4" />
+                      </button>
 
                       <button
                         type="button"
