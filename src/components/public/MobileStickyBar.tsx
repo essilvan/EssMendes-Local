@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { MessageCircle, Calendar, MapPin, Phone } from "lucide-react";
 import { generateWhatsAppUrl, sanitizePhoneNumber } from "@/utils/phone";
 import { recordAnalyticsEvent } from "@/actions/analytics";
@@ -39,6 +39,19 @@ export function MobileStickyBar({
   ctaText,
   onOpenBooking,
 }: MobileStickyBarProps) {
+  const [isCartOpen, setIsCartOpen] = useState(false);
+
+  useEffect(() => {
+    const handleCartChange = (event: Event) => {
+      const customEvent = event as CustomEvent<{ isOpen?: boolean }>;
+      setIsCartOpen(Boolean(customEvent.detail?.isOpen));
+    };
+    window.addEventListener("essmendes:cart-change", handleCartChange);
+    return () => {
+      window.removeEventListener("essmendes:cart-change", handleCartChange);
+    };
+  }, []);
+
   const cleanPhone = phoneWhatsapp ? sanitizePhoneNumber(phoneWhatsapp) : "";
   const whatsappUrl = generateWhatsAppUrl(phoneWhatsapp || "", tenantName);
   const hasCoords = typeof latitude === "number" && typeof longitude === "number";
@@ -68,7 +81,11 @@ export function MobileStickyBar({
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 p-3 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md border-t border-zinc-200/50 dark:border-white/10 z-40 md:hidden shadow-[0_-8px_30px_rgba(0,0,0,0.08)]">
+    <div
+      className={`fixed bottom-0 left-0 right-0 p-3 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md border-t border-zinc-200/50 dark:border-white/10 z-30 md:hidden shadow-[0_-8px_30px_rgba(0,0,0,0.08)] ${
+        isCartOpen ? "hidden" : ""
+      }`}
+    >
       <div className="flex items-center gap-2 max-w-lg mx-auto">
         {/* Botão de Atalho Rápido: Localização */}
         <a

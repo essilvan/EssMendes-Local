@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { createPublicTableOrderAction } from "@/services/restaurant.actions";
 import { generateWhatsAppUrl } from "@/utils/phone";
 import type { MenuCategory, MenuItem } from "@/types";
@@ -151,6 +152,11 @@ export function PublicRestaurantMenuSection({
   const [activeTab, setActiveTab] = useState<string>("Todos");
   const [cart, setCart] = useState<Record<string, CartItem>>({});
   const [isOrderDrawerOpen, setIsOrderDrawerOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -217,17 +223,17 @@ export function PublicRestaurantMenuSection({
   useEffect(() => {
     window.dispatchEvent(
       new CustomEvent("essmendes:cart-change", {
-        detail: { count: totalItemsCount },
+        detail: { count: totalItemsCount, isOpen: isOrderDrawerOpen },
       })
     );
     return () => {
       window.dispatchEvent(
         new CustomEvent("essmendes:cart-change", {
-          detail: { count: 0 },
+          detail: { count: 0, isOpen: false },
         })
       );
     };
-  }, [totalItemsCount]);
+  }, [totalItemsCount, isOrderDrawerOpen]);
 
   const handleAddItem = (item: MenuItem) => {
     setSubmittedWhatsappUrl(null);
@@ -591,45 +597,51 @@ export function PublicRestaurantMenuSection({
       </div>
 
       {/* Barra Flutuante Inferior com Resumo da Comanda e Botão "Ver Pedido" */}
-      {totalItemsCount > 0 && (
-        <div
-          className={`fixed ${
-            tableNumber ? "bottom-4 sm:bottom-6" : "bottom-20 sm:bottom-6"
-          } left-4 right-4 z-50 mx-auto max-w-2xl animate-in slide-in-from-bottom-4`}
-        >
-          <div className="flex items-center justify-between gap-4 rounded-2xl border border-amber-500/40 bg-zinc-950/95 p-4 text-zinc-100 shadow-2xl backdrop-blur-md">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500 font-black text-zinc-950 shadow-inner">
-                {totalItemsCount}
+      {isMounted &&
+        totalItemsCount > 0 &&
+        !isOrderDrawerOpen &&
+        createPortal(
+          <div
+            className={`fixed ${
+              tableNumber ? "bottom-4 sm:bottom-6" : "bottom-20 sm:bottom-6"
+            } left-4 right-4 z-50 mx-auto max-w-2xl animate-in slide-in-from-bottom-4`}
+          >
+            <div className="flex items-center justify-between gap-4 rounded-2xl border border-amber-500/40 bg-zinc-950/95 p-4 text-zinc-100 shadow-2xl backdrop-blur-md">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500 font-black text-zinc-950 shadow-inner">
+                  {totalItemsCount}
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-zinc-400">
+                    {displayTableLabel
+                      ? `Comanda da ${displayTableLabel}`
+                      : "Resumo da sua Comanda"}
+                  </p>
+                  <p className="text-base sm:text-lg text-amber-400 font-extrabold">
+                    Total: {formatCurrency(totalOrderAmount)}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs font-semibold text-zinc-400">
-                  {displayTableLabel
-                    ? `Comanda da ${displayTableLabel}`
-                    : "Resumo da sua Comanda"}
-                </p>
-                <p className="text-base sm:text-lg text-amber-400 font-extrabold">
-                  Total: {formatCurrency(totalOrderAmount)}
-                </p>
-              </div>
-            </div>
 
-            <button
-              type="button"
-              onClick={() => setIsOrderDrawerOpen(true)}
-              className="inline-flex items-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold px-5 py-3 text-xs sm:text-sm shadow-lg shadow-amber-500/20 transition active:scale-95 cursor-pointer shrink-0"
-            >
-              <ShoppingBag className="h-4 w-4" />
-              <span>Ver Pedido</span>
-            </button>
-          </div>
-        </div>
-      )}
+              <button
+                type="button"
+                onClick={() => setIsOrderDrawerOpen(true)}
+                className="inline-flex items-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold px-5 py-3 text-xs sm:text-sm shadow-lg shadow-amber-500/20 transition active:scale-95 cursor-pointer shrink-0"
+              >
+                <ShoppingBag className="h-4 w-4" />
+                <span>Ver Pedido</span>
+              </button>
+            </div>
+          </div>,
+          document.body
+        )}
 
       {/* Modal / Drawer de Finalização da Comanda e Envio para o Garçom */}
-      {isOrderDrawerOpen && (
-        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/80 p-0 sm:p-4 backdrop-blur-xs">
-          <div className="w-full max-w-lg rounded-t-3xl sm:rounded-2xl bg-zinc-900 border border-zinc-800 p-6 text-zinc-100 shadow-2xl space-y-5 max-h-[90dvh] overflow-y-auto animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-150">
+      {isMounted &&
+        isOrderDrawerOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/80 p-0 sm:p-4 backdrop-blur-xs">
+            <div className="w-full max-w-lg rounded-t-3xl sm:rounded-2xl bg-zinc-900 border border-zinc-800 p-6 pb-24 sm:pb-6 text-zinc-100 shadow-2xl space-y-5 max-h-[90dvh] overflow-y-auto animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-zinc-800 pb-3.5">
               <div>
                 <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 border border-amber-500/30 px-2.5 py-0.5 text-[10px] font-bold uppercase text-amber-400">
@@ -832,8 +844,9 @@ export function PublicRestaurantMenuSection({
               </form>
             )}
           </div>
-        </div>
-      )}
+        </div>,
+          document.body
+        )}
     </section>
   );
 }
