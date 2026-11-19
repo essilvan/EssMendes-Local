@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { MessageCircle } from "lucide-react";
 import { sanitizePhoneNumber } from "@/utils/phone";
 import { recordAnalyticsEvent } from "@/actions/analytics";
@@ -18,6 +18,19 @@ export function WhatsAppFloatingButton({
   phoneWhatsapp,
   customMessage,
 }: WhatsAppFloatingButtonProps) {
+  const [hasCartItems, setHasCartItems] = useState(false);
+
+  useEffect(() => {
+    const handleCartChange = (event: Event) => {
+      const customEvent = event as CustomEvent<{ count?: number }>;
+      setHasCartItems(Number(customEvent.detail?.count || 0) > 0);
+    };
+    window.addEventListener("essmendes:cart-change", handleCartChange);
+    return () => {
+      window.removeEventListener("essmendes:cart-change", handleCartChange);
+    };
+  }, []);
+
   if (!phoneWhatsapp) return null;
 
   const cleanPhone = sanitizePhoneNumber(phoneWhatsapp);
@@ -37,7 +50,9 @@ export function WhatsAppFloatingButton({
   return (
     <aside
       aria-label="Atendimento via WhatsApp"
-      className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-50 flex items-center"
+      className={`fixed bottom-20 right-4 md:bottom-6 md:right-6 z-40 items-center ${
+        hasCartItems ? "hidden md:flex" : "flex"
+      }`}
     >
       <a
         href={whatsappUrl}

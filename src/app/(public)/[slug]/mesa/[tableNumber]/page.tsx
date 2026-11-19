@@ -91,7 +91,7 @@ export default async function PublicTableMenuPage({
   const address = profile?.address || (tenant as any)?.address || null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#18181b] via-[#121215] to-[#0d0d0f] text-zinc-100 dark pb-28 overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-b from-[#18181b] via-[#121215] to-[#0d0d0f] text-zinc-100 dark pb-32 overflow-x-hidden">
       {/* Topo da Vitrine / Cardápio da Mesa */}
       <header className="sticky top-0 z-40 border-b border-zinc-800/80 bg-zinc-950/90 backdrop-blur-md shadow-xl">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3.5 sm:px-6">

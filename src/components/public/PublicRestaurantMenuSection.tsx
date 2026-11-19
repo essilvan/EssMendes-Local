@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { createPublicTableOrderAction } from "@/services/restaurant.actions";
 import { generateWhatsAppUrl } from "@/utils/phone";
 import type { MenuCategory, MenuItem } from "@/types";
@@ -213,6 +213,21 @@ export function PublicRestaurantMenuSection({
     (sum, c) => sum + Number(c.item.price) * c.quantity,
     0
   );
+
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent("essmendes:cart-change", {
+        detail: { count: totalItemsCount },
+      })
+    );
+    return () => {
+      window.dispatchEvent(
+        new CustomEvent("essmendes:cart-change", {
+          detail: { count: 0 },
+        })
+      );
+    };
+  }, [totalItemsCount]);
 
   const handleAddItem = (item: MenuItem) => {
     setSubmittedWhatsappUrl(null);
@@ -577,7 +592,11 @@ export function PublicRestaurantMenuSection({
 
       {/* Barra Flutuante Inferior com Resumo da Comanda e Botão "Ver Pedido" */}
       {totalItemsCount > 0 && (
-        <div className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-2xl animate-in slide-in-from-bottom-4">
+        <div
+          className={`fixed ${
+            tableNumber ? "bottom-4 sm:bottom-6" : "bottom-20 sm:bottom-6"
+          } left-4 right-4 z-50 mx-auto max-w-2xl animate-in slide-in-from-bottom-4`}
+        >
           <div className="flex items-center justify-between gap-4 rounded-2xl border border-amber-500/40 bg-zinc-950/95 p-4 text-zinc-100 shadow-2xl backdrop-blur-md">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500 font-black text-zinc-950 shadow-inner">
@@ -609,8 +628,8 @@ export function PublicRestaurantMenuSection({
 
       {/* Modal / Drawer de Finalização da Comanda e Envio para o Garçom */}
       {isOrderDrawerOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 p-0 sm:p-4 backdrop-blur-xs">
-          <div className="w-full max-w-lg rounded-t-3xl sm:rounded-2xl bg-zinc-900 border border-zinc-800 p-6 text-zinc-100 shadow-2xl space-y-5 max-h-[92vh] overflow-y-auto animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/80 p-0 sm:p-4 backdrop-blur-xs">
+          <div className="w-full max-w-lg rounded-t-3xl sm:rounded-2xl bg-zinc-900 border border-zinc-800 p-6 text-zinc-100 shadow-2xl space-y-5 max-h-[90dvh] overflow-y-auto animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-zinc-800 pb-3.5">
               <div>
                 <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 border border-amber-500/30 px-2.5 py-0.5 text-[10px] font-bold uppercase text-amber-400">

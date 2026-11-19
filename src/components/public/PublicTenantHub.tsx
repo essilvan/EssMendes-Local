@@ -390,7 +390,7 @@ export function PublicTenantHub({
       <main
         className={`relative z-10 mx-auto w-full overflow-x-hidden px-4 sm:px-6 lg:px-8 ${
           isRestaurant
-            ? "max-w-5xl py-4 sm:py-8"
+            ? "max-w-5xl py-4 sm:py-8 pb-32"
             : "max-w-7xl py-8 sm:py-14 md:py-16"
         }`}
       >
