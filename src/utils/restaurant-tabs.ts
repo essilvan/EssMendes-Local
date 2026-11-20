@@ -158,6 +158,64 @@ export function formatTabCurrency(val: number): string {
   return `R$ ${Number(val || 0).toFixed(2).replace(".", ",")}`;
 }
 
+export function printHtmlReceipt(htmlContent: string): void {
+  if (typeof window === "undefined" || typeof document === "undefined") return;
+
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  iframe.style.visibility = "hidden";
+  iframe.setAttribute("aria-hidden", "true");
+
+  document.body.appendChild(iframe);
+
+  let cleanedUp = false;
+  const cleanup = () => {
+    if (cleanedUp) return;
+    cleanedUp = true;
+    try {
+      if (iframe.parentNode) {
+        iframe.parentNode.removeChild(iframe);
+      }
+    } catch {
+      // ignora se já removido
+    }
+  };
+
+  const fallbackTimer = window.setTimeout(cleanup, 60000);
+
+  const iframeWin = iframe.contentWindow;
+  const iframeDoc = iframeWin?.document;
+  if (!iframeWin || !iframeDoc) {
+    window.clearTimeout(fallbackTimer);
+    cleanup();
+    return;
+  }
+
+  iframeDoc.open();
+  iframeDoc.write(htmlContent);
+  iframeDoc.close();
+
+  iframeWin.onafterprint = () => {
+    window.clearTimeout(fallbackTimer);
+    cleanup();
+  };
+
+  window.setTimeout(() => {
+    try {
+      iframeWin.focus();
+      iframeWin.print();
+    } catch {
+      window.clearTimeout(fallbackTimer);
+      cleanup();
+    }
+  }, 250);
+}
+
 export function printOpenTabStatement80mm(params: {
   tenantName: string;
   tab: OpenTableTab;
@@ -165,11 +223,6 @@ export function printOpenTabStatement80mm(params: {
   serviceFeePercent: number;
 }) {
   const { tenantName, tab, includeServiceFee, serviceFeePercent } = params;
-  const printWindow = window.open("", "_blank", "width=350,height=650");
-  if (!printWindow) {
-    alert("Permita pop-ups no navegador para imprimir o extrato da conta.");
-    return;
-  }
 
   const escapeHtml = (val: string) =>
     String(val || "")
@@ -291,18 +344,9 @@ export function printOpenTabStatement80mm(params: {
     Obrigado pela preferência!<br/>
     EssMendes Local
   </div>
-
-  <script>
-    window.onload = function() {
-      window.print();
-      window.close();
-    };
-  </script>
 </body>
 </html>`;
 
-  printWindow.document.open();
-  printWindow.document.write(html);
-  printWindow.document.close();
+  printHtmlReceipt(html);
 }
 

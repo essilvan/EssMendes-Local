@@ -127,7 +127,7 @@ export default async function AdminDashboardPage({
           isSubscriptionExpired = true;
         }
       }
-    } catch {}
+    } catch { }
   }
   if (subscriptionStatus === "overdue" || subscriptionStatus === "expired") {
     isSubscriptionExpired = true;
@@ -387,13 +387,12 @@ export default async function AdminDashboardPage({
                   <div className="text-right space-y-0.5">
                     <p className="font-bold text-slate-800">{formatDate(app.start_time)}</p>
                     <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                        app.status === "confirmed"
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${app.status === "confirmed"
                           ? "bg-emerald-50 text-emerald-700"
                           : app.status === "pending"
-                          ? "bg-amber-50 text-amber-700"
-                          : "bg-slate-100 text-slate-600"
-                      }`}
+                            ? "bg-amber-50 text-amber-700"
+                            : "bg-slate-100 text-slate-600"
+                        }`}
                     >
                       {app.status}
                     </span>

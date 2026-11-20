@@ -13,6 +13,7 @@ import {
 import {
   groupOpenRestaurantTabs,
   printOpenTabStatement80mm,
+  printHtmlReceipt,
   formatTabCurrency,
   type OpenTableTab,
 } from "@/utils/restaurant-tabs";
@@ -531,12 +532,6 @@ export function OrdersManagerClient({
   };
 
   const handlePrintOrder = (order: RestaurantOrder) => {
-    const printWindow = window.open("", "_blank", "width=350,height=600");
-    if (!printWindow) {
-      alert("Permita pop-ups no navegador para imprimir a comanda.");
-      return;
-    }
-
     const escapeHtml = (val: string) =>
       String(val || "")
         .replace(/&/g, "&amp;")
@@ -680,19 +675,10 @@ export function OrdersManagerClient({
   </div>
 
   <div class="footer">EssMendes Local</div>
-
-  <script>
-    window.onload = function() {
-      window.print();
-      window.close();
-    };
-  </script>
 </body>
 </html>`;
 
-    printWindow.document.open();
-    printWindow.document.write(html);
-    printWindow.document.close();
+    printHtmlReceipt(html);
   };
 
   const getWaiterWhatsAppUrl = (order: RestaurantOrder) => {
