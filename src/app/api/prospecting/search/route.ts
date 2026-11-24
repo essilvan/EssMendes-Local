@@ -11,8 +11,19 @@ interface NormalizedPlaceLead {
   total_reviews: number;
 }
 
+const CITY_OR_UF_REGEX =
+  /\b(df|sp|rj|mg|go|ba|pr|rs|sc|pe|ce|pa|am|ma|es|pb|rn|al|pi|mt|ms|se|ro|to|ac|ap|rr|bras[ií]lia|taguatinga|ceil[aâ]ndia|samambaia|[aá]guas claras|guará|guara|gama|sobradinho|planaltina|vicente pires|recanto das emas|riacho fundo|santa maria|asa sul|asa norte|sudoeste|noroeste|lago sul|lago norte|valpara[ií]so|luz[iâ]nia|goi[aâ]nia|s[aã]o paulo|rio de janeiro|belo horizonte|curitiba|salvador|fortaleza|recife|porto alegre)\b/i;
+
+function enrichLocalQuery(rawQuery: string): string {
+  const trimmed = rawQuery.trim();
+  if (CITY_OR_UF_REGEX.test(trimmed)) {
+    return trimmed;
+  }
+  return `${trimmed} Taguatinga DF`;
+}
+
 async function searchPlacesNewApi(
-  query: string,
+  finalQuery: string,
   apiKey: string
 ): Promise<NormalizedPlaceLead[]> {
   const res = await fetch("https://places.googleapis.com/v1/places:searchText", {
@@ -24,17 +35,28 @@ async function searchPlacesNewApi(
         "places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.internationalPhoneNumber,places.rating,places.userRatingCount",
     },
     body: JSON.stringify({
-      textQuery: query,
+      textQuery: finalQuery,
       languageCode: "pt-BR",
       maxResultCount: 20,
+      locationBias: {
+        circle: {
+          center: { latitude: -15.836, longitude: -48.056 },
+          radius: 30000.0,
+        },
+      },
     }),
   });
 
+  const data = await res.json().catch(() => null);
+
   if (!res.ok) {
-    throw new Error(`Places API (New) HTTP ${res.status}`);
+    const googleMsg =
+      data?.error?.message ||
+      data?.error?.status ||
+      `HTTP ${res.status}`;
+    throw new Error(`Places API (New): ${googleMsg}`);
   }
 
-  const data = await res.json();
   const places: any[] = Array.isArray(data?.places) ? data.places : [];
 
   return places
@@ -56,16 +78,33 @@ async function searchPlacesNewApi(
 }
 
 async function searchPlacesLegacyApi(
-  query: string,
+  finalQuery: string,
   apiKey: string
 ): Promise<NormalizedPlaceLead[]> {
   const searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(
-    query
+    finalQuery
   )}&language=pt-BR&key=${encodeURIComponent(apiKey)}`;
   const searchRes = await fetch(searchUrl);
-  const searchJson = await searchRes.json();
-  const results: any[] = Array.isArray(searchJson?.results)
-    ? searchJson.results.slice(0, 15)
+  const searchJson = await searchRes.json().catch(() => null);
+
+  if (!searchRes.ok || !searchJson) {
+    throw new Error(`Places Legacy API HTTP ${searchRes.status}`);
+  }
+
+  if (
+    searchJson.status &&
+    searchJson.status !== "OK" &&
+    searchJson.status !== "ZERO_RESULTS"
+  ) {
+    throw new Error(
+      `Places Legacy API (${searchJson.status}): ${
+        searchJson.error_message || "Falha ao consultar Google Places."
+      }`
+    );
+  }
+
+  const results: any[] = Array.isArray(searchJson.results)
+    ? searchJson.results.slice(0, 20)
     : [];
 
   const detailed = await Promise.all(
@@ -78,7 +117,7 @@ async function searchPlacesLegacyApi(
       )}`;
       try {
         const dRes = await fetch(detailsUrl);
-        const dJson = await dRes.json();
+        const dJson = await dRes.json().catch(() => null);
         const p = dJson?.result;
         if (!p) return null;
         const phone = String(
@@ -124,9 +163,9 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const query = typeof body?.query === "string" ? body.query.trim() : "";
+    const rawQuery = typeof body?.query === "string" ? body.query.trim() : "";
 
-    if (!query || query.length < 3) {
+    if (!rawQuery || rawQuery.length < 3) {
       return NextResponse.json(
         {
           success: false,
@@ -136,25 +175,37 @@ export async function POST(request: Request) {
       );
     }
 
-    const apiKey =
-      process.env.GOOGLE_PLACES_API_KEY ||
-      process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ||
-      "";
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY?.trim() || "";
     if (!apiKey) {
       return NextResponse.json(
         {
           success: false,
-          error: "Variável GOOGLE_PLACES_API_KEY não configurada no servidor.",
+          error: "Variável GOOGLE_PLACES_API_KEY não configurada na Vercel.",
         },
-        { status: 500 }
+        { status: 400 }
       );
     }
 
+    const finalQuery = enrichLocalQuery(rawQuery);
     let foundPlaces: NormalizedPlaceLead[] = [];
+    let newApiErrorMsg: string | null = null;
+
     try {
-      foundPlaces = await searchPlacesNewApi(query, apiKey);
-    } catch {
-      foundPlaces = await searchPlacesLegacyApi(query, apiKey);
+      foundPlaces = await searchPlacesNewApi(finalQuery, apiKey);
+    } catch (newErr: any) {
+      newApiErrorMsg = newErr?.message || "Erro na Places API (New)";
+      try {
+        foundPlaces = await searchPlacesLegacyApi(finalQuery, apiKey);
+      } catch (legacyErr: any) {
+        const legacyMsg = legacyErr?.message || "Erro na Places API Clássica";
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Erro na API do Google Places. ${newApiErrorMsg} | Fallback: ${legacyMsg}`,
+          },
+          { status: 502 }
+        );
+      }
     }
 
     const supabase = createAdminClient();
@@ -162,10 +213,19 @@ export async function POST(request: Request) {
 
     const existingMap = new Map<string, any>();
     if (placeIds.length > 0) {
-      const { data: existingRows } = await supabase
+      const { data: existingRows, error: existingErr } = await supabase
         .from("prospecting_leads")
         .select("*")
         .in("place_id", placeIds);
+      if (existingErr) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Erro ao consultar Supabase (prospecting_leads): ${existingErr.message}`,
+          },
+          { status: 500 }
+        );
+      }
       (existingRows || []).forEach((row: any) => {
         if (row?.place_id) existingMap.set(row.place_id, row);
       });
@@ -173,11 +233,12 @@ export async function POST(request: Request) {
 
     let importedCount = 0;
     let updatedCount = 0;
+    let dbErrorMsg: string | null = null;
 
     for (const lead of foundPlaces) {
       const existing = existingMap.get(lead.place_id);
       if (existing) {
-        await supabase
+        const { error: updErr } = await supabase
           .from("prospecting_leads")
           .update({
             business_name: lead.business_name,
@@ -187,7 +248,11 @@ export async function POST(request: Request) {
             total_reviews: lead.total_reviews,
           })
           .eq("id", existing.id);
-        updatedCount++;
+        if (updErr) {
+          dbErrorMsg = updErr.message;
+        } else {
+          updatedCount++;
+        }
       } else {
         const { error: insErr } = await supabase
           .from("prospecting_leads")
@@ -201,18 +266,43 @@ export async function POST(request: Request) {
             status: "new",
             chat_history: [],
           });
-        if (!insErr) importedCount++;
+        if (insErr) {
+          dbErrorMsg = insErr.message;
+        } else {
+          importedCount++;
+        }
       }
     }
 
-    const { data: allLeads } = await supabase
+    if (dbErrorMsg && importedCount === 0 && updatedCount === 0 && foundPlaces.length > 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Erro ao salvar leads no Supabase: ${dbErrorMsg}`,
+        },
+        { status: 500 }
+      );
+    }
+
+    const { data: allLeads, error: listErr } = await supabase
       .from("prospecting_leads")
       .select("*")
       .order("created_at", { ascending: false })
       .limit(100);
 
+    if (listErr) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Erro ao listar leads no Supabase: ${listErr.message}`,
+        },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
+      queryUsed: finalQuery,
       foundCount: foundPlaces.length,
       importedCount,
       updatedCount,
