@@ -70,7 +70,8 @@ export default async function AdminLayout({
     // 1. Bloqueio de rotas globais exclusivas do Super Admin
     if (
       currentPath.startsWith("/admin/integracoes") ||
-      currentPath.startsWith("/admin/faturamento")
+      currentPath.startsWith("/admin/faturamento") ||
+      currentPath.startsWith("/admin/prospeccao")
     ) {
       redirect("/admin/dashboard?error=recurso_indisponivel");
     }

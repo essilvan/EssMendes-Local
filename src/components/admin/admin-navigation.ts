@@ -19,6 +19,7 @@ import {
   UtensilsCrossed,
   QrCode,
   ClipboardList,
+  Rocket,
 } from "lucide-react";
 import type { TenantPermissions } from "@/types";
 
@@ -33,7 +34,11 @@ export interface AdminNavItem {
   name: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
-  key: keyof TenantPermissions | "super_admin_tenants" | "public_site";
+  key:
+    | keyof TenantPermissions
+    | "super_admin_tenants"
+    | "super_admin_prospecting"
+    | "public_site";
   block: NavBlockType;
   superAdminOnly?: boolean;
   external?: boolean;
@@ -204,6 +209,14 @@ export const ADMIN_NAV_MODULES: AdminNavItem[] = [
  * Oculto completamente para tenant_owner, tenant_admin e staff.
  */
 export const SUPER_ADMIN_NAV_MODULES: AdminNavItem[] = [
+  {
+    name: "Prospecção IA",
+    href: "/admin/prospeccao",
+    icon: Rocket,
+    key: "super_admin_prospecting",
+    block: "super_admin",
+    superAdminOnly: true,
+  },
   {
     name: "Gestão de Tenants",
     href: "/super-admin",
