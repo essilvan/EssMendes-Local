@@ -2,6 +2,10 @@
 
 import React, { useState } from "react";
 import {
+  detectProspectingNiche,
+  type ProspectingNicheKey,
+} from "@/utils/prospecting-niche";
+import {
   Search,
   Star,
   MapPin,
@@ -27,6 +31,10 @@ export interface ProspectingLead {
   address: string | null;
   website?: string | null;
   region?: string | null;
+  photo_url?: string | null;
+  place_types?: string[] | null;
+  primary_type?: string | null;
+  detected_niche?: string | null;
   rating: number | null;
   total_reviews: number | null;
   demo_slug: string | null;
@@ -61,6 +69,29 @@ const STATUS_META: Record<string, { label: string; badgeClass: string }> = {
   closed: {
     label: "Fechado",
     badgeClass: "bg-emerald-100 text-emerald-800 border-emerald-300",
+  },
+};
+
+const NICHE_LABELS: Record<ProspectingNicheKey, { label: string; cls: string }> = {
+  petshop: {
+    label: "Pet Shop & Vet",
+    cls: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  },
+  restaurant: {
+    label: "Bar & Restaurante",
+    cls: "bg-amber-50 text-amber-800 border-amber-200",
+  },
+  bakery: {
+    label: "Confeitaria & Padaria",
+    cls: "bg-rose-50 text-rose-700 border-rose-200",
+  },
+  automotive: {
+    label: "Automotivo",
+    cls: "bg-blue-50 text-blue-700 border-blue-200",
+  },
+  services: {
+    label: "Negócio Local",
+    cls: "bg-indigo-50 text-indigo-700 border-indigo-200",
   },
 };
 
@@ -178,6 +209,7 @@ export function ProspectingManagerClient({
             ? {
                 ...l,
                 demo_slug: json.demoSlug,
+                detected_niche: json.niche || l.detected_niche,
                 status:
                   !l.status || l.status === "new" ? "demo_created" : l.status,
               }
@@ -186,7 +218,7 @@ export function ProspectingManagerClient({
       );
       setFeedback({
         type: "success",
-        text: `Prévia criada para "${lead.business_name}": https://${json.demoSlug}.essmendes.com.br/mesa/01`,
+        text: `Prévia (${json.nicheLabel || "Personalizada"}) criada para "${lead.business_name}": https://${json.demoSlug}.essmendes.com.br`,
       });
     } catch (err: any) {
       setFeedback({
@@ -302,9 +334,20 @@ export function ProspectingManagerClient({
 
   const handleCopyQuickReply = async (lead: ProspectingLead) => {
     const demoUrl = lead.demo_slug
-      ? `https://${lead.demo_slug}.essmendes.com.br/mesa/01`
+      ? `https://${lead.demo_slug}.essmendes.com.br`
       : "https://app.essmendes.com.br";
-    const quickReply = `Funciona assim: o cliente escaneia o QR Code na mesa, escolhe os itens (pode somar na conta única da mesa ou em comanda individual) e o pedido cai na hora no monitor da cozinha com alerta sonoro e no WhatsApp do garçom — sem precisar gastar com impressora! No fechamento já calcula os 10% opcionais e envia o link de avaliação 5 estrelas no Google. O Plano Piloto sai por apenas R$ 89,90/mês com o cadastro completo do cardápio do ${lead.business_name} já incluso. Dá uma olhada na prévia: ${demoUrl}`;
+    const nicheKey: ProspectingNicheKey =
+      (lead.detected_niche as ProspectingNicheKey) ||
+      detectProspectingNiche(
+        lead.business_name,
+        lead.place_types,
+        lead.primary_type
+      );
+
+    const quickReply =
+      nicheKey === "restaurant"
+        ? `Funciona assim: o cliente escaneia o QR Code na mesa, escolhe os itens (conta única da mesa ou comanda individual) e o pedido cai na hora no monitor da cozinha com alerta sonoro e no WhatsApp do garçom — sem precisar gastar com impressora! No fechamento já calcula os 10% opcionais e envia o link de avaliação 5 estrelas no Google. O Plano Piloto sai por apenas R$ 89,90/mês com o cadastro completo do cardápio do ${lead.business_name} já incluso. Dá uma olhada na prévia: ${demoUrl}`
+        : `Funciona assim: nós criamos a vitrine profissional do ${lead.business_name} otimizada para o Google com fotos reais, catálogo de serviços/produtos, avaliações 5 estrelas e botão direto de agendamento/orçamento no seu WhatsApp — tudo pronto sem precisar de site caro! O Plano Piloto sai por apenas R$ 89,90/mês com a montagem completa inclusa. Dá uma olhada na prévia que fizemos para vocês: ${demoUrl}`;
 
     try {
       await navigator.clipboard.writeText(quickReply);
@@ -347,7 +390,7 @@ export function ProspectingManagerClient({
       const stKey = lead.status || "new";
       const region = lead.region || inferRegionFromAddress(lead.address);
       const demoUrl = lead.demo_slug
-        ? `https://${lead.demo_slug}.essmendes.com.br/mesa/01`
+        ? `https://${lead.demo_slug}.essmendes.com.br`
         : "";
       return [
         escapeCsv(lead.business_name),
@@ -519,8 +562,16 @@ export function ProspectingManagerClient({
                   const stKey = lead.status || "new";
                   const stMeta = STATUS_META[stKey] || STATUS_META.new;
                   const demoUrl = lead.demo_slug
-                    ? `https://${lead.demo_slug}.essmendes.com.br/mesa/01`
+                    ? `https://${lead.demo_slug}.essmendes.com.br`
                     : null;
+                  const nicheKey: ProspectingNicheKey =
+                    (lead.detected_niche as ProspectingNicheKey) ||
+                    detectProspectingNiche(
+                      lead.business_name,
+                      lead.place_types,
+                      lead.primary_type
+                    );
+                  const nicheMeta = NICHE_LABELS[nicheKey] || NICHE_LABELS.services;
                   const regionLabel =
                     lead.region || inferRegionFromAddress(lead.address);
 
@@ -534,6 +585,13 @@ export function ProspectingManagerClient({
                         <p className="text-sm font-extrabold text-slate-900 leading-snug">
                           {lead.business_name}
                         </p>
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                          <span
+                            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold ${nicheMeta.cls}`}
+                          >
+                            {nicheMeta.label}
+                          </span>
+                        </div>
                         <div className="mt-1 flex items-center gap-1.5 text-xs font-bold text-amber-600">
                           <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-500 shrink-0" />
                           <span>

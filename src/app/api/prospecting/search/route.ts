@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAuthenticatedTenant } from "@/lib/supabase/tenant";
+import { detectProspectingNiche } from "@/utils/prospecting-niche";
 
 interface NormalizedPlaceLead {
   place_id: string;
@@ -9,6 +10,10 @@ interface NormalizedPlaceLead {
   address: string | null;
   website: string | null;
   region: string | null;
+  photo_url: string | null;
+  place_types: string[];
+  primary_type: string | null;
+  detected_niche: string;
   rating: number | null;
   total_reviews: number;
 }
@@ -40,7 +45,8 @@ function extractRegionFromComponentsOrAddress(
       const found = components.find(
         (c: any) => Array.isArray(c?.types) && c.types.includes(targetType)
       );
-      const name = found?.longText || found?.long_name || found?.shortText || found?.short_name;
+      const name =
+        found?.longText || found?.long_name || found?.shortText || found?.short_name;
       if (name && String(name).trim()) {
         return String(name).trim();
       }
@@ -54,9 +60,14 @@ function extractRegionFromComponentsOrAddress(
     if (knownMatch?.[1]) {
       return knownMatch[1];
     }
-    const parts = formattedAddress.split(",").map((s) => s.trim()).filter(Boolean);
+    const parts = formattedAddress
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
     if (parts.length >= 2) {
-      const candidate = parts[parts.length - 2].replace(/\s*-\s*[A-Z]{2}.*$/, "").trim();
+      const candidate = parts[parts.length - 2]
+        .replace(/\s*-\s*[A-Z]{2}.*$/, "")
+        .trim();
       if (candidate && candidate.length <= 40) return candidate;
     }
   }
@@ -74,7 +85,7 @@ async function searchPlacesNewApi(
       "Content-Type": "application/json",
       "X-Goog-Api-Key": apiKey,
       "X-Goog-FieldMask":
-        "places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.internationalPhoneNumber,places.rating,places.userRatingCount,places.websiteUri,places.addressComponents",
+        "places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.internationalPhoneNumber,places.rating,places.userRatingCount,places.websiteUri,places.addressComponents,places.photos,places.types,places.primaryTypeDisplayName",
     },
     body: JSON.stringify({
       textQuery: finalQuery,
@@ -93,9 +104,7 @@ async function searchPlacesNewApi(
 
   if (!res.ok) {
     const googleMsg =
-      data?.error?.message ||
-      data?.error?.status ||
-      `HTTP ${res.status}`;
+      data?.error?.message || data?.error?.status || `HTTP ${res.status}`;
     throw new Error(`Places API (New): ${googleMsg}`);
   }
 
@@ -106,14 +115,43 @@ async function searchPlacesNewApi(
       const phone = String(
         p.nationalPhoneNumber || p.internationalPhoneNumber || ""
       ).trim();
-      const address = p.formattedAddress ? String(p.formattedAddress).trim() : null;
+      const businessName = String(p.displayName?.text || "").trim();
+      const address = p.formattedAddress
+        ? String(p.formattedAddress).trim()
+        : null;
+      const firstPhotoName = p.photos?.[0]?.name
+        ? String(p.photos[0].name).trim()
+        : null;
+      const photoUrl = firstPhotoName
+        ? `https://places.googleapis.com/v1/${firstPhotoName}/media?maxWidthPx=1000&key=${encodeURIComponent(
+            apiKey
+          )}`
+        : null;
+      const placeTypes: string[] = Array.isArray(p.types)
+        ? p.types.filter((t: any) => typeof t === "string")
+        : [];
+      const primaryType = p.primaryTypeDisplayName?.text
+        ? String(p.primaryTypeDisplayName.text).trim()
+        : null;
+
       return {
         place_id: String(p.id || "").trim(),
-        business_name: String(p.displayName?.text || "").trim(),
+        business_name: businessName,
         phone,
         address,
         website: p.websiteUri ? String(p.websiteUri).trim() : null,
-        region: extractRegionFromComponentsOrAddress(p.addressComponents, address),
+        region: extractRegionFromComponentsOrAddress(
+          p.addressComponents,
+          address
+        ),
+        photo_url: photoUrl,
+        place_types: placeTypes,
+        primary_type: primaryType,
+        detected_niche: detectProspectingNiche(
+          businessName,
+          placeTypes,
+          primaryType
+        ),
         rating:
           p.rating !== undefined && p.rating !== null ? Number(p.rating) : null,
         total_reviews: Number(p.userRatingCount || 0),
@@ -157,7 +195,7 @@ async function searchPlacesLegacyApi(
       if (!r?.place_id) return null;
       const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(
         r.place_id
-      )}&fields=place_id,name,formatted_address,formatted_phone_number,international_phone_number,rating,user_ratings_total,website,address_components&language=pt-BR&key=${encodeURIComponent(
+      )}&fields=place_id,name,formatted_address,formatted_phone_number,international_phone_number,rating,user_ratings_total,website,address_components,photos,types&language=pt-BR&key=${encodeURIComponent(
         apiKey
       )}`;
       try {
@@ -169,14 +207,32 @@ async function searchPlacesLegacyApi(
           p.formatted_phone_number || p.international_phone_number || ""
         ).trim();
         if (!phone) return null;
+        const businessName = String(p.name || r.name || "").trim();
         const address = p.formatted_address || r.formatted_address || null;
+        const photoRef = p.photos?.[0]?.photo_reference || null;
+        const photoUrl = photoRef
+          ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=1000&photo_reference=${encodeURIComponent(
+              photoRef
+            )}&key=${encodeURIComponent(apiKey)}`
+          : null;
+        const placeTypes: string[] = Array.isArray(p.types)
+          ? p.types.filter((t: any) => typeof t === "string")
+          : [];
+
         return {
           place_id: String(p.place_id || r.place_id),
-          business_name: String(p.name || r.name || "").trim(),
+          business_name: businessName,
           phone,
           address,
           website: p.website ? String(p.website).trim() : null,
-          region: extractRegionFromComponentsOrAddress(p.address_components, address),
+          region: extractRegionFromComponentsOrAddress(
+            p.address_components,
+            address
+          ),
+          photo_url: photoUrl,
+          place_types: placeTypes,
+          primary_type: null,
+          detected_niche: detectProspectingNiche(businessName, placeTypes, null),
           rating:
             p.rating !== undefined && p.rating !== null
               ? Number(p.rating)
@@ -298,6 +354,10 @@ export async function POST(request: Request) {
         ...baseFields,
         website: lead.website,
         region: lead.region,
+        photo_url: lead.photo_url,
+        place_types: lead.place_types,
+        primary_type: lead.primary_type,
+        detected_niche: lead.detected_niche,
       };
 
       if (existing) {
@@ -306,7 +366,10 @@ export async function POST(request: Request) {
           .update(extendedFields)
           .eq("id", existing.id);
 
-        if (updErr && (updErr.code === "PGRST204" || /column/i.test(updErr.message))) {
+        if (
+          updErr &&
+          (updErr.code === "PGRST204" || /column/i.test(updErr.message))
+        ) {
           const retry = await supabase
             .from("prospecting_leads")
             .update(baseFields)
@@ -329,15 +392,16 @@ export async function POST(request: Request) {
             chat_history: [],
           });
 
-        if (insErr && (insErr.code === "PGRST204" || /column/i.test(insErr.message))) {
-          const retry = await supabase
-            .from("prospecting_leads")
-            .insert({
-              place_id: lead.place_id,
-              ...baseFields,
-              status: "new",
-              chat_history: [],
-            });
+        if (
+          insErr &&
+          (insErr.code === "PGRST204" || /column/i.test(insErr.message))
+        ) {
+          const retry = await supabase.from("prospecting_leads").insert({
+            place_id: lead.place_id,
+            ...baseFields,
+            status: "new",
+            chat_history: [],
+          });
           insErr = retry.error;
         }
 
@@ -349,7 +413,12 @@ export async function POST(request: Request) {
       }
     }
 
-    if (dbErrorMsg && importedCount === 0 && updatedCount === 0 && foundPlaces.length > 0) {
+    if (
+      dbErrorMsg &&
+      importedCount === 0 &&
+      updatedCount === 0 &&
+      foundPlaces.length > 0
+    ) {
       return NextResponse.json(
         {
           success: false,
@@ -375,9 +444,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // Garante que website/region recém-extraídos apareçam imediatamente mesmo se a migration ainda não foi rodada
     const enrichedLeads = (allLeads || []).map((row: any) => {
       const fresh = foundByPlaceId.get(row.place_id);
+      const placeTypes = row.place_types ?? fresh?.place_types ?? [];
+      const primaryType = row.primary_type ?? fresh?.primary_type ?? null;
       return {
         ...row,
         website: row.website ?? fresh?.website ?? null,
@@ -385,6 +455,13 @@ export async function POST(request: Request) {
           row.region ??
           fresh?.region ??
           extractRegionFromComponentsOrAddress(null, row.address),
+        photo_url: row.photo_url ?? fresh?.photo_url ?? null,
+        place_types: placeTypes,
+        primary_type: primaryType,
+        detected_niche:
+          row.detected_niche ??
+          fresh?.detected_niche ??
+          detectProspectingNiche(row.business_name, placeTypes, primaryType),
       };
     });
 

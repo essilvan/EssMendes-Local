@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAuthenticatedTenant } from "@/lib/supabase/tenant";
+import {
+  detectProspectingNiche,
+  buildProspectingWhatsAppMessage,
+  type ProspectingNicheKey,
+} from "@/utils/prospecting-niche";
 
 function formatBrazilianWhatsAppPhone(rawPhone?: string | null): string {
   const digits = String(rawPhone || "").replace(/\D/g, "");
@@ -58,10 +63,22 @@ export async function POST(request: Request) {
     }
 
     const demoUrl = lead.demo_slug
-      ? `https://${lead.demo_slug}.essmendes.com.br/mesa/01`
+      ? `https://${lead.demo_slug}.essmendes.com.br`
       : `https://app.essmendes.com.br`;
 
-    const message = `Opa, tudo bem? Vi o perfil do *${lead.business_name}* aqui no Google e montei uma prévia rápida de como ficaria o cardápio digital com QR Code nas mesas de vocês (sem precisar gastar com impressora na cozinha): ${demoUrl} — Posso te mostrar em 1 minuto como funciona?`;
+    const niche: ProspectingNicheKey =
+      (lead.detected_niche as ProspectingNicheKey) ||
+      detectProspectingNiche(
+        lead.business_name,
+        Array.isArray(lead.place_types) ? lead.place_types : [],
+        lead.primary_type || null
+      );
+
+    const message = buildProspectingWhatsAppMessage({
+      niche,
+      businessName: lead.business_name,
+      demoUrl,
+    });
 
     const nowIso = new Date().toISOString();
     const currentHistory: any[] = Array.isArray(lead.chat_history)
@@ -123,7 +140,6 @@ export async function POST(request: Request) {
       });
     }
 
-    // Modo 1-Clique Manual (WhatsApp Business / Web)
     await supabase
       .from("prospecting_leads")
       .update({
