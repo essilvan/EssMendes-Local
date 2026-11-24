@@ -21,6 +21,10 @@ import {
   Zap,
   Globe,
   Download,
+  Trash2,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 
 export interface ProspectingLead {
@@ -135,7 +139,12 @@ export function ProspectingManagerClient({
   const [leads, setLeads] = useState<ProspectingLead[]>(initialLeads);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<
+    "created_at" | "business_name" | "rating" | "phone" | "website" | "region" | "status"
+  >("created_at");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [isSearching, setIsSearching] = useState(false);
+  const [isClearingNew, setIsClearingNew] = useState(false);
   const [busyDemoId, setBusyDemoId] = useState<string | null>(null);
   const [busySendId, setBusySendId] = useState<string | null>(null);
   const [busyStatusId, setBusyStatusId] = useState<string | null>(null);
@@ -366,6 +375,130 @@ export function ProspectingManagerClient({
   const countByStatus = (st: string) =>
     leads.filter((l) => (l.status || "new") === st).length;
 
+  const newLeadsCount = countByStatus("new");
+
+  const STATUS_ORDER: Record<string, number> = {
+    new: 1,
+    demo_created: 2,
+    contacted: 3,
+    replied: 4,
+    closed: 5,
+  };
+
+  const handleSort = (
+    col: "business_name" | "rating" | "phone" | "website" | "region" | "status"
+  ) => {
+    if (sortBy === col) {
+      setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(col);
+      setSortDir(col === "rating" ? "desc" : "asc");
+    }
+  };
+
+  const renderSortIcon = (
+    col: "business_name" | "rating" | "phone" | "website" | "region" | "status"
+  ) => {
+    if (sortBy !== col) {
+      return <ArrowUpDown className="h-3 w-3 text-slate-400" />;
+    }
+    return sortDir === "asc" ? (
+      <ArrowUp className="h-3 w-3 text-teal-700" />
+    ) : (
+      <ArrowDown className="h-3 w-3 text-teal-700" />
+    );
+  };
+
+  const sortedLeads = [...filteredLeads].sort((a, b) => {
+    const mult = sortDir === "asc" ? 1 : -1;
+    switch (sortBy) {
+      case "business_name":
+        return (
+          a.business_name.localeCompare(b.business_name, "pt-BR", {
+            sensitivity: "base",
+          }) * mult
+        );
+      case "rating": {
+        const ra = Number(a.rating ?? -1);
+        const rb = Number(b.rating ?? -1);
+        if (ra !== rb) return (ra - rb) * mult;
+        return (Number(a.total_reviews ?? 0) - Number(b.total_reviews ?? 0)) * mult;
+      }
+      case "phone":
+        return (
+          String(a.phone || "").localeCompare(String(b.phone || ""), "pt-BR") *
+          mult
+        );
+      case "website": {
+        // asc: agrupa primeiro quem está "Sem Site — Oportunidade" (0) antes de quem tem site (1)
+        const wa = a.website ? 1 : 0;
+        const wb = b.website ? 1 : 0;
+        if (wa !== wb) return (wa - wb) * mult;
+        return (
+          String(a.website || "").localeCompare(
+            String(b.website || ""),
+            "pt-BR"
+          ) * mult
+        );
+      }
+      case "region": {
+        const regA = a.region || inferRegionFromAddress(a.address);
+        const regB = b.region || inferRegionFromAddress(b.address);
+        return regA.localeCompare(regB, "pt-BR", { sensitivity: "base" }) * mult;
+      }
+      case "status": {
+        const sa = STATUS_ORDER[a.status || "new"] ?? 99;
+        const sb = STATUS_ORDER[b.status || "new"] ?? 99;
+        if (sa !== sb) return (sa - sb) * mult;
+        return (
+          (new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) *
+          mult
+        );
+      }
+      default:
+        return (
+          (new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) *
+          mult
+        );
+    }
+  });
+
+  const handleClearNewLeads = async () => {
+    if (newLeadsCount === 0) return;
+    const confirmed = window.confirm(
+      `Deseja realmente excluir ${newLeadsCount} lead(s) com status "Novo"?\n\nLeads em Prévia Criada, Contatado, Respondeu e Fechado serão preservados.`
+    );
+    if (!confirmed) return;
+
+    setIsClearingNew(true);
+    setFeedback(null);
+    try {
+      const res = await fetch("/api/prospecting/clear-new", {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        setFeedback({
+          type: "error",
+          text: json.error || "Não foi possível limpar os leads novos.",
+        });
+        return;
+      }
+      setLeads((prev) => prev.filter((l) => (l.status || "new") !== "new"));
+      setFeedback({
+        type: "success",
+        text: `${json.deletedCount ?? newLeadsCount} lead(s) com status "Novo" removidos com segurança. Leads em andamento foram preservados.`,
+      });
+    } catch (err: any) {
+      setFeedback({
+        type: "error",
+        text: err?.message || "Erro ao limpar leads novos.",
+      });
+    } finally {
+      setIsClearingNew(false);
+    }
+  };
+
   const handleExportCsv = () => {
     if (filteredLeads.length === 0) return;
 
@@ -450,15 +583,32 @@ export function ProspectingManagerClient({
           </p>
         </div>
 
-        <button
-          type="button"
-          disabled={filteredLeads.length === 0}
-          onClick={handleExportCsv}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-50 px-4 py-2.5 text-xs sm:text-sm font-bold text-slate-800 shadow-xs transition cursor-pointer shrink-0"
-        >
-          <Download className="h-4 w-4 text-teal-700" />
-          <span>Exportar Tabela (CSV)</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <button
+            type="button"
+            disabled={newLeadsCount === 0 || isClearingNew}
+            onClick={handleClearNewLeads}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 disabled:opacity-50 px-4 py-2.5 text-xs sm:text-sm font-bold text-rose-700 shadow-xs transition cursor-pointer"
+            title="Excluir apenas leads com status Novo (mantém leads com prévia, contatados, respondidos e fechados)"
+          >
+            {isClearingNew ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4" />
+            )}
+            <span>Limpar Novos ({newLeadsCount})</span>
+          </button>
+
+          <button
+            type="button"
+            disabled={sortedLeads.length === 0}
+            onClick={handleExportCsv}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-50 px-4 py-2.5 text-xs sm:text-sm font-bold text-slate-800 shadow-xs transition cursor-pointer"
+          >
+            <Download className="h-4 w-4 text-teal-700" />
+            <span>Exportar Tabela (CSV)</span>
+          </button>
+        </div>
       </div>
 
       {/* Formulário de Busca Google Places */}
@@ -550,15 +700,72 @@ export function ProspectingManagerClient({
             <table className="w-full text-left border-collapse min-w-[920px]">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
-                  <th className="py-3.5 px-4">Estabelecimento</th>
-                  <th className="py-3.5 px-4">Telefone / WhatsApp</th>
-                  <th className="py-3.5 px-4">Site / Instagram</th>
-                  <th className="py-3.5 px-4">Endereço & Região</th>
-                  <th className="py-3.5 px-4 text-right">Status & Ações</th>
+                  <th className="py-3.5 px-4">
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => handleSort("business_name")}
+                        className="inline-flex items-center gap-1 hover:text-slate-900 cursor-pointer"
+                      >
+                        <span>Estabelecimento</span>
+                        {renderSortIcon("business_name")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSort("rating")}
+                        className="inline-flex items-center gap-1 rounded-md bg-slate-200/70 hover:bg-slate-200 px-1.5 py-0.5 text-[10px] text-slate-700 cursor-pointer"
+                        title="Ordenar por maior nota Google"
+                      >
+                        <span>Nota ★</span>
+                        {renderSortIcon("rating")}
+                      </button>
+                    </div>
+                  </th>
+                  <th className="py-3.5 px-4">
+                    <button
+                      type="button"
+                      onClick={() => handleSort("phone")}
+                      className="inline-flex items-center gap-1 hover:text-slate-900 cursor-pointer"
+                    >
+                      <span>Telefone / WhatsApp</span>
+                      {renderSortIcon("phone")}
+                    </button>
+                  </th>
+                  <th className="py-3.5 px-4">
+                    <button
+                      type="button"
+                      onClick={() => handleSort("website")}
+                      className="inline-flex items-center gap-1 hover:text-slate-900 cursor-pointer"
+                      title="Agrupar quem está Sem Site primeiro"
+                    >
+                      <span>Site / Instagram</span>
+                      {renderSortIcon("website")}
+                    </button>
+                  </th>
+                  <th className="py-3.5 px-4">
+                    <button
+                      type="button"
+                      onClick={() => handleSort("region")}
+                      className="inline-flex items-center gap-1 hover:text-slate-900 cursor-pointer"
+                    >
+                      <span>Endereço & Região</span>
+                      {renderSortIcon("region")}
+                    </button>
+                  </th>
+                  <th className="py-3.5 px-4 text-right">
+                    <button
+                      type="button"
+                      onClick={() => handleSort("status")}
+                      className="ml-auto inline-flex items-center gap-1 hover:text-slate-900 cursor-pointer"
+                    >
+                      <span>Status & Ações</span>
+                      {renderSortIcon("status")}
+                    </button>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">
-                {filteredLeads.map((lead) => {
+                {sortedLeads.map((lead) => {
                   const stKey = lead.status || "new";
                   const stMeta = STATUS_META[stKey] || STATUS_META.new;
                   const demoUrl = lead.demo_slug
@@ -582,9 +789,22 @@ export function ProspectingManagerClient({
                     >
                       {/* 1. Estabelecimento */}
                       <td className="py-4 px-4 max-w-[240px]">
-                        <p className="text-sm font-extrabold text-slate-900 leading-snug">
-                          {lead.business_name}
-                        </p>
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                            `${lead.business_name} ${lead.address || ""}`.trim()
+                          )}${
+                            lead.place_id
+                              ? `&query_place_id=${encodeURIComponent(lead.place_id)}`
+                              : ""
+                          }`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Abrir estabelecimento no Google Maps"
+                          className="group inline-flex items-start gap-1.5 text-sm font-extrabold text-slate-900 hover:text-teal-700 leading-snug transition-colors"
+                        >
+                          <span>{lead.business_name}</span>
+                          <ExternalLink className="h-3.5 w-3.5 shrink-0 mt-0.5 text-slate-400 group-hover:text-teal-600" />
+                        </a>
                         <div className="mt-1 flex flex-wrap items-center gap-1.5">
                           <span
                             className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold ${nicheMeta.cls}`}
