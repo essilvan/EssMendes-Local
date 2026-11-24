@@ -15,6 +15,8 @@ import {
   Rocket,
   Bot,
   Zap,
+  Globe,
+  Download,
 } from "lucide-react";
 
 export interface ProspectingLead {
@@ -23,6 +25,8 @@ export interface ProspectingLead {
   business_name: string;
   phone: string | null;
   address: string | null;
+  website?: string | null;
+  region?: string | null;
   rating: number | null;
   total_reviews: number | null;
   demo_slug: string | null;
@@ -37,10 +41,7 @@ interface ProspectingManagerClientProps {
   evolutionEnabled: boolean;
 }
 
-const STATUS_META: Record<
-  string,
-  { label: string; badgeClass: string }
-> = {
+const STATUS_META: Record<string, { label: string; badgeClass: string }> = {
   new: {
     label: "Novo",
     badgeClass: "bg-slate-100 text-slate-700 border-slate-200",
@@ -63,6 +64,39 @@ const STATUS_META: Record<
   },
 };
 
+function inferRegionFromAddress(address?: string | null): string {
+  if (!address) return "—";
+  const knownMatch = address.match(
+    /\b(Taguatinga|Ceil[aâ]ndia|[AÁ]guas Claras|Samambaia|Vicente Pires|Guar[aá]|Gama|Sobradinho|Planaltina|Recanto das Emas|Riacho Fundo|Santa Maria|Asa Sul|Asa Norte|Sudoeste|Noroeste|Lago Sul|Lago Norte|Bras[ií]lia)\b/i
+  );
+  if (knownMatch?.[1]) return knownMatch[1];
+  const parts = address
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (parts.length >= 2) {
+    const candidate = parts[parts.length - 2]
+      .replace(/\s*-\s*[A-Z]{2}.*$/, "")
+      .trim();
+    if (candidate && candidate.length <= 35) return candidate;
+  }
+  return "DF";
+}
+
+function formatSiteLabel(url: string): string {
+  try {
+    const parsed = new URL(url.startsWith("http") ? url : `https://${url}`);
+    const host = parsed.hostname.replace(/^www\./, "");
+    if (host.includes("instagram.com")) {
+      const handle = parsed.pathname.replace(/^\/|\/$/g, "").split("/")[0];
+      return handle ? `@${handle}` : "Instagram";
+    }
+    return host;
+  } catch {
+    return url.replace(/^https?:\/\/(www\.)?/, "").slice(0, 28);
+  }
+}
+
 export function ProspectingManagerClient({
   initialLeads,
   evolutionEnabled,
@@ -75,6 +109,7 @@ export function ProspectingManagerClient({
   const [busySendId, setBusySendId] = useState<string | null>(null);
   const [busyStatusId, setBusyStatusId] = useState<string | null>(null);
   const [copiedLeadId, setCopiedLeadId] = useState<string | null>(null);
+  const [copiedPhoneId, setCopiedPhoneId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{
     type: "success" | "error";
     text: string;
@@ -104,7 +139,11 @@ export function ProspectingManagerClient({
       }
       setFeedback({
         type: "success",
-        text: `Busca concluída! ${json.foundCount || 0} estabelecimentos com telefone encontrados (${json.importedCount || 0} novos, ${json.updatedCount || 0} atualizados).`,
+        text: `Busca "${json.queryUsed || query.trim()}" concluída! ${
+          json.foundCount || 0
+        } estabelecimentos com telefone encontrados (${
+          json.importedCount || 0
+        } novos, ${json.updatedCount || 0} atualizados).`,
       });
     } catch (err: any) {
       setFeedback({
@@ -163,7 +202,6 @@ export function ProspectingManagerClient({
     setBusySendId(lead.id);
     setFeedback(null);
     try {
-      // Se ainda não gerou a prévia, gera automaticamente antes de abordar
       let activeLead = lead;
       if (!activeLead.demo_slug) {
         const demoRes = await fetch("/api/prospecting/create-demo", {
@@ -251,6 +289,17 @@ export function ProspectingManagerClient({
     }
   };
 
+  const handleCopyPhone = async (lead: ProspectingLead) => {
+    if (!lead.phone) return;
+    try {
+      await navigator.clipboard.writeText(lead.phone);
+      setCopiedPhoneId(lead.id);
+      setTimeout(() => setCopiedPhoneId(null), 2000);
+    } catch {
+      // ignora erro de clipboard
+    }
+  };
+
   const handleCopyQuickReply = async (lead: ProspectingLead) => {
     const demoUrl = lead.demo_slug
       ? `https://${lead.demo_slug}.essmendes.com.br/mesa/01`
@@ -274,9 +323,61 @@ export function ProspectingManagerClient({
   const countByStatus = (st: string) =>
     leads.filter((l) => (l.status || "new") === st).length;
 
+  const handleExportCsv = () => {
+    if (filteredLeads.length === 0) return;
+
+    const escapeCsv = (val: string | number | null | undefined) => {
+      const str = String(val ?? "").replace(/"/g, '""');
+      return `"${str}"`;
+    };
+
+    const headers = [
+      "Estabelecimento",
+      "Nota Google",
+      "Avaliacoes",
+      "Telefone / WhatsApp",
+      "Site / Instagram",
+      "Regiao",
+      "Endereco",
+      "Status",
+      "Link Previa",
+    ];
+
+    const rows = filteredLeads.map((lead) => {
+      const stKey = lead.status || "new";
+      const region = lead.region || inferRegionFromAddress(lead.address);
+      const demoUrl = lead.demo_slug
+        ? `https://${lead.demo_slug}.essmendes.com.br/mesa/01`
+        : "";
+      return [
+        escapeCsv(lead.business_name),
+        escapeCsv(lead.rating !== null ? Number(lead.rating).toFixed(1) : ""),
+        escapeCsv(lead.total_reviews ?? 0),
+        escapeCsv(lead.phone || ""),
+        escapeCsv(lead.website || "Sem Site"),
+        escapeCsv(region),
+        escapeCsv(lead.address || ""),
+        escapeCsv(STATUS_META[stKey]?.label || stKey),
+        escapeCsv(demoUrl),
+      ].join(";");
+    });
+
+    const csvContent = "\uFEFF" + [headers.join(";"), ...rows].join("\r\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const dateStr = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `leads-prospeccao-${dateStr}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-6">
-      {/* Header + Badge de Modo Ativo */}
+      {/* Header + Badge de Modo Ativo + Exportação CSV */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <div className="flex flex-wrap items-center gap-2">
@@ -302,9 +403,19 @@ export function ProspectingManagerClient({
             Prospecção Híbrida de Bares & Restaurantes
           </h1>
           <p className="mt-1 text-sm text-slate-600">
-            Busque estabelecimentos no Google Places, gere a prévia personalizada do cardápio digital e aborde pelo WhatsApp com 1 clique.
+            Busque estabelecimentos no Google Places com telefone, site/Instagram e região, gere a prévia personalizada e aborde com 1 clique.
           </p>
         </div>
+
+        <button
+          type="button"
+          disabled={filteredLeads.length === 0}
+          onClick={handleExportCsv}
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-50 px-4 py-2.5 text-xs sm:text-sm font-bold text-slate-800 shadow-xs transition cursor-pointer shrink-0"
+        >
+          <Download className="h-4 w-4 text-teal-700" />
+          <span>Exportar Tabela (CSV)</span>
+        </button>
       </div>
 
       {/* Formulário de Busca Google Places */}
@@ -379,7 +490,7 @@ export function ProspectingManagerClient({
         )}
       </div>
 
-      {/* Lista de Leads */}
+      {/* Tabela Completa de Prospecção */}
       {filteredLeads.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center space-y-2">
           <Rocket className="mx-auto h-10 w-10 text-slate-300" />
@@ -387,147 +498,216 @@ export function ProspectingManagerClient({
             Nenhum lead nesta etapa
           </h3>
           <p className="text-xs text-slate-500 max-w-md mx-auto">
-            Digite um segmento e cidade na busca acima (ex: &quot;Espetinho Taguatinga DF&quot;) para importar estabelecimentos reais do Google Places com telefone.
+            Digite um segmento e cidade na busca acima (ex: &quot;Espetinho Taguatinga DF&quot;) para importar estabelecimentos reais do Google Places.
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {filteredLeads.map((lead) => {
-            const stKey = lead.status || "new";
-            const stMeta = STATUS_META[stKey] || STATUS_META.new;
-            const demoUrl = lead.demo_slug
-              ? `https://${lead.demo_slug}.essmendes.com.br/mesa/01`
-              : null;
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[920px]">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
+                  <th className="py-3.5 px-4">Estabelecimento</th>
+                  <th className="py-3.5 px-4">Telefone / WhatsApp</th>
+                  <th className="py-3.5 px-4">Site / Instagram</th>
+                  <th className="py-3.5 px-4">Endereço & Região</th>
+                  <th className="py-3.5 px-4 text-right">Status & Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-xs">
+                {filteredLeads.map((lead) => {
+                  const stKey = lead.status || "new";
+                  const stMeta = STATUS_META[stKey] || STATUS_META.new;
+                  const demoUrl = lead.demo_slug
+                    ? `https://${lead.demo_slug}.essmendes.com.br/mesa/01`
+                    : null;
+                  const regionLabel =
+                    lead.region || inferRegionFromAddress(lead.address);
 
-            return (
-              <div
-                key={lead.id}
-                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs flex flex-col justify-between space-y-4"
-              >
-                <div className="space-y-2.5">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <h3 className="text-base font-extrabold text-slate-900 leading-snug">
-                        {lead.business_name}
-                      </h3>
-                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-600">
-                        {lead.rating !== null && (
-                          <span className="inline-flex items-center gap-1 font-bold text-amber-600">
-                            <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-500" />
-                            {Number(lead.rating).toFixed(1)} (
-                            {lead.total_reviews || 0})
+                  return (
+                    <tr
+                      key={lead.id}
+                      className="hover:bg-slate-50/70 transition-colors align-top"
+                    >
+                      {/* 1. Estabelecimento */}
+                      <td className="py-4 px-4 max-w-[240px]">
+                        <p className="text-sm font-extrabold text-slate-900 leading-snug">
+                          {lead.business_name}
+                        </p>
+                        <div className="mt-1 flex items-center gap-1.5 text-xs font-bold text-amber-600">
+                          <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-500 shrink-0" />
+                          <span>
+                            {lead.rating !== null
+                              ? Number(lead.rating).toFixed(1)
+                              : "—"}
+                          </span>
+                          <span className="font-medium text-slate-500">
+                            ({lead.total_reviews || 0} avaliações)
+                          </span>
+                        </div>
+                        {demoUrl && (
+                          <a
+                            href={demoUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-1.5 inline-flex items-center gap-1 rounded-lg bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-[11px] font-bold text-indigo-700 hover:bg-indigo-100 transition"
+                          >
+                            <span>Ver Prévia</span>
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        )}
+                      </td>
+
+                      {/* 2. Telefone / WhatsApp */}
+                      <td className="py-4 px-4 whitespace-nowrap">
+                        {lead.phone ? (
+                          <div className="inline-flex items-center gap-1.5">
+                            <Phone className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                            <span className="font-bold text-slate-800">
+                              {lead.phone}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyPhone(lead)}
+                              title="Copiar telefone"
+                              className="p-1 rounded-md text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer"
+                            >
+                              {copiedPhoneId === lead.id ? (
+                                <Check className="h-3.5 w-3.5 text-emerald-600" />
+                              ) : (
+                                <Copy className="h-3.5 w-3.5" />
+                              )}
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400">Sem telefone</span>
+                        )}
+                      </td>
+
+                      {/* 3. Site / Instagram */}
+                      <td className="py-4 px-4 max-w-[190px]">
+                        {lead.website ? (
+                          <a
+                            href={
+                              lead.website.startsWith("http")
+                                ? lead.website
+                                : `https://${lead.website}`
+                            }
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 px-2.5 py-1 text-xs font-semibold text-teal-700 max-w-full"
+                            title={lead.website}
+                          >
+                            <Globe className="h-3.5 w-3.5 shrink-0" />
+                            <span className="truncate">
+                              {formatSiteLabel(lead.website)}
+                            </span>
+                            <ExternalLink className="h-3 w-3 shrink-0 text-slate-400" />
+                          </a>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2.5 py-1 text-[11px] font-bold text-amber-800">
+                            Sem Site — Oportunidade
                           </span>
                         )}
-                        {lead.phone && (
-                          <span className="inline-flex items-center gap-1 font-semibold text-slate-700">
-                            <Phone className="h-3.5 w-3.5 text-emerald-600" />
-                            {lead.phone}
-                          </span>
+                      </td>
+
+                      {/* 4. Endereço & Região */}
+                      <td className="py-4 px-4 max-w-[240px]">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-[11px] font-bold text-slate-700">
+                          <MapPin className="h-3 w-3 text-teal-600" />
+                          {regionLabel}
+                        </span>
+                        {lead.address && (
+                          <p className="mt-1 text-[11px] text-slate-500 leading-relaxed line-clamp-2">
+                            {lead.address}
+                          </p>
                         )}
-                      </div>
-                    </div>
+                      </td>
 
-                    <div className="flex flex-col items-end gap-1.5 shrink-0">
-                      <span
-                        className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${stMeta.badgeClass}`}
-                      >
-                        {stMeta.label}
-                      </span>
-                      <select
-                        value={stKey}
-                        disabled={busyStatusId === lead.id}
-                        onChange={(e) =>
-                          handleStatusChange(lead.id, e.target.value)
-                        }
-                        aria-label="Atualizar status do lead"
-                        className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-700 focus:border-teal-600 focus:outline-none cursor-pointer"
-                      >
-                        <option value="new">Novo</option>
-                        <option value="demo_created">Prévia Criada</option>
-                        <option value="contacted">Contatado</option>
-                        <option value="replied">Respondeu</option>
-                        <option value="closed">Fechado</option>
-                      </select>
-                    </div>
-                  </div>
+                      {/* 5. Status & Ações */}
+                      <td className="py-4 px-4 text-right">
+                        <div className="flex flex-col items-end gap-2">
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${stMeta.badgeClass}`}
+                            >
+                              {stMeta.label}
+                            </span>
+                            <select
+                              value={stKey}
+                              disabled={busyStatusId === lead.id}
+                              onChange={(e) =>
+                                handleStatusChange(lead.id, e.target.value)
+                              }
+                              aria-label="Atualizar status do lead"
+                              className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-700 focus:border-teal-600 focus:outline-none cursor-pointer"
+                            >
+                              <option value="new">Novo</option>
+                              <option value="demo_created">Prévia Criada</option>
+                              <option value="contacted">Contatado</option>
+                              <option value="replied">Respondeu</option>
+                              <option value="closed">Fechado</option>
+                            </select>
+                          </div>
 
-                  {lead.address && (
-                    <p className="flex items-start gap-1.5 text-xs text-slate-500">
-                      <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400 mt-0.5" />
-                      <span>{lead.address}</span>
-                    </p>
-                  )}
+                          <div className="flex flex-wrap items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              disabled={busyDemoId === lead.id}
+                              onClick={() => handleCreateDemo(lead)}
+                              className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1.5 text-[11px] font-bold text-indigo-800 transition cursor-pointer disabled:opacity-60"
+                            >
+                              {busyDemoId === lead.id ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <Sparkles className="h-3 w-3" />
+                              )}
+                              <span>1. Gerar Prévia</span>
+                            </button>
 
-                  {demoUrl && (
-                    <div className="flex items-center justify-between gap-2 rounded-xl border border-indigo-200 bg-indigo-50/70 px-3 py-2 text-xs">
-                      <span className="truncate font-semibold text-indigo-800">
-                        {demoUrl}
-                      </span>
-                      <a
-                        href={demoUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 font-bold text-indigo-700 hover:text-indigo-900 shrink-0"
-                      >
-                        <span>Visualizar</span>
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </a>
-                    </div>
-                  )}
-                </div>
+                            <button
+                              type="button"
+                              disabled={busySendId === lead.id || !lead.phone}
+                              onClick={() => handleSendWhatsApp(lead)}
+                              className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 px-2.5 py-1.5 text-[11px] font-extrabold text-white shadow-2xs transition cursor-pointer disabled:opacity-60"
+                            >
+                              {busySendId === lead.id ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <MessageCircle className="h-3 w-3" />
+                              )}
+                              <span>2. Abordar WhatsApp</span>
+                            </button>
 
-                {/* Ações do Lead */}
-                <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100">
-                  <button
-                    type="button"
-                    disabled={busyDemoId === lead.id}
-                    onClick={() => handleCreateDemo(lead)}
-                    className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 px-3.5 py-2 text-xs font-bold text-indigo-800 transition cursor-pointer disabled:opacity-60"
-                  >
-                    {busyDemoId === lead.id ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Sparkles className="h-3.5 w-3.5" />
-                    )}
-                    <span>{lead.demo_slug ? "Atualizar Prévia" : "Gerar Prévia"}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={busySendId === lead.id || !lead.phone}
-                    onClick={() => handleSendWhatsApp(lead)}
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-3.5 py-2 text-xs font-extrabold text-white shadow-xs transition cursor-pointer disabled:opacity-60"
-                  >
-                    {busySendId === lead.id ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <MessageCircle className="h-3.5 w-3.5" />
-                    )}
-                    <span>Abordar no WhatsApp</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleCopyQuickReply(lead)}
-                    className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 transition cursor-pointer"
-                    title="Copiar resposta rápida de vendas para colar no WhatsApp"
-                  >
-                    {copiedLeadId === lead.id ? (
-                      <>
-                        <Check className="h-3.5 w-3.5 text-emerald-600" />
-                        <span className="text-emerald-700">Copiado!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="h-3.5 w-3.5" />
-                        <span>Copiar Resposta Rápida</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+                            <button
+                              type="button"
+                              onClick={() => handleCopyQuickReply(lead)}
+                              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 px-2 py-1.5 text-[11px] font-bold text-slate-700 transition cursor-pointer"
+                              title="Copiar resposta rápida de vendas"
+                            >
+                              {copiedLeadId === lead.id ? (
+                                <>
+                                  <Check className="h-3 w-3 text-emerald-600" />
+                                  <span className="text-emerald-700">
+                                    Copiado
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="h-3 w-3" />
+                                  <span>Resposta</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

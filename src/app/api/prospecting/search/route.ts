@@ -7,6 +7,8 @@ interface NormalizedPlaceLead {
   business_name: string;
   phone: string;
   address: string | null;
+  website: string | null;
+  region: string | null;
   rating: number | null;
   total_reviews: number;
 }
@@ -22,6 +24,46 @@ function enrichLocalQuery(rawQuery: string): string {
   return `${trimmed} Taguatinga DF`;
 }
 
+function extractRegionFromComponentsOrAddress(
+  components?: any[] | null,
+  formattedAddress?: string | null
+): string | null {
+  if (Array.isArray(components) && components.length > 0) {
+    const priorityTypes = [
+      "sublocality_level_1",
+      "sublocality",
+      "neighborhood",
+      "administrative_area_level_2",
+      "locality",
+    ];
+    for (const targetType of priorityTypes) {
+      const found = components.find(
+        (c: any) => Array.isArray(c?.types) && c.types.includes(targetType)
+      );
+      const name = found?.longText || found?.long_name || found?.shortText || found?.short_name;
+      if (name && String(name).trim()) {
+        return String(name).trim();
+      }
+    }
+  }
+
+  if (formattedAddress) {
+    const knownMatch = formattedAddress.match(
+      /\b(Taguatinga|Ceil[aâ]ndia|[AÁ]guas Claras|Samambaia|Vicente Pires|Guar[aá]|Gama|Sobradinho|Planaltina|Recanto das Emas|Riacho Fundo|Santa Maria|Asa Sul|Asa Norte|Sudoeste|Noroeste|Lago Sul|Lago Norte|Bras[ií]lia)\b/i
+    );
+    if (knownMatch?.[1]) {
+      return knownMatch[1];
+    }
+    const parts = formattedAddress.split(",").map((s) => s.trim()).filter(Boolean);
+    if (parts.length >= 2) {
+      const candidate = parts[parts.length - 2].replace(/\s*-\s*[A-Z]{2}.*$/, "").trim();
+      if (candidate && candidate.length <= 40) return candidate;
+    }
+  }
+
+  return null;
+}
+
 async function searchPlacesNewApi(
   finalQuery: string,
   apiKey: string
@@ -32,7 +74,7 @@ async function searchPlacesNewApi(
       "Content-Type": "application/json",
       "X-Goog-Api-Key": apiKey,
       "X-Goog-FieldMask":
-        "places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.internationalPhoneNumber,places.rating,places.userRatingCount",
+        "places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.internationalPhoneNumber,places.rating,places.userRatingCount,places.websiteUri,places.addressComponents",
     },
     body: JSON.stringify({
       textQuery: finalQuery,
@@ -64,11 +106,14 @@ async function searchPlacesNewApi(
       const phone = String(
         p.nationalPhoneNumber || p.internationalPhoneNumber || ""
       ).trim();
+      const address = p.formattedAddress ? String(p.formattedAddress).trim() : null;
       return {
         place_id: String(p.id || "").trim(),
         business_name: String(p.displayName?.text || "").trim(),
         phone,
-        address: p.formattedAddress ? String(p.formattedAddress).trim() : null,
+        address,
+        website: p.websiteUri ? String(p.websiteUri).trim() : null,
+        region: extractRegionFromComponentsOrAddress(p.addressComponents, address),
         rating:
           p.rating !== undefined && p.rating !== null ? Number(p.rating) : null,
         total_reviews: Number(p.userRatingCount || 0),
@@ -112,7 +157,7 @@ async function searchPlacesLegacyApi(
       if (!r?.place_id) return null;
       const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(
         r.place_id
-      )}&fields=place_id,name,formatted_address,formatted_phone_number,international_phone_number,rating,user_ratings_total&language=pt-BR&key=${encodeURIComponent(
+      )}&fields=place_id,name,formatted_address,formatted_phone_number,international_phone_number,rating,user_ratings_total,website,address_components&language=pt-BR&key=${encodeURIComponent(
         apiKey
       )}`;
       try {
@@ -124,11 +169,14 @@ async function searchPlacesLegacyApi(
           p.formatted_phone_number || p.international_phone_number || ""
         ).trim();
         if (!phone) return null;
+        const address = p.formatted_address || r.formatted_address || null;
         return {
           place_id: String(p.place_id || r.place_id),
           business_name: String(p.name || r.name || "").trim(),
           phone,
-          address: p.formatted_address || r.formatted_address || null,
+          address,
+          website: p.website ? String(p.website).trim() : null,
+          region: extractRegionFromComponentsOrAddress(p.address_components, address),
           rating:
             p.rating !== undefined && p.rating !== null
               ? Number(p.rating)
@@ -234,38 +282,65 @@ export async function POST(request: Request) {
     let importedCount = 0;
     let updatedCount = 0;
     let dbErrorMsg: string | null = null;
+    const foundByPlaceId = new Map<string, NormalizedPlaceLead>();
+    foundPlaces.forEach((p) => foundByPlaceId.set(p.place_id, p));
 
     for (const lead of foundPlaces) {
       const existing = existingMap.get(lead.place_id);
+      const baseFields = {
+        business_name: lead.business_name,
+        phone: lead.phone,
+        address: lead.address,
+        rating: lead.rating,
+        total_reviews: lead.total_reviews,
+      };
+      const extendedFields = {
+        ...baseFields,
+        website: lead.website,
+        region: lead.region,
+      };
+
       if (existing) {
-        const { error: updErr } = await supabase
+        let { error: updErr } = await supabase
           .from("prospecting_leads")
-          .update({
-            business_name: lead.business_name,
-            phone: lead.phone,
-            address: lead.address,
-            rating: lead.rating,
-            total_reviews: lead.total_reviews,
-          })
+          .update(extendedFields)
           .eq("id", existing.id);
+
+        if (updErr && (updErr.code === "PGRST204" || /column/i.test(updErr.message))) {
+          const retry = await supabase
+            .from("prospecting_leads")
+            .update(baseFields)
+            .eq("id", existing.id);
+          updErr = retry.error;
+        }
+
         if (updErr) {
           dbErrorMsg = updErr.message;
         } else {
           updatedCount++;
         }
       } else {
-        const { error: insErr } = await supabase
+        let { error: insErr } = await supabase
           .from("prospecting_leads")
           .insert({
             place_id: lead.place_id,
-            business_name: lead.business_name,
-            phone: lead.phone,
-            address: lead.address,
-            rating: lead.rating,
-            total_reviews: lead.total_reviews,
+            ...extendedFields,
             status: "new",
             chat_history: [],
           });
+
+        if (insErr && (insErr.code === "PGRST204" || /column/i.test(insErr.message))) {
+          const retry = await supabase
+            .from("prospecting_leads")
+            .insert({
+              place_id: lead.place_id,
+              ...baseFields,
+              status: "new",
+              chat_history: [],
+            });
+          insErr = retry.error;
+        }
+
         if (insErr) {
           dbErrorMsg = insErr.message;
         } else {
@@ -300,13 +375,26 @@ export async function POST(request: Request) {
       );
     }
 
+    // Garante que website/region recém-extraídos apareçam imediatamente mesmo se a migration ainda não foi rodada
+    const enrichedLeads = (allLeads || []).map((row: any) => {
+      const fresh = foundByPlaceId.get(row.place_id);
+      return {
+        ...row,
+        website: row.website ?? fresh?.website ?? null,
+        region:
+          row.region ??
+          fresh?.region ??
+          extractRegionFromComponentsOrAddress(null, row.address),
+      };
+    });
+
     return NextResponse.json({
       success: true,
       queryUsed: finalQuery,
       foundCount: foundPlaces.length,
       importedCount,
       updatedCount,
-      leads: allLeads || [],
+      leads: enrichedLeads,
     });
   } catch (err: any) {
     return NextResponse.json(
