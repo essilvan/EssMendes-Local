@@ -14,6 +14,7 @@ import { PlacePhotoGallery } from "../PlacePhotoGallery";
 import { GoogleReviewsCard } from "../GoogleReviewsCard";
 import { PublicPostsSection } from "../PublicPostsSection";
 import { PublicRestaurantMenuSection } from "../PublicRestaurantMenuSection";
+import { resolvePublicSubniche } from "@/utils/prospecting-niche";
 import { MapLocationCard } from "../MapLocationCard";
 import { BusinessAttributes } from "../BusinessAttributes";
 
@@ -118,17 +119,19 @@ export function PremiumTemplateView({
             onSelectService={(serviceId) => onOpenBooking(serviceId)}
           />
 
-          {/* 3. Dashboard de Conversão Refinado (Catálogo de Serviços + Antes & Depois + Agendamento) */}
-          <ConversionDashboard
-            tenant={tenant}
-            profile={profile}
-            services={services}
-            portfolioItems={portfolioItems}
-            posts={posts}
-            theme={theme}
-            brandColor={brandColor}
-            onOpenBookingModal={onOpenBooking}
-          />
+          {/* 3. Dashboard de Conversão Refinado (Oculto para Guincho 24h, que usa chamado emergencial) */}
+          {resolvePublicSubniche(tenant, profile) !== "towing" && (
+            <ConversionDashboard
+              tenant={tenant}
+              profile={profile}
+              services={services}
+              portfolioItems={portfolioItems}
+              posts={posts}
+              theme={theme}
+              brandColor={brandColor}
+              onOpenBookingModal={onOpenBooking}
+            />
+          )}
 
           {/* 3.5 Secção da Equipe / Profissionais com Agendamento Direto */}
           {professionals && professionals.length > 0 && (
@@ -183,16 +186,18 @@ export function PremiumTemplateView({
         phoneWhatsapp={rawPhone}
         businessCategory={profile?.business_category}
         theme={theme}
+        isExternalService={resolvePublicSubniche(tenant, profile) === "towing"}
         onOpenBooking={() => onOpenBooking()}
       />
 
-      {/* Comodidades & Atributos do Google Maps */}
-      {tenant.business_attributes && (
-        <BusinessAttributes
-          attributes={tenant.business_attributes}
-          theme={theme}
-        />
-      )}
+      {/* Comodidades & Atributos do Google Maps (Oculto em serviços externos/emergenciais como guincho) */}
+      {tenant.business_attributes &&
+        resolvePublicSubniche(tenant, profile) !== "towing" && (
+          <BusinessAttributes
+            attributes={tenant.business_attributes}
+            theme={theme}
+          />
+        )}
 
       {/* Posts & Artigos de SEO Local */}
       {posts.length > 0 && (

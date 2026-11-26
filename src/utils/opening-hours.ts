@@ -212,8 +212,27 @@ export function getBusinessStatus(
     };
   }
 
-  // 4. Extrair os horários (ex: "08:00 – 18:00" ou "11:00 – 00:00")
+  // 4. Extrair os horários (ex: "08:00 – 18:00", "11:00 – 00:00" ou "Atendimento 24 horas")
   const rawTimes = todayEntry.split(":").slice(1).join(":").trim();
+
+  if (/24\s*h|24\s*horas|open\s*24|aberto\s*24/i.test(rawTimes)) {
+    const badgeText = "Aberto Agora";
+    const subText = "Atendimento 24 horas";
+    return {
+      isOpen: true,
+      isOpenNow: true,
+      badgeText,
+      subText,
+      label: badgeText,
+      subLabel: subText,
+      detailText: subText,
+      statusLine: `🟢 ${badgeText} • ${subText}`,
+      hasOfficialHours: true,
+      todayHoursText: "Atendimento 24 horas",
+      scheduleList,
+    };
+  }
+
   // Normaliza travessões (–, -, —)
   const [startStr, endStr] = rawTimes.split(/[–—-]/).map((s) => s.trim());
 

@@ -77,9 +77,25 @@ const STATUS_META: Record<string, { label: string; badgeClass: string }> = {
 };
 
 const NICHE_LABELS: Record<ProspectingNicheKey, { label: string; cls: string }> = {
+  towing: {
+    label: "Guincho 24h",
+    cls: "bg-red-50 text-red-700 border-red-200",
+  },
+  mechanic: {
+    label: "Oficina Mecânica",
+    cls: "bg-blue-50 text-blue-700 border-blue-200",
+  },
+  car_wash: {
+    label: "Estética Automotiva",
+    cls: "bg-sky-50 text-sky-700 border-sky-200",
+  },
   petshop: {
     label: "Pet Shop & Vet",
     cls: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  },
+  beauty: {
+    label: "Beleza & Barbearia",
+    cls: "bg-purple-50 text-purple-700 border-purple-200",
   },
   restaurant: {
     label: "Bar & Restaurante",
@@ -88,10 +104,6 @@ const NICHE_LABELS: Record<ProspectingNicheKey, { label: string; cls: string }> 
   bakery: {
     label: "Confeitaria & Padaria",
     cls: "bg-rose-50 text-rose-700 border-rose-200",
-  },
-  automotive: {
-    label: "Automotivo",
-    cls: "bg-blue-50 text-blue-700 border-blue-200",
   },
   services: {
     label: "Negócio Local",

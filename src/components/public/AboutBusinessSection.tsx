@@ -22,6 +22,7 @@ interface AboutBusinessSectionProps {
   phoneWhatsapp?: string | null;
   businessCategory?: string | null;
   theme?: NicheThemeConfig;
+  isExternalService?: boolean;
   onOpenBooking: () => void;
 }
 
@@ -33,6 +34,7 @@ export function AboutBusinessSection({
   phoneWhatsapp,
   businessCategory,
   theme,
+  isExternalService = false,
   onOpenBooking,
 }: AboutBusinessSectionProps) {
   const whatsappUrl = generateWhatsAppUrl(phoneWhatsapp || "", tenantName);
@@ -131,9 +133,13 @@ export function AboutBusinessSection({
             >
               <Sparkles className="h-4 w-4" />
             </div>
-            <h3 className="text-xs sm:text-sm font-bold text-neutral-900 dark:text-white">Ambiente Confortável</h3>
+            <h3 className="text-xs sm:text-sm font-bold text-neutral-900 dark:text-white">
+              {isExternalService ? "Seguro Total no Transporte" : "Ambiente Confortável"}
+            </h3>
             <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">
-              Instalações preparadas para proporcionar o seu bem-estar total.
+              {isExternalService
+                ? "Veículo transportado com máxima segurança, cintas reforçadas e cobertura completa."
+                : "Instalações preparadas para proporcionar o seu bem-estar total."}
             </p>
           </div>
 
@@ -144,9 +150,13 @@ export function AboutBusinessSection({
             >
               <MapPin className="h-4 w-4" />
             </div>
-            <h3 className="text-xs sm:text-sm font-bold text-neutral-900 dark:text-white">Fácil Acesso</h3>
+            <h3 className="text-xs sm:text-sm font-bold text-neutral-900 dark:text-white">
+              {isExternalService ? "Frota Plataforma 24h" : "Fácil Acesso"}
+            </h3>
             <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">
-              Localização conveniente e facilidade de chegada para você.
+              {isExternalService
+                ? "Despacho rápido onde você estiver com atendimento direto pelo WhatsApp."
+                : "Localização conveniente e facilidade de chegada para você."}
             </p>
           </div>
         </div>

@@ -16,16 +16,17 @@ function slugifyName(name: string): string {
     .slice(0, 40);
 }
 
-async function fetchGooglePlacePhotosAndTypes(
+async function fetchGooglePlaceDetails(
   placeId: string,
   apiKey: string
 ): Promise<{
   photos: string[];
   types: string[];
   primaryType: string | null;
+  openingHours: string[] | null;
 }> {
   if (!placeId || !apiKey) {
-    return { photos: [], types: [], primaryType: null };
+    return { photos: [], types: [], primaryType: null, openingHours: null };
   }
 
   try {
@@ -34,13 +35,18 @@ async function fetchGooglePlacePhotosAndTypes(
       {
         headers: {
           "X-Goog-Api-Key": apiKey,
-          "X-Goog-FieldMask": "photos,types,primaryTypeDisplayName",
+          "X-Goog-FieldMask":
+            "photos,types,primaryTypeDisplayName,regularOpeningHours.weekdayDescriptions",
         },
       }
     );
-    if (!res.ok) return { photos: [], types: [], primaryType: null };
+    if (!res.ok) {
+      return { photos: [], types: [], primaryType: null, openingHours: null };
+    }
     const data = await res.json().catch(() => null);
-    if (!data) return { photos: [], types: [], primaryType: null };
+    if (!data) {
+      return { photos: [], types: [], primaryType: null, openingHours: null };
+    }
 
     const photos: string[] = (Array.isArray(data.photos) ? data.photos : [])
       .slice(0, 5)
@@ -59,12 +65,27 @@ async function fetchGooglePlacePhotosAndTypes(
     const primaryType = data.primaryTypeDisplayName?.text
       ? String(data.primaryTypeDisplayName.text).trim()
       : null;
+    const openingHours = Array.isArray(
+      data.regularOpeningHours?.weekdayDescriptions
+    )
+      ? data.regularOpeningHours.weekdayDescriptions
+      : null;
 
-    return { photos, types, primaryType };
+    return { photos, types, primaryType, openingHours };
   } catch {
-    return { photos: [], types: [], primaryType: null };
+    return { photos: [], types: [], primaryType: null, openingHours: null };
   }
 }
+
+const HOURS_24H = [
+  "domingo: Atendimento 24 horas",
+  "segunda-feira: Atendimento 24 horas",
+  "terça-feira: Atendimento 24 horas",
+  "quarta-feira: Atendimento 24 horas",
+  "quinta-feira: Atendimento 24 horas",
+  "sexta-feira: Atendimento 24 horas",
+  "sábado: Atendimento 24 horas",
+];
 
 export async function POST(request: Request) {
   try {
@@ -110,13 +131,14 @@ export async function POST(request: Request) {
       ? lead.place_types
       : [];
     let primaryType: string | null = lead.primary_type || null;
+    let openingHours: string[] | null = null;
 
-    // Se ainda não temos foto real ou types salvos, busca no Google Places Details
-    if ((placePhotos.length === 0 || placeTypes.length === 0) && lead.place_id && apiKey) {
-      const fetched = await fetchGooglePlacePhotosAndTypes(lead.place_id, apiKey);
+    if (lead.place_id && apiKey) {
+      const fetched = await fetchGooglePlaceDetails(lead.place_id, apiKey);
       if (fetched.photos.length > 0) placePhotos = fetched.photos;
       if (fetched.types.length > 0) placeTypes = fetched.types;
       if (fetched.primaryType) primaryType = fetched.primaryType;
+      if (fetched.openingHours) openingHours = fetched.openingHours;
     }
 
     const nicheKey = detectProspectingNiche(
@@ -124,17 +146,21 @@ export async function POST(request: Request) {
       placeTypes,
       primaryType
     );
+    const cityLabel = lead.region || "Brasília e Região";
     const nicheConfig = getNicheDemoConfig(
       nicheKey,
       lead.business_name,
-      primaryType
+      primaryType,
+      cityLabel
     );
 
     const coverImageUrl = placePhotos[0] || nicheConfig.fallbackCoverUrl;
     const galleryPhotos =
       placePhotos.length > 0 ? placePhotos : [nicheConfig.fallbackCoverUrl];
+    const effectiveHours =
+      openingHours || (nicheConfig.key === "towing" ? HOURS_24H : null);
 
-    // Verifica se já existe um tenant para esse demo_slug (permite atualizar prévia existente!)
+    // Verifica se já existe um tenant para esse demo_slug (permite regerar/atualizar prévia existente!)
     let tenantId: string | null = null;
     let finalSlug = lead.demo_slug || "";
 
@@ -151,7 +177,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const tenantPayload = {
+    const tenantPayload: Record<string, any> = {
       name: lead.business_name,
       niche: nicheConfig.tenantNiche,
       theme_niche: nicheConfig.themeNiche,
@@ -166,12 +192,17 @@ export async function POST(request: Request) {
       service_fee_enabled: nicheConfig.key === "restaurant",
       service_fee_percent: 10,
       subscription_status: "trial",
+      business_attributes: null,
       theme_settings: {
         template_id: "premium",
         niche: nicheConfig.themeNiche,
         primary_color: nicheConfig.primaryColor,
       },
     };
+
+    if (effectiveHours) {
+      tenantPayload.opening_hours = effectiveHours;
+    }
 
     if (tenantId) {
       await supabase.from("tenants").update(tenantPayload).eq("id", tenantId);
@@ -215,13 +246,16 @@ export async function POST(request: Request) {
       finalSlug = createdTenant.slug;
     }
 
-    // 2. Upsert perfil da vitrine com foto real do Google Places
+    // 2. Upsert perfil da vitrine com bio personalizada do subnicho e foto real
     await supabase.from("tenant_profiles").upsert(
       {
         tenant_id: tenantId,
         name: lead.business_name,
         description: nicheConfig.description,
-        editorial_summary: nicheConfig.editorialSummary(lead.business_name),
+        editorial_summary: nicheConfig.editorialSummary(
+          lead.business_name,
+          cityLabel
+        ),
         phone_whatsapp: lead.phone || null,
         address: lead.address || null,
         cover_image_url: coverImageUrl,
@@ -235,9 +269,8 @@ export async function POST(request: Request) {
       { onConflict: "tenant_id" }
     );
 
-    // 3. Popula catálogo específico do nicho com imagens
+    // 3. Popula catálogo específico do subnicho usando nomes reais das colunas do Supabase
     if (nicheConfig.key === "restaurant") {
-      // Limpa itens anteriores da prévia se estiver atualizando
       await supabase.from("menu_items").delete().eq("tenant_id", tenantId);
       await supabase.from("menu_categories").delete().eq("tenant_id", tenantId);
 
@@ -288,12 +321,11 @@ export async function POST(request: Request) {
         });
       }
     } else {
-      // Nichos não-restaurante: limpa menu de bar antigo (se houver) e popula services + tenant_products com fotos
       await supabase.from("menu_items").delete().eq("tenant_id", tenantId);
       await supabase.from("services").delete().eq("tenant_id", tenantId);
       await supabase.from("tenant_products").delete().eq("tenant_id", tenantId);
 
-      await supabase.from("services").insert(
+      const { error: svcErr } = await supabase.from("services").insert(
         nicheConfig.items.map((item) => ({
           tenant_id: tenantId,
           name: item.name,
@@ -304,20 +336,33 @@ export async function POST(request: Request) {
         }))
       );
 
-      await supabase.from("tenant_products").insert(
-        nicheConfig.items.map((item) => ({
+      if (svcErr) {
+        console.error("[create-demo] Erro ao inserir services:", svcErr.message);
+      }
+
+      const { error: prodErr } = await supabase.from("tenant_products").insert(
+        nicheConfig.items.map((item, idx) => ({
           tenant_id: tenantId,
           name: item.name,
           description: item.description,
-          price: item.price,
           category: item.category,
+          price: item.price,
           image_url: item.image_url,
-          is_active: true,
+          is_available: true,
+          is_featured: idx === 0,
+          display_order: idx + 1,
         }))
       );
+
+      if (prodErr) {
+        console.error(
+          "[create-demo] Erro ao inserir tenant_products:",
+          prodErr.message
+        );
+      }
     }
 
-    // 4. Atualiza lead em prospecting_leads (resiliente se colunas novas ainda não existirem)
+    // 4. Atualiza lead em prospecting_leads
     const nextStatus =
       lead.status === "new" || !lead.status ? "demo_created" : lead.status;
     const baseUpdate = {
@@ -337,7 +382,10 @@ export async function POST(request: Request) {
       .update(extendedUpdate)
       .eq("id", lead.id);
 
-    if (updErr && (updErr.code === "PGRST204" || /column/i.test(updErr.message))) {
+    if (
+      updErr &&
+      (updErr.code === "PGRST204" || /column/i.test(updErr.message))
+    ) {
       await supabase
         .from("prospecting_leads")
         .update(baseUpdate)

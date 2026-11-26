@@ -30,6 +30,8 @@ import { PremiumTemplateView } from "./templates/PremiumTemplateView";
 import { WhatsAppFloatingButton } from "./WhatsAppFloatingButton";
 import { VehicleQuoteModal } from "./VehicleQuoteModal";
 import { PublicRestaurantMenuSection } from "./PublicRestaurantMenuSection";
+import { TowingEmergencyCard } from "./TowingEmergencyCard";
+import { resolvePublicSubniche } from "@/utils/prospecting-niche";
 import { getUnifiedEstablishmentPhotos } from "@/utils/establishment-photos";
 import { getCtaButtonText, isAutomotiveNiche, isRestaurantNiche } from "@/utils/showcase";
 import { CarFront, Wrench, Gauge, ShieldCheck } from "lucide-react";
@@ -212,14 +214,22 @@ export function PublicTenantHub({
     tenant.theme_settings?.niche ||
     tenant.theme_niche ||
     profile?.template_id;
-  const isRestaurant = isRestaurantNiche(
-    tenant,
-    profile,
-    effectiveNiche,
-    menuCategories,
-    menuItems
-  );
-  const ctaButtonText = isRestaurant
+  const subniche = resolvePublicSubniche(tenant, profile);
+  const isTowing = subniche === "towing";
+  const isMechanic = subniche === "mechanic";
+
+  const isRestaurant =
+    subniche === "restaurant" ||
+    isRestaurantNiche(
+      tenant,
+      profile,
+      effectiveNiche,
+      menuCategories,
+      menuItems
+    );
+  const ctaButtonText = isTowing
+    ? "Chamar Guincho Agora"
+    : isRestaurant
     ? "Ver Cardápio"
     : getCtaButtonText(
         tenant,
@@ -242,6 +252,13 @@ export function PublicTenantHub({
     profile?.google_reviews_count ?? profile?.review_count ?? tenant.google_reviews_count ?? visibleReviews.length;
 
   const handleOpenBooking = (serviceId?: string, professionalId?: string) => {
+    if (isTowing) {
+      const towingEl = document.getElementById("socorro-guincho");
+      if (towingEl) {
+        towingEl.scrollIntoView({ behavior: "smooth" });
+        return;
+      }
+    }
     if (isRestaurant) {
       const menuEl = document.getElementById("cardapio");
       if (menuEl) {
@@ -270,11 +287,14 @@ export function PublicTenantHub({
     effectiveNiche === "bolos" ||
     effectiveNiche === "doceria";
   const isAutomotive =
-    effectiveNiche === "automotive" ||
-    effectiveNiche === "automotivo" ||
-    effectiveNiche === "auto" ||
-    effectiveNiche === "mecanica" ||
-    isAutomotiveNiche(tenant, profile, effectiveNiche);
+    isMechanic ||
+    (!isTowing &&
+      subniche !== "car_wash" &&
+      (effectiveNiche === "automotive" ||
+        effectiveNiche === "automotivo" ||
+        effectiveNiche === "auto" ||
+        effectiveNiche === "mecanica" ||
+        isAutomotiveNiche(tenant, profile, effectiveNiche)));
   const isAuto = isAutomotive || effectiveNiche === "barbearia";
   const isFood = isRestaurant;
   const isHealth = effectiveNiche === "health_beauty" || effectiveNiche === "estetica_saude";
@@ -394,8 +414,17 @@ export function PublicTenantHub({
             : "max-w-7xl py-8 sm:py-14 md:py-16"
         }`}
       >
-        {/* Faixa de Triagem & Orçamento Inteligente por Placa (Exclusivo Nicho Automotivo / Mecânica) */}
-        {isAutomotive && (
+        {/* Card Emergencial Exclusivo para Guincho / Socorro Veicular 24h */}
+        {isTowing && (
+          <TowingEmergencyCard
+            tenantName={tenant.name}
+            phoneWhatsapp={profile?.phone_whatsapp || profile?.phone}
+            cityLabel={profile?.address}
+          />
+        )}
+
+        {/* Faixa de Triagem & Orçamento Inteligente por Placa (APENAS para Oficina Mecânica) */}
+        {isMechanic && (
           <div className="mb-8 rounded-3xl border border-blue-500/30 bg-gradient-to-r from-slate-900/95 via-slate-800/95 to-slate-900/95 p-5 sm:p-6 shadow-xl shadow-black/40 backdrop-blur-md flex flex-col md:flex-row items-center justify-between gap-5">
             <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-4">
               {/* Mini Placa Mercosul Decorativa */}
