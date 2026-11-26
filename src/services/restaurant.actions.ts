@@ -76,10 +76,18 @@ function normalizeCategory(row: any): MenuCategory {
     tenant_id: row.tenant_id,
     name: row.name || row.title || "Categoria",
     description: row.description ?? null,
-    display_order: Number(row.display_order ?? row.sort_order ?? 0),
+    display_order: Number(row.order_index ?? row.display_order ?? row.sort_order ?? 0),
     is_active: row.is_active !== false,
     created_at: row.created_at || new Date().toISOString(),
   };
+}
+
+function sortCategoriesByOrder(categories: MenuCategory[]): MenuCategory[] {
+  return [...categories].sort((a, b) => {
+    const orderDiff = (a.display_order ?? 0) - (b.display_order ?? 0);
+    if (orderDiff !== 0) return orderDiff;
+    return String(a.created_at || "").localeCompare(String(b.created_at || ""));
+  });
 }
 
 function normalizeMenuItem(row: any, categoryMap?: Map<string, string>): MenuItem {
@@ -298,7 +306,9 @@ export async function getAdminMenuDataAction(): Promise<{
         .order("created_at", { ascending: false }),
     ]);
 
-    const categories = (catsRes.data || []).map(normalizeCategory);
+    const categories = sortCategoriesByOrder(
+      (catsRes.data || []).map(normalizeCategory)
+    );
     const categoryMap = new Map<string, string>();
     categories.forEach((c) => categoryMap.set(c.id, c.name));
 
@@ -342,6 +352,7 @@ export async function createMenuCategoryAction(input: {
       tenant_id: authContext.tenantId,
       name: parsed.data.name.trim(),
       description: parsed.data.description?.trim() || null,
+      order_index: parsed.data.display_order ?? 0,
       display_order: parsed.data.display_order ?? 0,
       is_active: true,
     });
@@ -355,7 +366,7 @@ export async function createMenuCategoryAction(input: {
 
     revalidatePath("/admin/cardapio");
     if (authContext.tenant?.slug) {
-      revalidatePath(`/${authContext.tenant.slug}`);
+      revalidatePath(`/${authContext.tenant.slug}`, "layout");
     }
 
     return { success: true, data: normalizeCategory(data) };
@@ -374,6 +385,37 @@ export async function deleteMenuCategoryAction(
     }
 
     const supabase = createAdminClient();
+
+    // Verifica se existem produtos vinculados à categoria antes de excluir
+    const [{ data: catRow }, { data: tenantItems }] = await Promise.all([
+      supabase
+        .from("menu_categories")
+        .select("id, name")
+        .eq("id", categoryId)
+        .eq("tenant_id", authContext.tenantId)
+        .maybeSingle(),
+      supabase
+        .from("menu_items")
+        .select("id, category_id, category")
+        .eq("tenant_id", authContext.tenantId),
+    ]);
+
+    if (catRow) {
+      const catNameLower = String(catRow.name || "").toLowerCase();
+      const linkedCount = (tenantItems || []).filter(
+        (it: any) =>
+          it.category_id === categoryId ||
+          String(it.category || "").toLowerCase() === catNameLower
+      ).length;
+
+      if (linkedCount > 0) {
+        return {
+          success: false,
+          error: `A categoria "${catRow.name}" possui ${linkedCount} produto(s) vinculado(s). Mova ou exclua os produtos antes de remover a categoria.`,
+        };
+      }
+    }
+
     const { error } = await supabase
       .from("menu_categories")
       .delete()
@@ -386,12 +428,143 @@ export async function deleteMenuCategoryAction(
 
     revalidatePath("/admin/cardapio");
     if (authContext.tenant?.slug) {
-      revalidatePath(`/${authContext.tenant.slug}`);
+      revalidatePath(`/${authContext.tenant.slug}`, "layout");
     }
 
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err?.message || "Erro ao remover categoria." };
+  }
+}
+
+export async function deleteEmptyMenuCategoriesAction(
+  categoryIds?: string[]
+): Promise<{
+  success: boolean;
+  data?: { deletedIds: string[] };
+  error?: string;
+}> {
+  try {
+    const { data: authContext, error: authError } = await getAuthenticatedTenant();
+    if (authError || !authContext) {
+      return { success: false, error: authError || "Não autenticado." };
+    }
+
+    const supabase = createAdminClient();
+    const tenantId = authContext.tenantId;
+
+    const [{ data: cats, error: catsError }, { data: items, error: itemsError }] =
+      await Promise.all([
+        supabase
+          .from("menu_categories")
+          .select("id, name")
+          .eq("tenant_id", tenantId),
+        supabase
+          .from("menu_items")
+          .select("id, category_id, category")
+          .eq("tenant_id", tenantId),
+      ]);
+
+    if (catsError) {
+      return { success: false, error: catsError.message };
+    }
+    if (itemsError) {
+      return { success: false, error: itemsError.message };
+    }
+
+    const requestedSet =
+      Array.isArray(categoryIds) && categoryIds.length > 0
+        ? new Set(categoryIds)
+        : null;
+
+    const deletableIds = (cats || [])
+      .filter((cat: any) => {
+        if (requestedSet && !requestedSet.has(cat.id)) return false;
+        const catNameLower = String(cat.name || "").toLowerCase();
+        const hasItems = (items || []).some(
+          (it: any) =>
+            it.category_id === cat.id ||
+            String(it.category || "").toLowerCase() === catNameLower
+        );
+        return !hasItems;
+      })
+      .map((cat: any) => cat.id as string);
+
+    if (deletableIds.length > 0) {
+      const { error: delError } = await supabase
+        .from("menu_categories")
+        .delete()
+        .in("id", deletableIds)
+        .eq("tenant_id", tenantId);
+
+      if (delError) {
+        return { success: false, error: delError.message };
+      }
+    }
+
+    revalidatePath("/admin/cardapio");
+    if (authContext.tenant?.slug) {
+      revalidatePath(`/${authContext.tenant.slug}`, "layout");
+    }
+
+    return { success: true, data: { deletedIds: deletableIds } };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || "Erro ao limpar categorias vazias.",
+    };
+  }
+}
+
+export async function reorderMenuCategoriesAction(
+  orderedIds: string[]
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const parsed = z.array(z.string().min(1)).min(1).safeParse(orderedIds);
+    if (!parsed.success) {
+      return { success: false, error: "Lista de categorias inválida para ordenação." };
+    }
+
+    const { data: authContext, error: authError } = await getAuthenticatedTenant();
+    if (authError || !authContext) {
+      return { success: false, error: authError || "Não autenticado." };
+    }
+
+    const supabase = createAdminClient();
+    const tenantId = authContext.tenantId;
+
+    for (let idx = 0; idx < parsed.data.length; idx++) {
+      const id = parsed.data[idx];
+      const nextOrder = idx + 1;
+      const { error } = await resilientUpdate(
+        supabase,
+        "menu_categories",
+        id,
+        tenantId,
+        {
+          order_index: nextOrder,
+          display_order: nextOrder,
+        }
+      );
+      if (error) {
+        return {
+          success: false,
+          error: error.message || "Erro ao salvar a ordem das categorias.",
+        };
+      }
+    }
+
+    revalidatePath("/admin/cardapio");
+    if (authContext.tenant?.slug) {
+      revalidatePath(`/${authContext.tenant.slug}`, "layout");
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || "Erro ao reordenar categorias.",
+    };
   }
 }
 
@@ -1149,9 +1322,11 @@ export async function getPublicRestaurantMenuAction(tenantId: string): Promise<{
         .order("created_at", { ascending: false }),
     ]);
 
-    const categories = (catsRes.data || [])
-      .map(normalizeCategory)
-      .filter((c) => c.is_active !== false);
+    const categories = sortCategoriesByOrder(
+      (catsRes.data || [])
+        .map(normalizeCategory)
+        .filter((c) => c.is_active !== false)
+    );
 
     const categoryMap = new Map<string, string>();
     categories.forEach((c) => categoryMap.set(c.id, c.name));

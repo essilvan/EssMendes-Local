@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/client";
 import {
   createMenuCategoryAction,
   deleteMenuCategoryAction,
+  deleteEmptyMenuCategoriesAction,
+  reorderMenuCategoriesAction,
   saveMenuItemAction,
   toggleMenuItemAvailabilityAction,
   deleteMenuItemAction,
@@ -24,6 +26,10 @@ import {
   Tag,
   X,
   Search,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
+  Save,
 } from "lucide-react";
 
 interface MenuManagerClientProps {
@@ -129,14 +135,30 @@ export function MenuManagerClient({
       body: JSON.stringify({ slug: tenantSlug }),
     }).catch(() => {});
   };
-  const [categories, setCategories] = useState<MenuCategory[]>(initialCategories);
+  const [categories, setCategories] = useState<MenuCategory[]>(() =>
+    [...initialCategories].sort((a, b) => {
+      const orderDiff = (a.display_order ?? 0) - (b.display_order ?? 0);
+      if (orderDiff !== 0) return orderDiff;
+      return String(a.created_at || "").localeCompare(String(b.created_at || ""));
+    })
+  );
   const [items, setItems] = useState<MenuItem[]>(initialItems);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [dismissedDefaultCategories, setDismissedDefaultCategories] = useState<
+    string[]
+  >([]);
 
-  // Estado Nova Categoria
+  // Estado Nova Categoria, Limpeza e Reordenação
   const [newCategoryName, setNewCategoryName] = useState("");
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+  const [deletingCategoryKey, setDeletingCategoryKey] = useState<string | null>(
+    null
+  );
+  const [isClearingEmpty, setIsClearingEmpty] = useState(false);
+  const [isReorderMode, setIsReorderMode] = useState(false);
+  const [reorderDraft, setReorderDraft] = useState<MenuCategory[]>([]);
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
 
   // Estado Modal / Form de Item
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
@@ -159,20 +181,51 @@ export function MenuManagerClient({
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Lista combinada de categorias (padrões + cadastradas no banco)
-  const allCategoryNames = Array.from(
-    new Set([
-      ...DEFAULT_CATEGORY_SUGGESTIONS,
-      ...categories.map((c) => c.name),
-      ...items.map((i) => i.category || "Pratos"),
-    ])
-  ).filter(Boolean);
+  const getCategoryItemCount = (catName: string, catId?: string) =>
+    items.filter(
+      (i) =>
+        (catId && i.category_id === catId) ||
+        (i.category || "Pratos").toLowerCase() === catName.toLowerCase()
+    ).length;
+
+  // Lista combinada de categorias na ordem salva (só sugere padrões se o cardápio estiver totalmente vazio)
+  const rawCategoryNames: string[] = [
+    ...categories.map((c) => c.name),
+    ...items.map((i) => i.category || "Pratos"),
+    ...(categories.length === 0 && items.length === 0
+      ? DEFAULT_CATEGORY_SUGGESTIONS.filter(
+          (d) =>
+            !dismissedDefaultCategories.some(
+              (hidden) => hidden.toLowerCase() === d.toLowerCase()
+            )
+        )
+      : []),
+  ].filter(Boolean);
+
+  const allCategoryNames: string[] = [];
+  for (const name of rawCategoryNames) {
+    if (!allCategoryNames.some((n) => n.toLowerCase() === name.toLowerCase())) {
+      allCategoryNames.push(name);
+    }
+  }
+
+  const modalCategoryOptions =
+    allCategoryNames.length > 0 ? allCategoryNames : DEFAULT_CATEGORY_SUGGESTIONS;
+
+  const emptyCategoryNames = allCategoryNames.filter((catName) => {
+    const dbCat = categories.find(
+      (c) => c.name.toLowerCase() === catName.toLowerCase()
+    );
+    return getCategoryItemCount(catName, dbCat?.id) === 0;
+  });
 
   const openNewItemModal = () => {
     setEditingItemId(null);
     setItemName("");
     setItemCategory(
-      selectedCategoryFilter !== "all" ? selectedCategoryFilter : "Pratos"
+      selectedCategoryFilter !== "all"
+        ? selectedCategoryFilter
+        : modalCategoryOptions[0] || "Pratos"
     );
     setItemPrice("");
     setItemDescription("");
@@ -209,6 +262,7 @@ export function MenuManagerClient({
           type: "success",
           text: `Categoria "${res.data.name}" adicionada ao cardápio!`,
         });
+        triggerPublicRevalidate();
       } else {
         setFeedback({
           type: "error",
@@ -220,13 +274,157 @@ export function MenuManagerClient({
     }
   };
 
-  const handleDeleteCategory = async (cat: MenuCategory) => {
-    const res = await deleteMenuCategoryAction(cat.id);
-    if (res.success) {
-      setCategories((prev) => prev.filter((c) => c.id !== cat.id));
-      if (selectedCategoryFilter === cat.name) {
+  const handleDeleteCategoryByName = async (catName: string) => {
+    const dbCat = categories.find(
+      (c) => c.name.toLowerCase() === catName.toLowerCase()
+    );
+    const count = getCategoryItemCount(catName, dbCat?.id);
+    if (count > 0) {
+      setFeedback({
+        type: "error",
+        text: `A categoria "${catName}" possui ${count} produto(s) vinculado(s). Mova ou exclua os produtos antes de removê-la.`,
+      });
+      return;
+    }
+
+    setDeletingCategoryKey(catName.toLowerCase());
+    setFeedback(null);
+    try {
+      if (dbCat) {
+        const res = await deleteMenuCategoryAction(dbCat.id);
+        if (res.success) {
+          setCategories((prev) => prev.filter((c) => c.id !== dbCat.id));
+          if (selectedCategoryFilter.toLowerCase() === catName.toLowerCase()) {
+            setSelectedCategoryFilter("all");
+          }
+          setFeedback({
+            type: "success",
+            text: `Categoria "${catName}" removida do cardápio.`,
+          });
+          triggerPublicRevalidate();
+        } else {
+          setFeedback({
+            type: "error",
+            text: res.error || "Não foi possível remover a categoria.",
+          });
+        }
+      } else {
+        setDismissedDefaultCategories((prev) => [...prev, catName]);
+        if (selectedCategoryFilter.toLowerCase() === catName.toLowerCase()) {
+          setSelectedCategoryFilter("all");
+        }
+        setFeedback({
+          type: "success",
+          text: `Categoria "${catName}" removida.`,
+        });
+      }
+    } finally {
+      setDeletingCategoryKey(null);
+    }
+  };
+
+  const handleClearEmptyCategories = async () => {
+    if (emptyCategoryNames.length === 0) return;
+    setIsClearingEmpty(true);
+    setFeedback(null);
+    try {
+      const emptyDbCats = categories.filter(
+        (c) => getCategoryItemCount(c.name, c.id) === 0
+      );
+      const emptyDbIds = emptyDbCats.map((c) => c.id);
+      const emptyDefaultNames = emptyCategoryNames.filter(
+        (name) =>
+          !emptyDbCats.some((c) => c.name.toLowerCase() === name.toLowerCase())
+      );
+
+      let removedCount = 0;
+
+      if (emptyDbIds.length > 0) {
+        const res = await deleteEmptyMenuCategoriesAction(emptyDbIds);
+        if (!res.success) {
+          setFeedback({
+            type: "error",
+            text: res.error || "Não foi possível limpar as categorias vazias.",
+          });
+          return;
+        }
+        const deletedSet = new Set(res.data?.deletedIds || emptyDbIds);
+        removedCount += deletedSet.size;
+        setCategories((prev) => prev.filter((c) => !deletedSet.has(c.id)));
+      }
+
+      if (emptyDefaultNames.length > 0) {
+        removedCount += emptyDefaultNames.length;
+        setDismissedDefaultCategories((prev) => [
+          ...prev,
+          ...emptyDefaultNames,
+        ]);
+      }
+
+      if (
+        selectedCategoryFilter !== "all" &&
+        emptyCategoryNames.some(
+          (n) => n.toLowerCase() === selectedCategoryFilter.toLowerCase()
+        )
+      ) {
         setSelectedCategoryFilter("all");
       }
+
+      setFeedback({
+        type: "success",
+        text: `${removedCount} categoria(s) vazia(s) removida(s) com sucesso!`,
+      });
+      triggerPublicRevalidate();
+    } finally {
+      setIsClearingEmpty(false);
+    }
+  };
+
+  const handleOpenReorderMode = () => {
+    setReorderDraft([...categories]);
+    setIsReorderMode(true);
+    setFeedback(null);
+  };
+
+  const handleMoveCategory = (index: number, direction: -1 | 1) => {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= reorderDraft.length) return;
+    setReorderDraft((prev) => {
+      const next = [...prev];
+      const temp = next[index];
+      next[index] = next[targetIndex];
+      next[targetIndex] = temp;
+      return next;
+    });
+  };
+
+  const handleSaveCategoryOrder = async () => {
+    if (reorderDraft.length === 0) return;
+    setIsSavingOrder(true);
+    setFeedback(null);
+    try {
+      const orderedIds = reorderDraft.map((c) => c.id);
+      const res = await reorderMenuCategoriesAction(orderedIds);
+      if (res.success) {
+        const updated = reorderDraft.map((cat, idx) => ({
+          ...cat,
+          display_order: idx + 1,
+        }));
+        setCategories(updated);
+        setIsReorderMode(false);
+        setFeedback({
+          type: "success",
+          text: "Ordem das categorias salva! A vitrine pública e o cardápio das mesas foram atualizados.",
+        });
+        triggerPublicRevalidate();
+      } else {
+        setFeedback({
+          type: "error",
+          text: res.error || "Não foi possível salvar a ordem das categorias.",
+        });
+      }
+    } finally {
+      setIsSavingOrder(false);
     }
   };
 
@@ -461,10 +659,49 @@ export function MenuManagerClient({
 
       {/* Bloco de Categorias */}
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-600">
-            <Tag className="h-4 w-4 text-orange-600" />
-            <span>Categorias do Cardápio</span>
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-600">
+              <Tag className="h-4 w-4 text-orange-600" />
+              <span>Categorias do Cardápio</span>
+            </div>
+
+            {emptyCategoryNames.length > 0 && !isReorderMode && (
+              <button
+                type="button"
+                onClick={handleClearEmptyCategories}
+                disabled={isClearingEmpty}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 disabled:opacity-50 px-2.5 py-1 text-[11px] font-bold text-rose-700 transition cursor-pointer"
+              >
+                {isClearingEmpty ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Trash2 className="h-3 w-3" />
+                )}
+                <span>Limpar Vazias ({emptyCategoryNames.length})</span>
+              </button>
+            )}
+
+            {categories.length > 1 && (
+              <button
+                type="button"
+                onClick={() =>
+                  isReorderMode
+                    ? setIsReorderMode(false)
+                    : handleOpenReorderMode()
+                }
+                className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-bold transition cursor-pointer ${
+                  isReorderMode
+                    ? "border-orange-300 bg-orange-50 text-orange-700"
+                    : "border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700"
+                }`}
+              >
+                <ArrowUpDown className="h-3 w-3" />
+                <span>
+                  {isReorderMode ? "Fechar Ordenação" : "Ordenar Categorias"}
+                </span>
+              </button>
+            )}
           </div>
 
           <form onSubmit={handleAddCategory} className="flex items-center gap-2">
@@ -490,6 +727,93 @@ export function MenuManagerClient({
           </form>
         </div>
 
+        {/* Painel de Reordenação de Categorias */}
+        {isReorderMode && (
+          <div className="rounded-xl border border-orange-200 bg-orange-50/50 p-4 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <p className="text-xs font-bold text-slate-900">
+                  Defina a ordem de exibição das categorias
+                </p>
+                <p className="text-[11px] text-slate-600">
+                  Use as setas para definir a sequência exata na vitrine pública e no cardápio digital das mesas.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsReorderMode(false)}
+                  disabled={isSavingOrder}
+                  className="rounded-lg border border-slate-300 bg-white hover:bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 transition cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveCategoryOrder}
+                  disabled={isSavingOrder}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-orange-600 hover:bg-orange-500 disabled:opacity-50 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition cursor-pointer"
+                >
+                  {isSavingOrder ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Save className="h-3.5 w-3.5" />
+                  )}
+                  <span>Salvar Ordem</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {reorderDraft.map((cat, idx) => {
+                const count = getCategoryItemCount(cat.name, cat.id);
+                return (
+                  <div
+                    key={cat.id}
+                    className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-2xs"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-orange-100 text-[11px] font-black text-orange-700">
+                        {idx + 1}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-bold text-slate-900">
+                          {cat.name}
+                        </p>
+                        <p className="text-[10px] font-medium text-slate-500">
+                          {count} {count === 1 ? "item" : "itens"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleMoveCategory(idx, -1)}
+                        disabled={idx === 0 || isSavingOrder}
+                        title="Mover para cima"
+                        className="rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-200 disabled:opacity-30 p-1.5 text-slate-700 transition cursor-pointer"
+                      >
+                        <ArrowUp className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleMoveCategory(idx, 1)}
+                        disabled={
+                          idx === reorderDraft.length - 1 || isSavingOrder
+                        }
+                        title="Mover para baixo"
+                        className="rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-200 disabled:opacity-30 p-1.5 text-slate-700 transition cursor-pointer"
+                      >
+                        <ArrowDown className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Abas de Filtro de Categoria */}
         <div className="flex items-center gap-2 flex-wrap pt-1">
           <button
@@ -505,14 +829,14 @@ export function MenuManagerClient({
           </button>
 
           {allCategoryNames.map((catName) => {
-            const count = items.filter(
-              (i) => (i.category || "Pratos").toLowerCase() === catName.toLowerCase()
-            ).length;
             const customCat = categories.find(
               (c) => c.name.toLowerCase() === catName.toLowerCase()
             );
+            const count = getCategoryItemCount(catName, customCat?.id);
             const active =
               selectedCategoryFilter.toLowerCase() === catName.toLowerCase();
+            const isDeletingThis =
+              deletingCategoryKey === catName.toLowerCase();
 
             return (
               <div
@@ -530,10 +854,11 @@ export function MenuManagerClient({
                 >
                   {catName} ({count})
                 </button>
-                {customCat && (
+                {count === 0 && (
                   <button
                     type="button"
-                    onClick={() => handleDeleteCategory(customCat)}
+                    onClick={() => handleDeleteCategoryByName(catName)}
+                    disabled={isDeletingThis}
                     title="Remover categoria"
                     className={`ml-1 rounded p-0.5 transition cursor-pointer ${
                       active
@@ -541,7 +866,11 @@ export function MenuManagerClient({
                         : "hover:bg-slate-300 text-slate-400 hover:text-rose-600"
                     }`}
                   >
-                    <X className="h-3 w-3" />
+                    {isDeletingThis ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <X className="h-3 w-3" />
+                    )}
                   </button>
                 )}
               </div>
@@ -743,7 +1072,7 @@ export function MenuManagerClient({
                     onChange={(e) => setItemCategory(e.target.value)}
                     className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-900 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
                   >
-                    {allCategoryNames.map((cat) => (
+                    {modalCategoryOptions.map((cat) => (
                       <option key={cat} value={cat}>
                         {cat}
                       </option>

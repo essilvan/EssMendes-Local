@@ -75,14 +75,6 @@ interface CartItem {
   quantity: number;
 }
 
-const defaultCategories = [
-  "Todos",
-  "Petiscos & Entradas",
-  "Pratos",
-  "Bebidas",
-  "Sobremesas",
-];
-
 function renderCategoryIcon(tabName: string, isActive: boolean) {
   const normalized = (tabName || "").toLowerCase();
   if (normalized === "todos" || normalized.includes("todo")) {
@@ -240,39 +232,70 @@ export function PublicRestaurantMenuSection({
   const safeCategories = Array.isArray(categories) ? categories : [];
   const safeItems = Array.isArray(items) ? items : [];
 
-  // Abas dinâmicas combinando as categorias padrão + categorias do banco
+  // Abas dinâmicas na ordem exata configurada pelo lojista (exibindo apenas categorias com itens)
   const categoryTabs = useMemo(() => {
-    const dynamicNames = [
-      ...safeCategories.map((c) => c?.name).filter(Boolean),
-      ...safeItems.map((i) => i?.category || "Pratos").filter(Boolean),
-    ] as string[];
+    const sortedCategories = [...safeCategories].sort((a, b) => {
+      const orderDiff = (a?.display_order ?? 0) - (b?.display_order ?? 0);
+      if (orderDiff !== 0) return orderDiff;
+      return String(a?.created_at || "").localeCompare(
+        String(b?.created_at || "")
+      );
+    });
 
-    const merged = [...defaultCategories];
-    for (const name of dynamicNames) {
-      if (!merged.some((m) => m.toLowerCase() === name.toLowerCase())) {
-        merged.push(name);
+    const tabs: string[] = ["Todos"];
+
+    // 1. Primeiro, adiciona categorias cadastradas na ordem definida que possuam ao menos 1 item
+    for (const cat of sortedCategories) {
+      const catName = cat?.name?.trim();
+      if (!catName) continue;
+      const hasItems = safeItems.some(
+        (it) =>
+          it?.category_id === cat.id ||
+          (it?.category || "Pratos").toLowerCase() === catName.toLowerCase()
+      );
+      if (
+        hasItems &&
+        !tabs.some((t) => t.toLowerCase() === catName.toLowerCase())
+      ) {
+        tabs.push(catName);
       }
     }
-    return merged;
+
+    // 2. Depois, adiciona eventuais categorias presentes nos itens que não estavam em menu_categories
+    for (const item of safeItems) {
+      const itemCatName = (item?.category || "Pratos").trim();
+      if (
+        itemCatName &&
+        !tabs.some((t) => t.toLowerCase() === itemCatName.toLowerCase())
+      ) {
+        tabs.push(itemCatName);
+      }
+    }
+
+    return tabs;
   }, [safeCategories, safeItems]);
 
   const filteredItems = useMemo(() => {
-    if (activeTab === "Todos") return safeItems;
+    if (activeTab === "Todos") {
+      // Ordena os itens acompanhando a sequência de categorias configurada pelo lojista
+      const categoryOrderMap = new Map<string, number>();
+      categoryTabs.forEach((tab, idx) => {
+        if (idx > 0) categoryOrderMap.set(tab.toLowerCase(), idx);
+      });
+      return [...safeItems].sort((a, b) => {
+        const idxA =
+          categoryOrderMap.get((a?.category || "Pratos").toLowerCase()) ?? 9999;
+        const idxB =
+          categoryOrderMap.get((b?.category || "Pratos").toLowerCase()) ?? 9999;
+        return idxA - idxB;
+      });
+    }
     const target = activeTab.toLowerCase();
     return safeItems.filter((item) => {
       const itemCat = (item?.category || "Pratos").toLowerCase();
-      if (target === "petiscos & entradas") {
-        return (
-          itemCat === target ||
-          itemCat.includes("entrada") ||
-          itemCat.includes("petisc") ||
-          itemCat.includes("porc") ||
-          itemCat.includes("porç")
-        );
-      }
       return itemCat === target;
     });
-  }, [safeItems, activeTab]);
+  }, [safeItems, activeTab, categoryTabs]);
 
   const fallbackWhatsappUrl = generateWhatsAppUrl(
     restaurantPhone || "",
