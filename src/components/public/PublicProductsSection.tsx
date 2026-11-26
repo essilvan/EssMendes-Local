@@ -23,6 +23,8 @@ interface PublicProductsSectionProps {
   tenantName: string;
   phoneWhatsapp?: string | null;
   theme?: NicheThemeConfig;
+  subniche?: string;
+  isDemo?: boolean;
 }
 
 export function PublicProductsSection({
@@ -30,6 +32,8 @@ export function PublicProductsSection({
   tenantName,
   phoneWhatsapp,
   theme,
+  subniche,
+  isDemo = false,
 }: PublicProductsSectionProps) {
   const [selectedProduct, setSelectedProduct] = React.useState<ItemDetailData | null>(null);
   const activeProducts = products.filter((p) => p.is_available);
@@ -47,19 +51,62 @@ export function PublicProductsSection({
     }).format(val);
   };
 
-  const getWhatsAppProductLink = (productName: string, price: number, isOutOfStock?: boolean) => {
-    const formattedPrice = formatCurrency(price);
+  const getWhatsAppProductLink = (
+    productName: string,
+    price: number | null,
+    isOutOfStock?: boolean
+  ) => {
+    const hasNumericPrice = price !== null && Number(price) > 0;
     const message = isOutOfStock
       ? encodeURIComponent(
-          `👋 Olá! Vi no site o produto *${productName}* e gostaria de consultar a encomenda e prazo de reposição.`
+          `👋 Olá! Vi no site *${productName}* e gostaria de consultar a disponibilidade e prazo.`
+        )
+      : hasNumericPrice
+      ? encodeURIComponent(
+          `👋 Olá! Vi no site *${productName}* por ${formatCurrency(
+            Number(price)
+          )}. Gostaria de confirmar a disponibilidade.`
         )
       : encodeURIComponent(
-          `👋 Olá! Vi no site o produto *${productName}* por ${formattedPrice}. Gostaria de confirmar a disponibilidade para retirada ou entrega.`
+          `👋 Olá! Vi no site de ${tenantName} o serviço *${productName}* e gostaria de solicitar um orçamento rápido pelo WhatsApp.`
         );
-    return `https://wa.me/55${cleanPhone}?text=${message}`;
+    return cleanPhone
+      ? `https://wa.me/${cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`}?text=${message}`
+      : `https://wa.me/?text=${message}`;
   };
 
   const currentTheme = theme || NICHE_THEMES.retail_default;
+
+  const sectionCopy =
+    subniche === "towing"
+      ? {
+          badge: "Socorro & Resgate 24h",
+          title: "Serviços de Socorro & Remoção 24h",
+          subtitle: `Solicite atendimento imediato ou orçamento rápido direto pelo WhatsApp de ${tenantName}.`,
+        }
+      : subniche === "beauty" || subniche === "petshop"
+      ? {
+          badge: "Catálogo de Atendimento",
+          title: "Serviços & Atendimentos",
+          subtitle: `Escolha o atendimento ideal e solicite orçamento ou horário direto pelo WhatsApp de ${tenantName}.`,
+        }
+      : subniche === "mechanic"
+      ? {
+          badge: "Oficina & Manutenção",
+          title: "Serviços Automotivos & Revisões",
+          subtitle: `Solicite seu diagnóstico ou orçamento rápido direto pelo WhatsApp de ${tenantName}.`,
+        }
+      : subniche === "car_wash"
+      ? {
+          badge: "Estética Automotiva",
+          title: "Serviços de Lavagem & Detalhamento",
+          subtitle: `Solicite orçamento ou agende o cuidado do seu veículo direto pelo WhatsApp de ${tenantName}.`,
+        }
+      : {
+          badge: "Vitrine & Catálogo",
+          title: "Peças e Itens Disponíveis para Retirada",
+          subtitle: `Consulte a disponibilidade em tempo real e faça seu pedido direto pelo WhatsApp de ${tenantName}.`,
+        };
 
   return (
     <section id="produtos" className="scroll-mt-20 space-y-6">
@@ -68,28 +115,41 @@ export function PublicProductsSection({
         <div>
           <div className={`inline-flex items-center gap-1.5 rounded-full ${currentTheme.badgeBg} px-3 py-1 text-xs font-bold ${currentTheme.badgeText}`}>
             <span>{currentTheme.icons?.products || "🛍️"}</span>
-            <span>Vitrine & Produtos Físicos</span>
+            <span>{sectionCopy.badge}</span>
           </div>
           <h2 className={`mt-2 text-2xl sm:text-3xl font-extrabold tracking-tight ${currentTheme.textPrimary}`}>
-            Peças e Itens Disponíveis para Retirada
+            {sectionCopy.title}
           </h2>
           <p className={`mt-1 text-xs sm:text-sm ${currentTheme.textMuted}`}>
-            Consulte a disponibilidade em tempo real e faça seu pedido direto pelo WhatsApp de {tenantName}.
+            {sectionCopy.subtitle}
           </p>
         </div>
 
         <span className={`text-xs font-semibold ${currentTheme.textMuted} self-start sm:self-auto`}>
-          {activeProducts.length} {activeProducts.length === 1 ? "item disponível" : "itens disponíveis"}
+          {activeProducts.length} {activeProducts.length === 1 ? "opção disponível" : "opções disponíveis"}
         </span>
       </div>
 
       {/* Grid de Produtos */}
       <div className="grid gap-5 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {activeProducts.map((p) => {
-          const hasPromo = p.promotional_price && p.promotional_price > 0 && p.promotional_price < p.price;
+          const hasPrice =
+            !isDemo &&
+            p.price !== null &&
+            p.price !== undefined &&
+            Number(p.price) > 0;
+          const hasPromo =
+            hasPrice &&
+            p.promotional_price &&
+            p.promotional_price > 0 &&
+            p.promotional_price < p.price;
           const currentPrice = hasPromo ? p.promotional_price! : p.price;
           const isOutOfStock = typeof p.stock_quantity === "number" && p.stock_quantity === 0;
-          const orderUrl = cleanPhone ? getWhatsAppProductLink(p.name, currentPrice, isOutOfStock) : "#";
+          const orderUrl = getWhatsAppProductLink(
+            p.name,
+            hasPrice ? currentPrice : null,
+            isOutOfStock
+          );
 
           return (
             <div
@@ -98,12 +158,12 @@ export function PublicProductsSection({
                 setSelectedProduct({
                   title: p.name,
                   description: p.description,
-                  price: p.price,
-                  promotional_price: p.promotional_price,
+                  price: hasPrice ? p.price : null,
+                  promotional_price: hasPromo ? p.promotional_price : null,
                   image_url: p.image_url,
                   category: p.category,
                   stock_quantity: p.stock_quantity,
-                  isService: false,
+                  isService: !hasPrice,
                 })
               }
               className={`group flex flex-col justify-between overflow-hidden rounded-3xl border border-neutral-200/80 dark:border-white/10 ${currentTheme.bgCard} shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer`}
@@ -177,14 +237,22 @@ export function PublicProductsSection({
                     </p>
                   )}
 
-                  {/* Preços */}
+                  {/* Preços ou Selo Sob Consulta */}
                   <div className="pt-2 flex items-baseline gap-2">
-                    <span className={`text-xl font-extrabold ${currentTheme.textPrimary}`}>
-                      {formatCurrency(currentPrice)}
-                    </span>
-                    {hasPromo && (
-                      <span className="text-xs font-semibold text-neutral-400 line-through">
-                        {formatCurrency(p.price)}
+                    {hasPrice ? (
+                      <>
+                        <span className={`text-xl font-extrabold ${currentTheme.textPrimary}`}>
+                          {formatCurrency(currentPrice)}
+                        </span>
+                        {hasPromo && (
+                          <span className="text-xs font-semibold text-neutral-400 line-through">
+                            {formatCurrency(p.price)}
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <span className="inline-flex items-center rounded-lg border border-neutral-200/80 dark:border-white/15 bg-neutral-100/80 dark:bg-white/5 px-2.5 py-1 text-xs font-bold text-neutral-700 dark:text-neutral-200">
+                        Orçamento Rápido • Sob Consulta
                       </span>
                     )}
                   </div>
@@ -210,7 +278,13 @@ export function PublicProductsSection({
                   } px-4 py-3 text-xs font-bold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-sm`}
                 >
                   <MessageCircle className="h-4 w-4" />
-                  <span>{isOutOfStock ? "Consultar Encomenda" : "Pedir no WhatsApp"}</span>
+                  <span>
+                    {isOutOfStock
+                      ? "Consultar Encomenda"
+                      : hasPrice
+                      ? "Pedir no WhatsApp"
+                      : "Solicitar Orçamento no WhatsApp"}
+                  </span>
                 </a>
               </div>
             </div>

@@ -330,7 +330,7 @@ export async function POST(request: Request) {
           tenant_id: tenantId,
           name: item.name,
           description: item.description,
-          price: item.price,
+          price: 0,
           duration_minutes: item.duration_minutes ?? 45,
           is_active: true,
         }))
@@ -346,7 +346,7 @@ export async function POST(request: Request) {
           name: item.name,
           description: item.description,
           category: item.category,
-          price: item.price,
+          price: 0,
           image_url: item.image_url,
           is_available: true,
           is_featured: idx === 0,

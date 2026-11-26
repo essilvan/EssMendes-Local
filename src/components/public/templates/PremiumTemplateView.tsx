@@ -144,13 +144,18 @@ export function PremiumTemplateView({
             />
           )}
 
-          {/* 4. Vitrine de Produtos Físicos & Peças Nobre */}
+          {/* 4. Vitrine de Serviços / Produtos com Fotos */}
           {products.length > 0 && (
             <PublicProductsSection
               products={products}
               tenantName={tenant.name}
               phoneWhatsapp={rawPhone}
               theme={theme}
+              subniche={resolvePublicSubniche(tenant, profile)}
+              isDemo={Boolean(
+                (tenant as any)?.is_demo ||
+                  String(tenant?.slug || "").startsWith("demo-")
+              )}
             />
           )}
         </>

@@ -149,7 +149,15 @@ export function ConversionDashboard({
         ) : (
           <div className="space-y-4">
             {services.map((service) => {
-              const hasPrice = service.price !== null && Number(service.price) > 0;
+              const isDemoTenant = Boolean(
+                (tenant as any)?.is_demo ||
+                  String(tenant?.slug || "").startsWith("demo-")
+              );
+              const hasPrice =
+                !isDemoTenant &&
+                service.price !== null &&
+                service.price !== undefined &&
+                Number(service.price) > 0;
               const phone = profile?.phone_whatsapp || profile?.phone;
               const whatsappOrderText = `Olá, vi a vitrine de vocês e gostaria de pedir um orçamento para o serviço: *${service?.name ?? ""}*.`;
 

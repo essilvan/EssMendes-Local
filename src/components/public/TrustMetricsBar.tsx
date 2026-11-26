@@ -39,10 +39,17 @@ export function TrustMetricsBar({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
           {displayedServices.map((service: Service) => {
             const Icon = getServiceIcon(service.name, currentTheme?.id);
-            const hasPrice = service.price !== null && Number(service.price) > 0;
-            const priceTag = hasPrice ? formatCurrency(Number(service.price)) : null;
-            const durationTag = service.duration_minutes ? `${service.duration_minutes} min` : null;
-            const tag = priceTag || durationTag;
+            const isDemoTenant = Boolean(
+              tenant?.is_demo || String(tenant?.slug || "").startsWith("demo-")
+            );
+            const hasPrice =
+              !isDemoTenant &&
+              service.price !== null &&
+              service.price !== undefined &&
+              Number(service.price) > 0;
+            const priceTag = hasPrice
+              ? formatCurrency(Number(service.price))
+              : "Sob Consulta";
 
             return (
               <div
@@ -71,11 +78,15 @@ export function TrustMetricsBar({
                     >
                       {service.name}
                     </h3>
-                    {tag && (
-                      <span className="shrink-0 text-[10px] font-extrabold font-mono px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                        {tag}
-                      </span>
-                    )}
+                    <span
+                      className={`shrink-0 text-[10px] font-extrabold px-2 py-0.5 rounded-md border ${
+                        hasPrice
+                          ? "font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                          : "bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-neutral-300 border-neutral-200/80 dark:border-white/10"
+                      }`}
+                    >
+                      {priceTag}
+                    </span>
                   </div>
                   <p
                     className={`text-xs ${currentTheme.textMuted} leading-relaxed font-normal line-clamp-2`}
