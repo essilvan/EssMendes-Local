@@ -14,19 +14,38 @@ export default async function AdminPedidosPage() {
   }
 
   const supabase = createAdminClient();
-  const [res, { data: tenantRow }, { data: profileRow }] = await Promise.all([
-    getAdminOrdersDataAction(),
-    supabase
-      .from("tenants")
-      .select("name, google_review_url, google_place_id, service_fee_enabled, service_fee_percent")
-      .eq("id", authContext.tenantId)
-      .maybeSingle(),
-    supabase
-      .from("tenant_profiles")
-      .select("address")
-      .eq("tenant_id", authContext.tenantId)
-      .maybeSingle(),
-  ]);
+  const [res, { data: tenantRow }, { data: profileRow }, { data: menuRows }] =
+    await Promise.all([
+      getAdminOrdersDataAction(),
+      supabase
+        .from("tenants")
+        .select(
+          "name, google_review_url, google_place_id, service_fee_enabled, service_fee_percent"
+        )
+        .eq("id", authContext.tenantId)
+        .maybeSingle(),
+      supabase
+        .from("tenant_profiles")
+        .select("address")
+        .eq("tenant_id", authContext.tenantId)
+        .maybeSingle(),
+      supabase
+        .from("menu_items")
+        .select("id, name, category")
+        .eq("tenant_id", authContext.tenantId),
+    ]);
+
+  const menuItemCategories: Record<string, string> = {};
+  (menuRows || []).forEach((m: any) => {
+    if (m?.id && m?.category) {
+      menuItemCategories[String(m.id)] = String(m.category);
+    }
+    if (m?.name && m?.category) {
+      menuItemCategories[String(m.name).trim().toLowerCase()] = String(
+        m.category
+      );
+    }
+  });
 
   const orders = res.data || [];
 
@@ -40,6 +59,7 @@ export default async function AdminPedidosPage() {
       tenantAddress={profileRow?.address || null}
       serviceFeeEnabled={Boolean(tenantRow?.service_fee_enabled)}
       serviceFeePercent={Number(tenantRow?.service_fee_percent ?? 10)}
+      menuItemCategories={menuItemCategories}
     />
   );
 }

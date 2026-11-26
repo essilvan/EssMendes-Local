@@ -42,6 +42,12 @@ import {
   Trash2,
   Printer,
   Receipt,
+  Maximize2,
+  Minimize2,
+  Flame,
+  Beer,
+  CheckSquare,
+  Square,
 } from "lucide-react";
 
 interface OrdersManagerClientProps {
@@ -53,6 +59,7 @@ interface OrdersManagerClientProps {
   tenantAddress?: string | null;
   serviceFeeEnabled?: boolean;
   serviceFeePercent?: number;
+  menuItemCategories?: Record<string, string>;
 }
 
 type OrderFilter =
@@ -62,6 +69,47 @@ type OrderFilter =
   | "in_kitchen"
   | "delivered"
   | "canceled";
+
+type KdsUrgencyFilter = "all" | "on_time" | "warning" | "late";
+type KdsSectorFilter = "all" | "kitchen" | "bar";
+
+const DRINK_CATEGORY_OR_NAME_REGEX =
+  /\b(bebida|bebidas|cerveja|chopp|chope|refri|refrigerante|suco|[aá]gua|drink|drinks|caipirinha|vinho|dose|whisky|vodka|gin|lata|600ml|long\s*neck|heineken|skol|brahma|antarctica|amstel|stella|spaten|corona|coca|guaran[aá]|fanta|sprite|energ[eé]tico|red\s*bull|gelo|limonada|h2oh|mate)\b/i;
+
+function classifyItemSector(
+  item: RestaurantOrderItem,
+  menuItemCategories: Record<string, string>
+): "kitchen" | "bar" {
+  const cat =
+    menuItemCategories[String(item.id || "")] ||
+    menuItemCategories[String(item.name || "").trim().toLowerCase()] ||
+    "";
+  if (cat && DRINK_CATEGORY_OR_NAME_REGEX.test(cat)) {
+    return "bar";
+  }
+  if (DRINK_CATEGORY_OR_NAME_REGEX.test(item.name || "")) {
+    return "bar";
+  }
+  return "kitchen";
+}
+
+function getElapsedSeconds(createdAt: string, nowMs: number): number {
+  const diff = Math.floor((nowMs - new Date(createdAt).getTime()) / 1000);
+  return diff > 0 ? diff : 0;
+}
+
+function formatTimerMMSS(totalSeconds: number): string {
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+}
+
+function getUrgencyTier(elapsedSeconds: number): "on_time" | "warning" | "late" {
+  const mins = elapsedSeconds / 60;
+  if (mins >= 20) return "late";
+  if (mins >= 10) return "warning";
+  return "on_time";
+}
 
 function normalizeOrderClient(row: any): RestaurantOrder {
   let parsedItems: RestaurantOrderItem[] = [];
@@ -124,9 +172,15 @@ export function OrdersManagerClient({
   tenantAddress = null,
   serviceFeeEnabled = false,
   serviceFeePercent = 10,
+  menuItemCategories = {},
 }: OrdersManagerClientProps) {
   const [orders, setOrders] = useState<RestaurantOrder[]>(initialOrders);
   const [statusFilter, setStatusFilter] = useState<OrderFilter>("all");
+  const [urgencyFilter, setUrgencyFilter] = useState<KdsUrgencyFilter>("all");
+  const [sectorFilter, setSectorFilter] = useState<KdsSectorFilter>("all");
+  const [checkedItemsMap, setCheckedItemsMap] = useState<Record<string, boolean>>({});
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [isClearingCanceled, setIsClearingCanceled] = useState(false);
   const [closingTabKey, setClosingTabKey] = useState<string | null>(null);
@@ -157,6 +211,40 @@ export function OrdersManagerClient({
   useEffect(() => {
     soundEnabledRef.current = soundEnabled;
   }, [soundEnabled]);
+
+  // Cronômetro KDS ao vivo (atualiza a cada segundo)
+  useEffect(() => {
+    const tick = window.setInterval(() => {
+      setNowMs(Date.now());
+    }, 1000);
+    return () => window.clearInterval(tick);
+  }, []);
+
+  // Sincroniza estado de Tela Cheia (Fullscreen API)
+  useEffect(() => {
+    const onFsChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener("fullscreenchange", onFsChange);
+    return () => document.removeEventListener("fullscreenchange", onFsChange);
+  }, []);
+
+  const toggleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch {
+      // ignora se navegador bloquear fullscreen
+    }
+  };
+
+  const toggleCheckedItem = (orderId: string, itemIdx: number) => {
+    const key = `${orderId}:${itemIdx}`;
+    setCheckedItemsMap((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
 
   const getOrCreateAudioContext = useCallback((): AudioContext | null => {
     if (typeof window === "undefined") return null;
@@ -716,6 +804,80 @@ export function OrdersManagerClient({
 
   const openTabs = groupOpenRestaurantTabs(orders);
 
+  // Pedidos ativos na fila KDS (pending + in_kitchen)
+  const activeQueueOrders = orders.filter((o) => {
+    const st = normalizeStatus(o.status);
+    return st === "pending" || st === "in_kitchen";
+  });
+
+  const kdsOnTimeCount = activeQueueOrders.filter(
+    (o) => getUrgencyTier(getElapsedSeconds(o.created_at, nowMs)) === "on_time"
+  ).length;
+  const kdsWarningCount = activeQueueOrders.filter(
+    (o) => getUrgencyTier(getElapsedSeconds(o.created_at, nowMs)) === "warning"
+  ).length;
+  const kdsLateCount = activeQueueOrders.filter(
+    (o) => getUrgencyTier(getElapsedSeconds(o.created_at, nowMs)) === "late"
+  ).length;
+
+  // Fila de Produção Consolidada (soma itens iguais entre todos os pedidos abertos no setor selecionado)
+  const batchProductionItems = (() => {
+    const map = new Map<
+      string,
+      { name: string; quantity: number; sector: "kitchen" | "bar" }
+    >();
+    for (const ord of activeQueueOrders) {
+      for (const it of ord.items || []) {
+        const sector = classifyItemSector(it, menuItemCategories);
+        if (sectorFilter !== "all" && sector !== sectorFilter) continue;
+        const key = String(it.name || "Item").trim().toLowerCase();
+        const existing = map.get(key);
+        if (existing) {
+          existing.quantity += Number(it.quantity || 1);
+        } else {
+          map.set(key, {
+            name: String(it.name || "Item").trim(),
+            quantity: Number(it.quantity || 1),
+            sector,
+          });
+        }
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => b.quantity - a.quantity);
+  })();
+
+  // Aplica filtro de setor, urgência e ordenação FIFO (mais antigos/urgentes primeiro) nos pedidos ativos
+  const displayedKdsOrders = (() => {
+    const base = filteredOrders.filter((order) => {
+      const st = normalizeStatus(order.status);
+      const isActive = st === "pending" || st === "in_kitchen";
+
+      if (urgencyFilter !== "all") {
+        if (!isActive) return false;
+        const tier = getUrgencyTier(getElapsedSeconds(order.created_at, nowMs));
+        if (tier !== urgencyFilter) return false;
+      }
+
+      if (sectorFilter !== "all") {
+        const hasSectorItem = (order.items || []).some(
+          (it) => classifyItemSector(it, menuItemCategories) === sectorFilter
+        );
+        if (!hasSectorItem) return false;
+      }
+
+      return true;
+    });
+
+    // FIFO: mais antigos (mais urgentes) primeiro na fila ativa; mais recentes primeiro no histórico (entregues/cancelados)
+    const isHistoryTab =
+      statusFilter === "delivered" || statusFilter === "canceled";
+    return [...base].sort((a, b) => {
+      const ta = new Date(a.created_at).getTime();
+      const tb = new Date(b.created_at).getTime();
+      return isHistoryTab ? tb - ta : ta - tb;
+    });
+  })();
+
   const isTabFeeIncluded = (tabKey: string) =>
     tabFeeMap[tabKey] !== undefined
       ? tabFeeMap[tabKey]
@@ -854,14 +1016,14 @@ export function OrdersManagerClient({
           </div>
 
           <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-            Monitor de Pedidos da Cozinha & Balcão
+            Painel KDS • Cozinha, Copa & Balcão
           </h1>
           <p className="mt-1 text-sm text-slate-600">
-            Novos pedidos aparecem automaticamente no topo da tela com alerta sonoro, sem precisar recarregar.
+            Semáforo de urgência em tempo real, produção consolidada em lote e checklist por item — sem precisar de impressora.
           </p>
         </div>
 
-        {/* Barra de Controle Sonoro e Atualização */}
+        {/* Barra de Controle Sonoro, Tela Cheia e Atualização */}
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
@@ -874,17 +1036,6 @@ export function OrdersManagerClient({
               className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`}
             />
             <span>Atualizar</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleActivateAndTestSound}
-            className="inline-flex items-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-[0.98] px-4 py-2.5 text-xs sm:text-sm font-bold text-white shadow-sm transition cursor-pointer"
-          >
-            <BellRing className="h-4 w-4" />
-            <span>
-              {audioUnlocked ? "Testar Som da Campainha" : "Ativar/Testar Som"}
-            </span>
           </button>
 
           <button
@@ -904,17 +1055,206 @@ export function OrdersManagerClient({
             {soundEnabled ? (
               <>
                 <Volume2 className="h-4 w-4 text-emerald-600" />
-                <span>Som Ativo</span>
+                <span>🔊 Som: Ligado</span>
               </>
             ) : (
               <>
                 <VolumeX className="h-4 w-4 text-slate-500" />
-                <span>Som Mudo</span>
+                <span>Som: Desligado</span>
+              </>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleActivateAndTestSound}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-[0.98] px-3.5 py-2.5 text-xs font-bold text-white shadow-sm transition cursor-pointer"
+          >
+            <BellRing className="h-3.5 w-3.5" />
+            <span>{audioUnlocked ? "Testar Bip" : "Liberar Som"}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void toggleFullscreen()}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-slate-900 hover:bg-slate-800 px-3.5 py-2.5 text-xs font-bold text-white shadow-xs transition cursor-pointer"
+            title="Alternar Modo Tela Cheia (ideal para tablet/monitor na cozinha)"
+          >
+            {isFullscreen ? (
+              <>
+                <Minimize2 className="h-3.5 w-3.5" />
+                <span>Sair Tela Cheia</span>
+              </>
+            ) : (
+              <>
+                <Maximize2 className="h-3.5 w-3.5" />
+                <span>Modo Tela Cheia</span>
               </>
             )}
           </button>
         </div>
       </div>
+
+      {/* Barra de Resumo KDS (Semáforo de Urgência Clicável) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <button
+          type="button"
+          onClick={() => {
+            setUrgencyFilter("all");
+            if (statusFilter === "open_tabs") setStatusFilter("all");
+          }}
+          className={`rounded-2xl border p-3.5 text-left transition cursor-pointer ${
+            urgencyFilter === "all" && statusFilter !== "open_tabs"
+              ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+              : "border-slate-200 bg-white text-slate-800 hover:border-slate-300"
+          }`}
+        >
+          <p className="text-[11px] font-bold uppercase tracking-wider opacity-75">
+            Total na Fila
+          </p>
+          <p className="mt-1 text-2xl font-black">{activeQueueOrders.length}</p>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setUrgencyFilter((prev) => (prev === "on_time" ? "all" : "on_time"));
+            if (statusFilter === "open_tabs" || statusFilter === "delivered" || statusFilter === "canceled") {
+              setStatusFilter("all");
+            }
+          }}
+          className={`rounded-2xl border-2 p-3.5 text-left transition cursor-pointer ${
+            urgencyFilter === "on_time"
+              ? "border-emerald-500 bg-emerald-500 text-white shadow-sm"
+              : "border-emerald-200 bg-emerald-50/70 text-emerald-900 hover:border-emerald-400"
+          }`}
+        >
+          <p className="text-[11px] font-bold uppercase tracking-wider">
+            🟢 No Prazo (&lt;10m)
+          </p>
+          <p className="mt-1 text-2xl font-black">{kdsOnTimeCount}</p>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setUrgencyFilter((prev) => (prev === "warning" ? "all" : "warning"));
+            if (statusFilter === "open_tabs" || statusFilter === "delivered" || statusFilter === "canceled") {
+              setStatusFilter("all");
+            }
+          }}
+          className={`rounded-2xl border-2 p-3.5 text-left transition cursor-pointer ${
+            urgencyFilter === "warning"
+              ? "border-amber-500 bg-amber-500 text-white shadow-sm"
+              : "border-amber-200 bg-amber-50/70 text-amber-900 hover:border-amber-400"
+          }`}
+        >
+          <p className="text-[11px] font-bold uppercase tracking-wider">
+            🟡 Atenção (10-20m)
+          </p>
+          <p className="mt-1 text-2xl font-black">{kdsWarningCount}</p>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setUrgencyFilter((prev) => (prev === "late" ? "all" : "late"));
+            if (statusFilter === "open_tabs" || statusFilter === "delivered" || statusFilter === "canceled") {
+              setStatusFilter("all");
+            }
+          }}
+          className={`rounded-2xl border-2 p-3.5 text-left transition cursor-pointer ${
+            urgencyFilter === "late"
+              ? "border-red-500 bg-red-600 text-white shadow-sm"
+              : "border-red-200 bg-red-50/80 text-red-900 hover:border-red-400"
+          }`}
+        >
+          <p className="text-[11px] font-bold uppercase tracking-wider">
+            🔴 Atrasados (&gt;20m)
+          </p>
+          <p className="mt-1 text-2xl font-black">{kdsLateCount}</p>
+        </button>
+      </div>
+
+      {/* Filtro por Setor + Faixa de Fila de Produção Consolidada */}
+      {statusFilter !== "open_tabs" && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2">
+              <Flame className="h-4 w-4 text-orange-600" />
+              <h2 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-800">
+                Fila de Produção Consolidada
+              </h2>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setSectorFilter("all")}
+                className={`rounded-xl px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
+                  sectorFilter === "all"
+                    ? "bg-slate-900 text-white"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                Todos os Itens
+              </button>
+              <button
+                type="button"
+                onClick={() => setSectorFilter("kitchen")}
+                className={`inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
+                  sectorFilter === "kitchen"
+                    ? "bg-orange-600 text-white"
+                    : "bg-orange-50 text-orange-800 hover:bg-orange-100"
+                }`}
+              >
+                <Flame className="h-3.5 w-3.5" />
+                <span>Cozinha / Chapa</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSectorFilter("bar")}
+                className={`inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
+                  sectorFilter === "bar"
+                    ? "bg-sky-600 text-white"
+                    : "bg-sky-50 text-sky-800 hover:bg-sky-100"
+                }`}
+              >
+                <Beer className="h-3.5 w-3.5" />
+                <span>Copa / Bebidas</span>
+              </button>
+            </div>
+          </div>
+
+          {batchProductionItems.length === 0 ? (
+            <p className="text-xs text-slate-500">
+              Nenhum item em preparo aberto neste setor no momento.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {batchProductionItems.map((batch) => (
+                <div
+                  key={`${batch.sector}-${batch.name}`}
+                  className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-bold ${
+                    batch.sector === "bar"
+                      ? "border-sky-200 bg-sky-50 text-sky-900"
+                      : "border-orange-200 bg-orange-50 text-orange-950"
+                  }`}
+                >
+                  <span
+                    className={`rounded-md px-1.5 py-0.5 text-xs font-black text-white ${
+                      batch.sector === "bar" ? "bg-sky-600" : "bg-orange-600"
+                    }`}
+                  >
+                    {batch.quantity}x
+                  </span>
+                  <span>{batch.name}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Abas de Filtro por Status */}
       <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-2xs">
@@ -1236,8 +1576,8 @@ export function OrdersManagerClient({
         )
       ) : (
         <>
-      {/* Lista de Pedidos */}
-      {filteredOrders.length === 0 ? (
+      {/* Lista de Pedidos KDS (Ordenação FIFO: mais antigos/urgentes primeiro) */}
+      {displayedKdsOrders.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center space-y-2">
           <ClipboardList className="mx-auto h-10 w-10 text-slate-300" />
           <h3 className="text-base font-bold text-slate-800">
@@ -1249,36 +1589,83 @@ export function OrdersManagerClient({
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {filteredOrders.map((order) => {
+          {displayedKdsOrders.map((order) => {
             const normStatus = normalizeStatus(order.status);
+            const isActiveKds =
+              normStatus === "pending" || normStatus === "in_kitchen";
             const isUpdating = updatingId === order.id;
             const isNewOrder = newOrderIds.has(order.id);
             const tableLabel = formatTableLabel(order.table_number);
+            const elapsedSec = getElapsedSeconds(order.created_at, nowMs);
+            const urgencyTier = getUrgencyTier(elapsedSec);
+
+            const cardBorderClass = !isActiveKds
+              ? normStatus === "canceled"
+                ? "border-slate-200 opacity-75"
+                : "border-slate-200"
+              : urgencyTier === "late"
+              ? "border-2 border-red-500 ring-2 ring-red-500/20 shadow-md"
+              : urgencyTier === "warning"
+              ? "border-2 border-amber-500 shadow-sm"
+              : "border-2 border-emerald-500 shadow-xs";
+
+            const headerTintClass = !isActiveKds
+              ? "border-slate-100"
+              : urgencyTier === "late"
+              ? "border-red-200 bg-red-50/70 -mx-5 -mt-5 px-5 pt-4 pb-3 rounded-t-2xl"
+              : urgencyTier === "warning"
+              ? "border-amber-200 bg-amber-50/70 -mx-5 -mt-5 px-5 pt-4 pb-3 rounded-t-2xl"
+              : "border-emerald-200 bg-emerald-50/60 -mx-5 -mt-5 px-5 pt-4 pb-3 rounded-t-2xl";
+
+            const timerBadgeClass =
+              urgencyTier === "late"
+                ? "bg-red-600 text-white animate-pulse"
+                : urgencyTier === "warning"
+                ? "bg-amber-500 text-white"
+                : "bg-emerald-600 text-white";
+
+            const visibleItems = (order.items || []).filter(
+              (it) =>
+                sectorFilter === "all" ||
+                classifyItemSector(it, menuItemCategories) === sectorFilter
+            );
 
             return (
               <div
                 key={order.id}
-                className={`rounded-2xl border bg-white p-5 shadow-xs flex flex-col justify-between space-y-4 transition-all ${
-                  isNewOrder
-                    ? "border-amber-400 ring-2 ring-amber-400/70 shadow-lg shadow-amber-500/10"
-                    : normStatus === "canceled"
-                    ? "border-slate-200 opacity-75"
-                    : "border-slate-200"
-                }`}
+                className={`rounded-2xl border bg-white p-5 flex flex-col justify-between space-y-4 transition-all ${cardBorderClass}`}
               >
                 <div className="space-y-3">
-                  {/* Topo com Mesa/Retirada, Status, Badge NOVO PEDIDO e Total */}
-                  <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3">
+                  {/* Topo com Mesa/Retirada, Cronômetro KDS MM:SS, Status e Total */}
+                  <div
+                    className={`flex items-start justify-between gap-2 border-b pb-3 ${headerTintClass}`}
+                  >
                     <div className="space-y-1.5">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded-xl bg-orange-600 px-3.5 py-1.5 text-sm font-black text-white shadow-2xs">
+                        <span className="rounded-xl bg-slate-900 px-3.5 py-1.5 text-sm font-black text-white shadow-2xs">
                           {tableLabel}
                         </span>
+
+                        {isActiveKds && (
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-xl px-2.5 py-1 text-xs font-black font-mono shadow-2xs ${timerBadgeClass}`}
+                            title={
+                              urgencyTier === "late"
+                                ? "Atrasado (>20 min) — Prioridade Máxima"
+                                : urgencyTier === "warning"
+                                ? "Atenção (10-20 min)"
+                                : "No Prazo (<10 min)"
+                            }
+                          >
+                            <Clock className="h-3.5 w-3.5" />
+                            <span>{formatTimerMMSS(elapsedSec)}</span>
+                          </span>
+                        )}
 
                         {isNewOrder && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-rose-600 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-white animate-pulse shadow-sm">
                             <BellRing className="h-3 w-3" />
-                            NOVO PEDIDO
+                            NOVO
                           </span>
                         )}
 
@@ -1291,19 +1678,19 @@ export function OrdersManagerClient({
                         {normStatus === "pending" && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-bold text-amber-900">
                             <Clock className="h-3 w-3" />
-                            Pendente
+                            Novo
                           </span>
                         )}
                         {normStatus === "in_kitchen" && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2.5 py-0.5 text-[11px] font-bold text-orange-900">
                             <ChefHat className="h-3 w-3" />
-                            Na Cozinha
+                            Em Preparo
                           </span>
                         )}
                         {normStatus === "delivered" && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-900">
                             <CheckCircle2 className="h-3 w-3" />
-                            Entregue
+                            Pronto / Entregue
                           </span>
                         )}
                         {normStatus === "canceled" && (
@@ -1340,13 +1727,13 @@ export function OrdersManagerClient({
                     </div>
 
                     <div className="text-right shrink-0">
-                      <span className="text-xl font-black text-slate-900">
+                      <span className="text-lg font-black text-slate-900">
                         R${" "}
                         {Number(order.total_amount || 0)
                           .toFixed(2)
                           .replace(".", ",")}
                       </span>
-                      <p className="text-[11px] font-medium text-slate-400">
+                      <p className="text-[11px] font-medium text-slate-500">
                         {new Date(order.created_at).toLocaleTimeString("pt-BR", {
                           hour: "2-digit",
                           minute: "2-digit",
@@ -1355,41 +1742,70 @@ export function OrdersManagerClient({
                     </div>
                   </div>
 
-                  {/* Itens da Comanda */}
+                  {/* Checklist Interativo de Itens da Comanda (toque para riscar) */}
                   <div className="space-y-1.5">
-                    {(order.items || []).map((it, idx) => (
-                      <div
-                        key={`${order.id}-item-${idx}`}
-                        className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-xs sm:text-sm"
-                      >
-                        <span className="font-semibold text-slate-800">
-                          <strong className="text-orange-600 font-black">
-                            {it.quantity}x
-                          </strong>{" "}
-                          {it.name}
-                        </span>
-                        <span className="font-bold text-slate-700 shrink-0 ml-2">
-                          R${" "}
-                          {(Number(it.price) * Number(it.quantity))
-                            .toFixed(2)
-                            .replace(".", ",")}
-                        </span>
-                      </div>
-                    ))}
+                    {visibleItems.map((it, idx) => {
+                      const checkKey = `${order.id}:${idx}`;
+                      const isChecked = Boolean(checkedItemsMap[checkKey]);
+                      const itemSector = classifyItemSector(
+                        it,
+                        menuItemCategories
+                      );
+
+                      return (
+                        <button
+                          key={`${order.id}-item-${idx}`}
+                          type="button"
+                          onClick={() => toggleCheckedItem(order.id, idx)}
+                          className={`w-full flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left text-xs sm:text-sm transition cursor-pointer border ${
+                            isChecked
+                              ? "bg-emerald-50/70 border-emerald-200 text-slate-400 line-through"
+                              : "bg-slate-50 border-slate-200/70 hover:bg-slate-100 text-slate-900"
+                          }`}
+                        >
+                          <span className="flex items-center gap-2 min-w-0 font-semibold">
+                            {isChecked ? (
+                              <CheckSquare className="h-4 w-4 text-emerald-600 shrink-0" />
+                            ) : (
+                              <Square className="h-4 w-4 text-slate-400 shrink-0" />
+                            )}
+                            <strong
+                              className={`font-black shrink-0 ${
+                                isChecked
+                                  ? "text-emerald-600"
+                                  : itemSector === "bar"
+                                  ? "text-sky-600"
+                                  : "text-orange-600"
+                              }`}
+                            >
+                              {it.quantity}x
+                            </strong>
+                            <span className="truncate">{it.name}</span>
+                          </span>
+
+                          <span className="font-bold text-slate-600 shrink-0 text-xs">
+                            R${" "}
+                            {(Number(it.price) * Number(it.quantity))
+                              .toFixed(2)
+                              .replace(".", ",")}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
 
-                  {/* Observações em amarelo */}
+                  {/* Observações em destaque */}
                   {order.notes && (
-                    <div className="flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-100/80 p-3 text-xs sm:text-sm text-amber-950">
+                    <div className="flex items-start gap-2 rounded-xl border-2 border-amber-400 bg-amber-100 p-3 text-xs sm:text-sm font-semibold text-amber-950 shadow-2xs">
                       <StickyNote className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
                       <span>
-                        <strong>Observação:</strong> {order.notes}
+                        <strong>OBS:</strong> {order.notes}
                       </span>
                     </div>
                   )}
                 </div>
 
-                {/* Botões Grandes e Diretos de Status com Um Toque */}
+                {/* Botões Grandes (mín. 48px) de Ação Rápida KDS */}
                 <div className="space-y-2.5 pt-3 border-t border-slate-100">
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                     {normStatus === "pending" && (
@@ -1399,14 +1815,14 @@ export function OrdersManagerClient({
                         onClick={() =>
                           handleStatusChange(order.id, "in_kitchen")
                         }
-                        className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-orange-600 hover:bg-orange-500 active:scale-[0.99] px-4 py-3 text-sm font-extrabold text-white shadow-sm transition cursor-pointer disabled:opacity-60"
+                        className="flex-1 min-h-[48px] inline-flex items-center justify-center gap-2 rounded-xl bg-orange-600 hover:bg-orange-500 active:scale-[0.99] px-4 py-3 text-sm font-black text-white shadow-sm transition cursor-pointer disabled:opacity-60"
                       >
                         {isUpdating ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
-                          <ChefHat className="h-4 w-4" />
+                          <Flame className="h-4 w-4" />
                         )}
-                        <span>Aceitar e Enviar p/ Cozinha</span>
+                        <span>🔥 Iniciar Preparo</span>
                       </button>
                     )}
 
@@ -1417,14 +1833,14 @@ export function OrdersManagerClient({
                         onClick={() =>
                           handleStatusChange(order.id, "delivered")
                         }
-                        className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] px-4 py-3 text-sm font-extrabold text-white shadow-sm transition cursor-pointer disabled:opacity-60"
+                        className="flex-1 min-h-[48px] inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] px-4 py-3 text-sm font-black text-white shadow-sm transition cursor-pointer disabled:opacity-60"
                       >
                         {isUpdating ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <CheckCircle2 className="h-4 w-4" />
                         )}
-                        <span>Marcar como Entregue</span>
+                        <span>✅ Pronto para Entrega</span>
                       </button>
                     )}
                   </div>
