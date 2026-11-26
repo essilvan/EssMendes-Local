@@ -191,6 +191,14 @@ export const TEMPLATE_OPTIONS = [
 
 export const NICHE_OPTIONS = [
   {
+    id: "towing",
+    name: "Guincho & Socorro 24h",
+    icon: "🚨",
+    badgeText: "Resgate & Reboque 24h | Chamado GPS",
+    desc: "Chamado imediato com localização GPS e resgate 24 horas",
+    isNew: true,
+  },
+  {
     id: "automotive",
     name: "Automotivo & Mecânica",
     icon: "🚗",
@@ -227,20 +235,6 @@ export const NICHE_OPTIONS = [
     icon: "💼",
     badgeText: "Serviços & Negócios",
     desc: "Comércio, consultoria e serviços especializados",
-  },
-  {
-    id: "automotivo",
-    name: "Automotivo (Legado)",
-    icon: "🔧",
-    badgeText: "Oficinas & Autopeças",
-    desc: "Compatibilidade técnica para centros automotivos",
-  },
-  {
-    id: "gastronomia",
-    name: "Gastronomia (Legado)",
-    icon: "🍷",
-    badgeText: "Bares & Restaurantes",
-    desc: "Compatibilidade para restaurantes e delivery",
   },
   {
     id: "barbearia",
@@ -430,7 +424,9 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
 
   const handleNicheChange = (nicheId: string) => {
     setSelectedNiche(nicheId);
-    if (nicheId === "petshop" && (primaryColor === "#0d9488" || primaryColor === "#2563eb" || !primaryColor)) {
+    if (nicheId === "towing") {
+      setPrimaryColor("#dc2626");
+    } else if (nicheId === "petshop" && (primaryColor === "#0d9488" || primaryColor === "#2563eb" || !primaryColor)) {
       setPrimaryColor("#ea580c");
     } else if (nicheId === "confeitaria" && (primaryColor === "#0d9488" || primaryColor === "#2563eb" || !primaryColor)) {
       setPrimaryColor("#f43f5e");

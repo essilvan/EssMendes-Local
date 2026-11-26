@@ -112,6 +112,7 @@ export async function updateTenantProfileAction(
     });
     const tenantUpdateData: Record<string, any> = {
       name: companyName,
+      niche: themeNiche || "servicos",
       theme_niche: themeNiche || "servicos",
       theme_settings: {
         template_id: templateId || "premium",

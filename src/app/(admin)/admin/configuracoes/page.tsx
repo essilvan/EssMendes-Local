@@ -164,6 +164,7 @@ export default async function ConfiguracoesPage() {
       safeProfile.primary_color ||
       "#0d9488",
     themeNiche:
+      safeTenant.niche ||
       safeTenant.theme_settings?.niche ||
       safeTenant.theme_niche ||
       safeProfile.template_id ||
