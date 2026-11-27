@@ -11,6 +11,7 @@ interface NormalizedPlaceLead {
   website: string | null;
   region: string | null;
   photo_url: string | null;
+  photo_urls: string[];
   place_types: string[];
   primary_type: string | null;
   detected_niche: string;
@@ -119,14 +120,17 @@ async function searchPlacesNewApi(
       const address = p.formattedAddress
         ? String(p.formattedAddress).trim()
         : null;
-      const firstPhotoName = p.photos?.[0]?.name
-        ? String(p.photos[0].name).trim()
-        : null;
-      const photoUrl = firstPhotoName
-        ? `https://places.googleapis.com/v1/${firstPhotoName}/media?maxWidthPx=1000&key=${encodeURIComponent(
-            apiKey
-          )}`
-        : null;
+      const photoUrls: string[] = (Array.isArray(p.photos) ? p.photos : [])
+        .slice(0, 6)
+        .map((ph: any) =>
+          ph?.name
+            ? `https://places.googleapis.com/v1/${String(ph.name).trim()}/media?maxWidthPx=1000&key=${encodeURIComponent(
+                apiKey
+              )}`
+            : null
+        )
+        .filter(Boolean) as string[];
+      const photoUrl = photoUrls[0] || null;
       const placeTypes: string[] = Array.isArray(p.types)
         ? p.types.filter((t: any) => typeof t === "string")
         : [];
@@ -145,6 +149,7 @@ async function searchPlacesNewApi(
           address
         ),
         photo_url: photoUrl,
+        photo_urls: photoUrls,
         place_types: placeTypes,
         primary_type: primaryType,
         detected_niche: detectProspectingNiche(
@@ -209,12 +214,17 @@ async function searchPlacesLegacyApi(
         if (!phone) return null;
         const businessName = String(p.name || r.name || "").trim();
         const address = p.formatted_address || r.formatted_address || null;
-        const photoRef = p.photos?.[0]?.photo_reference || null;
-        const photoUrl = photoRef
-          ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=1000&photo_reference=${encodeURIComponent(
-              photoRef
-            )}&key=${encodeURIComponent(apiKey)}`
-          : null;
+        const photoUrls: string[] = (Array.isArray(p.photos) ? p.photos : [])
+          .slice(0, 6)
+          .map((ph: any) =>
+            ph?.photo_reference
+              ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=1000&photo_reference=${encodeURIComponent(
+                  ph.photo_reference
+                )}&key=${encodeURIComponent(apiKey)}`
+              : null
+          )
+          .filter(Boolean) as string[];
+        const photoUrl = photoUrls[0] || null;
         const placeTypes: string[] = Array.isArray(p.types)
           ? p.types.filter((t: any) => typeof t === "string")
           : [];
@@ -230,6 +240,7 @@ async function searchPlacesLegacyApi(
             address
           ),
           photo_url: photoUrl,
+          photo_urls: photoUrls,
           place_types: placeTypes,
           primary_type: null,
           detected_niche: detectProspectingNiche(businessName, placeTypes, null),
@@ -355,6 +366,7 @@ export async function POST(request: Request) {
         website: lead.website,
         region: lead.region,
         photo_url: lead.photo_url,
+        photo_urls: lead.photo_urls,
         place_types: lead.place_types,
         primary_type: lead.primary_type,
         detected_niche: lead.detected_niche,

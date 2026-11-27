@@ -74,6 +74,63 @@ export const NICHE_FALLBACK_IMAGES = {
 /**
  * Retorna imagem de fallback apropriada de acordo com o nicho do estabelecimento
  */
+export function getNicheFallbackGallery(
+  nicheKey?: string | null,
+  category?: string | null,
+  googleTypes?: string[] | null
+): string[] {
+  const norm = `${nicheKey || ""} ${category || ""}`.toLowerCase();
+
+  if (norm.includes("pet") || norm.includes("vet")) {
+    return [NICHE_FALLBACK_IMAGES.petshop.hero, ...NICHE_FALLBACK_IMAGES.petshop.gallery];
+  }
+  if (
+    norm.includes("confeit") ||
+    norm.includes("bakery") ||
+    norm.includes("bolo") ||
+    norm.includes("doce")
+  ) {
+    return [NICHE_FALLBACK_IMAGES.confeitaria.hero, ...NICHE_FALLBACK_IMAGES.confeitaria.gallery];
+  }
+  if (
+    norm.includes("restaurant") ||
+    norm.includes("gastronomia") ||
+    norm.includes("food") ||
+    norm.includes("bar") ||
+    norm.includes("cervej")
+  ) {
+    return [NICHE_FALLBACK_IMAGES.gastronomia.hero, ...NICHE_FALLBACK_IMAGES.gastronomia.gallery];
+  }
+  if (norm.includes("barbea") || norm.includes("barber")) {
+    return [NICHE_FALLBACK_IMAGES.barbearia.hero, ...NICHE_FALLBACK_IMAGES.barbearia.gallery];
+  }
+  if (
+    norm.includes("towing") ||
+    norm.includes("guincho") ||
+    norm.includes("mechanic") ||
+    norm.includes("auto") ||
+    norm.includes("car_wash") ||
+    norm.includes("oficina")
+  ) {
+    return [NICHE_FALLBACK_IMAGES.automotivo.hero, ...NICHE_FALLBACK_IMAGES.automotivo.gallery];
+  }
+  if (
+    norm.includes("beauty") ||
+    norm.includes("estetica") ||
+    norm.includes("health") ||
+    norm.includes("salao")
+  ) {
+    return [NICHE_FALLBACK_IMAGES.estetica_saude.hero, ...NICHE_FALLBACK_IMAGES.estetica_saude.gallery];
+  }
+
+  const effectiveNiche =
+    nicheKey || detectNicheTheme(category, googleTypes || undefined);
+  if (effectiveNiche === "petshop") {
+    return [NICHE_FALLBACK_IMAGES.petshop.hero, ...NICHE_FALLBACK_IMAGES.petshop.gallery];
+  }
+  return [NICHE_FALLBACK_IMAGES.servicos.hero, ...NICHE_FALLBACK_IMAGES.servicos.gallery];
+}
+
 export function getNicheFallbackImage(
   nicheKey?: string | null,
   category?: string | null,

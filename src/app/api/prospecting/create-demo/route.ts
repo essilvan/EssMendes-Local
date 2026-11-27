@@ -5,6 +5,7 @@ import {
   detectProspectingNiche,
   getNicheDemoConfig,
 } from "@/utils/prospecting-niche";
+import { getNicheFallbackGallery } from "@/utils/establishment-photos";
 
 function slugifyName(name: string): string {
   return name
@@ -49,7 +50,7 @@ async function fetchGooglePlaceDetails(
     }
 
     const photos: string[] = (Array.isArray(data.photos) ? data.photos : [])
-      .slice(0, 5)
+      .slice(0, 6)
       .map((ph: any) =>
         ph?.name
           ? `https://places.googleapis.com/v1/${ph.name}/media?maxWidthPx=1000&key=${encodeURIComponent(
@@ -126,7 +127,12 @@ export async function POST(request: Request) {
     }
 
     const apiKey = process.env.GOOGLE_PLACES_API_KEY?.trim() || "";
-    let placePhotos: string[] = lead.photo_url ? [String(lead.photo_url)] : [];
+    const initialLeadPhotos: string[] = Array.isArray(lead.photo_urls)
+      ? lead.photo_urls.filter((u: any) => typeof u === "string" && u.trim())
+      : lead.photo_url
+      ? [String(lead.photo_url)]
+      : [];
+    let placePhotos: string[] = initialLeadPhotos;
     let placeTypes: string[] = Array.isArray(lead.place_types)
       ? lead.place_types
       : [];
@@ -146,7 +152,7 @@ export async function POST(request: Request) {
       placeTypes,
       primaryType
     );
-    const cityLabel = lead.region || "Brasília e Região";
+    const cityLabel = lead.region || "Brasília - DF";
     const nicheConfig = getNicheDemoConfig(
       nicheKey,
       lead.business_name,
@@ -154,9 +160,18 @@ export async function POST(request: Request) {
       cityLabel
     );
 
-    const coverImageUrl = placePhotos[0] || nicheConfig.fallbackCoverUrl;
-    const galleryPhotos =
-      placePhotos.length > 0 ? placePhotos : [nicheConfig.fallbackCoverUrl];
+    // Garante pelo menos 3 fotos (até 6) para o mosaico visual do Hero nunca ficar incompleto
+    const nicheFallbackGallery = getNicheFallbackGallery(nicheKey, primaryType);
+    const galleryPhotos: string[] = [...placePhotos.slice(0, 6)];
+    if (galleryPhotos.length < 3) {
+      for (const fallbackUrl of nicheFallbackGallery) {
+        if (galleryPhotos.length >= 4) break;
+        if (!galleryPhotos.includes(fallbackUrl)) {
+          galleryPhotos.push(fallbackUrl);
+        }
+      }
+    }
+    const coverImageUrl = galleryPhotos[0] || nicheConfig.fallbackCoverUrl;
     const effectiveHours =
       openingHours || (nicheConfig.key === "towing" ? HOURS_24H : null);
 
