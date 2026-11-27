@@ -31,6 +31,7 @@ export interface GeneratedPostData {
   metaDescription: string;
   ctaType: "booking" | "whatsapp" | "link";
   ctaLabel: string;
+  ctaUrl?: string;
   imageUrl?: string;
   source: "gemini" | "fallback";
   pillar?: string;
@@ -42,29 +43,296 @@ export interface GeneratePostResult {
   error?: string;
 }
 
+const KNOWN_DF_REGIONS = [
+  "Taguatinga",
+  "Ceilândia",
+  "Águas Claras",
+  "Samambaia",
+  "Vicente Pires",
+  "Guará",
+  "Gama",
+  "Sobradinho",
+  "Planaltina",
+  "Asa Sul",
+  "Asa Norte",
+  "Sudoeste",
+  "Octogonal",
+  "Noroeste",
+  "Lago Sul",
+  "Lago Norte",
+  "Recanto das Emas",
+  "Riacho Fundo",
+  "Santa Maria",
+  "Núcleo Bandeirante",
+  "Park Way",
+  "Cruzeiro",
+  "Brazlândia",
+  "Paranoá",
+  "São Sebastião",
+  "Jardim Botânico",
+  "Brasília",
+];
+
+function isPlaceholderCity(value?: string | null): boolean {
+  const clean = String(value || "").trim().toLowerCase();
+  if (!clean) return true;
+  return (
+    clean === "sua cidade" ||
+    clean === "minha cidade" ||
+    clean === "cidade" ||
+    clean === "sua região" ||
+    clean === "região" ||
+    clean === "local"
+  );
+}
+
 /**
- * Mapeamento de contexto e dores reais por nicho para calibrar o prompt da IA
+ * Extrai a cidade/bairro real do tenant a partir do cadastro ou endereço formatado.
+ * Nunca retorna "sua cidade".
  */
-function getNichePromptInstructions(niche: string, services: string[]): {
+function extractRealCity(
+  paramsCity?: string | null,
+  tenantRow?: any,
+  profileAddress?: string | null
+): string {
+  const candidates = [
+    paramsCity,
+    tenantRow?.city,
+    tenantRow?.region,
+    tenantRow?.theme_settings?.city,
+    tenantRow?.theme_settings?.region,
+  ];
+
+  for (const cand of candidates) {
+    if (cand && !isPlaceholderCity(cand)) {
+      return String(cand).trim();
+    }
+  }
+
+  const combinedAddress = [profileAddress, tenantRow?.address]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+
+  if (combinedAddress) {
+    const lowerAddr = combinedAddress.toLowerCase();
+    for (const region of KNOWN_DF_REGIONS) {
+      if (lowerAddr.includes(region.toLowerCase())) {
+        return region === "Brasília" ? "Brasília - DF" : `${region} - DF`;
+      }
+    }
+
+    // Tenta extrair padrão "Cidade - UF" ou penúltimo segmento do endereço
+    const cityUfMatch = combinedAddress.match(
+      /([A-Za-zÀ-ÿ\s]{3,35})\s*[-–,]\s*([A-Z]{2})\b/
+    );
+    if (cityUfMatch && cityUfMatch[1] && !isPlaceholderCity(cityUfMatch[1])) {
+      return `${cityUfMatch[1].trim()} - ${cityUfMatch[2].trim()}`;
+    }
+
+    const parts = combinedAddress
+      .split(/[-–,]/)
+      .map((p) => p.trim())
+      .filter((p) => p.length >= 3 && !/^\d{5}-?\d{3}$/.test(p));
+    if (parts.length >= 2) {
+      const candidate = parts[parts.length - 2];
+      if (candidate && !isPlaceholderCity(candidate) && !/^\d+$/.test(candidate)) {
+        return candidate;
+      }
+    }
+  }
+
+  return "Brasília - DF";
+}
+
+/**
+ * Remove qualquer placeholder genérico ("sua cidade", "segmento de serviços") que a IA possa ter emitido.
+ */
+function enforceNoPlaceholders(
+  text: string,
+  realCity: string,
+  nicheLabel: string
+): string {
+  if (!text) return "";
+  return text
+    .replace(/\b(em|na|da|de)\s+sua cidade\b/gi, `$1 ${realCity}`)
+    .replace(/\bsua cidade\b/gi, realCity)
+    .replace(/\bsegmento de serviços\b/gi, nicheLabel.toLowerCase())
+    .trim();
+}
+
+/**
+ * Resolve o bucket de nicho real combinando o campo niche/theme_niche com palavras-chave do nome/categoria do estabelecimento.
+ */
+function resolveBucketKeyForNiche(
+  niche?: string | null,
+  businessName?: string | null,
+  businessCategory?: string | null
+): string {
+  const combined = `${niche || ""} ${businessCategory || ""} ${businessName || ""}`
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  // 1. Guincho & Socorro 24h (prioridade antes de automotive)
+  if (
+    combined.includes("towing") ||
+    combined.includes("guincho") ||
+    combined.includes("reboque") ||
+    combined.includes("auto socorro") ||
+    combined.includes("socorro veicular") ||
+    combined.includes("resgate veicular")
+  ) {
+    return "towing";
+  }
+
+  // 2. Bares, Cervejarias, Espetarias e Restaurantes
+  if (
+    combined.includes("restaurant") ||
+    combined.includes("gastronomia") ||
+    combined.includes("cervejaria") ||
+    combined.includes("choperia") ||
+    combined.includes("petisc") ||
+    combined.includes("espet") ||
+    combined.includes("pizz") ||
+    combined.includes("burger") ||
+    combined.includes("hamburg") ||
+    combined.includes("boteco") ||
+    combined.includes("churrasc") ||
+    combined.includes("lanchonete") ||
+    combined.includes("bistro") ||
+    combined.includes("sushi") ||
+    /\bbar\b/.test(combined)
+  ) {
+    return "restaurant";
+  }
+
+  // 3. Oficina Mecânica / Automotivo
+  if (
+    combined.includes("automotive") ||
+    combined.includes("mechanic") ||
+    combined.includes("mecanic") ||
+    combined.includes("oficina") ||
+    combined.includes("auto center") ||
+    combined.includes("funilaria") ||
+    combined.includes("borracharia") ||
+    combined.includes("lava jato") ||
+    combined.includes("car_wash")
+  ) {
+    return "automotive";
+  }
+
+  // 4. Barbearia
+  if (combined.includes("barbea") || combined.includes("barber")) {
+    return "barbearia";
+  }
+
+  // 5. Pet Shop & Veterinária
+  if (
+    combined.includes("pet") ||
+    combined.includes("veterin") ||
+    combined.includes("bicho") ||
+    combined.includes("animal")
+  ) {
+    return "petshop";
+  }
+
+  // 6. Confeitaria & Doceria
+  if (
+    combined.includes("confeit") ||
+    combined.includes("bakery") ||
+    combined.includes("bolo") ||
+    combined.includes("doce") ||
+    combined.includes("padaria")
+  ) {
+    return "confeitaria";
+  }
+
+  // 7. Estética, Salão e Beleza
+  if (
+    combined.includes("beauty") ||
+    combined.includes("estetica") ||
+    combined.includes("beleza") ||
+    combined.includes("salao") ||
+    combined.includes("cilios") ||
+    combined.includes("lash") ||
+    combined.includes("clinica")
+  ) {
+    return "estetica_saude";
+  }
+
+  return "default";
+}
+
+/**
+ * Mapeamento de contexto, pilares e CTAs reais por nicho para calibrar o prompt da IA
+ */
+function getNichePromptInstructions(
+  bucketKey: string,
+  services: string[],
+  targetCity: string,
+  tenantSlug?: string
+): {
   nicheLabel: string;
   domainGuidelines: string;
   defaultServices: string[];
-  defaultCtaType: "booking" | "whatsapp";
+  defaultCtaType: "booking" | "whatsapp" | "link";
   defaultCtaLabel: string;
+  defaultCtaUrl?: string;
 } {
-  const norm = (niche || "").toLowerCase();
+  if (bucketKey === "restaurant") {
+    return {
+      nicheLabel: "Bar, Cervejaria, Petiscaria e Restaurante",
+      domainGuidelines: `FOCO OBRIGATÓRIO DO NICHO GASTRONOMIA / BAR & CERVEJARIA:
+- Escreva com linguagem convidativa, saborosa e descontraída de bar, cervejaria e petiscaria em ${targetCity}.
+- Cite pratos, porções e bebidas REAIS da lista de produtos do cardápio (ex: "${services.slice(0, 4).join('", "') || "Carne de Sol, Picanha na Chapa, Porções e Cerveja Gelada"}").
+- Explore os 3 pilares do segmento:
+  1. Happy Hour & Cerveja Gelada: cerveja trincando, long necks e petiscos na brasa para reunir os amigos hoje em ${targetCity}.
+  2. Destaque do Cardápio: dar água na boca destacando pratos reais servidos na casa.
+  3. Fim de Semana / Confraternização: ambiente animado, porções fartas e atendimento rápido direto na mesa via QR Code.
+- Palavras-chave SEO devem incluir termos como "bar e petiscaria em ${targetCity}", "cerveja gelada ${targetCity}", "onde comer em ${targetCity}" e nomes reais dos pratos.
+- PROIBIDO usar termos de escritório, consultório ou "agende seu atendimento" / "materiais de alto padrão". Convide para abrir o cardápio digital ou vir curtir hoje!`,
+      defaultServices:
+        services.length > 0
+          ? services
+          : [
+              "Carne de Sol na Chapa",
+              "Picanha na Chapa",
+              "Porções e Petiscos na Brasa",
+              "Cervejas Long Neck e Chopp Trincando",
+            ],
+      defaultCtaType: "link",
+      defaultCtaLabel: "Ver Cardápio & Pedir",
+      defaultCtaUrl: tenantSlug ? `/${tenantSlug}#cardapio` : "#cardapio",
+    };
+  }
 
-  if (
-    norm === "automotive" ||
-    norm === "auto" ||
-    norm.includes("auto") ||
-    norm.includes("mecanic") ||
-    norm.includes("oficina")
-  ) {
+  if (bucketKey === "towing") {
+    return {
+      nicheLabel: "Guincho, Reboque e Socorro Veicular 24h",
+      domainGuidelines: `FOCO OBRIGATÓRIO DO NICHO GUINCHO & SOCORRO 24H:
+- Aborde exclusivamente situações reais de resgate e transporte veicular em ${targetCity}: atendimento rápido 24 horas, transporte seguro em caminhão plataforma sem danificar câmbio ou para-choque, socorro para pane elétrica, pane seca, bateria descarregada, pneu furado ou remoção de carros e motos.
+- Destaque agilidade no envio de localização pelo WhatsApp, segurança no transporte e disponibilidade 24h em ${targetCity} e rodovias próximas.
+- PROIBIDO mencionar agendamento de salão, barbearia ou "materiais de alto padrão".`,
+      defaultServices:
+        services.length > 0
+          ? services
+          : [
+              "Guincho Plataforma 24 Horas",
+              "Socorro para Pane Elétrica e Bateria",
+              "Resgate de Carros, SUVs e Motos",
+              "Transporte Seguro em Caminhão Plataforma",
+            ],
+      defaultCtaType: "whatsapp",
+      defaultCtaLabel: "Solicitar Guincho 24h",
+    };
+  }
+
+  if (bucketKey === "automotive") {
     return {
       nicheLabel: "Oficina Mecânica e Centro Automotivo",
       domainGuidelines: `FOCO OBRIGATÓRIO DO NICHO AUTOMOTIVO:
-- Aborde dicas práticas e reais de manutenção preventiva e corretiva automotiva: troca de óleo e filtros no prazo correto, revisão do sistema de freios (pastilhas, discos e fluido), alinhamento, balanceamento e suspensão (amortecedores, buchas, pivôs), barulhos no motor, kit de embreagem, direção hidráulica/elétrica, correia dentada ou higienização de ar-condicionado automotivo.
+- Aborde dicas práticas e reais de manutenção preventiva e corretiva automotiva em ${targetCity}: troca de óleo e filtros no prazo correto, revisão do sistema de freios (pastilhas, discos e fluido), alinhamento, balanceamento e suspensão (amortecedores, buchas, pivôs), barulhos no motor, kit de embreagem, direção hidráulica/elétrica, correia dentada ou higienização de ar-condicionado automotivo.
 - Destaque a segurança da família nas ruas e estradas, economia de combustível, prevenção de quebras inesperadas e diagnóstico técnico transparente por placa.
 - NUNCA mencione serviços de salão, barbearia ou estética corporal.`,
       defaultServices:
@@ -82,15 +350,11 @@ function getNichePromptInstructions(niche: string, services: string[]): {
     };
   }
 
-  if (
-    norm.includes("barbea") ||
-    norm.includes("barber") ||
-    norm.includes("corte")
-  ) {
+  if (bucketKey === "barbearia") {
     return {
       nicheLabel: "Barbearia e Estética Masculina",
       domainGuidelines: `FOCO OBRIGATÓRIO DO NICHO BARBEARIA:
-- Aborde exclusivamente cuidados masculinos: corte degradê (fade), corte social, alinhamento e hidratação de barba, barbaterapia com toalha quente, cuidados com o couro cabeludo e visual impecável para o dia a dia ou eventos.`,
+- Aborde exclusivamente cuidados masculinos em ${targetCity}: corte degradê (fade), corte social, alinhamento e hidratação de barba, barbaterapia com toalha quente, cuidados com o couro cabeludo e visual impecável para o dia a dia ou eventos.`,
       defaultServices:
         services.length > 0
           ? services
@@ -101,20 +365,15 @@ function getNichePromptInstructions(niche: string, services: string[]): {
               "Hidratação Capilar e de Barba",
             ],
       defaultCtaType: "booking",
-      defaultCtaLabel: "Agendar Horário Online",
+      defaultCtaLabel: "Reservar Horário",
     };
   }
 
-  if (
-    norm.includes("pet") ||
-    norm.includes("veterin") ||
-    norm.includes("bicho") ||
-    norm.includes("animal")
-  ) {
+  if (bucketKey === "petshop") {
     return {
       nicheLabel: "Pet Shop e Clínica Veterinária",
       domainGuidelines: `FOCO OBRIGATÓRIO DO NICHO PET & VETERINÁRIA:
-- Aborde exclusivamente saúde, higiene e bem-estar de cães e gatos: banho e tosa higiênica, hidratação de pelagem, vacinação em dia, check-up veterinário preventivo, controle de pulgas/carrapatos e alimentação saudável para pets.`,
+- Aborde exclusivamente saúde, higiene e bem-estar de cães e gatos em ${targetCity}: banho e tosa higiênica, hidratação de pelagem, vacinação em dia, check-up veterinário preventivo, controle de pulgas/carrapatos e alimentação saudável para pets.`,
       defaultServices:
         services.length > 0
           ? services
@@ -125,19 +384,15 @@ function getNichePromptInstructions(niche: string, services: string[]): {
               "Hidratação e Cuidados para Pets",
             ],
       defaultCtaType: "booking",
-      defaultCtaLabel: "Agendar Atendimento Pet",
+      defaultCtaLabel: "Agendar Banho & Tosa",
     };
   }
 
-  if (
-    norm.includes("confeit") ||
-    norm.includes("bolo") ||
-    norm.includes("doce")
-  ) {
+  if (bucketKey === "confeitaria") {
     return {
       nicheLabel: "Confeitaria Artesanal e Doceria",
       domainGuidelines: `FOCO OBRIGATÓRIO DO NICHO CONFEITARIA:
-- Aborde exclusivamente bolos artesanais, tortas especiais, doces finos para festas e aniversários, ingredientes selecionados e encomendas personalizadas.`,
+- Aborde exclusivamente bolos artesanais, tortas especiais, doces finos para festas e aniversários, ingredientes selecionados e encomendas personalizadas em ${targetCity}.`,
       defaultServices:
         services.length > 0
           ? services
@@ -147,22 +402,15 @@ function getNichePromptInstructions(niche: string, services: string[]): {
               "Tortas Artesanais e Kits Festa",
             ],
       defaultCtaType: "whatsapp",
-      defaultCtaLabel: "Fazer Encomenda no WhatsApp",
+      defaultCtaLabel: "Fazer Encomenda",
     };
   }
 
-  if (
-    norm.includes("estetica") ||
-    norm.includes("beleza") ||
-    norm.includes("salao") ||
-    norm.includes("cilios") ||
-    norm.includes("lash") ||
-    norm.includes("clinica")
-  ) {
+  if (bucketKey === "estetica_saude") {
     return {
       nicheLabel: "Estética, Beleza e Bem-Estar",
       domainGuidelines: `FOCO OBRIGATÓRIO DO NICHO ESTÉTICA & BELEZA:
-- Aborde exclusivamente autoestima, cuidados estéticos faciais e corporais, durabilidade dos procedimentos, biossegurança, técnicas modernas e atendimento personalizado.`,
+- Aborde exclusivamente autoestima, cuidados estéticos faciais e corporais, durabilidade dos procedimentos, biossegurança, técnicas modernas e atendimento personalizado em ${targetCity}.`,
       defaultServices:
         services.length > 0
           ? services
@@ -172,20 +420,20 @@ function getNichePromptInstructions(niche: string, services: string[]): {
               "Atendimento com Hora Marcada",
             ],
       defaultCtaType: "booking",
-      defaultCtaLabel: "Agendar Horário Online",
+      defaultCtaLabel: "Reservar Horário",
     };
   }
 
   return {
-    nicheLabel: niche || "Comércio e Serviços Locais",
+    nicheLabel: "Serviços Especializados Locais",
     domainGuidelines: `FOCO OBRIGATÓRIO DO NICHO:
-- Aborde exclusivamente os serviços reais da empresa, resolvendo dúvidas reais dos clientes da cidade e destacando a qualidade do atendimento local.`,
+- Aborde exclusivamente os serviços reais da empresa em ${targetCity}, resolvendo dúvidas reais dos clientes da região e destacando atendimento ágil e transparente.`,
     defaultServices:
       services.length > 0
         ? services
-        : ["Atendimento Especializado", "Serviços de Qualidade"],
-    defaultCtaType: "booking",
-    defaultCtaLabel: "Agendar Horário Online",
+        : ["Atendimento Especializado", "Orçamento Rápido no WhatsApp"],
+    defaultCtaType: "whatsapp",
+    defaultCtaLabel: "Falar no WhatsApp",
   };
 }
 
@@ -196,6 +444,55 @@ const NICHE_ROTATING_SUBTOPICS: Record<
   string,
   Array<{ angle: string; matchKeywords: string[] }>
 > = {
+  restaurant: [
+    {
+      angle:
+        "Happy Hour & Cerveja Gelada: cerveja trincando, long necks e petiscos na brasa para reunir os amigos hoje",
+      matchKeywords: ["happy hour", "cerveja", "gelada", "long neck", "amigos"],
+    },
+    {
+      angle:
+        "Destaque do Cardápio: porções caprichadas, carnes na chapa e pratos mais pedidos da casa para compartilhar na mesa",
+      matchKeywords: ["cardápio", "cardapio", "porção", "porcao", "chapa", "destaque"],
+    },
+    {
+      angle:
+        "Fim de Semana e Confraternização: ambiente animado, porções fartas e pedido rápido direto na mesa via QR Code sem espera",
+      matchKeywords: ["fim de semana", "confraterniza", "qr code", "mesa", "sábado"],
+    },
+    {
+      angle:
+        "Combinação perfeita de petiscos crocantes, entradas quentes e bebidas geladas para curtir o fim de tarde",
+      matchKeywords: ["petisco", "entrada", "crocante", "fim de tarde"],
+    },
+    {
+      angle:
+        "Noite de sabores na brasa: cortes selecionados, acompanhamentos frescos e atendimento ágil no bar e petiscaria",
+      matchKeywords: ["brasa", "corte", "carne", "noite"],
+    },
+  ],
+  towing: [
+    {
+      angle:
+        "Socorro Veicular e Guincho 24 Horas: atendimento rápido enviando sua localização pelo WhatsApp em qualquer horário",
+      matchKeywords: ["24 horas", "24h", "localização", "socorro", "emergência"],
+    },
+    {
+      angle:
+        "Transporte seguro em caminhão plataforma: por que a plataforma protege câmbio automático, suspensão e para-choque",
+      matchKeywords: ["plataforma", "câmbio", "cambio", "transporte", "seguro"],
+    },
+    {
+      angle:
+        "Pane elétrica, bateria descarregada ou pane seca: como agir com segurança no acostamento enquanto o guincho chega",
+      matchKeywords: ["pane", "bateria", "elétrica", "acostamento", "seca"],
+    },
+    {
+      angle:
+        "Remoção segura de motos, carros baixos e utilitários com cintas certificadas e acompanhamento em tempo real",
+      matchKeywords: ["moto", "utilitário", "cinta", "remoção"],
+    },
+  ],
   automotive: [
     {
       angle:
@@ -358,49 +655,16 @@ const NICHE_ROTATING_SUBTOPICS: Record<
   ],
 };
 
-function resolveBucketKeyForNiche(niche: string): string {
-  const normNiche = (niche || "").toLowerCase();
-  if (
-    normNiche.includes("auto") ||
-    normNiche.includes("mecanic") ||
-    normNiche.includes("oficina")
-  ) {
-    return "automotive";
-  }
-  if (normNiche.includes("barbea") || normNiche.includes("barber")) {
-    return "barbearia";
-  }
-  if (
-    normNiche.includes("pet") ||
-    normNiche.includes("veterin") ||
-    normNiche.includes("bicho")
-  ) {
-    return "petshop";
-  }
-  if (normNiche.includes("confeit") || normNiche.includes("bolo")) {
-    return "confeitaria";
-  }
-  if (
-    normNiche.includes("estetica") ||
-    normNiche.includes("beleza") ||
-    normNiche.includes("salao")
-  ) {
-    return "estetica_saude";
-  }
-  return "default";
-}
-
 /**
  * Seleciona um subtema do nicho que ainda NÃO foi abordado nos títulos anteriores
  */
 function pickFreshSubtopicForNiche(
-  niche: string,
+  bucketKey: string,
   existingTitles: string[]
 ): string {
-  const bucketKey = resolveBucketKeyForNiche(niche);
   const subtopics = NICHE_ROTATING_SUBTOPICS[bucketKey] || [];
   if (subtopics.length === 0) {
-    return "Destaque um diferencial prático e responda uma dúvida comum dos clientes da cidade (variando completamente dos títulos anteriores)";
+    return "Destaque um diferencial prático e responda uma dúvida comum dos clientes da região (variando completamente dos títulos anteriores)";
   }
 
   const joinedTitles = existingTitles.join(" | ").toLowerCase();
@@ -423,6 +687,50 @@ const NICHE_ILLUSTRATIVE_IMAGES: Record<
   string,
   Array<{ id: string; keywords: string[]; url: string }>
 > = {
+  restaurant: [
+    {
+      id: "rest-beer-happyhour",
+      keywords: ["cerveja", "chopp", "happy hour", "long neck", "gelada", "drink"],
+      url: "https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "rest-grill-steak",
+      keywords: ["carne", "picanha", "chapa", "brasa", "churrasco", "espeto"],
+      url: "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "rest-petiscos-table",
+      keywords: ["petisco", "porção", "porcao", "mesa", "amigos", "confraterniza"],
+      url: "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "rest-beer-glasses",
+      keywords: ["brinde", "fim de semana", "noite", "cervejaria", "bar"],
+      url: "https://images.unsplash.com/photo-1575037614876-c38a4d44f5b8?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "rest-fries-appetizer",
+      keywords: ["frito", "batata", "entrada", "crocante", "cardápio"],
+      url: "https://images.unsplash.com/photo-1561758033-d89a9ad46330?auto=format&fit=crop&w=1280&q=80",
+    },
+  ],
+  towing: [
+    {
+      id: "tow-roadside-rescue",
+      keywords: ["guincho", "reboque", "socorro", "plataforma", "24h"],
+      url: "https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "tow-highway-assist",
+      keywords: ["rodovia", "estrada", "pane", "acostamento", "resgate"],
+      url: "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "tow-car-battery",
+      keywords: ["bateria", "elétrica", "motor", "emergência"],
+      url: "https://images.unsplash.com/photo-1632823471565-1ecdf5c6da35?auto=format&fit=crop&w=1280&q=80",
+    },
+  ],
   automotive: [
     {
       id: "auto-oil-engine",
@@ -614,12 +922,27 @@ function isImageCandidateAlreadyUsed(
 }
 
 function selectCuratedImageForNicheAndTitle(
-  niche: string,
+  bucketKey: string,
   postDescription: string,
-  existingImages: string[] = []
+  existingImages: string[] = [],
+  preferredRealPhotos: string[] = []
 ): { id: string; url: string } {
-  const bucketKey = resolveBucketKeyForNiche(niche);
   const normDesc = (postDescription || "").toLowerCase();
+
+  // 0. Se o estabelecimento (ex: restaurante/bar) possui fotos reais de pratos/produtos ainda não usadas, prioriza-as!
+  if (preferredRealPhotos && preferredRealPhotos.length > 0) {
+    const validReal = preferredRealPhotos.filter(
+      (u) => typeof u === "string" && /^https?:\/\//i.test(u.trim())
+    );
+    const unusedReal = validReal.filter(
+      (u) => !isImageCandidateAlreadyUsed({ id: "tenant-real", url: u }, existingImages)
+    );
+    const realPool = unusedReal.length > 0 ? unusedReal : validReal;
+    if (realPool.length > 0) {
+      const pickedReal = realPool[Math.floor(Math.random() * realPool.length)];
+      return { id: "tenant-catalog", url: pickedReal };
+    }
+  }
 
   const allCandidates =
     NICHE_ILLUSTRATIVE_IMAGES[bucketKey] || NICHE_ILLUSTRATIVE_IMAGES.default;
@@ -728,9 +1051,10 @@ async function fetchTenantRecentPostsHistory(
  * Garante que a requisição NUNCA falhe sem resposta e NUNCA repita títulos anteriores.
  */
 function buildStructuredNicheFallbackPost(params: {
-  niche: string;
+  bucketKey: string;
   businessName: string;
   targetCity: string;
+  catalogItems: string[];
   freshSubtopic: string;
   existingTitles: string[];
 }): {
@@ -739,10 +1063,13 @@ function buildStructuredNicheFallbackPost(params: {
   keywords: string;
   meta_description: string;
 } {
-  const bucketKey = resolveBucketKeyForNiche(params.niche);
-  const city = params.targetCity || "sua cidade";
-  const name = params.businessName || "nossa equipe";
+  const bucketKey = params.bucketKey;
+  const city = params.targetCity || "Brasília - DF";
+  const name = params.businessName || "Nosso Estabelecimento";
   const usedLower = (params.existingTitles || []).map((t) => t.toLowerCase());
+  const item1 = params.catalogItems[0] || "Carne de Sol na Chapa";
+  const item2 = params.catalogItems[1] || "Picanha na Chapa";
+  const item3 = params.catalogItems[2] || "Cerveja Gelada";
 
   const fallbackTemplates: Record<
     string,
@@ -753,6 +1080,40 @@ function buildStructuredNicheFallbackPost(params: {
       meta_description: string;
     }>
   > = {
+    restaurant: [
+      {
+        title: `Happy Hour e Cerveja Gelada em ${city}: Venha pro ${name}`,
+        content: `Nada melhor do que encerrar o dia com cerveja trincando, long necks selecionadas e petiscos feitos na hora para reunir os amigos em ${city}.\n\nNo ${name}, você aproveita porções caprichadas como ${item1} e ${item2}, com atendimento rápido direto na mesa via QR Code. Confira nosso cardápio digital e venha curtir hoje mesmo!`,
+        keywords: `${name}, bar e petiscaria em ${city}, cerveja gelada ${city}, onde comer em ${city}, ${item1}`,
+        meta_description: `Happy hour com cerveja gelada, ${item1} e petiscos em ${city} no ${name}. Veja o cardápio digital!`,
+      },
+      {
+        title: `Destaque do Cardápio em ${city}: Experimente ${item1} no ${name}`,
+        content: `Está procurando onde comer bem em ${city}? Nosso cardápio reúne receitas caprichadas e porções generosas perfeitas para dividir na mesa com quem você gosta.\n\nExperimente nossa ${item1}, além de ${item2} e ${item3}, sempre servidos na temperatura ideal. Abra nosso cardápio digital agora e escolha seus favoritos!`,
+        keywords: `${item1}, ${item2}, onde comer em ${city}, bar e petiscaria em ${city}, ${name}`,
+        meta_description: `Experimente ${item1} e ${item2} no ${name} em ${city}. Porções fartas e pedido rápido na mesa!`,
+      },
+      {
+        title: `Fim de Semana e Confraternização em ${city} é no ${name}`,
+        content: `Reúna a galera ou a família para curtir um ambiente descontraído, comida saborosa e bebidas sempre geladas em ${city}.\n\nNo ${name}, você pede direto da mesa pelo cardápio digital com QR Code sem enfrentar demora e aproveita destaques como ${item1} e ${item2}. Acesse o cardápio e venha aproveitar!`,
+        keywords: `confraternização ${city}, bar em ${city}, cerveja gelada ${city}, petiscaria ${city}, ${name}`,
+        meta_description: `Curta o fim de semana no ${name} em ${city} com porções fartas, cerveja gelada e cardápio digital na mesa.`,
+      },
+    ],
+    towing: [
+      {
+        title: `Guincho e Socorro Veicular 24h em ${city}: Chegada Rápida`,
+        content: `Ficou na mão com pane elétrica, bateria descarregada ou pneu furado em ${city}? Conte com o atendimento rápido 24 horas da ${name}.\n\nBasta enviar sua localização pelo WhatsApp para acionar nosso caminhão plataforma com total segurança para carros, SUVs e motos. Salve nosso contato e chame sempre que precisar!`,
+        keywords: `guincho 24h ${city}, reboque ${city}, auto socorro ${city}, caminhão plataforma, ${name}`,
+        meta_description: `Precisa de guincho 24h em ${city}? A ${name} oferece resgate veicular rápido em caminhão plataforma.`,
+      },
+      {
+        title: `Transporte em Caminhão Plataforma em ${city}: Proteja seu Veículo`,
+        content: `Em caso de pane mecânica ou acidente, o transporte em caminhão plataforma evita danos ao câmbio automático, suspensão e para-choque do seu carro.\n\nA ${name} atende ${city} e região 24 horas com cintas certificadas, agilidade e preço justo combinado antes da saída. Solicite seu guincho agora pelo WhatsApp!`,
+        keywords: `caminhão plataforma ${city}, guincho para carro automático, socorro veicular ${city}, ${name}`,
+        meta_description: `Transporte seguro em caminhão plataforma 24h em ${city}. Chame a ${name} no WhatsApp!`,
+      },
+    ],
     automotive: [
       {
         title: `Troca de Óleo e Filtros em ${city}: Proteja o Motor do Seu Carro`,
@@ -853,14 +1214,14 @@ export async function generateLocalSeoPost(
     }
 
     const tenantId = tenantContext.tenantId;
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
-    // 1. Buscar dados completos do tenant, perfil, serviços e histórico dos últimos 10 posts
-    const [tenantRes, profileRes, servicesRes, historyData] =
+    // 1. Buscar dados completos do tenant, perfil, cardápio/serviços/produtos e histórico dos últimos 10 posts
+    const [tenantRes, profileRes, servicesRes, menuItemsRes, productsRes, historyData] =
       await Promise.all([
         supabase
           .from("tenants")
-          .select("id, name, slug, niche, theme_niche, theme_settings")
+          .select("*")
           .eq("id", tenantId)
           .maybeSingle(),
         supabase
@@ -874,6 +1235,17 @@ export async function generateLocalSeoPost(
           .eq("tenant_id", tenantId)
           .eq("is_active", true)
           .limit(10),
+        supabase
+          .from("menu_items")
+          .select("name, image_url, category")
+          .eq("tenant_id", tenantId)
+          .order("created_at", { ascending: false })
+          .limit(25),
+        supabase
+          .from("tenant_products")
+          .select("name, image_url")
+          .eq("tenant_id", tenantId)
+          .limit(10),
         fetchTenantRecentPostsHistory(
           supabase,
           tenantId,
@@ -885,6 +1257,8 @@ export async function generateLocalSeoPost(
     const tenantRow = tenantRes.data || tenantContext.tenant;
     const profile = profileRes.data;
     const servicesData = servicesRes.data || [];
+    const menuItemsData = menuItemsRes.data || [];
+    const productsData = productsRes.data || [];
     const { existingTitles, existingImages } = historyData;
 
     const existingTitlesFormatted =
@@ -896,7 +1270,7 @@ export async function generateLocalSeoPost(
       CONTENT_PILLARS.find((p) => p.id === params?.pillarId) ||
       CONTENT_PILLARS[Math.floor(Math.random() * CONTENT_PILLARS.length)];
 
-    // 2. Captura dinâmica de tenant.name, tenant.niche, tenant.city e services
+    // 2. Captura dinâmica de tenant.name, nicho efetivo, cidade real e top 5 produtos/serviços
     const businessName =
       params?.businessName ||
       tenantRow?.name ||
@@ -910,41 +1284,59 @@ export async function generateLocalSeoPost(
       profile?.business_category ||
       "general";
 
-    const address = profile?.address || "";
-    let extractedCity = params?.targetCity || (tenantRow as any)?.city || "";
-    if (!extractedCity && address) {
-      const parts = address.split(/[-–,]/);
-      if (parts.length >= 2) {
-        extractedCity = parts[parts.length - 2].trim();
-      }
-    }
-    const targetCity: string = extractedCity || "sua cidade";
+    const bucketKey = resolveBucketKeyForNiche(
+      resolvedNiche,
+      businessName,
+      profile?.business_category || params?.businessCategory
+    );
 
-    const rawServices =
-      params?.servicesList && params.servicesList.length > 0
-        ? params.servicesList
-        : servicesData.map((s) => s.name).filter(Boolean);
+    const targetCity = extractRealCity(
+      params?.targetCity,
+      tenantRow,
+      profile?.address
+    );
 
-    const nicheContext = getNichePromptInstructions(resolvedNiche, rawServices);
+    const catalogNames = Array.from(
+      new Set([
+        ...(params?.servicesList || []),
+        ...menuItemsData.map((m: any) => m?.name).filter(Boolean),
+        ...productsData.map((p: any) => p?.name).filter(Boolean),
+        ...servicesData.map((s: any) => s?.name).filter(Boolean),
+      ])
+    ).slice(0, 8);
+
+    const top5CatalogItems = catalogNames.slice(0, 5);
+
+    const realCatalogImageUrls = [
+      ...menuItemsData.map((m: any) => m?.image_url).filter(Boolean),
+      ...productsData.map((p: any) => p?.image_url).filter(Boolean),
+    ].filter((u: string) => /^https?:\/\//i.test(String(u)));
+
+    const nicheContext = getNichePromptInstructions(
+      bucketKey,
+      top5CatalogItems,
+      targetCity,
+      tenantRow?.slug
+    );
 
     // 3. Sorteia um subtema específico do nicho que ainda NÃO aparece nos existingTitles
     const freshSubtopic =
       params?.focusTopic ||
-      pickFreshSubtopicForNiche(resolvedNiche, existingTitles);
+      pickFreshSubtopicForNiche(bucketKey, existingTitles);
 
     const randomGenerationSeed = `${Date.now()}-${Math.random()
       .toString(36)
       .substring(2, 8)}`;
 
-    // 4. Prompt estrito em PT-BR com bloqueio explícito de repetição de temas
-    const prompt = `Gere uma publicação inédita e persuasiva de blog/novidades otimizada para SEO Local no Google.
+    // 4. Prompt estrito em PT-BR com bloqueio explícito de repetição e de placeholders
+    const prompt = `Gere uma publicação inédita e persuasiva de novidades/artigo otimizada para SEO Local no Google.
 Semente de variação única: ${randomGenerationSeed}
 
 DADOS REAIS DO ESTABELECIMENTO:
-- Nome da Empresa: ${businessName}
-- Nicho de Atuação: ${nicheContext.nicheLabel} (código: ${resolvedNiche})
-- Cidade / Região: ${targetCity}
-- Serviços Principais: ${nicheContext.defaultServices.join(", ")}
+- Nome do Estabelecimento: ${businessName}
+- Nicho Real: ${nicheContext.nicheLabel} (bucket: ${bucketKey})
+- Cidade / Região Real: ${targetCity}
+- Top Produtos / Pratos / Serviços Reais: ${nicheContext.defaultServices.join(", ")}
 - Pilar Editorial: ${selectedPillar.name} (${selectedPillar.angleDescription})
 - PAUTA / ÂNGULO OBRIGATÓRIO DESTE NOVO POST: ${freshSubtopic}
 
@@ -954,16 +1346,16 @@ TEMAS JÁ PUBLICADOS (PROIBIDO REPETIR QUALQUER UM DELES):
 ${existingTitlesFormatted}
 
 INSTRUÇÃO DE DIVERSIFICAÇÃO OBRIGATÓRIA:
-- Escolha um ângulo, problema prático e título 100% DIFERENTES de todos os itens listados em "TEMAS JÁ PUBLICADOS".
-- Desenvolva especificamente a pauta "${freshSubtopic}", trazendo dicas práticas e reais que ainda não foram abordadas nos títulos acima.
+- Escolha um ângulo e título 100% DIFERENTES de todos os itens listados em "TEMAS JÁ PUBLICADOS".
+- Desenvolva especificamente a pauta "${freshSubtopic}", citando naturalmente os itens reais do estabelecimento quando pertinente.
 
 REGRAS ESTRITAS E OBRIGATÓRIAS DE SAÍDA:
 1. Retorne APENAS um objeto JSON puro e válido, sem blocos markdown (\`\`\`json) e sem nenhuma frase antes ou depois do JSON.
 2. O conteúdo deve ser 100% em Português do Brasil (PT-BR) natural, humano e persuasivo.
-3. PROIBIDO incluir termos técnicos de prompt ou meta-comentários dentro dos textos, tais como "SEO Specialist", "Copywriter", "placeholder", "[insira aqui]" ou textos em inglês.
-4. O campo "title" deve ter entre 35 e 70 caracteres, em PT-BR, inédito e atrativo para clientes locais.
-5. O campo "content" deve ter entre 120 e 180 palavras divididas em 2 ou 3 parágrafos claros, educando o cliente sobre o tema e convidando-o a falar com a equipe da ${businessName} em ${targetCity}.
-6. O campo "keywords" deve conter 5 palavras-chave locais separadas por vírgula em PT-BR (incluindo o serviço específico abordado e ${targetCity}).
+3. PROIBIDO usar strings genéricas ou placeholders como "sua cidade", "segmento de serviços", "SEO Specialist", "Copywriter", "[insira aqui]" ou textos em inglês. Sempre escreva "${targetCity}" e "${businessName}".
+4. O campo "title" deve ter entre 35 e 70 caracteres, em PT-BR, inédito e atrativo para clientes de ${targetCity}.
+5. O campo "content" deve ter entre 110 e 170 palavras divididas em 2 ou 3 parágrafos claros, alinhados ao tom real de ${nicheContext.nicheLabel} e chamando para "${nicheContext.defaultCtaLabel}".
+6. O campo "keywords" deve conter 5 palavras-chave locais separadas por vírgula em PT-BR (incluindo ${targetCity} e termos reais do nicho).
 7. O campo "meta_description" deve ter até 155 caracteres em PT-BR resumindo o benefício do artigo para o Google.
 
 FORMATO EXATO DO JSON:
@@ -975,9 +1367,10 @@ FORMATO EXATO DO JSON:
 }`;
 
     const fallbackTemplate = buildStructuredNicheFallbackPost({
-      niche: resolvedNiche,
+      bucketKey,
       businessName,
       targetCity,
+      catalogItems: top5CatalogItems,
       freshSubtopic,
       existingTitles,
     });
@@ -1026,30 +1419,44 @@ FORMATO EXATO DO JSON:
       sourceUsed = "fallback";
     }
 
-    const parsedTitle =
-      sanitizeAiText(postData.title) || fallbackTemplate.title;
+    const parsedTitle = enforceNoPlaceholders(
+      sanitizeAiText(postData.title) || fallbackTemplate.title,
+      targetCity,
+      nicheContext.nicheLabel
+    );
 
-    const parsedContent =
-      sanitizeAiText(postData.content) || fallbackTemplate.content;
+    const parsedContent = enforceNoPlaceholders(
+      sanitizeAiText(postData.content) || fallbackTemplate.content,
+      targetCity,
+      nicheContext.nicheLabel
+    );
     const rawKeywords =
       postData.keywords || postData.tags || fallbackTemplate.keywords;
-    const parsedTags =
+    const parsedTags = enforceNoPlaceholders(
       typeof rawKeywords === "string"
         ? sanitizeAiText(rawKeywords)
         : Array.isArray(rawKeywords)
         ? rawKeywords.map((k: string) => sanitizeAiText(k)).join(", ")
-        : fallbackTemplate.keywords;
-    const parsedMetaDesc = sanitizeAiText(
-      postData.meta_description ||
-        postData.metaDescription ||
-        fallbackTemplate.meta_description
+        : fallbackTemplate.keywords,
+      targetCity,
+      nicheContext.nicheLabel
+    );
+    const parsedMetaDesc = enforceNoPlaceholders(
+      sanitizeAiText(
+        postData.meta_description ||
+          postData.metaDescription ||
+          fallbackTemplate.meta_description
+      ),
+      targetCity,
+      nicheContext.nicheLabel
     ).slice(0, 160);
 
-    // 5. Seleciona ou gera imagem baseada na descrição exata do novo post, garantindo que NÃO esteja em existingImages
+    // 5. Seleciona imagem real do cardápio (para restaurantes) ou foto curada do nicho sem repetir
     const selectedImage = selectCuratedImageForNicheAndTitle(
-      resolvedNiche,
+      bucketKey,
       `${parsedTitle} ${parsedContent} ${freshSubtopic}`,
-      existingImages
+      existingImages,
+      bucketKey === "restaurant" ? realCatalogImageUrls : []
     );
 
     return {
@@ -1061,6 +1468,7 @@ FORMATO EXATO DO JSON:
         metaDescription: parsedMetaDesc,
         ctaType: nicheContext.defaultCtaType,
         ctaLabel: nicheContext.defaultCtaLabel,
+        ctaUrl: nicheContext.defaultCtaUrl,
         imageUrl: selectedImage.url,
         source: sourceUsed,
         pillar: selectedPillar.name,
@@ -1101,18 +1509,33 @@ export async function generatePostCoverImageAction(input?: {
     }
 
     const tenantId = tenantContext.tenantId;
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
-    // 1. Consulta histórico de imagens já utilizadas nos últimos 10 posts do tenant
-    const { existingImages } = await fetchTenantRecentPostsHistory(
-      supabase,
-      tenantId,
-      [],
-      input?.excludeImageUrls || []
-    );
+    // 1. Consulta histórico de imagens já utilizadas e possíveis fotos reais do cardápio
+    const [{ existingImages }, { data: menuPhotos }] = await Promise.all([
+      fetchTenantRecentPostsHistory(
+        supabase,
+        tenantId,
+        [],
+        input?.excludeImageUrls || []
+      ),
+      supabase
+        .from("menu_items")
+        .select("image_url")
+        .eq("tenant_id", tenantId)
+        .not("image_url", "is", null)
+        .limit(20),
+    ]);
 
     const resolvedNiche =
       input?.niche || resolveTenantNiche(tenantContext.tenant) || "general";
+    const bucketKey = resolveBucketKeyForNiche(
+      resolvedNiche,
+      tenantContext.tenant?.name
+    );
+    const realMenuPhotos = (menuPhotos || [])
+      .map((m: any) => m?.image_url)
+      .filter((u: any) => typeof u === "string" && /^https?:\/\//i.test(u));
     const postTitle = (input?.title || "").trim();
     const postContent = (input?.content || "").trim();
     const exactPostDescription = [postTitle, postContent]
@@ -1199,9 +1622,10 @@ export async function generatePostCoverImageAction(input?: {
 
     // 3. Seleção inteligente baseada na descrição exata do post e garantindo que NÃO exista em existingImages
     const selectedCandidate = selectCuratedImageForNicheAndTitle(
-      resolvedNiche,
-      exactPostDescription || resolvedNiche,
-      existingImages
+      bucketKey,
+      exactPostDescription || bucketKey,
+      existingImages,
+      bucketKey === "restaurant" ? realMenuPhotos : []
     );
 
     const dlController = new AbortController();

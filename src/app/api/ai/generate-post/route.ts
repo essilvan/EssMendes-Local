@@ -121,6 +121,8 @@ export async function POST(request: Request) {
       cta_type: result.data.ctaType,
       ctaLabel: result.data.ctaLabel,
       cta_label: result.data.ctaLabel,
+      ctaUrl: result.data.ctaUrl || "",
+      cta_url: result.data.ctaUrl || "",
       imageUrl: result.data.imageUrl,
       image_url: result.data.imageUrl,
       pillar: result.data.pillar,

@@ -113,11 +113,43 @@ export function PostsManager({
   tenantNiche = "general",
   tenantId,
 }: PostsManagerProps) {
+  const normNiche = `${tenantNiche || "general"} ${slug || ""}`.toLowerCase();
+  const isTowing =
+    normNiche === "towing" ||
+    normNiche.includes("guincho") ||
+    normNiche.includes("reboque") ||
+    normNiche.includes("socorro");
+  const isRestaurant =
+    normNiche === "restaurant" ||
+    normNiche.includes("gastronomia") ||
+    normNiche.includes("bar") ||
+    normNiche.includes("cervej") ||
+    normNiche.includes("pizz") ||
+    normNiche.includes("petisc") ||
+    normNiche.includes("espet");
   const isAutomotive =
-    tenantNiche === "automotive" ||
-    tenantNiche.includes("auto") ||
-    tenantNiche.includes("mecanica") ||
-    tenantNiche.includes("oficina");
+    !isTowing &&
+    (normNiche === "automotive" ||
+      normNiche === "mechanic" ||
+      normNiche.includes("auto") ||
+      normNiche.includes("mecanica") ||
+      normNiche.includes("oficina"));
+
+  const defaultCtaType: "booking" | "whatsapp" | "link" = isRestaurant
+    ? "link"
+    : isTowing || isAutomotive
+    ? "whatsapp"
+    : "booking";
+
+  const defaultCtaLabel = isRestaurant
+    ? "Ver Cardápio & Pedir"
+    : isTowing
+    ? "Solicitar Guincho 24h"
+    : isAutomotive
+    ? "Solicitar Orçamento por Placa"
+    : "Agendar Horário";
+
+  const defaultCtaUrl = isRestaurant ? `/${slug}#cardapio` : "";
 
   const [posts, setPosts] = useState<TenantPost[]>(initialPosts);
   const [isAdding, setIsAdding] = useState(false);
@@ -129,12 +161,10 @@ export function PostsManager({
   const [tags, setTags] = useState("");
   const [metaDescription, setMetaDescription] = useState("");
   const [ctaType, setCtaType] = useState<"booking" | "whatsapp" | "link">(
-    isAutomotive ? "whatsapp" : "booking"
+    defaultCtaType
   );
-  const [ctaLabel, setCtaLabel] = useState(
-    isAutomotive ? "Solicitar Orçamento no WhatsApp" : "Agendar Horário"
-  );
-  const [ctaUrl, setCtaUrl] = useState("");
+  const [ctaLabel, setCtaLabel] = useState(defaultCtaLabel);
+  const [ctaUrl, setCtaUrl] = useState(defaultCtaUrl);
 
   const [feedback, setFeedback] = useState<{
     type: "success" | "error";
@@ -228,13 +258,13 @@ export function PostsManager({
         const nextMeta =
           generated.metaDescription || generated.meta_description || "";
         const nextCtaType =
-          generated.ctaType ||
-          generated.cta_type ||
-          (isAutomotive ? "whatsapp" : "booking");
+          generated.ctaType || generated.cta_type || defaultCtaType;
         const nextCtaLabel =
-          generated.ctaLabel ||
-          generated.cta_label ||
-          (isAutomotive ? "Solicitar Orçamento no WhatsApp" : "Agendar Horário");
+          generated.ctaLabel || generated.cta_label || defaultCtaLabel;
+        const nextCtaUrl =
+          generated.ctaUrl ||
+          generated.cta_url ||
+          (nextCtaType === "link" && isRestaurant ? `/${slug}#cardapio` : "");
         const nextImage = generated.imageUrl || generated.image_url || "";
 
         setTitle(nextTitle);
@@ -243,6 +273,7 @@ export function PostsManager({
         setMetaDescription(nextMeta);
         setCtaType(nextCtaType);
         setCtaLabel(nextCtaLabel);
+        setCtaUrl(nextCtaUrl);
         if (nextTitle) {
           setSessionTitles((prev) =>
             Array.from(new Set([...prev, nextTitle]))
@@ -486,9 +517,9 @@ export function PostsManager({
         setImageUrl("");
         setTags("");
         setMetaDescription("");
-        setCtaType("booking");
-        setCtaLabel("Agendar Horário");
-        setCtaUrl("");
+        setCtaType(defaultCtaType);
+        setCtaLabel(defaultCtaLabel);
+        setCtaUrl(defaultCtaUrl);
         setIsAdding(false);
       }
     });
@@ -634,7 +665,158 @@ export function PostsManager({
           </div>
 
           <div className="grid gap-2.5 sm:grid-cols-3">
-            {isAutomotive ? (
+            {isRestaurant ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCtaUrl(`/${slug}#cardapio`);
+                    handleApplyPreset({
+                      title: "🍻 Happy Hour & Cerveja Trincando com Petiscos na Brasa",
+                      content:
+                        "Reúna os amigos hoje mesmo para aproveitar cervejas geladas, porções caprichadas feitas na hora e atendimento rápido direto na mesa via QR Code. Confira nosso cardápio digital!",
+                      tags: "happy hour, cerveja gelada, petiscaria, bar, porções na brasa",
+                      metaDescription:
+                        "Happy hour com cerveja trincando, porções fartas e cardápio digital na mesa. Venha curtir hoje!",
+                      ctaType: "link",
+                      ctaLabel: "Ver Cardápio & Pedir",
+                      imageUrl:
+                        "https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1200&auto=format&fit=crop&q=80",
+                    });
+                  }}
+                  className="rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-teal-400 hover:shadow-xs transition"
+                >
+                  <p className="text-xs font-bold text-slate-900">🍻 Happy Hour & Cerveja Gelada</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">
+                    Convite para happy hour com cerveja trincando e link direto para o cardápio.
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCtaUrl(`/${slug}#cardapio`);
+                    handleApplyPreset({
+                      title: "🔥 Destaque do Cardápio: Porções Fartas para Compartilhar",
+                      content:
+                        "Nosso cardápio reúne carnes na chapa, petiscos crocantes e acompanhamentos frescos perfeitos para dividir na mesa. Abra o cardápio digital e escolha seus pratos favoritos!",
+                      tags: "cardápio digital, porções, carne na chapa, petiscos, onde comer",
+                      metaDescription:
+                        "Confira os destaques do nosso cardápio: porções fartas, carnes na chapa e bebidas geladas.",
+                      ctaType: "link",
+                      ctaLabel: "Ver Cardápio & Pedir",
+                      imageUrl:
+                        "https://images.unsplash.com/photo-1544025162-d76694265947?w=1200&auto=format&fit=crop&q=80",
+                    });
+                  }}
+                  className="rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-teal-400 hover:shadow-xs transition"
+                >
+                  <p className="text-xs font-bold text-slate-900">🔥 Destaque do Cardápio</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">
+                    Destaca os pratos e porções mais pedidos com CTA para o cardápio digital.
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCtaUrl(`/${slug}#cardapio`);
+                    handleApplyPreset({
+                      title: "🎉 Fim de Semana & Confraternização: Pedido Rápido na Mesa",
+                      content:
+                        "Ambiente descontraído, comida saborosa e pedido ágil pelo QR Code da mesa sem espera. Traga sua turma ou família para curtir o fim de semana com a gente!",
+                      tags: "fim de semana, confraternização, bar e petiscaria, cardápio qr code",
+                      metaDescription:
+                        "Curta o fim de semana com porções fartas, bebidas geladas e pedido rápido na mesa.",
+                      ctaType: "whatsapp",
+                      ctaLabel: "Ver Cardápio & Pedir",
+                      imageUrl:
+                        "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=1200&auto=format&fit=crop&q=80",
+                    });
+                  }}
+                  className="rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-teal-400 hover:shadow-xs transition"
+                >
+                  <p className="text-xs font-bold text-slate-900">🎉 Fim de Semana & Galera</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">
+                    Chamada para confraternizações com destaque ao atendimento ágil na mesa.
+                  </p>
+                </button>
+              </>
+            ) : isTowing ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleApplyPreset({
+                      title: "🚨 Guincho & Socorro Veicular 24 Horas: Chegada Rápida",
+                      content:
+                        "Ficou na mão com pane elétrica, bateria descarregada ou pneu furado? Envie sua localização no WhatsApp e acione nosso caminhão plataforma 24 horas com segurança e agilidade.",
+                      tags: "guincho 24h, reboque, auto socorro, caminhão plataforma, resgate veicular",
+                      metaDescription:
+                        "Precisa de guincho 24h? Atendimento rápido em caminhão plataforma pelo WhatsApp.",
+                      ctaType: "whatsapp",
+                      ctaLabel: "Solicitar Guincho 24h",
+                      imageUrl:
+                        "https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=1200&auto=format&fit=crop&q=80",
+                    })
+                  }
+                  className="rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-teal-400 hover:shadow-xs transition"
+                >
+                  <p className="text-xs font-bold text-slate-900">🚨 Socorro Guincho 24h</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">
+                    Chamada direta para resgate 24 horas com envio de localização no WhatsApp.
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleApplyPreset({
+                      title: "🛻 Transporte Seguro em Caminhão Plataforma para Carros e Motos",
+                      content:
+                        "O transporte em plataforma evita danos ao câmbio automático, suspensão e para-choque. Atendemos veículos leves, SUVs e motos com cintas certificadas e preço combinado antes da saída.",
+                      tags: "caminhão plataforma, guincho carro automático, transporte de motos, reboque seguro",
+                      metaDescription:
+                        "Transporte seguro em caminhão plataforma 24h para carros, SUVs e motos.",
+                      ctaType: "whatsapp",
+                      ctaLabel: "Solicitar Guincho 24h",
+                      imageUrl:
+                        "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=1200&auto=format&fit=crop&q=80",
+                    })
+                  }
+                  className="rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-teal-400 hover:shadow-xs transition"
+                >
+                  <p className="text-xs font-bold text-slate-900">🛻 Caminhão Plataforma</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">
+                    Destaca a segurança da plataforma para câmbio automático e carros baixos.
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleApplyPreset({
+                      title: "⚡ Pane Elétrica ou Bateria Descarregada? Saiba o que Fazer",
+                      content:
+                        "Sinalize o local com o triângulo, mantenha-se em segurança fora da pista e envie sua localização pelo WhatsApp para receber socorro rápido 24 horas.",
+                      tags: "pane elétrica, bateria descarregada, socorro mecânico, guincho rápido",
+                      metaDescription:
+                        "Dicas de segurança em caso de pane elétrica ou seca e acionamento rápido de guincho 24h.",
+                      ctaType: "whatsapp",
+                      ctaLabel: "Solicitar Guincho 24h",
+                      imageUrl:
+                        "https://images.unsplash.com/photo-1632823471565-1ecdf5c6da35?w=1200&auto=format&fit=crop&q=80",
+                    })
+                  }
+                  className="rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-teal-400 hover:shadow-xs transition"
+                >
+                  <p className="text-xs font-bold text-slate-900">⚡ Pane Elétrica / Seca</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">
+                    Conteúdo educativo de emergência com botão direto de socorro 24h.
+                  </p>
+                </button>
+              </>
+            ) : isAutomotive ? (
               <>
                 <button
                   type="button"
@@ -1068,15 +1250,42 @@ export function PostsManager({
                 onChange={(e) => {
                   const val = e.target.value as "booking" | "whatsapp" | "link";
                   setCtaType(val);
-                  if (val === "booking") setCtaLabel("Agendar Horário Online");
-                  if (val === "whatsapp") setCtaLabel("Chamar no WhatsApp");
-                  if (val === "link") setCtaLabel("Saiba Mais");
+                  if (isRestaurant) {
+                    if (val === "link") {
+                      setCtaLabel("Ver Cardápio & Pedir");
+                      if (!ctaUrl) setCtaUrl(`/${slug}#cardapio`);
+                    }
+                    if (val === "whatsapp") setCtaLabel("Ver Cardápio & Pedir");
+                    if (val === "booking") setCtaLabel("Reservar Mesa");
+                  } else {
+                    if (val === "booking") setCtaLabel("Agendar Horário Online");
+                    if (val === "whatsapp") {
+                      setCtaLabel(
+                        isTowing
+                          ? "Solicitar Guincho 24h"
+                          : isAutomotive
+                          ? "Solicitar Orçamento por Placa"
+                          : "Chamar no WhatsApp"
+                      );
+                    }
+                    if (val === "link") setCtaLabel("Saiba Mais");
+                  }
                 }}
                 className="mt-1.5 block w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs sm:text-sm text-slate-900 focus:border-indigo-600 focus:outline-none"
               >
-                <option value="booking">📅 Abrir Agendamento Online</option>
-                <option value="whatsapp">💬 Iniciar Conversa no WhatsApp</option>
-                <option value="link">🔗 Abrir Link Externo</option>
+                {isRestaurant ? (
+                  <>
+                    <option value="link">🍽️ Abrir Cardápio Digital</option>
+                    <option value="whatsapp">💬 Chamar no WhatsApp</option>
+                    <option value="booking">📅 Reservar Mesa / Horário</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="booking">📅 Abrir Agendamento Online</option>
+                    <option value="whatsapp">💬 Iniciar Conversa no WhatsApp</option>
+                    <option value="link">🔗 Abrir Link Externo</option>
+                  </>
+                )}
               </select>
             </div>
 
@@ -1089,22 +1298,26 @@ export function PostsManager({
                 type="text"
                 value={ctaLabel}
                 onChange={(e) => setCtaLabel(e.target.value)}
-                placeholder="Ex: Agendar Horário"
+                placeholder={defaultCtaLabel}
                 className="mt-1.5 block w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs sm:text-sm text-slate-900 focus:border-indigo-600 focus:outline-none"
               />
             </div>
 
-            {/* URL Externa (se ctaType === link) */}
+            {/* URL Externa / Cardápio (se ctaType === link) */}
             {ctaType === "link" && (
               <div className="sm:col-span-2">
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                  Link de Destino
+                  {isRestaurant ? "Link do Cardápio Digital / Destino" : "Link de Destino"}
                 </label>
                 <input
-                  type="url"
+                  type="text"
                   value={ctaUrl}
                   onChange={(e) => setCtaUrl(e.target.value)}
-                  placeholder="Ex: https://instagram.com/seu-perfil"
+                  placeholder={
+                    isRestaurant
+                      ? `/${slug}#cardapio`
+                      : "Ex: https://instagram.com/seu-perfil"
+                  }
                   className="mt-1.5 block w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs text-slate-900 focus:border-indigo-600 focus:outline-none"
                 />
               </div>
