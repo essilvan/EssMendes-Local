@@ -1533,6 +1533,7 @@ export async function getWaiterTerminalDataAction(tenantId: string): Promise<{
     tables: RestaurantTable[];
     orders: RestaurantOrder[];
     menuItems: MenuItem[];
+    menuCategories: MenuCategory[];
   };
   error?: string;
 }> {
@@ -1562,12 +1563,19 @@ export async function getWaiterTerminalDataAction(tenantId: string): Promise<{
       supabase
         .from("menu_categories")
         .select("*")
-        .eq("tenant_id", tenantId),
+        .eq("tenant_id", tenantId)
+        .order("created_at", { ascending: true }),
     ]);
 
+    const menuCategories = sortCategoriesByOrder(
+      (catsRes.data || [])
+        .map(normalizeCategory)
+        .filter((c) => c.is_active !== false)
+    );
+
     const catMap = new Map<string, string>();
-    (catsRes.data || []).forEach((c: any) => {
-      catMap.set(c.id, c.name || c.title || "Pratos");
+    menuCategories.forEach((c) => {
+      catMap.set(c.id, c.name || "Pratos");
     });
 
     return {
@@ -1578,12 +1586,146 @@ export async function getWaiterTerminalDataAction(tenantId: string): Promise<{
         menuItems: (itemsRes.data || [])
           .map((row: any) => normalizeMenuItem(row, catMap))
           .filter((item: MenuItem) => item.is_available !== false),
+        menuCategories,
       },
     };
   } catch (err: any) {
     return {
       success: false,
       error: err?.message || "Erro ao carregar dados do terminal.",
+    };
+  }
+}
+
+const createWaiterOrderSchema = z.object({
+  tenant_id: z.string().min(1, "Estabelecimento inválido."),
+  table_number: z.string().min(1, "Selecione uma mesa ou Balcão."),
+  customer_name: z.string().optional().nullable(),
+  waiter_id: z.string().min(1, "Garçom não identificado."),
+  waiter_name: z.string().min(1, "Nome do garçom inválido."),
+  notes: z.string().optional().nullable(),
+  items: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        price: z.coerce.number().min(0),
+        quantity: z.coerce.number().int().min(1),
+        notes: z.string().optional().nullable(),
+      })
+    )
+    .min(1, "Adicione pelo menos 1 item ao pedido."),
+});
+
+export async function createWaiterOrderAction(
+  rawInput: z.infer<typeof createWaiterOrderSchema>
+): Promise<{
+  success: boolean;
+  data?: RestaurantOrder;
+  error?: string;
+}> {
+  try {
+    const parsed = createWaiterOrderSchema.safeParse(rawInput);
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: parsed.error.issues[0]?.message || "Verifique os dados do pedido.",
+      };
+    }
+
+    const {
+      tenant_id,
+      table_number,
+      customer_name,
+      waiter_id,
+      waiter_name,
+      notes,
+      items,
+    } = parsed.data;
+
+    const supabase = createAdminClient();
+    const cleanTableNumber = table_number.trim();
+
+    const sanitizedItems: RestaurantOrderItem[] = items.map((it) => ({
+      id: String(it.id || ""),
+      name: String(it.name || "Item"),
+      price: Number(it.price || 0),
+      quantity: Math.max(1, Math.floor(Number(it.quantity || 1))),
+      notes: it.notes?.trim() || null,
+      delivered: false,
+    }));
+
+    const totalAmount = sanitizedItems.reduce(
+      (sum, it) => sum + it.price * it.quantity,
+      0
+    );
+
+    // Localiza a mesa correspondente (se não for Balcão)
+    const { data: tableRows } = await supabase
+      .from("restaurant_tables")
+      .select("id, table_number, number")
+      .eq("tenant_id", tenant_id);
+
+    const matchedTable = (tableRows || []).find((r: any) => {
+      const rNum = String(r.table_number ?? r.number ?? "").trim().toLowerCase();
+      const target = cleanTableNumber.toLowerCase();
+      return (
+        rNum === target ||
+        rNum.replace(/^0+/, "") === target.replace(/^0+/, "") ||
+        `mesa ${rNum}` === target
+      );
+    });
+
+    const finalCustomerName =
+      customer_name && customer_name.trim().length > 0
+        ? customer_name.trim()
+        : `Garçom: ${waiter_name.trim()}`;
+
+    const orderPayload: Record<string, any> = {
+      tenant_id,
+      table_id: matchedTable?.id || null,
+      table_number: cleanTableNumber,
+      customer_name: finalCustomerName,
+      client_name: finalCustomerName,
+      customer_phone: null,
+      is_individual_tab: false,
+      is_paid: false,
+      items: sanitizedItems,
+      notes: notes?.trim() || null,
+      observations: notes?.trim() || null,
+      total_amount: totalAmount,
+      total_price: totalAmount,
+      total: totalAmount,
+      status: "pending",
+      waiter_id,
+      waiter_name: waiter_name.trim(),
+      created_by_waiter: waiter_id,
+    };
+
+    const { data: savedOrder, error: insertError } = await resilientInsert(
+      supabase,
+      "restaurant_orders",
+      orderPayload
+    );
+
+    if (insertError || !savedOrder) {
+      return {
+        success: false,
+        error:
+          insertError?.message ||
+          "Erro ao registrar pedido na cozinha. Tente novamente.",
+      };
+    }
+
+    revalidatePath("/admin/pedidos");
+    return {
+      success: true,
+      data: normalizeOrder(savedOrder),
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || "Não foi possível enviar o pedido.",
     };
   }
 }

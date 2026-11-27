@@ -90,6 +90,7 @@ export default async function WaiterTerminalPage({
       initialTables={terminalData.data?.tables || []}
       initialOrders={terminalData.data?.orders || []}
       menuItems={terminalData.data?.menuItems || []}
+      menuCategories={terminalData.data?.menuCategories || []}
       serviceFeeEnabled={Boolean((tenant as any)?.service_fee_enabled)}
       serviceFeePercent={Number((tenant as any)?.service_fee_percent ?? 10)}
       googleReviewUrl={(tenant as any)?.google_review_url || null}

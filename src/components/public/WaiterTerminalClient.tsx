@@ -10,6 +10,7 @@ import {
   toggleWaiterOrderItemDeliveredAction,
   completeWaiterOrderDeliveryAction,
   closeWaiterTabAction,
+  createWaiterOrderAction,
 } from "@/services/restaurant.actions";
 import {
   groupOpenRestaurantTabs,
@@ -22,6 +23,7 @@ import type {
   RestaurantOrder,
   RestaurantOrderItem,
   MenuItem,
+  MenuCategory,
 } from "@/types";
 import {
   UtensilsCrossed,
@@ -49,6 +51,7 @@ import {
   Receipt,
   Printer,
   Star,
+  Send,
 } from "lucide-react";
 
 export interface WaiterSummary {
@@ -68,6 +71,7 @@ interface WaiterTerminalClientProps {
   initialTables: RestaurantTable[];
   initialOrders: RestaurantOrder[];
   menuItems: MenuItem[];
+  menuCategories?: MenuCategory[];
   serviceFeeEnabled?: boolean;
   serviceFeePercent?: number;
   googleReviewUrl?: string | null;
@@ -189,6 +193,7 @@ export function WaiterTerminalClient({
   initialTables,
   initialOrders,
   menuItems,
+  menuCategories = [],
   serviceFeeEnabled = false,
   serviceFeePercent = 10,
   googleReviewUrl = null,
@@ -217,6 +222,28 @@ export function WaiterTerminalClient({
   const [orders, setOrders] = useState<RestaurantOrder[]>(initialOrders);
   const [availableMenuItems, setAvailableMenuItems] =
     useState<MenuItem[]>(menuItems);
+  const [availableMenuCategories, setAvailableMenuCategories] =
+    useState<MenuCategory[]>(menuCategories);
+
+  // Drawer de Cardápio / Novo Pedido do Garçom
+  const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
+  const [newOrderTable, setNewOrderTable] = useState<string>(
+    initialTables[0]?.table_number || "Balcão"
+  );
+  const [newOrderCustomerName, setNewOrderCustomerName] = useState("");
+  const [newOrderNotes, setNewOrderNotes] = useState("");
+  const [newOrderSearch, setNewOrderSearch] = useState("");
+  const [newOrderCategoryTab, setNewOrderCategoryTab] = useState("Todas");
+  const [newOrderCart, setNewOrderCart] = useState<
+    Record<string, { item: MenuItem; quantity: number; notes: string }>
+  >({});
+  const [isSendingNewOrder, setIsSendingNewOrder] = useState(false);
+  const [newOrderError, setNewOrderError] = useState<string | null>(null);
+  const [orderSentToast, setOrderSentToast] = useState<{
+    table: string;
+    itemsCount: number;
+    total: number;
+  } | null>(null);
 
   // Filtros e UI
   const [tableScope, setTableScope] = useState<"mine" | "all" | "open_tabs">("mine");
@@ -400,6 +427,9 @@ export function WaiterTerminalClient({
         if (res.success && res.data) {
           setTables(res.data.tables);
           setAvailableMenuItems(res.data.menuItems);
+          if (Array.isArray(res.data.menuCategories)) {
+            setAvailableMenuCategories(res.data.menuCategories);
+          }
 
           const freshOrders = res.data.orders;
           const newlyDetected: RestaurantOrder[] = [];
@@ -631,6 +661,241 @@ export function WaiterTerminalClient({
       }
     } finally {
       setBusyOrderId(null);
+    }
+  };
+
+  const openNewOrderDrawer = (
+    preselectedTable?: string | null,
+    preselectedCustomer?: string | null
+  ) => {
+    const defaultTbl =
+      preselectedTable?.trim() ||
+      selectedTableFilter ||
+      tables[0]?.table_number ||
+      "Balcão";
+    setNewOrderTable(defaultTbl);
+    const cleanedCustomer =
+      preselectedCustomer &&
+      !preselectedCustomer.startsWith("Garçom:") &&
+      preselectedCustomer !== "Cliente na Mesa"
+        ? preselectedCustomer
+        : "";
+    setNewOrderCustomerName(cleanedCustomer);
+    setNewOrderNotes("");
+    setNewOrderSearch("");
+    setNewOrderCategoryTab("Todas");
+    setNewOrderCart({});
+    setNewOrderError(null);
+    setIsMenuDrawerOpen(true);
+  };
+
+  const handleNewOrderAddItem = (item: MenuItem) => {
+    setNewOrderError(null);
+    setNewOrderCart((prev) => {
+      const existing = prev[item.id];
+      return {
+        ...prev,
+        [item.id]: {
+          item,
+          quantity: existing ? existing.quantity + 1 : 1,
+          notes: existing?.notes || "",
+        },
+      };
+    });
+  };
+
+  const handleNewOrderDecreaseItem = (itemId: string) => {
+    setNewOrderCart((prev) => {
+      const existing = prev[itemId];
+      if (!existing) return prev;
+      if (existing.quantity <= 1) {
+        const next = { ...prev };
+        delete next[itemId];
+        return next;
+      }
+      return {
+        ...prev,
+        [itemId]: {
+          ...existing,
+          quantity: existing.quantity - 1,
+        },
+      };
+    });
+  };
+
+  const handleNewOrderItemNotesChange = (itemId: string, notes: string) => {
+    setNewOrderCart((prev) => {
+      const existing = prev[itemId];
+      if (!existing) return prev;
+      return {
+        ...prev,
+        [itemId]: {
+          ...existing,
+          notes,
+        },
+      };
+    });
+  };
+
+  const newOrderCartEntries = useMemo(
+    () => Object.values(newOrderCart),
+    [newOrderCart]
+  );
+
+  const newOrderTotalItems = useMemo(
+    () => newOrderCartEntries.reduce((sum, entry) => sum + entry.quantity, 0),
+    [newOrderCartEntries]
+  );
+
+  const newOrderTotalAmount = useMemo(
+    () =>
+      newOrderCartEntries.reduce(
+        (sum, entry) => sum + Number(entry.item.price || 0) * entry.quantity,
+        0
+      ),
+    [newOrderCartEntries]
+  );
+
+  const drawerCategoryTabs = useMemo(() => {
+    const sortedCats = [...availableMenuCategories].sort((a, b) => {
+      const orderDiff = (a?.display_order ?? 0) - (b?.display_order ?? 0);
+      if (orderDiff !== 0) return orderDiff;
+      return String(a?.created_at || "").localeCompare(
+        String(b?.created_at || "")
+      );
+    });
+
+    const tabs: string[] = ["Todas"];
+
+    for (const cat of sortedCats) {
+      const name = cat?.name?.trim();
+      if (!name) continue;
+      const hasItems = availableMenuItems.some(
+        (it) =>
+          it.category_id === cat.id ||
+          (it.category || "Pratos").toLowerCase() === name.toLowerCase()
+      );
+      if (
+        hasItems &&
+        !tabs.some((t) => t.toLowerCase() === name.toLowerCase())
+      ) {
+        tabs.push(name);
+      }
+    }
+
+    for (const item of availableMenuItems) {
+      const catName = (item.category || "Pratos").trim();
+      if (
+        catName &&
+        !tabs.some((t) => t.toLowerCase() === catName.toLowerCase())
+      ) {
+        tabs.push(catName);
+      }
+    }
+
+    return tabs;
+  }, [availableMenuCategories, availableMenuItems]);
+
+  const drawerFilteredItems = useMemo(() => {
+    const q = newOrderSearch.trim().toLowerCase();
+    const catOrderMap = new Map<string, number>();
+    drawerCategoryTabs.forEach((tab, idx) => {
+      if (idx > 0) catOrderMap.set(tab.toLowerCase(), idx);
+    });
+
+    return availableMenuItems
+      .filter((item) => {
+        if (newOrderCategoryTab !== "Todas") {
+          if (
+            (item.category || "Pratos").toLowerCase() !==
+            newOrderCategoryTab.toLowerCase()
+          ) {
+            return false;
+          }
+        }
+        if (q) {
+          return (
+            item.name.toLowerCase().includes(q) ||
+            (item.description || "").toLowerCase().includes(q) ||
+            (item.category || "").toLowerCase().includes(q)
+          );
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        const idxA =
+          catOrderMap.get((a.category || "Pratos").toLowerCase()) ?? 9999;
+        const idxB =
+          catOrderMap.get((b.category || "Pratos").toLowerCase()) ?? 9999;
+        if (idxA !== idxB) return idxA - idxB;
+        return a.name.localeCompare(b.name);
+      });
+  }, [
+    availableMenuItems,
+    newOrderSearch,
+    newOrderCategoryTab,
+    drawerCategoryTabs,
+  ]);
+
+  const handleSubmitNewWaiterOrder = async () => {
+    if (!loggedWaiter) return;
+    if (newOrderCartEntries.length === 0) {
+      setNewOrderError("Adicione pelo menos 1 item para enviar o pedido.");
+      return;
+    }
+    if (!newOrderTable.trim()) {
+      setNewOrderError("Selecione a mesa ou Balcão.");
+      return;
+    }
+
+    setIsSendingNewOrder(true);
+    setNewOrderError(null);
+    try {
+      const res = await createWaiterOrderAction({
+        tenant_id: tenantId,
+        table_number: newOrderTable.trim(),
+        customer_name: newOrderCustomerName.trim() || null,
+        waiter_id: loggedWaiter.id,
+        waiter_name: loggedWaiter.name,
+        notes: newOrderNotes.trim() || null,
+        items: newOrderCartEntries.map((entry) => ({
+          id: entry.item.id,
+          name: entry.item.name,
+          price: Number(entry.item.price || 0),
+          quantity: entry.quantity,
+          notes: entry.notes.trim() || null,
+        })),
+      });
+
+      if (res.success && res.data) {
+        const created = res.data;
+        knownOrderIdsRef.current.add(created.id);
+        setOrders((prev) => {
+          if (prev.some((o) => o.id === created.id)) return prev;
+          return [created, ...prev];
+        });
+        setIsMenuDrawerOpen(false);
+        setOrderSentToast({
+          table: created.table_number,
+          itemsCount: newOrderTotalItems,
+          total: newOrderTotalAmount,
+        });
+        setTimeout(() => {
+          setOrderSentToast((curr) =>
+            curr?.table === created.table_number ? null : curr
+          );
+        }, 4500);
+        if (tableScope === "open_tabs") {
+          setTableScope("mine");
+        }
+        setStatusTab("active");
+      } else {
+        setNewOrderError(
+          res.error || "Não foi possível enviar o pedido para a cozinha."
+        );
+      }
+    } finally {
+      setIsSendingNewOrder(false);
     }
   };
 
@@ -1000,6 +1265,45 @@ export function WaiterTerminalClient({
           </button>
         </div>
 
+        {/* Botão de Destaque: Cardápio / Novo Pedido */}
+        <button
+          type="button"
+          onClick={() => openNewOrderDrawer(selectedTableFilter)}
+          className="w-full flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-orange-500 hover:from-amber-400 hover:to-orange-400 active:scale-[0.99] px-5 py-3.5 text-sm font-black text-zinc-950 shadow-lg shadow-amber-500/20 transition cursor-pointer"
+        >
+          <UtensilsCrossed className="h-4 w-4 stroke-[2.5]" />
+          <span>🍽️ Cardápio / Novo Pedido</span>
+        </button>
+
+        {/* Feedback imediato pós-envio de pedido para a Cozinha */}
+        {orderSentToast && (
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-500/40 bg-emerald-950/60 px-4 py-3 text-xs text-emerald-200 shadow-lg animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="flex items-center gap-2.5">
+              <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
+              <div>
+                <p className="font-black text-emerald-300 text-sm">
+                  Pedido enviado para a Cozinha!
+                </p>
+                <p className="text-[11px] text-emerald-200/80">
+                  {orderSentToast.table === "Balcão"
+                    ? "Balcão"
+                    : `Mesa ${orderSentToast.table}`}{" "}
+                  • {orderSentToast.itemsCount}{" "}
+                  {orderSentToast.itemsCount === 1 ? "item" : "itens"} • R${" "}
+                  {orderSentToast.total.toFixed(2).replace(".", ",")}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setOrderSentToast(null)}
+              className="rounded-lg p-1 text-emerald-400 hover:bg-emerald-900/50 cursor-pointer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
         {/* Banner pós-fechamento no Terminal do Garçom */}
         {recentlyClosedTab && (
           <div className="rounded-2xl border border-emerald-500/40 bg-emerald-950/50 p-4 space-y-3">
@@ -1276,15 +1580,14 @@ export function WaiterTerminalClient({
                 );
 
                 return (
-                  <button
+                  <div
                     key={table.id}
-                    type="button"
                     onClick={() =>
                       setSelectedTableFilter(
                         isSelected ? null : table.table_number
                       )
                     }
-                    className={`rounded-2xl border p-3 text-left transition active:scale-95 cursor-pointer ${
+                    className={`rounded-2xl border p-2.5 sm:p-3 text-left transition cursor-pointer flex flex-col justify-between gap-2 ${
                       isSelected
                         ? "border-amber-400 ring-2 ring-amber-400/50 bg-zinc-800"
                         : hasPending
@@ -1294,26 +1597,39 @@ export function WaiterTerminalClient({
                         : "border-zinc-800 bg-zinc-900/70"
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-black text-white">
-                        #{table.table_number}
-                      </span>
-                      <span
-                        className={`h-2.5 w-2.5 rounded-full ${
-                          hasPending
-                            ? "bg-red-500 animate-ping"
-                            : hasActive
-                            ? "bg-amber-400"
-                            : "bg-emerald-500"
-                        }`}
-                      />
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-black text-white">
+                          #{table.table_number}
+                        </span>
+                        <span
+                          className={`h-2.5 w-2.5 rounded-full ${
+                            hasPending
+                              ? "bg-red-500 animate-ping"
+                              : hasActive
+                              ? "bg-amber-400"
+                              : "bg-emerald-500"
+                          }`}
+                        />
+                      </div>
+                      <p className="mt-0.5 truncate text-[11px] font-semibold text-zinc-300">
+                        {hasActive
+                          ? `${tableActiveOrders.length} pedido(s)`
+                          : "Livre"}
+                      </p>
                     </div>
-                    <p className="mt-1 truncate text-[11px] font-semibold text-zinc-300">
-                      {hasActive
-                        ? `${tableActiveOrders.length} pedido(s)`
-                        : "Livre"}
-                    </p>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openNewOrderDrawer(table.table_number);
+                      }}
+                      className="w-full inline-flex items-center justify-center gap-1 rounded-lg border border-amber-500/40 bg-amber-500/15 hover:bg-amber-500 hover:text-zinc-950 py-1.5 text-[10px] font-extrabold text-amber-300 transition cursor-pointer"
+                    >
+                      <Plus className="h-3 w-3 stroke-[2.5]" />
+                      <span>Lançar Item</span>
+                    </button>
+                  </div>
                 );
               })}
             </div>
@@ -1463,18 +1779,25 @@ export function WaiterTerminalClient({
                               >
                                 <Check className="h-4 w-4 stroke-[3]" />
                               </span>
-                              <span
-                                className={`text-sm font-semibold truncate ${
-                                  isItemDelivered
-                                    ? "line-through text-zinc-400"
-                                    : "text-zinc-100"
-                                }`}
-                              >
-                                <strong className="text-amber-400 font-black">
-                                  {item.quantity}x
-                                </strong>{" "}
-                                {item.name}
-                              </span>
+                              <div className="min-w-0">
+                                <span
+                                  className={`block text-sm font-semibold truncate ${
+                                    isItemDelivered
+                                      ? "line-through text-zinc-400"
+                                      : "text-zinc-100"
+                                  }`}
+                                >
+                                  <strong className="text-amber-400 font-black">
+                                    {item.quantity}x
+                                  </strong>{" "}
+                                  {item.name}
+                                </span>
+                                {item.notes && (
+                                  <span className="block text-[11px] text-amber-300/90 font-medium truncate">
+                                    Obs: {item.notes}
+                                  </span>
+                                )}
+                              </div>
                             </div>
 
                             <span className="text-xs font-bold text-zinc-400 shrink-0">
@@ -1518,29 +1841,44 @@ export function WaiterTerminalClient({
                             </button>
                           )}
 
-                          <div className="flex items-center gap-2">
+                          <div className="grid grid-cols-3 gap-2">
+                            <button
+                              type="button"
+                              disabled={isBusy}
+                              onClick={() =>
+                                openNewOrderDrawer(
+                                  order.table_number,
+                                  order.customer_name
+                                )
+                              }
+                              className="inline-flex items-center justify-center gap-1 rounded-xl border border-amber-500/40 bg-amber-500/15 hover:bg-amber-500/25 py-2.5 px-2 text-[11px] sm:text-xs font-extrabold text-amber-300 transition cursor-pointer"
+                            >
+                              <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
+                              <span>Lançar Item</span>
+                            </button>
+
                             <button
                               type="button"
                               disabled={isBusy}
                               onClick={() => openEditModal(order)}
-                              className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 py-2.5 text-xs font-bold text-zinc-200 transition cursor-pointer"
+                              className="inline-flex items-center justify-center gap-1 rounded-xl border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 py-2.5 px-2 text-[11px] sm:text-xs font-bold text-zinc-200 transition cursor-pointer"
                             >
                               <Edit3 className="h-3.5 w-3.5 text-amber-400" />
-                              <span>Editar Itens</span>
+                              <span>Editar</span>
                             </button>
 
                             <button
                               type="button"
                               disabled={isBusy}
                               onClick={() => void handleCompleteDelivery(order)}
-                              className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 py-2.5 text-xs font-extrabold text-white transition cursor-pointer disabled:opacity-60"
+                              className="inline-flex items-center justify-center gap-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 py-2.5 px-2 text-[11px] sm:text-xs font-extrabold text-white transition cursor-pointer disabled:opacity-60"
                             >
                               {isBusy ? (
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                               ) : (
                                 <CheckCircle2 className="h-3.5 w-3.5" />
                               )}
-                              <span>Concluir Entrega da Mesa</span>
+                              <span>Entregue</span>
                             </button>
                           </div>
                         </div>
@@ -1554,6 +1892,303 @@ export function WaiterTerminalClient({
         </>
         )}
       </main>
+
+      {/* ===================================================================== */}
+      {/* MODAL / DRAWER MOBILE-FIRST: CARDÁPIO / NOVO PEDIDO DO GARÇOM */}
+      {/* ===================================================================== */}
+      {isMenuDrawerOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/85 backdrop-blur-sm p-0 sm:p-4">
+          <div className="w-full max-w-2xl h-[94dvh] sm:h-auto sm:max-h-[92vh] flex flex-col rounded-t-3xl sm:rounded-3xl border border-zinc-800 bg-zinc-950 text-zinc-100 shadow-2xl overflow-hidden">
+            {/* Header Fixo */}
+            <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900 px-4 sm:px-5 py-3.5 shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-zinc-950">
+                  <UtensilsCrossed className="h-4 w-4 stroke-[2.5]" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="truncate text-sm sm:text-base font-black text-white">
+                    Cardápio • Novo Pedido
+                  </h3>
+                  <p className="truncate text-[11px] text-zinc-400">
+                    Garçom: {loggedWaiter.name} •{" "}
+                    {newOrderTable === "Balcão"
+                      ? "Balcão"
+                      : `Mesa ${newOrderTable}`}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMenuDrawerOpen(false)}
+                className="rounded-xl p-2 text-zinc-400 hover:bg-zinc-800 hover:text-white cursor-pointer"
+                title="Fechar cardápio"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Corpo Scrollável */}
+            <div className="flex-1 overflow-y-auto px-4 sm:px-5 py-4 space-y-4">
+              {newOrderError && (
+                <div className="flex items-center gap-2 rounded-xl border border-red-500/40 bg-red-950/60 p-3 text-xs font-semibold text-red-300">
+                  <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
+                  <span>{newOrderError}</span>
+                </div>
+              )}
+
+              {/* Seleção de Mesa + Cliente */}
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-3.5 space-y-3">
+                <div className="space-y-2">
+                  <label className="block text-[11px] font-extrabold uppercase tracking-wider text-zinc-400">
+                    Selecione a Mesa / Balcão
+                  </label>
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                    {tables.map((tbl) => {
+                      const active = normalizeTableMatch(
+                        newOrderTable,
+                        tbl.table_number
+                      );
+                      return (
+                        <button
+                          key={tbl.id}
+                          type="button"
+                          onClick={() => setNewOrderTable(tbl.table_number)}
+                          className={`shrink-0 rounded-xl px-3 py-2 text-xs font-black transition cursor-pointer ${
+                            active
+                              ? "bg-amber-500 text-zinc-950 shadow-sm"
+                              : "border border-zinc-700 bg-zinc-950 text-zinc-300 hover:border-zinc-500"
+                          }`}
+                        >
+                          Mesa {tbl.table_number}
+                        </button>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      onClick={() => setNewOrderTable("Balcão")}
+                      className={`shrink-0 rounded-xl px-3 py-2 text-xs font-black transition cursor-pointer ${
+                        newOrderTable === "Balcão"
+                          ? "bg-amber-500 text-zinc-950 shadow-sm"
+                          : "border border-zinc-700 bg-zinc-950 text-zinc-300 hover:border-zinc-500"
+                      }`}
+                    >
+                      Balcão
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-zinc-400 mb-1">
+                    Nome do Cliente / Comanda (opcional)
+                  </label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
+                    <input
+                      type="text"
+                      value={newOrderCustomerName}
+                      onChange={(e) => setNewOrderCustomerName(e.target.value)}
+                      placeholder="Ex: João, Mesa Fundos..."
+                      className="w-full rounded-xl border border-zinc-700 bg-zinc-950 py-2 pl-9 pr-3 text-xs text-white placeholder:text-zinc-500 focus:border-amber-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Busca Rápida + Abas de Categorias Ordenadas */}
+              <div className="space-y-2.5 sticky top-0 z-10 bg-zinc-950/95 backdrop-blur-sm py-1">
+                <div className="relative">
+                  <Search className="absolute left-3.5 top-2.5 h-4 w-4 text-zinc-500" />
+                  <input
+                    type="text"
+                    value={newOrderSearch}
+                    onChange={(e) => setNewOrderSearch(e.target.value)}
+                    placeholder="Buscar prato, porção ou bebida..."
+                    className="w-full rounded-xl border border-zinc-700 bg-zinc-900 py-2.5 pl-10 pr-9 text-xs text-white placeholder:text-zinc-500 focus:border-amber-500 focus:outline-none"
+                  />
+                  {newOrderSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setNewOrderSearch("")}
+                      className="absolute right-2.5 top-2 rounded-lg p-1 text-zinc-400 hover:text-white cursor-pointer"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                  {drawerCategoryTabs.map((tab) => {
+                    const active = newOrderCategoryTab === tab;
+                    return (
+                      <button
+                        key={tab}
+                        type="button"
+                        onClick={() => setNewOrderCategoryTab(tab)}
+                        className={`shrink-0 rounded-xl px-3 py-1.5 text-xs font-extrabold transition cursor-pointer ${
+                          active
+                            ? "bg-amber-500 text-zinc-950 shadow-xs"
+                            : "border border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800"
+                        }`}
+                      >
+                        {tab}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Lista Compacta de Itens para Toque Rápido */}
+              {drawerFilteredItems.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-900/40 p-8 text-center text-xs text-zinc-400">
+                  Nenhum item encontrado para este filtro.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {drawerFilteredItems.map((item) => {
+                    const cartEntry = newOrderCart[item.id];
+                    const qty = cartEntry?.quantity || 0;
+
+                    return (
+                      <div
+                        key={item.id}
+                        className={`rounded-2xl border p-2.5 transition ${
+                          qty > 0
+                            ? "border-amber-500/50 bg-amber-500/10"
+                            : "border-zinc-800 bg-zinc-900/60"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2.5">
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                            {item.image_url ? (
+                              <img
+                                src={item.image_url}
+                                alt={item.name}
+                                className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 rounded-xl object-cover border border-zinc-800 bg-zinc-950"
+                              />
+                            ) : (
+                              <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950 text-zinc-600">
+                                <UtensilsCrossed className="h-5 w-5" />
+                              </div>
+                            )}
+
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-xs sm:text-sm font-bold text-white">
+                                {item.name}
+                              </p>
+                              <p className="truncate text-[10px] text-zinc-400">
+                                {item.category || "Pratos"}
+                              </p>
+                              <p className="mt-0.5 text-xs sm:text-sm font-black text-amber-400">
+                                R${" "}
+                                {Number(item.price || 0)
+                                  .toFixed(2)
+                                  .replace(".", ",")}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Controles grandes para toque com 1 mão */}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {qty > 0 && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleNewOrderDecreaseItem(item.id)
+                                  }
+                                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-700 bg-zinc-900 text-white hover:bg-zinc-800 active:scale-95 transition cursor-pointer"
+                                  aria-label="Diminuir quantidade"
+                                >
+                                  <Minus className="h-4 w-4 stroke-[2.5]" />
+                                </button>
+                                <span className="w-7 text-center text-sm font-black text-white">
+                                  {qty}
+                                </span>
+                              </>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleNewOrderAddItem(item)}
+                              className={`flex h-10 w-10 items-center justify-center rounded-xl font-black active:scale-95 transition cursor-pointer ${
+                                qty > 0
+                                  ? "bg-amber-500 text-zinc-950 hover:bg-amber-400"
+                                  : "border border-amber-500/40 bg-amber-500/15 text-amber-400 hover:bg-amber-500 hover:text-zinc-950"
+                              }`}
+                              aria-label="Adicionar item"
+                            >
+                              <Plus className="h-5 w-5 stroke-[2.5]" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Observação específica do item */}
+                        {qty > 0 && (
+                          <div className="mt-2 pt-2 border-t border-amber-500/20">
+                            <div className="relative">
+                              <StickyNote className="absolute left-2.5 top-2 h-3.5 w-3.5 text-amber-400/80" />
+                              <input
+                                type="text"
+                                value={cartEntry.notes}
+                                onChange={(e) =>
+                                  handleNewOrderItemNotesChange(
+                                    item.id,
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="Obs deste item (ex: bem passada, sem cebola, gelo e limão)..."
+                                className="w-full rounded-lg border border-zinc-800 bg-zinc-950/90 py-1.5 pl-8 pr-3 text-[11px] text-zinc-100 placeholder:text-zinc-500 focus:border-amber-500 focus:outline-none"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Observação Geral do Pedido */}
+              <div className="space-y-1.5 pt-2 border-t border-zinc-800">
+                <label className="block text-[11px] font-extrabold uppercase tracking-wider text-zinc-400">
+                  Observação Geral do Pedido
+                </label>
+                <textarea
+                  rows={2}
+                  value={newOrderNotes}
+                  onChange={(e) => setNewOrderNotes(e.target.value)}
+                  placeholder="Ex: Trazer talheres extras, bebidas primeiro..."
+                  className="w-full rounded-xl border border-zinc-700 bg-zinc-900 p-3 text-xs text-white placeholder:text-zinc-500 focus:border-amber-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Footer Fixo Inferior com Botão de Envio */}
+            <div className="border-t border-zinc-800 bg-zinc-900 px-4 sm:px-5 py-3.5 shrink-0">
+              <button
+                type="button"
+                disabled={isSendingNewOrder || newOrderTotalItems === 0}
+                onClick={() => void handleSubmitNewWaiterOrder()}
+                className="w-full flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 hover:bg-emerald-400 active:scale-[0.99] disabled:opacity-45 disabled:hover:bg-emerald-500 py-3.5 px-4 text-sm font-black text-zinc-950 shadow-lg transition cursor-pointer"
+              >
+                {isSendingNewOrder ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4 stroke-[2.5]" />
+                )}
+                <span>
+                  {newOrderTotalItems > 0
+                    ? `Enviar Pedido (${newOrderTotalItems} ${
+                        newOrderTotalItems === 1 ? "item" : "itens"
+                      } • R$ ${newOrderTotalAmount
+                        .toFixed(2)
+                        .replace(".", ",")})`
+                    : "Selecione itens para enviar"}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ===================================================================== */}
       {/* MODAL / DRAWER DE EDIÇÃO DE ITENS DO PEDIDO */}
