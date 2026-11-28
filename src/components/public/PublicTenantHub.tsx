@@ -31,7 +31,7 @@ import { WhatsAppFloatingButton } from "./WhatsAppFloatingButton";
 import { VehicleQuoteModal } from "./VehicleQuoteModal";
 import { PublicRestaurantMenuSection } from "./PublicRestaurantMenuSection";
 import { TowingEmergencyCard } from "./TowingEmergencyCard";
-import { CarDealershipSimulatorCard } from "./CarDealershipSimulatorCard";
+import { AutomotiveDealershipStorefront } from "./AutomotiveDealershipStorefront";
 import { resolvePublicSubniche } from "@/utils/prospecting-niche";
 import { getUnifiedEstablishmentPhotos } from "@/utils/establishment-photos";
 import { getCtaButtonText, isAutomotiveNiche, isRestaurantNiche } from "@/utils/showcase";
@@ -337,6 +337,33 @@ export function PublicTenantHub({
   );
   const effectiveHero = heroBg || heroImage;
 
+  // Layout 100% dedicado para Portal de Revenda de Veículos & Multimarcas (car_dealership)
+  if (isCarDealership) {
+    return (
+      <>
+        <PublicPageTracker tenantId={tenant.id} />
+        <AutomotiveDealershipStorefront
+          tenant={tenant}
+          profile={profile}
+          products={products}
+          reviews={visibleReviews}
+          posts={posts}
+          heroImage={effectiveHero}
+          brandColor={brandColor}
+          theme={currentTheme}
+          isOpenNow={isOpenNow}
+          statusBadgeText={statusBadgeText}
+          statusDetailText={statusDetailText}
+        />
+        <WhatsAppFloatingButton
+          tenantId={tenant.id}
+          tenantName={tenant.name}
+          phoneWhatsapp={profile?.phone_whatsapp || profile?.phone}
+        />
+      </>
+    );
+  }
+
   return (
     <div
       style={{ ...colorStyles, "--brand-primary": brandColor } as React.CSSProperties}
@@ -434,15 +461,6 @@ export function PublicTenantHub({
             tenantName={tenant.name}
             phoneWhatsapp={profile?.phone_whatsapp || profile?.phone}
             cityLabel={profile?.address}
-          />
-        )}
-
-        {/* Simulador Rápido de Financiamento ou Troca (EXCLUSIVO para Revenda & Multimarcas) */}
-        {isCarDealership && (
-          <CarDealershipSimulatorCard
-            tenantName={tenant.name}
-            phoneWhatsapp={profile?.phone_whatsapp || profile?.phone}
-            address={profile?.address || tenant.address}
           />
         )}
 

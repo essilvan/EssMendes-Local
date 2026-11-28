@@ -283,44 +283,64 @@ export function getNicheDemoConfig(
           `${name} oferece estoque selecionado de veículos seminovos e multimarcas em ${loc}, com laudo cautelar aprovado, garantia de procedência, financiamento em até 60x e a melhor avaliação do seu usado na troca.`,
         items: [
           {
-            name: "SUV Compacto Automático • Completo & Revisado",
+            name: "VW NIVUS | Highline 200 TSI Automático",
             description:
-              "2023/2024 • Automático • Flex • Multimídia, câmera de ré e revisado com garantia de motor e câmbio.",
+              "2023/2024 • 26.800 km • Automático • Flex • Multimídia VW Play, painel digital, laudo cautelar aprovado e garantia.",
             price: 0,
-            category: "SUV",
+            category: "SUVs",
             duration_minutes: 30,
             image_url:
               "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?auto=format&fit=crop&w=900&q=80",
           },
           {
-            name: "Sedan Executivo • Bancos em Couro • Único Dono",
+            name: "TOYOTA COROLLA | XEi 2.0 16V Direct Shift CVT",
             description:
-              "2022/2023 • Automático CVT • Flex • Interior em couro, piloto automático, manual, chave reserva e revisado com garantia.",
+              "2022/2023 • 34.500 km • Automático • Flex • Bancos em couro, único dono, manual, chave reserva e revisado com garantia.",
             price: 0,
-            category: "Sedan",
+            category: "Sedans",
             duration_minutes: 30,
             image_url:
               "https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=900&q=80",
           },
           {
-            name: "Hatch Econômico • Baixa Quilometragem • Laudo Aprovado",
+            name: "JEEP COMPASS | Longitude T270 Turbo Flex",
             description:
-              "2023 • Manual/Automático • Flex • Econômico para o dia a dia, laudo cautelar 100% aprovado e revisado com garantia.",
+              "2023/2023 • 29.100 km • Automático • Flex • Central multimídia 10\", bancos em couro, laudo 100% aprovado e garantia.",
             price: 0,
-            category: "Hatch",
+            category: "SUVs",
+            duration_minutes: 30,
+            image_url:
+              "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=900&q=80",
+          },
+          {
+            name: "CHEVROLET ONIX | Premier 1.0 Turbo Automático",
+            description:
+              "2023/2024 • 18.900 km • Automático • Flex • Baixa quilometragem, alerta de ponto cego, laudo aprovado e procedência garantida.",
+            price: 0,
+            category: "Hatches",
             duration_minutes: 30,
             image_url:
               "https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&w=900&q=80",
           },
           {
-            name: "Picape Cabine Dupla • Diesel 4x4 • Procedência Garantida",
+            name: "FIAT TORO | Volcano 2.0 Turbo Diesel 4x4 AT9",
             description:
-              "2022/2023 • Automática 4x4 • Turbo Diesel • Capota marítima, santo antônio, laudo aprovado e revisada com garantia.",
+              "2022/2023 • 42.300 km • Automático • Diesel • Tração 4x4, capota marítima, bancos em couro, laudo cautelar aprovado e revisada.",
             price: 0,
-            category: "Picape 4x4",
+            category: "Picapes",
             duration_minutes: 30,
             image_url:
               "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=900&q=80",
+          },
+          {
+            name: "HYUNDAI HB20 | Platinum 1.0 TGDI Flex",
+            description:
+              "2023/2024 • 21.600 km • Automático • Flex • Chave presencial, câmera de ré, econômico, revisado com garantia de motor e câmbio.",
+            price: 0,
+            category: "Hatches",
+            duration_minutes: 30,
+            image_url:
+              "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=900&q=80",
           },
         ],
       };
