@@ -191,6 +191,14 @@ export const TEMPLATE_OPTIONS = [
 
 export const NICHE_OPTIONS = [
   {
+    id: "car_dealership",
+    name: "Revenda & Multimarcas",
+    icon: "🚘",
+    badgeText: "Seminovos & Estoque | Simulador",
+    desc: "Vitrine de estoque seminovo, simulação de financiamento e avaliação de troca",
+    isNew: true,
+  },
+  {
     id: "towing",
     name: "Guincho & Socorro 24h",
     icon: "🚨",
@@ -424,7 +432,9 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
 
   const handleNicheChange = (nicheId: string) => {
     setSelectedNiche(nicheId);
-    if (nicheId === "towing") {
+    if (nicheId === "car_dealership") {
+      setPrimaryColor("#1E293B");
+    } else if (nicheId === "towing") {
       setPrimaryColor("#dc2626");
     } else if (nicheId === "petshop" && (primaryColor === "#0d9488" || primaryColor === "#2563eb" || !primaryColor)) {
       setPrimaryColor("#ea580c");

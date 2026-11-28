@@ -133,6 +133,30 @@ function getNicheHighlights(subniche: string): HighlightItem[] {
           Icon: ShieldCheck,
         },
       ];
+    case "car_dealership":
+      return [
+        {
+          title: "Laudo Cautelar Aprovado",
+          subtitle: "Procedência verificada e histórico transparente",
+          iconBg: "bg-emerald-100",
+          iconColor: "text-emerald-700",
+          Icon: ShieldCheck,
+        },
+        {
+          title: "Garantia Motor & Câmbio",
+          subtitle: "Seminovos revisados prontos para rodar",
+          iconBg: "bg-blue-100",
+          iconColor: "text-blue-700",
+          Icon: Award,
+        },
+        {
+          title: "Financiamento em até 60x",
+          subtitle: "Aprovação facilitada e melhor avaliação no usado",
+          iconBg: "bg-amber-100",
+          iconColor: "text-amber-700",
+          Icon: CarFront,
+        },
+      ];
     case "mechanic":
     case "car_wash":
       return [
@@ -268,6 +292,7 @@ export function PublicHeroSplit({
   });
 
   const isTowing = subniche === "towing";
+  const isCarDealership = subniche === "car_dealership";
   const isPetShop = subniche === "petshop" || currentTheme?.id === "petshop";
   const isConfectionery =
     subniche === "bakery" ||
@@ -280,6 +305,7 @@ export function PublicHeroSplit({
     currentTheme?.id === "health_beauty";
   const isAutomotive =
     !isTowing &&
+    !isCarDealership &&
     (subniche === "mechanic" ||
       currentTheme?.id === "automotive" ||
       currentTheme?.id === "automotivo" ||
@@ -298,20 +324,32 @@ export function PublicHeroSplit({
   const cleanCity = extractNeighborhoodAndCity(displayAddress);
   const cleanPhone = phoneWhatsapp ? sanitizePhoneNumber(phoneWhatsapp) : "";
   const cleanDescription = sanitizeDescription(description, displayAddress);
-  const rawSubtitle =
-    getHeroSubtitle(tenant, undefined, currentTheme?.id, businessCategory) ||
-    cleanDescription;
+  const rawSubtitle = isCarDealership
+    ? `Seminovos Selecionados com Garantia e Procedência${
+        cleanCity ? ` em ${cleanCity}` : ""
+      }. Laudo cautelar aprovado, financiamento em até 60x e a melhor avaliação no seu usado na troca.`
+    : getHeroSubtitle(tenant, undefined, currentTheme?.id, businessCategory) ||
+      cleanDescription;
   const heroSubtitle = sanitizeDescription(rawSubtitle, displayAddress);
-  const heroPills = getHeroPills(
-    tenant,
-    services,
-    currentTheme?.id,
-    businessCategory
-  );
+  const heroPills = isCarDealership
+    ? [
+        "Laudo Cautelar Aprovado",
+        "Garantia de Motor e Câmbio",
+        "Financiamento em até 60x",
+        "Melhor Avaliação no Usado",
+      ]
+    : getHeroPills(
+        tenant,
+        services,
+        currentTheme?.id,
+        businessCategory
+      );
   const ctaLabel =
     ctaText ||
     (isTowing
       ? "Chamar Guincho 24h"
+      : isCarDealership
+      ? "Ver Estoque & Simular"
       : isRestaurant
       ? "Ver Cardápio Digital"
       : isAutomotive
@@ -320,6 +358,8 @@ export function PublicHeroSplit({
 
   const heroWaMessage = isRestaurant
     ? `Olá! Estou vendo o cardápio de ${tenantName} e gostaria de atendimento.`
+    : isCarDealership
+    ? `Olá! Vi o estoque de seminovos da ${tenantName} e gostaria de simular um financiamento ou troca.`
     : isTowing
     ? `Olá! Preciso de guincho / socorro veicular 24h com ${tenantName}.`
     : `Olá, vi a vitrine de vocês e gostaria de agendar um atendimento/orçamento em ${tenantName}.`;

@@ -207,6 +207,22 @@ function resolveBucketKeyForNiche(
     return "restaurant";
   }
 
+  // 2.5 Revenda de Veículos & Multimarcas (PRIORIDADE antes de oficina mecânica!)
+  if (
+    combined.includes("car_dealership") ||
+    combined.includes("veiculos") ||
+    combined.includes("multimarcas") ||
+    combined.includes("seminovos") ||
+    combined.includes("semi-novos") ||
+    combined.includes("automoveis") ||
+    combined.includes("motors") ||
+    combined.includes("carros") ||
+    combined.includes("concessionaria") ||
+    combined.includes("revenda")
+  ) {
+    return "car_dealership";
+  }
+
   // 3. Oficina Mecânica / Automotivo
   if (
     combined.includes("automotive") ||
@@ -325,6 +341,28 @@ function getNichePromptInstructions(
             ],
       defaultCtaType: "whatsapp",
       defaultCtaLabel: "Solicitar Guincho 24h",
+    };
+  }
+
+  if (bucketKey === "car_dealership") {
+    return {
+      nicheLabel: "Revenda de Veículos, Seminovos e Multimarcas",
+      domainGuidelines: `FOCO OBRIGATÓRIO DO NICHO REVENDA DE VEÍCULOS & MULTIMARCAS:
+- Aborde exclusivamente compra segura de carros seminovos em ${targetCity}: importância do laudo cautelar 100% aprovado, financiamento facilitado em até 60x, troca com troco e avaliação justa do usado, garantia de motor e câmbio e revisão pré-entrega.
+- Destaque procedência, transparência na negociação e simulação rápida pelo WhatsApp em ${targetCity}.
+- PROIBIDO falar de conserto mecânico de oficina, troca de óleo avulsa ou salão de beleza.`,
+      defaultServices:
+        services.length > 0
+          ? services
+          : [
+              "Seminovos com Laudo Cautelar Aprovado",
+              "Financiamento Facilitado em até 60x",
+              "Troca com Troco e Avaliação do Usado",
+              "Veículos Revisados com Garantia",
+            ],
+      defaultCtaType: "link",
+      defaultCtaLabel: "Ver Estoque & Simular",
+      defaultCtaUrl: tenantSlug ? `/${tenantSlug}#produtos` : "#produtos",
     };
   }
 
@@ -491,6 +529,28 @@ const NICHE_ROTATING_SUBTOPICS: Record<
       angle:
         "Remoção segura de motos, carros baixos e utilitários com cintas certificadas e acompanhamento em tempo real",
       matchKeywords: ["moto", "utilitário", "cinta", "remoção"],
+    },
+  ],
+  car_dealership: [
+    {
+      angle:
+        "Compra segura de seminovos: por que exigir laudo cautelar aprovado e histórico transparente antes de fechar negócio",
+      matchKeywords: ["laudo", "cautelar", "procedência", "segura"],
+    },
+    {
+      angle:
+        "Financiamento facilitado em até 60x: como simular parcelas que cabem no bolso com aprovação rápida",
+      matchKeywords: ["financiamento", "parcela", "60x", "simular"],
+    },
+    {
+      angle:
+        "Troca com troco e avaliação justa do seu carro usado para sair de seminovo revisado no mesmo dia",
+      matchKeywords: ["troca", "usado", "avaliação", "troco"],
+    },
+    {
+      angle:
+        "Revisão pré-entrega e garantia de motor e câmbio: a tranquilidade de comprar seu próximo carro em uma multimarcas de confiança",
+      matchKeywords: ["revisão", "garantia", "motor", "câmbio", "pré-entrega"],
     },
   ],
   automotive: [
@@ -729,6 +789,28 @@ const NICHE_ILLUSTRATIVE_IMAGES: Record<
       id: "tow-car-battery",
       keywords: ["bateria", "elétrica", "motor", "emergência"],
       url: "https://images.unsplash.com/photo-1632823471565-1ecdf5c6da35?auto=format&fit=crop&w=1280&q=80",
+    },
+  ],
+  car_dealership: [
+    {
+      id: "dealer-suv-showroom",
+      keywords: ["suv", "seminovo", "estoque", "laudo", "procedência"],
+      url: "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "dealer-sedan-exec",
+      keywords: ["sedan", "financiamento", "parcela", "executivo"],
+      url: "https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "dealer-sports-lot",
+      keywords: ["troca", "usado", "multimarcas", "garantia"],
+      url: "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=1280&q=80",
+    },
+    {
+      id: "dealer-pickup-4x4",
+      keywords: ["picape", "diesel", "4x4", "revisão"],
+      url: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=1280&q=80",
     },
   ],
   automotive: [
@@ -1112,6 +1194,20 @@ function buildStructuredNicheFallbackPost(params: {
         content: `Em caso de pane mecânica ou acidente, o transporte em caminhão plataforma evita danos ao câmbio automático, suspensão e para-choque do seu carro.\n\nA ${name} atende ${city} e região 24 horas com cintas certificadas, agilidade e preço justo combinado antes da saída. Solicite seu guincho agora pelo WhatsApp!`,
         keywords: `caminhão plataforma ${city}, guincho para carro automático, socorro veicular ${city}, ${name}`,
         meta_description: `Transporte seguro em caminhão plataforma 24h em ${city}. Chame a ${name} no WhatsApp!`,
+      },
+    ],
+    car_dealership: [
+      {
+        title: `Seminovos com Laudo Cautelar Aprovado em ${city}: Compre com Segurança`,
+        content: `Comprar um carro seminovo exige tranquilidade e procedência comprovada. O laudo cautelar verifica a estrutura, histórico de leilão e documentação completa do veículo antes da entrega.\n\nNa ${name}, em ${city}, todos os veículos do estoque passam por revisão pré-entrega e contam com garantia de motor e câmbio. Confira nosso estoque online e simule seu financiamento agora!`,
+        keywords: `seminovos ${city}, loja de carros ${city}, laudo cautelar aprovado, multimarcas ${city}, ${name}`,
+        meta_description: `Compre seminovos com laudo cautelar aprovado e garantia em ${city} na ${name}. Veja o estoque e simule!`,
+      },
+      {
+        title: `Financiamento em até 60x e Troca com Troco em ${city}`,
+        content: `Quer trocar de carro sem burocracia? Avaliamos seu usado com transparência na troca e oferecemos financiamento facilitado com as melhores taxas e parcelas que cabem no seu orçamento.\n\nAcesse o estoque selecionado da ${name} em ${city} e faça uma simulação rápida pelo WhatsApp sem compromisso!`,
+        keywords: `financiamento de carros ${city}, troca com troco ${city}, revenda de veículos ${city}, carros seminovos, ${name}`,
+        meta_description: `Simule seu financiamento em até 60x e avalie seu usado na troca na ${name} em ${city}.`,
       },
     ],
     automotive: [

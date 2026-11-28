@@ -81,6 +81,10 @@ const NICHE_LABELS: Record<ProspectingNicheKey, { label: string; cls: string }> 
     label: "Guincho 24h",
     cls: "bg-red-50 text-red-700 border-red-200",
   },
+  car_dealership: {
+    label: "Revenda & Multimarcas",
+    cls: "bg-slate-100 text-slate-800 border-slate-300",
+  },
   mechanic: {
     label: "Oficina Mecânica",
     cls: "bg-blue-50 text-blue-700 border-blue-200",

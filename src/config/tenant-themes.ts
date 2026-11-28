@@ -1,4 +1,5 @@
 export type ThemeNiche =
+  | 'car_dealership'
   | 'automotive'
   | 'auto'
   | 'restaurant'
@@ -45,6 +46,33 @@ export interface NicheThemeConfig {
 }
 
 export const NICHE_THEMES: Record<ThemeNiche, NicheThemeConfig> = {
+  car_dealership: {
+    id: 'car_dealership',
+    name: 'Revenda & Multimarcas',
+    icon: '🚘',
+    description: 'Vitrine executiva clara para estoque seminovo, financiamento e avaliação de troca',
+    isDark: false,
+    bgPage: 'bg-slate-50 text-slate-900',
+    bgCard: 'bg-white border border-slate-200/90 shadow-md shadow-slate-200/50',
+    textPrimary: 'text-slate-900',
+    textMuted: 'text-slate-600',
+    accentColor: '#1E293B',
+    accentBg: 'bg-slate-900 hover:bg-slate-800',
+    accentText: 'text-blue-700',
+    badgeBg: 'bg-slate-100 border border-slate-200',
+    badgeText: 'text-slate-800 font-bold',
+    borderClass: 'border-slate-200',
+    roundedClass: 'rounded-2xl',
+    ctaButtonClass: 'bg-gradient-to-r from-slate-900 via-slate-800 to-blue-800 hover:from-slate-800 hover:to-blue-700 text-white font-extrabold shadow-md shadow-slate-900/15 rounded-xl hover:scale-[1.02] transition-all',
+    heroTagline: 'Seminovos Selecionados com Garantia e Procedência',
+    icons: {
+      hero: '🚘',
+      services: '🚗',
+      products: '🚘',
+      reviews: '⭐',
+      contact: '📍',
+    },
+  },
   auto: {
     id: 'auto',
     name: 'Industrial / Auto Center',
@@ -498,6 +526,14 @@ export function getTenantTheme(themeKey?: string | null, category?: string | nul
   if (normalizedKey === 'bakery' || normalizedKey === 'confectionery' || normalizedKey === 'bolos' || normalizedKey === 'doceria') {
     return NICHE_THEMES.confeitaria;
   }
+  if (
+    normalizedKey === 'car_dealership' ||
+    normalizedKey === 'revenda' ||
+    normalizedKey === 'multimarcas' ||
+    normalizedKey === 'seminovos'
+  ) {
+    return NICHE_THEMES.car_dealership;
+  }
   if (normalizedKey === 'automotive' || normalizedKey === 'automotivo' || normalizedKey === 'auto') {
     return NICHE_THEMES.automotive;
   }
@@ -538,6 +574,15 @@ export function getTenantTheme(themeKey?: string | null, category?: string | nul
   }
   if (text.includes('barber') || text.includes('barbearia') || text.includes('corte masculino')) {
     return NICHE_THEMES.barbearia;
+  }
+  if (
+    text.includes('multimarcas') ||
+    text.includes('seminovo') ||
+    text.includes('concessionaria') ||
+    text.includes('revenda') ||
+    text.includes('car_dealer')
+  ) {
+    return NICHE_THEMES.car_dealership;
   }
   if (text.includes('car') || text.includes('auto') || text.includes('mecanic') || text.includes('oficina') || text.includes('pneu') || text.includes('guincho') || text.includes('veiculo') || text.includes('lavajato') || text.includes('funilaria')) {
     return NICHE_THEMES.automotive;

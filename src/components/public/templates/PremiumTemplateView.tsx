@@ -119,19 +119,20 @@ export function PremiumTemplateView({
             onSelectService={(serviceId) => onOpenBooking(serviceId)}
           />
 
-          {/* 3. Dashboard de Conversão Refinado (Oculto para Guincho 24h, que usa chamado emergencial) */}
-          {resolvePublicSubniche(tenant, profile) !== "towing" && (
-            <ConversionDashboard
-              tenant={tenant}
-              profile={profile}
-              services={services}
-              portfolioItems={portfolioItems}
-              posts={posts}
-              theme={theme}
-              brandColor={brandColor}
-              onOpenBookingModal={onOpenBooking}
-            />
-          )}
+          {/* 3. Dashboard de Conversão Refinado (Oculto para Guincho 24h e Revenda de Veículos) */}
+          {resolvePublicSubniche(tenant, profile) !== "towing" &&
+            resolvePublicSubniche(tenant, profile) !== "car_dealership" && (
+              <ConversionDashboard
+                tenant={tenant}
+                profile={profile}
+                services={services}
+                portfolioItems={portfolioItems}
+                posts={posts}
+                theme={theme}
+                brandColor={brandColor}
+                onOpenBookingModal={onOpenBooking}
+              />
+            )}
 
           {/* 3.5 Secção da Equipe / Profissionais com Agendamento Direto */}
           {professionals && professionals.length > 0 && (
@@ -195,9 +196,10 @@ export function PremiumTemplateView({
         onOpenBooking={() => onOpenBooking()}
       />
 
-      {/* Comodidades & Atributos do Google Maps (Oculto em serviços externos/emergenciais como guincho) */}
+      {/* Comodidades & Atributos do Google Maps (Oculto em guincho e revenda de veículos) */}
       {tenant.business_attributes &&
-        resolvePublicSubniche(tenant, profile) !== "towing" && (
+        resolvePublicSubniche(tenant, profile) !== "towing" &&
+        resolvePublicSubniche(tenant, profile) !== "car_dealership" && (
           <BusinessAttributes
             attributes={tenant.business_attributes}
             theme={theme}

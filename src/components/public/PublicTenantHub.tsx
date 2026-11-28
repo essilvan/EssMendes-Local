@@ -31,6 +31,7 @@ import { WhatsAppFloatingButton } from "./WhatsAppFloatingButton";
 import { VehicleQuoteModal } from "./VehicleQuoteModal";
 import { PublicRestaurantMenuSection } from "./PublicRestaurantMenuSection";
 import { TowingEmergencyCard } from "./TowingEmergencyCard";
+import { CarDealershipSimulatorCard } from "./CarDealershipSimulatorCard";
 import { resolvePublicSubniche } from "@/utils/prospecting-niche";
 import { getUnifiedEstablishmentPhotos } from "@/utils/establishment-photos";
 import { getCtaButtonText, isAutomotiveNiche, isRestaurantNiche } from "@/utils/showcase";
@@ -216,6 +217,7 @@ export function PublicTenantHub({
     profile?.template_id;
   const subniche = resolvePublicSubniche(tenant, profile);
   const isTowing = subniche === "towing";
+  const isCarDealership = subniche === "car_dealership";
   const isMechanic = subniche === "mechanic";
 
   const isRestaurant =
@@ -229,6 +231,8 @@ export function PublicTenantHub({
     );
   const ctaButtonText = isTowing
     ? "Chamar Guincho Agora"
+    : isCarDealership
+    ? "Ver Estoque & Simular"
     : isRestaurant
     ? "Ver Cardápio"
     : getCtaButtonText(
@@ -256,6 +260,15 @@ export function PublicTenantHub({
       const towingEl = document.getElementById("socorro-guincho");
       if (towingEl) {
         towingEl.scrollIntoView({ behavior: "smooth" });
+        return;
+      }
+    }
+    if (isCarDealership) {
+      const simEl =
+        document.getElementById("simulador-financiamento") ||
+        document.getElementById("produtos");
+      if (simEl) {
+        simEl.scrollIntoView({ behavior: "smooth" });
         return;
       }
     }
@@ -289,6 +302,7 @@ export function PublicTenantHub({
   const isAutomotive =
     isMechanic ||
     (!isTowing &&
+      !isCarDealership &&
       subniche !== "car_wash" &&
       (effectiveNiche === "automotive" ||
         effectiveNiche === "automotivo" ||
@@ -420,6 +434,15 @@ export function PublicTenantHub({
             tenantName={tenant.name}
             phoneWhatsapp={profile?.phone_whatsapp || profile?.phone}
             cityLabel={profile?.address}
+          />
+        )}
+
+        {/* Simulador Rápido de Financiamento ou Troca (EXCLUSIVO para Revenda & Multimarcas) */}
+        {isCarDealership && (
+          <CarDealershipSimulatorCard
+            tenantName={tenant.name}
+            phoneWhatsapp={profile?.phone_whatsapp || profile?.phone}
+            address={profile?.address || tenant.address}
           />
         )}
 

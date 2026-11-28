@@ -51,25 +51,37 @@ export function PublicProductsSection({
     }).format(val);
   };
 
+  const isDealership = subniche === "car_dealership";
+
   const getWhatsAppProductLink = (
     productName: string,
     price: number | null,
-    isOutOfStock?: boolean
+    isOutOfStock?: boolean,
+    mode: "default" | "trade_in" = "default"
   ) => {
     const hasNumericPrice = price !== null && Number(price) > 0;
-    const message = isOutOfStock
-      ? encodeURIComponent(
-          `👋 Olá! Vi no site *${productName}* e gostaria de consultar a disponibilidade e prazo.`
-        )
-      : hasNumericPrice
-      ? encodeURIComponent(
-          `👋 Olá! Vi no site *${productName}* por ${formatCurrency(
-            Number(price)
-          )}. Gostaria de confirmar a disponibilidade.`
-        )
-      : encodeURIComponent(
-          `👋 Olá! Vi no site de ${tenantName} o serviço *${productName}* e gostaria de solicitar um orçamento rápido pelo WhatsApp.`
-        );
+    const message =
+      isDealership && mode === "trade_in"
+        ? encodeURIComponent(
+            `🚘 Olá! Vi o veículo *${productName}* no estoque da *${tenantName}* e gostaria de avaliar meu usado na troca.`
+          )
+        : isDealership
+        ? encodeURIComponent(
+            `🚘 Olá! Vi o veículo *${productName}* no estoque da *${tenantName}* e gostaria de simular as parcelas do financiamento no WhatsApp.`
+          )
+        : isOutOfStock
+        ? encodeURIComponent(
+            `👋 Olá! Vi no site *${productName}* e gostaria de consultar a disponibilidade e prazo.`
+          )
+        : hasNumericPrice
+        ? encodeURIComponent(
+            `👋 Olá! Vi no site *${productName}* por ${formatCurrency(
+              Number(price)
+            )}. Gostaria de confirmar a disponibilidade.`
+          )
+        : encodeURIComponent(
+            `👋 Olá! Vi no site de ${tenantName} o serviço *${productName}* e gostaria de solicitar um orçamento rápido pelo WhatsApp.`
+          );
     return cleanPhone
       ? `https://wa.me/${cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`}?text=${message}`
       : `https://wa.me/?text=${message}`;
@@ -78,7 +90,13 @@ export function PublicProductsSection({
   const currentTheme = theme || NICHE_THEMES.retail_default;
 
   const sectionCopy =
-    subniche === "towing"
+    subniche === "car_dealership"
+      ? {
+          badge: "Seminovos Selecionados • Procedência Garantida",
+          title: "🚘 Estoque em Destaque",
+          subtitle: `Veículos revisados com laudo cautelar aprovado. Simule parcelas ou avalie seu usado na troca direto no WhatsApp de ${tenantName}.`,
+        }
+      : subniche === "towing"
       ? {
           badge: "Socorro & Resgate 24h",
           title: "Serviços de Socorro & Remoção 24h",
@@ -251,8 +269,10 @@ export function PublicProductsSection({
                         )}
                       </>
                     ) : (
-                      <span className="inline-flex items-center rounded-lg border border-neutral-200/80 dark:border-white/15 bg-neutral-100/80 dark:bg-white/5 px-2.5 py-1 text-xs font-bold text-neutral-700 dark:text-neutral-200">
-                        Orçamento Rápido • Sob Consulta
+                      <span className="inline-flex items-center rounded-lg border border-slate-200 dark:border-white/15 bg-slate-100 dark:bg-white/5 px-2.5 py-1 text-xs font-bold text-slate-800 dark:text-neutral-200">
+                        {isDealership
+                          ? "Sob Consulta • Financiamento"
+                          : "Orçamento Rápido • Sob Consulta"}
                       </span>
                     )}
                   </div>
@@ -265,7 +285,7 @@ export function PublicProductsSection({
               </div>
 
               {/* Botão de WhatsApp usando theme.ctaButtonClass */}
-              <div className="p-5 pt-0">
+              <div className="p-5 pt-0 space-y-2">
                 <a
                   href={orderUrl}
                   target="_blank"
@@ -274,18 +294,39 @@ export function PublicProductsSection({
                   className={`flex items-center justify-center gap-2 w-full rounded-2xl ${
                     isOutOfStock
                       ? "border border-amber-500/30 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 hover:bg-amber-100"
+                      : isDealership
+                      ? "bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold"
                       : currentTheme.ctaButtonClass
                   } px-4 py-3 text-xs font-bold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-sm`}
                 >
-                  <MessageCircle className="h-4 w-4" />
+                  <MessageCircle className="h-4 w-4 shrink-0" />
                   <span>
-                    {isOutOfStock
+                    {isDealership
+                      ? "Simular Parcelas no WhatsApp"
+                      : isOutOfStock
                       ? "Consultar Encomenda"
                       : hasPrice
                       ? "Pedir no WhatsApp"
                       : "Solicitar Orçamento no WhatsApp"}
                   </span>
                 </a>
+
+                {isDealership && (
+                  <a
+                    href={getWhatsAppProductLink(
+                      p.name,
+                      null,
+                      false,
+                      "trade_in"
+                    )}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex items-center justify-center w-full rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 px-3 py-2 text-[11px] font-bold text-slate-700 transition"
+                  >
+                    Avaliar Meu Usado na Troca
+                  </a>
+                )}
               </div>
             </div>
           );

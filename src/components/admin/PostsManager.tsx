@@ -119,6 +119,15 @@ export function PostsManager({
     normNiche.includes("guincho") ||
     normNiche.includes("reboque") ||
     normNiche.includes("socorro");
+  const isCarDealership =
+    !isTowing &&
+    (normNiche.includes("car_dealership") ||
+      normNiche.includes("veiculos") ||
+      normNiche.includes("multimarcas") ||
+      normNiche.includes("seminovos") ||
+      normNiche.includes("motors") ||
+      normNiche.includes("concessionaria") ||
+      normNiche.includes("revenda"));
   const isRestaurant =
     normNiche === "restaurant" ||
     normNiche.includes("gastronomia") ||
@@ -129,27 +138,35 @@ export function PostsManager({
     normNiche.includes("espet");
   const isAutomotive =
     !isTowing &&
+    !isCarDealership &&
     (normNiche === "automotive" ||
       normNiche === "mechanic" ||
       normNiche.includes("auto") ||
       normNiche.includes("mecanica") ||
       normNiche.includes("oficina"));
 
-  const defaultCtaType: "booking" | "whatsapp" | "link" = isRestaurant
-    ? "link"
-    : isTowing || isAutomotive
-    ? "whatsapp"
-    : "booking";
+  const defaultCtaType: "booking" | "whatsapp" | "link" =
+    isRestaurant || isCarDealership
+      ? "link"
+      : isTowing || isAutomotive
+      ? "whatsapp"
+      : "booking";
 
   const defaultCtaLabel = isRestaurant
     ? "Ver Cardápio & Pedir"
+    : isCarDealership
+    ? "Ver Estoque & Simular"
     : isTowing
     ? "Solicitar Guincho 24h"
     : isAutomotive
     ? "Solicitar Orçamento por Placa"
     : "Agendar Horário";
 
-  const defaultCtaUrl = isRestaurant ? `/${slug}#cardapio` : "";
+  const defaultCtaUrl = isRestaurant
+    ? `/${slug}#cardapio`
+    : isCarDealership
+    ? `/${slug}#produtos`
+    : "";
 
   const [posts, setPosts] = useState<TenantPost[]>(initialPosts);
   const [isAdding, setIsAdding] = useState(false);
@@ -816,6 +833,83 @@ export function PostsManager({
                   </p>
                 </button>
               </>
+            ) : isCarDealership ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCtaUrl(`/${slug}#produtos`);
+                    handleApplyPreset({
+                      title: "🚘 Seminovos com Laudo Cautelar Aprovado e Garantia",
+                      content:
+                        "Todos os veículos do nosso estoque passam por inspeção rigorosa, laudo cautelar aprovado e revisão pré-entrega com garantia de motor e câmbio. Confira os modelos disponíveis e simule agora!",
+                      tags: "seminovos, laudo cautelar aprovado, multimarcas, carros revisados, garantia",
+                      metaDescription:
+                        "Seminovos selecionados com laudo cautelar aprovado e garantia de motor e câmbio. Veja o estoque!",
+                      ctaType: "link",
+                      ctaLabel: "Ver Estoque & Simular",
+                      imageUrl:
+                        "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=1200&auto=format&fit=crop&q=80",
+                    });
+                  }}
+                  className="rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-teal-400 hover:shadow-xs transition"
+                >
+                  <p className="text-xs font-bold text-slate-900">🚘 Laudo Cautelar & Garantia</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">
+                    Destaca procedência, revisão pré-entrega e link direto para o estoque.
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCtaUrl(`/${slug}#produtos`);
+                    handleApplyPreset({
+                      title: "💳 Financiamento Facilitado em até 60x: Simule no WhatsApp",
+                      content:
+                        "Aprovação ágil com as melhores financeiras do mercado e parcelas planejadas para caber no seu bolso. Escolha seu próximo seminovo no nosso estoque e faça uma simulação sem compromisso!",
+                      tags: "financiamento de carros, até 60x, aprovação rápida, seminovos, multimarcas",
+                      metaDescription:
+                        "Simule o financiamento do seu seminovo em até 60x com aprovação rápida pelo WhatsApp.",
+                      ctaType: "link",
+                      ctaLabel: "Ver Estoque & Simular",
+                      imageUrl:
+                        "https://images.unsplash.com/photo-1555215695-3004980ad54e?w=1200&auto=format&fit=crop&q=80",
+                    });
+                  }}
+                  className="rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-teal-400 hover:shadow-xs transition"
+                >
+                  <p className="text-xs font-bold text-slate-900">💳 Financiamento em até 60x</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">
+                    Chamada de conversão para simulação rápida de parcelas pelo WhatsApp.
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCtaUrl(`/${slug}#produtos`);
+                    handleApplyPreset({
+                      title: "🔄 Troca com Troco: Melhor Avaliação no Seu Usado",
+                      content:
+                        "Quer trocar de veículo com agilidade? Avaliamos seu usado com valor justo na troca e você já sai dirigindo um seminovo revisado e com garantia. Fale com nossa equipe hoje!",
+                      tags: "troca com troco, avaliação de usado, revenda de veículos, seminovos",
+                      metaDescription:
+                        "Avalie seu carro usado na troca e saia de seminovo revisado com garantia e financiamento facilitado.",
+                      ctaType: "whatsapp",
+                      ctaLabel: "Ver Estoque & Simular",
+                      imageUrl:
+                        "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=1200&auto=format&fit=crop&q=80",
+                    });
+                  }}
+                  className="rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-teal-400 hover:shadow-xs transition"
+                >
+                  <p className="text-xs font-bold text-slate-900">🔄 Troca com Troco</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">
+                    Atrai clientes interessados em dar o carro atual como entrada na troca.
+                  </p>
+                </button>
+              </>
             ) : isAutomotive ? (
               <>
                 <button
@@ -1278,6 +1372,12 @@ export function PostsManager({
                     <option value="link">🍽️ Abrir Cardápio Digital</option>
                     <option value="whatsapp">💬 Chamar no WhatsApp</option>
                     <option value="booking">📅 Reservar Mesa / Horário</option>
+                  </>
+                ) : isCarDealership ? (
+                  <>
+                    <option value="link">🚘 Ver Estoque & Simular</option>
+                    <option value="whatsapp">💬 Simular no WhatsApp</option>
+                    <option value="booking">📅 Agendar Visita / Test-Drive</option>
                   </>
                 ) : (
                   <>

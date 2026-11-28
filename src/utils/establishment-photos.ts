@@ -24,6 +24,15 @@ export const NICHE_FALLBACK_IMAGES = {
       "https://images.unsplash.com/photo-1534778101976-62847782c213?q=80&w=1000&auto=format&fit=crop",
     ],
   },
+  car_dealership: {
+    hero: "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?q=80&w=1200&auto=format&fit=crop",
+    gallery: [
+      "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?q=80&w=1000&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1555215695-3004980ad54e?q=80&w=1000&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?q=80&w=1000&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?q=80&w=1000&auto=format&fit=crop",
+    ],
+  },
   automotivo: {
     hero: "https://images.unsplash.com/photo-1613214149922-f1809c99b414?q=80&w=1200&auto=format&fit=crop",
     gallery: [
@@ -103,6 +112,15 @@ export function getNicheFallbackGallery(
   }
   if (norm.includes("barbea") || norm.includes("barber")) {
     return [NICHE_FALLBACK_IMAGES.barbearia.hero, ...NICHE_FALLBACK_IMAGES.barbearia.gallery];
+  }
+  if (
+    norm.includes("car_dealership") ||
+    norm.includes("revenda") ||
+    norm.includes("multimarcas") ||
+    norm.includes("seminovo") ||
+    norm.includes("concession")
+  ) {
+    return [NICHE_FALLBACK_IMAGES.car_dealership.hero, ...NICHE_FALLBACK_IMAGES.car_dealership.gallery];
   }
   if (
     norm.includes("towing") ||

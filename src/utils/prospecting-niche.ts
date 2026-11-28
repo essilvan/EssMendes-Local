@@ -1,5 +1,6 @@
 export type ProspectingNicheKey =
   | "towing"
+  | "car_dealership"
   | "mechanic"
   | "car_wash"
   | "petshop"
@@ -57,7 +58,23 @@ export function detectProspectingNiche(
     return "towing";
   }
 
-  // 2. Subnicho: Lava-Jato e Estética Automotiva
+  // 2. Subnicho: Revenda de Veículos, Multimarcas, Seminovos & Concessionária (PRIORIDADE antes de oficina!)
+  if (
+    /\b(ve[ií]culos|multimarcas|seminovos|semi-novos|autom[oó]veis|motors|carros|concession[aá]ria|revenda|car_dealer|car_dealership)\b/i.test(
+      haystack
+    ) ||
+    haystack.includes("veículos") ||
+    haystack.includes("veiculos") ||
+    haystack.includes("multimarcas") ||
+    haystack.includes("seminovos") ||
+    haystack.includes("automóveis") ||
+    haystack.includes("concessionária") ||
+    haystack.includes("concessionaria")
+  ) {
+    return "car_dealership";
+  }
+
+  // 3. Subnicho: Lava-Jato e Estética Automotiva
   if (
     /\b(lava\s*-?\s*jato|lavajato|est[eé]tica\s*automotiva|polimento|higieniza[çc][aã]o|detalhamento|vitrifica[çc][aã]o|car_wash)\b/i.test(
       haystack
@@ -146,6 +163,15 @@ export function resolvePublicSubniche(
     .toLowerCase();
 
   if (explicit === "towing" || explicit === "guincho") return "towing";
+  if (
+    explicit === "car_dealership" ||
+    explicit === "revenda" ||
+    explicit === "multimarcas" ||
+    explicit === "veiculos" ||
+    explicit === "seminovos"
+  ) {
+    return "car_dealership";
+  }
   if (explicit === "car_wash" || explicit === "lava_jato") return "car_wash";
   if (explicit === "mechanic" || explicit === "mecanica") return "mechanic";
   if (explicit === "beauty" || explicit === "barbearia" || explicit === "salao")
@@ -155,7 +181,7 @@ export function resolvePublicSubniche(
     return "restaurant";
   if (explicit === "bakery" || explicit === "confeitaria") return "bakery";
 
-  // Para tenants antigos salvos como "automotive", diferencia guincho vs lava-jato vs mecânica pelo nome/categoria
+  // Para tenants antigos salvos como "automotive", diferencia guincho vs revenda vs lava-jato vs mecânica pelo nome/categoria
   const detected = detectProspectingNiche(
     tenant?.name || profile?.name,
     tenant?.google_types || [],
@@ -163,7 +189,13 @@ export function resolvePublicSubniche(
   );
 
   if (explicit === "automotive" || explicit === "automotivo" || explicit === "auto") {
-    if (detected === "towing" || detected === "car_wash") return detected;
+    if (
+      detected === "towing" ||
+      detected === "car_dealership" ||
+      detected === "car_wash"
+    ) {
+      return detected;
+    }
     return "mechanic";
   }
 
@@ -231,6 +263,64 @@ export function getNicheDemoConfig(
             duration_minutes: 60,
             image_url:
               "https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=800&q=80",
+          },
+        ],
+      };
+
+    case "car_dealership":
+      return {
+        key: "car_dealership",
+        tenantNiche: "car_dealership",
+        themeNiche: "car_dealership",
+        label: "Revenda & Multimarcas",
+        primaryColor: "#1E293B",
+        heroTitle: "Seminovos Selecionados com Garantia e Procedência",
+        ctaText: "Simular Financiamento",
+        fallbackCoverUrl:
+          "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=1200&q=80",
+        description: `Seminovos revisados com laudo cautelar aprovado, garantia de motor e câmbio e financiamento facilitado em ${city}.`,
+        editorialSummary: (name, loc = city) =>
+          `${name} oferece estoque selecionado de veículos seminovos e multimarcas em ${loc}, com laudo cautelar aprovado, garantia de procedência, financiamento em até 60x e a melhor avaliação do seu usado na troca.`,
+        items: [
+          {
+            name: "SUV Compacto Automático • Completo & Revisado",
+            description:
+              "2023/2024 • Automático • Flex • Multimídia, câmera de ré e revisado com garantia de motor e câmbio.",
+            price: 0,
+            category: "SUV",
+            duration_minutes: 30,
+            image_url:
+              "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?auto=format&fit=crop&w=900&q=80",
+          },
+          {
+            name: "Sedan Executivo • Bancos em Couro • Único Dono",
+            description:
+              "2022/2023 • Automático CVT • Flex • Interior em couro, piloto automático, manual, chave reserva e revisado com garantia.",
+            price: 0,
+            category: "Sedan",
+            duration_minutes: 30,
+            image_url:
+              "https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=900&q=80",
+          },
+          {
+            name: "Hatch Econômico • Baixa Quilometragem • Laudo Aprovado",
+            description:
+              "2023 • Manual/Automático • Flex • Econômico para o dia a dia, laudo cautelar 100% aprovado e revisado com garantia.",
+            price: 0,
+            category: "Hatch",
+            duration_minutes: 30,
+            image_url:
+              "https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&w=900&q=80",
+          },
+          {
+            name: "Picape Cabine Dupla • Diesel 4x4 • Procedência Garantida",
+            description:
+              "2022/2023 • Automática 4x4 • Turbo Diesel • Capota marítima, santo antônio, laudo aprovado e revisada com garantia.",
+            price: 0,
+            category: "Picape 4x4",
+            duration_minutes: 30,
+            image_url:
+              "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=900&q=80",
           },
         ],
       };
@@ -664,6 +754,10 @@ export function buildProspectingWhatsAppMessage(params: {
 
   if (niche === "petshop") {
     return `Opa, tudo bem? Vi o perfil do *${businessName}* aqui no Google e montei uma prévia rápida de como ficaria a vitrine profissional de vocês com catálogo de Banho & Tosa / serviços e agendamento direto no WhatsApp: ${demoUrl} — Posso te mostrar em 1 minuto como funciona?`;
+  }
+
+  if (niche === "car_dealership") {
+    return `Opa, tudo bem? Vi o perfil da *${businessName}* aqui no Google e montei uma prévia rápida de como ficaria a vitrine de estoque seminovo de vocês com simulador de financiamento e avaliação de troca direto no WhatsApp: ${demoUrl} — Posso te mostrar em 1 minuto como funciona?`;
   }
 
   if (niche === "mechanic") {
